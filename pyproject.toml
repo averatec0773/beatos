@@ -1,0 +1,29 @@
+[project]
+name = "beatos-workspace"
+version = "0.0.1"
+description = "BeatOS workspace root — three Python packages under uv."
+requires-python = ">=3.11,<3.12"
+readme = "README.md"
+license = { text = "MIT" }
+
+[tool.uv.workspace]
+members = [
+    "packages/beatos-core",
+    "packages/beatos-http",
+    "packages/beatos-mcp",
+]
+
+[tool.uv.sources]
+beatos-core = { workspace = true }
+beatos-http = { workspace = true }
+beatos-mcp = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

@@ -1,0 +1,22 @@
+[project]
+name = "beatos-mcp"
+version = "0.0.1"
+description = "BeatOS MCP facade — stdio MCP server exposing BeatOS to AI agents."
+requires-python = ">=3.11,<3.12"
+readme = "README.md"
+license = { text = "MIT" }
+dependencies = [
+    "beatos-core",
+    "mcp>=1.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["beatos_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
