@@ -4,15 +4,16 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from beatos_http.routes import libraries, tracks
+
 _ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # electron-vite dev renderer
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
-    # Electron production renderer uses file:// — tighten in v0.0.2.
 ]
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="BeatOS HTTP", version="0.0.1")
+    app = FastAPI(title="BeatOS HTTP", version="0.0.2")
 
     app.add_middleware(
         CORSMiddleware,
@@ -24,5 +25,8 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    app.include_router(libraries.router)
+    app.include_router(tracks.router)
 
     return app
