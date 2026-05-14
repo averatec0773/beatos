@@ -1,14 +1,19 @@
 # Changelog
 
-<!-- Format: [YYYY-MM-DD] vX.X.X — description -->
+All notable changes to BeatOS will be documented in this file.
 
-## v0.1.0 — 2026-04-16
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
-Initial release of averatec-harness-template.
+## [0.0.1] - 2026-05-14
 
-- CLAUDE.md with project placeholder, session start protocol, core rules, and harness index
-- Skills moved to .claude/skills/ for Claude Code auto-loading: setup, git, memory, changelog, skill-creator
-- Memory restructured: rules.md (agent behavior rules) and notes.md (discoveries and manual notes)
-- Conventions: git-workflow, testing
-- TODO.md template (gitignored in active projects)
-- README with Claude Code compatibility note and harness engineering references
+### Added
+
+- Initial walking skeleton: Electron + React + Vite + Tailwind + shadcn renderer; Python 3.11 sidecar with FastAPI `/api/health` route; MCP server with `ping` tool.
+- Three-package Python workspace (`beatos-core`, `beatos-http`, `beatos-mcp`) under `uv`.
+- SQLite schema migration `001_init.sql` (library / track / asset / watch_folder / settings / schema_version).
+- Design tokens (Spotify-dark palette) seeded into the renderer; Inter + JetBrains Mono fonts.
+- Repository harness (CLAUDE.md, AGENTS.md, conventions) customized from `averatec/averatec-harness-template`.
+
+### Notes
+
+This release is structural only — no end-user features yet.

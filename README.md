@@ -1,62 +1,51 @@
-# [PROJECT_NAME]
+# BeatOS
 
-<!-- Replace this line with a one-sentence description of the project. -->
+> *The operating system for beat producers.*
 
----
+BeatOS is a local-first desktop application for music producers — primarily beat-makers selling on marketplaces like BeatStars and Airbit. It catalogs a producer's beats and their assets, publishes them to multiple platforms by driving each platform's upload form in the user's own browser, and exposes the same library to AI agents via the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP).
 
-> **Note for template users:** The "About this template" section below is part of the template and should be removed once you've adapted this repo for a real project. Replace it — and this note — with content about your project.
+**Status:** `v0.0.1` — walking skeleton. Not yet useful end-to-end.
 
----
+## Architecture (one paragraph)
 
-## About this template
+Electron 33 hosts a React 19 + Vite + Tailwind + shadcn renderer. The Electron main process spawns a Python 3.11 sidecar (FastAPI + aiosqlite + mutagen + playwright) and the renderer talks to it over `http://127.0.0.1:<ephemeral port>`. A separate stdio MCP server exposes the same library to AI agents. All data stays on the user's machine — no server, no account, no telemetry by default.
 
-`averatec-harness-template` is a starting point for building a project harness: a structured repository that gives AI developers the context they need to operate consistently and safely within a codebase.
+## Develop
 
-> **Designed for [Claude Code](https://claude.ai/code).** Skills in `.claude/skills/` are auto-loaded by Claude Code and trigger based on their `description` field. `CLAUDE.md` at the project root is also read automatically at session start.
+Prerequisites:
 
-### What is a harness?
+- macOS or Windows (Linux works for dev; not a supported install target)
+- Node ≥22 LTS (`apps/desktop/.nvmrc` documents the preferred version)
+- Python 3.11.x
+- [`uv`](https://github.com/astral-sh/uv) — `brew install uv`
+- Google Chrome (used by the browser-automation feature, v0.0.4+)
 
-A harness encodes how a project works — its architecture, conventions, and operational procedures — so an AI developer doesn't have to figure it out from scratch every session. Rather than relying on improvisation, the harness makes the right action easy and the wrong action obvious to avoid.
+One-time:
 
-The core idea comes from how safety harnesses work physically: they don't restrict movement, they channel it. A well-written harness makes an AI developer more capable and less likely to cause unintended side effects.
-
-### What's in this template
-
-```
-CLAUDE.md                      ← Entry point, auto-read by Claude Code
-README.md                      ← This file
-CHANGELOG.md                   ← Project change history
-TODO.md                        ← Personal task list (gitignored in active projects)
-
-.claude/
-  skills/                      ← Auto-loaded by Claude Code
-    setup/                     ← Environment setup
-    git/                       ← Git operations
-    memory/                    ← When and how to update memory files
-    changelog/                 ← When and how to update CHANGELOG.md
-    skill-creator/             ← How to create and improve skills
-
-conventions/
-  git-workflow.md
-  testing.md
-
-memory/
-  rules.md                     ← Standing behavioral rules set by the user
-  notes.md                     ← Discoveries and manually triggered notes
+```bash
+make sync                                    # uv sync — resolve the Python workspace
+cd apps/desktop && npm install && cd -
 ```
 
-### How to use this template
+Run:
 
-1. Create a new repo from this template.
-2. Replace all `[placeholder]` fields across these files:
-   - `CLAUDE.md` — project name, description, stack, owner
-   - `.claude/skills/setup/SKILL.md` and `.claude/skills/git/SKILL.md` — actual commands and steps
-3. Update each skill with your project's real workflow.
-4. Remove this "About this template" section from the README and replace it with your project's own documentation.
-5. At the start of each AI session, point the AI developer to `CLAUDE.md`.
+```bash
+make dev           # uv sync + electron-vite dev (window opens)
+make test          # uv run pytest packages/
+```
 
-### Inspiration and references
+## Repository layout
 
-- [Harness Engineering](https://openai.com/index/harness-engineering/)
-- [Harness Design for Long-Running Apps](https://www.anthropic.com/engineering/harness-design-long-running-apps)
-- [Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
+```
+apps/desktop/         ← Electron + React renderer
+packages/
+  beatos-core/        ← pure Python business logic
+  beatos-http/        ← FastAPI facade
+  beatos-mcp/         ← stdio MCP server
+conventions/          ← architecture, design direction, testing
+.claude/, memory/, docs/  ← local-only (gitignored by repo policy)
+```
+
+## License
+
+MIT — see `LICENSE`.

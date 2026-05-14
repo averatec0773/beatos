@@ -2,12 +2,11 @@
 
 ## Project
 
-<!-- TEMPLATE STATE: fields below are placeholders. If any field still reads [like this], the harness has not been configured for a real project yet. Do not proceed with project work until these are filled in. -->
 
-**Name:** [PROJECT_NAME]
-**Description:** [What this project does]
-**Stack:** [Language / framework / infra]
-**Owner:** [Team or person]
+**Name:** BeatOS
+**Description:** Local-first desktop application for beat producers — catalog beats and their assets, publish to multiple platforms via browser automation, expose the library to AI agents via MCP.
+**Stack:** Electron 33 + React 19 + Vite + Tailwind + shadcn/ui (renderer); Python 3.11 + FastAPI + aiosqlite + mcp (sidecar); SQLite (storage); Playwright over CDP (browser automation, v0.0.4+).
+**Owner:** averatec (single-user, AI-assisted development).
 
 > All files except `README.md` are agent instructions. Treat them as authoritative.
 
@@ -18,8 +17,6 @@ At the start of every session:
 1. Run `git fetch && git status` — confirm the local repo is up to date with remote. If behind, pull before proceeding.
 2. Run `git log --oneline -10` — orient to recent history.
 3. Confirm working directory before any write or destructive operation.
-
-<!-- FILL: Add project-specific checks (e.g., verify a service is running, check env vars). -->
 
 ## Core Rules
 
@@ -44,7 +41,7 @@ At the start of every session:
 
 ### Conventions
 - [architecture](conventions/architecture.md)
-- [git-workflow](conventions/git-workflow.md)
+- [design-direction](conventions/design-direction.md)
 - [testing](conventions/testing.md)
 
 ### Memory
