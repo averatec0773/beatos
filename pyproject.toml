@@ -5,6 +5,11 @@ description = "BeatOS workspace root — three Python packages under uv."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
 license = { text = "MIT" }
+dependencies = [
+    "beatos-core",
+    "beatos-http",
+    "beatos-mcp",
+]
 
 [tool.uv.workspace]
 members = [

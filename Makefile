@@ -1,22 +1,35 @@
-# Makefile for [PROJECT_NAME]
-# Common project commands. Run `make help` to see all available targets.
+# BeatOS Makefile — top-level command runner.
 
-.PHONY: help setup test build deploy clean
+.PHONY: help dev sync build launch-chrome test test-py clean
 
 help:
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
+	@echo "BeatOS targets:"
+	@echo "  make dev            — run uv sync, then electron-vite dev"
+	@echo "  make sync           — uv sync (resolve Python workspace)"
+	@echo "  make test           — run all tests (Python now; Vitest in v0.0.2+)"
+	@echo "  make test-py        — uv run pytest packages/"
+	@echo "  make launch-chrome  — start Chrome on the BeatOS profile (CDP @ 9222) — v0.0.4+"
+	@echo "  make build          — placeholder; electron-builder wired in v0.0.6"
+	@echo "  make clean          — remove build artifacts"
 
-setup: ## Set up local development environment
-	@echo "See skills/setup/SKILL.md for setup instructions"
+dev:
+	bash scripts/dev.sh
 
-test: ## Run tests
-	@echo "Replace with your test command"
+sync:
+	uv sync
 
-build: ## Build the project
-	@echo "Replace with your build command"
+test: test-py
 
-deploy: ## Deploy (read skills/deploy/SKILL.md first)
-	@echo "See skills/deploy/SKILL.md before deploying"
+test-py:
+	uv run pytest packages/ -v
 
-clean: ## Clean build artifacts
-	@echo "Replace with your clean command"
+launch-chrome:
+	bash scripts/launch_chrome.sh
+
+build:
+	@echo "build: not implemented in v0.0.1 (electron-builder lands in v0.0.6)"
+	@exit 1
+
+clean:
+	rm -rf apps/desktop/out apps/desktop/dist apps/desktop/release
+	find . -type d -name __pycache__ -exec rm -rf {} +
