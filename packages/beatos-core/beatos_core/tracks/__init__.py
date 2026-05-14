@@ -1,1 +1,5 @@
-"""Stub for v0.0.2 work."""
+"""Track CRUD + queries."""
+
+from beatos_core.tracks import service
+
+__all__ = ["service"]

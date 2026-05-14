@@ -1,1 +1,5 @@
-"""Stub for v0.0.2 work."""
+"""Library lifecycle."""
+
+from beatos_core.library import service
+
+__all__ = ["service"]
