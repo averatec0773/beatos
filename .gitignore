@@ -1,0 +1,72 @@
+# Personal — untrack to keep local: `git rm --cached TODO.md`
+TODO.md
+
+# Local-only by explicit choice (decided 2026-05-14)
+# The repo is for "implementation" only; AI harness, project memory, and
+# all planning/thinking documents stay on the developer's local machine.
+.claude/
+memory/
+docs/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+vendor/
+
+# Python build / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+
+# Vite / electron-vite
+dist/
+out/
+.vite/
+
+# Electron / electron-builder
+release/
+build/
+*.dmg
+*.exe
+*.AppImage
+*.snap
+*.blockmap
+mac/
+mac-arm64/
+win-unpacked/
+linux-unpacked/
+
+# PyInstaller
+*.spec.bak
+
+# Runtime — keep the directory, ignore artifact contents
+apps/desktop/resources/sidecar/*
+!apps/desktop/resources/sidecar/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Note: uv.lock and package-lock.json are intentionally committed
+#   (BeatOS is an application, not a library — lockfiles must be reproducible)
