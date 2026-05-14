@@ -30,9 +30,9 @@
   --text-secondary: #b3b3b3;
   --text-tertiary: #6a6a6a;
 
-  /* Accent — TBD, placeholder Spotify green */
-  --accent: #1db954;
-  --accent-soft: rgba(29, 185, 84, 0.18);
+  /* Accent — BeatOS violet (finalized 2026-05-14) */
+  --accent: #7c5cff;
+  --accent-soft: rgba(124, 92, 255, 0.18);
 
   /* Semantic */
   --danger: #f15e6c;
