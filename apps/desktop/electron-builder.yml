@@ -1,0 +1,26 @@
+appId: studio.averatec.beatos
+productName: BeatOS
+copyright: "Copyright © 2026 averatec"
+
+directories:
+  output: release
+  buildResources: build
+
+extraResources:
+  - from: resources/sidecar
+    to: sidecar
+    filter:
+      - "**/*"
+
+mac:
+  category: public.app-category.music
+  target:
+    - dmg
+  identity: null
+
+win:
+  target:
+    - nsis
+  signtoolOptions: null
+
+publish: null

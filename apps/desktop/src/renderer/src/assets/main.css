@@ -1,0 +1,56 @@
+/* BeatOS renderer global stylesheet.
+   Tokens mirror conventions/design-direction.md §3.
+   Accent placeholder is Spotify green; revisit in v0.0.2 before first real button. */
+
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Surfaces */
+  --bg-base: #121212;
+  --bg-elevated: #181818;
+  --bg-elevated-hover: #1f1f1f;
+  --bg-sidebar: #000000;
+  --bg-row-hover: #1a1a1a;
+  --bg-row-selected: #2a2a2a;
+
+  /* Borders */
+  --border-subtle: #282828;
+
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-tertiary: #6a6a6a;
+
+  /* Accent — TBD, placeholder Spotify green */
+  --accent: #1db954;
+  --accent-soft: rgba(29, 185, 84, 0.18);
+
+  /* Semantic */
+  --danger: #f15e6c;
+  --success: #3ecf8e;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01" on, "cv11" on;
+}
+
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
