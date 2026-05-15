@@ -12,7 +12,7 @@ from typing import Optional
 import aiosqlite
 
 from beatos_core.db import resolve_db_path
-from beatos_core.sources.models import Source, SourceCreate, SourceUpdate
+from beatos_core.sources.models import Source, SourceCreate, SourceStatus, SourceUpdate
 
 _SELECT_COLS = "id, name, root_path, position, created_at"
 
@@ -113,3 +113,13 @@ async def find_source_for_path(abs_path: str) -> Optional[Source]:
         if abs_norm == root_norm or abs_norm.startswith(root_norm + "/"):
             return s
     return None
+
+
+async def get_source_status(source_id: int) -> Optional[SourceStatus]:
+    """Return the live online/offline status of a Source by checking disk."""
+    src = await get_source(source_id)
+    if src is None:
+        return None
+    p = Path(src.root_path)
+    status = "online" if p.is_dir() else "offline"
+    return SourceStatus(source_id=source_id, status=status, last_checked_at=_now())

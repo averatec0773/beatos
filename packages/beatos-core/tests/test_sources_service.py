@@ -155,3 +155,40 @@ async def test_create_source_rejects_symlink_duplicate(tmp_path):
 
     with pytest.raises(ValueError, match="already registered"):
         await create_source(SourceCreate(root_path=str(link)))
+
+
+import os
+
+
+@pytest.mark.asyncio
+async def test_get_source_status_online_when_exists(tmp_path):
+    from beatos_core.sources.service import get_source_status
+    from beatos_core.sources.models import SourceStatus
+
+    folder = tmp_path / "beats"
+    folder.mkdir()
+    s = await create_source(SourceCreate(root_path=str(folder)))
+    status = await get_source_status(s.id)
+    assert status is not None
+    assert isinstance(status, SourceStatus)
+    assert status.status == "online"
+
+
+@pytest.mark.asyncio
+async def test_get_source_status_offline_when_path_missing(tmp_path):
+    from beatos_core.sources.service import get_source_status
+
+    folder = tmp_path / "beats"
+    folder.mkdir()
+    s = await create_source(SourceCreate(root_path=str(folder)))
+    os.rmdir(folder)
+    status = await get_source_status(s.id)
+    assert status is not None
+    assert status.status == "offline"
+
+
+@pytest.mark.asyncio
+async def test_get_source_status_returns_none_for_missing_id():
+    from beatos_core.sources.service import get_source_status
+
+    assert await get_source_status(99999) is None
