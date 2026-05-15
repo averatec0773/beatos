@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 
 class Track(BaseModel):
     id: int
-    library_id: int
     title: str
     bpm: Optional[int] = None
     key_signature: Optional[str] = None
@@ -20,7 +19,6 @@ class Track(BaseModel):
     description_draft: Optional[str] = Field(default=None, description="AI-generated draft.")
     license_type: str = "lease_basic"
     price: Optional[float] = None
-    platform_data: Optional[dict] = None
     created_at: _dt.datetime
     updated_at: _dt.datetime
 
@@ -50,4 +48,3 @@ class TrackUpdate(BaseModel):
     description: Optional[str] = None
     license_type: Optional[str] = None
     price: Optional[float] = None
-    platform_data: Optional[dict] = None
