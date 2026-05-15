@@ -1,12 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Folder, Home } from "lucide-react";
 
 import { useLibraryStore } from "@/stores/library";
 
 export function WelcomeScreen(): React.JSX.Element {
   const init = useLibraryStore((s) => s.init);
+  const active = useLibraryStore((s) => s.active);
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Once an active library is set (by init or by main's auto-mount), leave the welcome screen.
+  useEffect(() => {
+    if (active) {
+      navigate("/", { replace: true });
+    }
+  }, [active, navigate]);
 
   async function onChooseFolder() {
     setError(null);
@@ -14,12 +24,13 @@ export function WelcomeScreen(): React.JSX.Element {
     try {
       const picked = await window.beatos.openFolderDialog();
       if (!picked) {
-        setBusy(false);
-        return;
+        return; // user canceled; restore buttons via finally
       }
       await init(picked);
+      // Navigation happens via the useEffect above when `active` becomes set.
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    } finally {
       setBusy(false);
     }
   }
@@ -30,6 +41,7 @@ export function WelcomeScreen(): React.JSX.Element {
     try {
       const home = await window.beatos.getHomePath();
       await init(`${home}/BeatOS`);
+      // Navigation handled by useEffect.
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

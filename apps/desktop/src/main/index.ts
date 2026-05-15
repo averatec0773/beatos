@@ -109,27 +109,56 @@ function stopSidecar(): void {
   child.once("exit", () => clearTimeout(killTimer));
 }
 
+async function pickAutoMountTarget(port: number, cfg: ReturnType<typeof readConfig>): Promise<string | null> {
+  // 1) Prefer the most recently-used library if its folder still exists.
+  if (cfg.lastLibraryPath && existsSync(cfg.lastLibraryPath)) {
+    return cfg.lastLibraryPath;
+  }
+  if (cfg.lastLibraryPath) {
+    console.warn(`[main] lastLibraryPath gone: ${cfg.lastLibraryPath}`);
+  }
+
+  // 2) Fallback: ask the sidecar for the registry of known libraries
+  //    and pick the first one whose folder still exists on disk.
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/libraries`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) return null;
+    const list = (await res.json()) as Array<{ root_path: string }>;
+    const found = list.find((l) => l.root_path && existsSync(l.root_path));
+    if (found) {
+      console.log(`[main] using first known library as fallback: ${found.root_path}`);
+      return found.root_path;
+    }
+  } catch (e) {
+    console.warn(`[main] could not list known libraries:`, e);
+  }
+
+  // 3) No candidates — renderer will land on /welcome.
+  return null;
+}
+
 async function autoMountLastLibrary(port: number): Promise<void> {
   const cfg = readConfig();
-  if (!cfg.lastLibraryPath) return;
-
-  // Stale-path check: if the folder vanished externally, don't auto-mount —
-  // renderer will see /api/libraries/active = 404 and route to /welcome.
-  if (!existsSync(cfg.lastLibraryPath)) {
-    console.warn(`[main] lastLibraryPath gone: ${cfg.lastLibraryPath} — falling back to welcome`);
-    return;
-  }
+  const target = await pickAutoMountTarget(port, cfg);
+  if (!target) return;
 
   try {
     const res = await fetch(`http://127.0.0.1:${port}/api/libraries/init`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: cfg.lastLibraryPath }),
+      body: JSON.stringify({ path: target }),
       // 5s ceiling so a hung sidecar can't block window creation forever.
       signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) {
-      console.warn(`[main] auto-mount of ${cfg.lastLibraryPath} failed: HTTP ${res.status}`);
+    if (res.ok) {
+      // Persist the mounted target so the next launch hits the fast path.
+      if (cfg.lastLibraryPath !== target) {
+        writeConfig({ lastLibraryPath: target });
+      }
+    } else {
+      console.warn(`[main] auto-mount of ${target} failed: HTTP ${res.status}`);
     }
   } catch (e) {
     console.warn(`[main] auto-mount failed:`, e);
