@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from beatos_http.routes import assets, lists, sweep, tracks
+from beatos_http.routes import assets, lists, sources, sweep, tracks
 
 _ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -18,7 +18,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_ALLOWED_ORIGINS,
-        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
     )
 
@@ -30,5 +30,6 @@ def create_app() -> FastAPI:
     app.include_router(assets.router)
     app.include_router(lists.router)
     app.include_router(sweep.router)
+    app.include_router(sources.router)
 
     return app
