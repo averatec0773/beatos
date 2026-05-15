@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
 import { join } from "node:path";
 import { existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { spawn, ChildProcess } from "node:child_process";
@@ -12,6 +12,22 @@ const SIDECAR_KILL_GRACE_MS = 3000;
 
 let sidecar: ChildProcess | null = null;
 let apiPort: number | null = null;
+
+// Register the beatos-asset:// scheme as privileged so the renderer can
+// load cover images via <img src="beatos-asset://cover/123">. file:// is
+// CSP-blocked from the renderer for security; a custom scheme is the
+// supported workaround.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "beatos-asset",
+    privileges: {
+      secure: true,
+      supportFetchAPI: true,
+      bypassCSP: false,
+      stream: true,
+    },
+  },
+]);
 
 function handshakePath(): string {
   return join(app.getPath("userData"), "runtime", "handshake.json");
@@ -97,6 +113,13 @@ async function autoMountLastLibrary(port: number): Promise<void> {
   const cfg = readConfig();
   if (!cfg.lastLibraryPath) return;
 
+  // Stale-path check: if the folder vanished externally, don't auto-mount —
+  // renderer will see /api/libraries/active = 404 and route to /welcome.
+  if (!existsSync(cfg.lastLibraryPath)) {
+    console.warn(`[main] lastLibraryPath gone: ${cfg.lastLibraryPath} — falling back to welcome`);
+    return;
+  }
+
   try {
     const res = await fetch(`http://127.0.0.1:${port}/api/libraries/init`, {
       method: "POST",
@@ -168,6 +191,44 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("config:set-last-library", (_e, path: string) => {
     writeConfig({ lastLibraryPath: path });
+  });
+
+  ipcMain.handle(
+    "dialog:open-file",
+    async (_e, filters: { name: string; extensions: string[] }[]) => {
+      const result = await dialog.showOpenDialog({
+        properties: ["openFile"],
+        filters,
+        title: "Choose File",
+      });
+      return result.canceled ? null : result.filePaths[0];
+    }
+  );
+
+  ipcMain.handle("shell:reveal-in-finder", (_e, path: string) => {
+    shell.showItemInFolder(path);
+  });
+
+  protocol.handle("beatos-asset", async (request) => {
+    // URL shape: beatos-asset://cover/<asset_id>
+    try {
+      const url = new URL(request.url);
+      if (url.host !== "cover") return new Response(null, { status: 404 });
+      const assetId = url.pathname.replace(/^\//, "");
+      if (apiPort == null) return new Response(null, { status: 503 });
+      const upstream = await fetch(`http://127.0.0.1:${apiPort}/api/assets/cover/${assetId}`);
+      if (!upstream.ok) return new Response(null, { status: upstream.status });
+      // Pass through body + content-type
+      return new Response(upstream.body, {
+        status: 200,
+        headers: {
+          "content-type": upstream.headers.get("content-type") ?? "image/jpeg",
+        },
+      });
+    } catch (e) {
+      console.warn("[protocol:beatos-asset] error", e);
+      return new Response(null, { status: 500 });
+    }
   });
 
   startSidecar();
