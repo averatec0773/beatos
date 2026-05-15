@@ -1,4 +1,9 @@
-"""List CRUD service. System lists are protected from delete."""
+"""List CRUD service.
+
+v0.0.4: lists are global (no library). All operations target the global DB
+resolved via BEATOS_DB_PATH (or ~/Music/BeatOS/global.db).
+System lists are protected from delete.
+"""
 from __future__ import annotations
 
 import datetime as _dt
@@ -6,8 +11,10 @@ from typing import Any, Optional
 
 import aiosqlite
 
-from beatos_core import state
+from beatos_core.db import resolve_db_path
 from beatos_core.models import List as ListModel
+
+_SELECT_COLS = "id, name, kind, position, created_at"
 
 
 def _now() -> str:
@@ -17,33 +24,28 @@ def _now() -> str:
 def _row_to_list(row: tuple) -> ListModel:
     return ListModel(
         id=row[0],
-        library_id=row[1],
-        name=row[2],
-        kind=row[3],
-        position=row[4],
-        created_at=_dt.datetime.fromisoformat(row[5]),
+        name=row[1],
+        kind=row[2],
+        position=row[3],
+        created_at=_dt.datetime.fromisoformat(row[4]),
     )
 
 
 async def list_lists() -> list[ListModel]:
-    active = state.require_active()
-    async with aiosqlite.connect(active.db_path) as conn:
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            "SELECT id, library_id, name, kind, position, created_at "
-            "FROM list WHERE library_id = ? ORDER BY position, id",
-            (active.library.id,),
+            f"SELECT {_SELECT_COLS} FROM list ORDER BY position ASC, id ASC"
         ) as cur:
             rows = await cur.fetchall()
     return [_row_to_list(r) for r in rows]
 
 
 async def get_list(list_id: int) -> Optional[ListModel]:
-    active = state.require_active()
-    async with aiosqlite.connect(active.db_path) as conn:
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            "SELECT id, library_id, name, kind, position, created_at "
-            "FROM list WHERE id = ? AND library_id = ?",
-            (list_id, active.library.id),
+            f"SELECT {_SELECT_COLS} FROM list WHERE id = ?", (list_id,)
         ) as cur:
             row = await cur.fetchone()
     return _row_to_list(row) if row else None
@@ -53,13 +55,12 @@ async def create_list(name: str, kind: str = "user") -> ListModel:
     if kind not in ("user", "beattape", "system"):
         raise ValueError(f"Invalid kind: {kind}")
     if kind == "system":
-        raise ValueError("System lists are seeded only at library init.")
-    active = state.require_active()
-    async with aiosqlite.connect(active.db_path) as conn:
+        raise ValueError("System lists are seeded only at schema init.")
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            "INSERT INTO list (library_id, name, kind, position, created_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (active.library.id, name, kind, 0, _now()),
+            "INSERT INTO list (name, kind, position, created_at) VALUES (?, ?, 0, ?)",
+            (name, kind, _now()),
         ) as cur:
             list_id = cur.lastrowid
         await conn.commit()
@@ -79,17 +80,16 @@ async def update_list(list_id: int, updates: dict[str, Any]) -> ListModel:
             raise ValueError(f"List {list_id} not found.")
         return existing
 
-    active = state.require_active()
     sets = []
     values: list[Any] = []
     for field, value in updates.items():
         sets.append(f"{field} = ?")
         values.append(value)
     values.append(list_id)
-    values.append(active.library.id)
-    async with aiosqlite.connect(active.db_path) as conn:
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
-            f"UPDATE list SET {', '.join(sets)} WHERE id = ? AND library_id = ?",
+            f"UPDATE list SET {', '.join(sets)} WHERE id = ?",
             tuple(values),
         )
         await conn.commit()
@@ -104,10 +104,7 @@ async def delete_list(list_id: int) -> None:
     if existing.kind == "system":
         raise ValueError("Cannot delete a system list.")
 
-    active = state.require_active()
-    async with aiosqlite.connect(active.db_path) as conn:
-        await conn.execute(
-            "DELETE FROM list WHERE id = ? AND library_id = ?",
-            (list_id, active.library.id),
-        )
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute("DELETE FROM list WHERE id = ?", (list_id,))
         await conn.commit()

@@ -13,7 +13,6 @@ class List(BaseModel):
     """A collection of tracks. 'system' is auto-created ('All Beats')."""
 
     id: int
-    library_id: int
     name: str
     kind: ListKind = "user"
     position: int = 0
