@@ -76,3 +76,30 @@ async def test_track_has_no_library_id(tmp_path: pathlib.Path) -> None:
     assert "library_id" not in cols
     assert "title" in cols
     assert "description_draft" in cols
+
+
+@pytest.mark.asyncio
+async def test_list_has_no_source_fk(tmp_path: pathlib.Path) -> None:
+    db_path = tmp_path / "test.sqlite"
+
+    await run_migrations(db_path)
+
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("PRAGMA table_info(list)") as cur:
+            cols = [r[1] for r in await cur.fetchall()]
+    assert "source_id" not in cols
+    assert "library_id" not in cols
+    assert "kind" in cols
+    assert "name" in cols
+
+
+@pytest.mark.asyncio
+async def test_track_list_join_table(tmp_path: pathlib.Path) -> None:
+    db_path = tmp_path / "test.sqlite"
+
+    await run_migrations(db_path)
+
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("PRAGMA table_info(track_list)") as cur:
+            cols = {r[1] for r in await cur.fetchall()}
+    assert {"list_id", "track_id", "position", "added_at"} <= cols
