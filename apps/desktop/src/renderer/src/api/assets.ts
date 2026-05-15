@@ -1,6 +1,6 @@
 import { apiDelete, apiGet, apiPost } from "./client";
 
-export type AssetRole = "audio" | "stems" | "cover";
+export type AssetRole = string;
 export type AssetMode = "linked" | "managed";
 
 export interface Asset {
