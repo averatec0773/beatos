@@ -60,17 +60,3 @@ class WatcherRegistry:
 
     def active_source_ids(self) -> set[int]:
         return set(self._observers.keys())
-
-
-# ---------------------------------------------------------------------------
-# v0.0.3 shims — removed in v0.0.4; kept so import errors are explicit.
-# Callers: beatos_core.library.service, beatos_http.routes.watch_folders
-# These will be cleaned up in Phase 5.
-# ---------------------------------------------------------------------------
-
-def start_watcher(*args, **kwargs):  # type: ignore[no-untyped-def]
-    raise NotImplementedError("start_watcher removed in v0.0.4 — use WatcherRegistry")
-
-
-def stop_watcher(*args, **kwargs):  # type: ignore[no-untyped-def]
-    raise NotImplementedError("stop_watcher removed in v0.0.4 — use WatcherRegistry")

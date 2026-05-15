@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from beatos_http.routes import assets, libraries, lists, sweep, tracks, watch_folders
+from beatos_http.routes import assets, lists, sweep, tracks
 
 _ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -13,7 +13,7 @@ _ALLOWED_ORIGINS = [
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="BeatOS HTTP", version="0.0.3")
+    app = FastAPI(title="BeatOS HTTP", version="0.0.4")
 
     app.add_middleware(
         CORSMiddleware,
@@ -26,11 +26,9 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.include_router(libraries.router)
     app.include_router(tracks.router)
     app.include_router(assets.router)
     app.include_router(lists.router)
     app.include_router(sweep.router)
-    app.include_router(watch_folders.router)
 
     return app

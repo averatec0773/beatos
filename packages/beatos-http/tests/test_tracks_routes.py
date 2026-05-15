@@ -1,38 +1,22 @@
 """Integration tests for /api/tracks routes."""
-import pathlib
-
 import pytest
 from fastapi.testclient import TestClient
 
-from beatos_core import state
+from beatos_core.db import run_migrations
 from beatos_http.app import create_app
 
 
 @pytest.fixture(autouse=True)
-async def _isolate(tmp_path, monkeypatch):
-    monkeypatch.setenv("BEATOS_REGISTRY_PATH", str(tmp_path / "known_libraries.json"))
-    await state.set_active(None)
+async def _fresh_db(tmp_path, monkeypatch):
+    """Each test gets its own isolated global DB with migrations applied."""
+    db_path = tmp_path / "global.db"
+    monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
+    await run_migrations(db_path)
     yield
-    await state.set_active(None)
-
-
-def _activate(client: TestClient, tmp_path: pathlib.Path) -> None:
-    root = tmp_path / "Lib"
-    root.mkdir()
-    client.post("/api/libraries/init", json={"path": str(root)})
-
-
-def test_create_track_without_active_returns_409(tmp_path):
-    client = TestClient(create_app())
-
-    res = client.post("/api/tracks", json={"title": "Untitled"})
-
-    assert res.status_code == 409
 
 
 def test_full_crud_flow(tmp_path):
     client = TestClient(create_app())
-    _activate(client, tmp_path)
 
     create_res = client.post("/api/tracks", json={"title": "Untitled"})
     assert create_res.status_code == 200
@@ -60,9 +44,16 @@ def test_full_crud_flow(tmp_path):
 
 def test_update_rejects_description_draft(tmp_path):
     client = TestClient(create_app())
-    _activate(client, tmp_path)
     track_id = client.post("/api/tracks", json={"title": "T"}).json()["id"]
 
     res = client.put(f"/api/tracks/{track_id}", json={"description_draft": "x"})
 
     assert res.status_code == 422  # TrackUpdate has extra='forbid'
+
+
+def test_get_missing_track_returns_404(tmp_path):
+    client = TestClient(create_app())
+
+    res = client.get("/api/tracks/99999")
+
+    assert res.status_code == 404
