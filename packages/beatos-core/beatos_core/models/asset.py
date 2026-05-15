@@ -6,26 +6,32 @@ from typing import Optional, Literal
 
 from pydantic import BaseModel, Field
 
-AssetRole = Literal["audio", "stems", "cover"]
+AssetRole = Literal[
+    "audio_tagged_mp3",
+    "audio_untagged_mp3",
+    "audio_tagged_wav",
+    "audio_untagged_wav",
+    "stems",
+    "cover",
+]
 AssetMode = Literal["linked", "managed"]
 
 
 class Asset(BaseModel):
-    """A file (audio / stems / cover) attached to a track via a role.
+    """A file attached to a track via a role.
 
     `linked`: BeatOS stores `abs_path` only, never copies the file.
-    `managed`: file lives inside `<library_root>/Assets/{track_id}/`.
-              v0.0.3 ships schema-only — managed moves are 501 / coming in v0.0.4.
+    `managed`: file lives inside the source folder (v0.0.4+).
     """
 
     id: int
     track_id: int
-    role: AssetRole
+    role: str
     mode: AssetMode = "linked"
     abs_path: str = Field(description="Absolute path on disk; always set.")
     rel_path: Optional[str] = Field(
         default=None,
-        description="Relative to library.root_path when mode='managed'.",
+        description="Relative path when mode='managed'.",
     )
     sha256: Optional[str] = Field(default=None, description="Content hash for recovery.")
     size_bytes: Optional[int] = None
