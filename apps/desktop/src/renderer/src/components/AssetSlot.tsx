@@ -11,6 +11,7 @@ import {
 import { useAssetStore } from "@/stores/assets";
 import { CoverImage } from "@/components/CoverImage";
 import type { Asset } from "@/api/assets";
+import { ApiError } from "@/api/client";
 
 interface Props {
   trackId: number;
@@ -57,14 +58,28 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
 
   const filterExtensions = extensions.map((e) => e.replace(/^\./, ""));
 
-  async function pickAndAttach(): Promise<void> {
+  async function pickAndAttach(replace: boolean): Promise<void> {
     const picked = await window.beatos.openFileDialog([
       { name: label, extensions: filterExtensions },
     ]);
     if (!picked) return;
     try {
-      await attach(trackId, role, picked);
+      await attach(trackId, role, picked, { replace });
     } catch (e) {
+      if (
+        e instanceof ApiError &&
+        e.status === 422 &&
+        typeof e.body === "object" && e.body !== null &&
+        (e.body as { error?: string }).error === "out_of_source"
+      ) {
+        console.warn("Attach blocked: file is outside any Source", e.body);
+        alert(
+          `This file is not inside any of your Sources.\n` +
+          `Path: ${(e.body as { path: string }).path}\n` +
+          `Copy/move/add-as-Source dialog ships in the next task.`
+        );
+        return;
+      }
       alert(`Attach failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
@@ -96,7 +111,7 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
     return (
       <button
         type="button"
-        onClick={pickAndAttach}
+        onClick={() => pickAndAttach(false)}
         className="aspect-square flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border-subtle rounded-md text-text-tertiary hover:text-text-secondary hover:border-text-tertiary transition"
       >
         {roleIcon(role)}
@@ -166,6 +181,13 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
             className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
             Reveal in Finder
+          </button>
+          <button
+            type="button"
+            onClick={() => pickAndAttach(true)}
+            className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
+          >
+            Replace file…
           </button>
           <button
             type="button"

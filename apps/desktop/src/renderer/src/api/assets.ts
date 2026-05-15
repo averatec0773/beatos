@@ -18,8 +18,10 @@ export interface Asset {
 }
 
 export const assets = {
-  attach: (trackId: number, role: AssetRole, path: string) =>
-    apiPost<Asset>(`/api/tracks/${trackId}/assets`, { role, path }),
+  attach: (trackId: number, role: AssetRole, path: string, options: { replace?: boolean } = {}) => {
+    const qs = options.replace ? "?replace=true" : "";
+    return apiPost<Asset>(`/api/tracks/${trackId}/assets${qs}`, { role, path });
+  },
   detach: (trackId: number, assetId: number) =>
     apiDelete(`/api/tracks/${trackId}/assets/${assetId}`),
   relocate: (trackId: number, assetId: number, newPath: string) =>
