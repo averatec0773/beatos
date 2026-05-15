@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Edit, Folder, Trash2, ListPlus } from "lucide-react";
 
 import {
@@ -30,8 +30,15 @@ export function TrackContextMenu({
   onDelete,
   children,
 }: Props): React.JSX.Element {
-  const userLists = useListStore((s) => s.all.filter((l) => l.kind !== "system"));
+  // IMPORTANT: select the stable `all` array, then derive userLists with useMemo.
+  // Inline `s.all.filter(...)` would return a new array each call, causing
+  // useSyncExternalStore to spin in an infinite re-render loop.
+  const allLists = useListStore((s) => s.all);
   const addToList = useListStore((s) => s.addTrack);
+  const userLists = useMemo(
+    () => allLists.filter((l) => l.kind !== "system"),
+    [allLists]
+  );
 
   function onReveal(): void {
     if (audioPath) window.beatos.revealInFinder(audioPath);
