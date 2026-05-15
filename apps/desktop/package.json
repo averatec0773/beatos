@@ -29,6 +29,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "@radix-ui/react-context-menu": "^2.2.16",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@tanstack/react-virtual": "^3.13.24",
     "class-variance-authority": "^0.7.1",

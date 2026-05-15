@@ -1,6 +1,7 @@
 import React from "react";
 
 import { useTrackStore } from "@/stores/tracks";
+import { CoverImage } from "@/components/CoverImage";
 
 export function TrackDetailPanel(): React.JSX.Element {
   const current = useTrackStore((s) => s.current);
@@ -21,12 +22,7 @@ export function TrackDetailPanel(): React.JSX.Element {
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
         Now Focused
       </div>
-      <div
-        className="w-full aspect-square rounded-lg bg-bg-elevated-hover flex items-center justify-center text-text-tertiary text-xs"
-        aria-label="Cover placeholder"
-      >
-        No cover
-      </div>
+      <CoverImage assetId={null} size={320} className="w-full" />
       <div>
         <div className="text-2xl font-bold leading-tight">{current.title}</div>
         <div className="text-text-secondary text-sm mt-1">
