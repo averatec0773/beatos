@@ -17,25 +17,6 @@ async def _table_names(db_path: pathlib.Path) -> list[str]:
 
 
 @pytest.mark.asyncio
-async def test_run_migrations_creates_all_tables(tmp_path):
-    db_path = tmp_path / "test.sqlite"
-
-    await run_migrations(db_path)
-
-    names = await _table_names(db_path)
-    assert names == [
-        "asset",
-        "library",
-        "list",
-        "schema_version",
-        "settings",
-        "track",
-        "track_list",
-        "watch_folder",
-    ]
-
-
-@pytest.mark.asyncio
 async def test_run_migrations_is_idempotent(tmp_path):
     db_path = tmp_path / "test.sqlite"
 
@@ -64,3 +45,34 @@ async def test_run_migrations_records_applied_version(tmp_path):
             rows = await cur.fetchall()
 
     assert [r[0] for r in rows] == [1, 2]
+
+
+@pytest.mark.asyncio
+async def test_schema_v004_tables_present(tmp_path: pathlib.Path) -> None:
+    db_path = tmp_path / "test.sqlite"
+
+    await run_migrations(db_path)
+
+    names = await _table_names(db_path)
+    assert "source" in names
+    assert "track" in names
+    assert "asset" in names
+    assert "list" in names
+    assert "track_list" in names
+    assert "schema_version" in names
+    assert "library" not in names
+    assert "watch_folder" not in names
+
+
+@pytest.mark.asyncio
+async def test_track_has_no_library_id(tmp_path: pathlib.Path) -> None:
+    db_path = tmp_path / "test.sqlite"
+
+    await run_migrations(db_path)
+
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("PRAGMA table_info(track)") as cur:
+            cols = [r[1] for r in await cur.fetchall()]
+    assert "library_id" not in cols
+    assert "title" in cols
+    assert "description_draft" in cols
