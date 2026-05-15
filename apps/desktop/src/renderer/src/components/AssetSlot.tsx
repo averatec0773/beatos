@@ -10,10 +10,13 @@ import {
 
 import { useAssetStore } from "@/stores/assets";
 import { useDialogStore } from "@/stores/dialogs";
+import { useSourceStore } from "@/stores/sources";
 import { CoverImage } from "@/components/CoverImage";
+import { OfflineBadge } from "./OfflineBadge";
 import type { Asset } from "@/api/assets";
 import type { Source } from "@/api/sources";
 import { ApiError } from "@/api/client";
+import { isPathOffline } from "@/lib/sourceOffline";
 
 interface Props {
   trackId: number;
@@ -44,6 +47,9 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
   // Derive the asset for this role in component body — never inside the selector
   // (see feedback_zustand_stable_selectors).
   const asset: Asset | null = assetsForTrack.find((a) => a.role === role) ?? null;
+
+  const sources = useSourceStore((s) => s.all);
+  const offline = asset ? isPathOffline(asset.abs_path, sources) : false;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -156,6 +162,7 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
       <div className="flex items-center gap-2 text-text-tertiary text-[10px] uppercase tracking-[0.05em] font-semibold">
         {roleIcon(role)}
         <span>{label}</span>
+        {offline && <OfflineBadge className="ml-1" />}
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
@@ -185,21 +192,27 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
           <button
             type="button"
             onClick={onReveal}
-            className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
+            className={`w-full text-left px-3 py-2 ${offline ? "text-text-tertiary cursor-not-allowed opacity-50" : "hover:bg-bg-row-hover"}`}
+            disabled={offline}
+            title={offline ? "Source offline" : undefined}
           >
             Reveal in Finder
           </button>
           <button
             type="button"
             onClick={() => pickAndAttach(true)}
-            className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
+            className={`w-full text-left px-3 py-2 ${offline ? "text-text-tertiary cursor-not-allowed opacity-50" : "hover:bg-bg-row-hover"}`}
+            disabled={offline}
+            title={offline ? "Source offline" : undefined}
           >
             Replace file…
           </button>
           <button
             type="button"
             onClick={onDetach}
-            className="w-full text-left px-3 py-2 text-danger hover:bg-bg-row-hover"
+            className={`w-full text-left px-3 py-2 text-danger ${offline ? "cursor-not-allowed opacity-50" : "hover:bg-bg-row-hover"}`}
+            disabled={offline}
+            title={offline ? "Source offline" : undefined}
           >
             Detach
           </button>
