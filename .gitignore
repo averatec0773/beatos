@@ -1,10 +1,10 @@
 # Personal — untrack to keep local: `git rm --cached TODO.md`
 TODO.md
 
-# Local-only by explicit choice (decided 2026-05-14)
-# The repo is for "implementation" only; AI harness, project memory, and
-# all planning/thinking documents stay on the developer's local machine.
+# AI harness, project memory, and all planning/thinking documents
+.agents/
 .claude/
+.codex/
 memory/
 docs/
 
