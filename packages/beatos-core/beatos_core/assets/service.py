@@ -14,6 +14,7 @@ from typing import Optional
 import aiosqlite
 
 from beatos_core import state
+from beatos_core.assets import ASSET_ROLES, AUDIO_ROLES
 from beatos_core.assets.hashing import sha256_file
 from beatos_core.assets import metadata as _metadata_mod
 from beatos_core.models import Asset
@@ -59,8 +60,8 @@ async def attach_asset(track_id: int, role: str, path: pathlib.Path | str) -> As
     Side effect: if role='audio' and the track has empty BPM/key, prefill
     from mutagen metadata when available.
     """
-    if role not in ("audio", "stems", "cover"):
-        raise ValueError(f"Invalid role: {role}")
+    if role not in ASSET_ROLES:
+        raise ValueError(f"Invalid role: {role}. Allowed: {sorted(ASSET_ROLES)}")
 
     active = state.require_active()
     file = pathlib.Path(path).resolve()
@@ -89,7 +90,7 @@ async def attach_asset(track_id: int, role: str, path: pathlib.Path | str) -> As
             asset_id = cur.lastrowid
         await conn.commit()
 
-        if role == "audio":
+        if role in AUDIO_ROLES:
             await _maybe_prefill_track_metadata(conn, track_id, file)
 
         async with conn.execute(
