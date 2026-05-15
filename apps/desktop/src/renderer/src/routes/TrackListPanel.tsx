@@ -10,7 +10,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { TrackDetailPanel } from "@/routes/TrackDetailPanel";
 import { TrackContextMenu } from "@/components/TrackContextMenu";
 import { VirtualTrackList } from "@/components/VirtualTrackList";
-import { SearchInput } from "@/components/SearchInput";
 
 export function TrackListPanel(): React.JSX.Element {
   const list = useTrackStore((s) => s.list);
@@ -86,7 +85,6 @@ export function TrackListPanel(): React.JSX.Element {
             {currentList ? `${currentList.name} · ` : ""}
             {visible.length} track{visible.length === 1 ? "" : "s"}
           </span>
-          <SearchInput />
         </header>
         <div className="px-4 py-2 flex items-center gap-3 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-b border-border-subtle">
           <div className="w-10" /> {/* cover thumb column */}
