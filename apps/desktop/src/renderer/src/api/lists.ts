@@ -4,7 +4,6 @@ export type ListKind = "system" | "user" | "beattape";
 
 export interface List {
   id: number;
-  library_id: number;
   name: string;
   kind: ListKind;
   position: number;
