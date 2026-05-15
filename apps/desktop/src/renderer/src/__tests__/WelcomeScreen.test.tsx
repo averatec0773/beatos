@@ -1,19 +1,29 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 import { WelcomeScreen } from "@/routes/WelcomeScreen";
-import { useLibraryStore } from "@/stores/library";
+import { useSourceStore } from "@/stores/sources";
 
 describe("WelcomeScreen", () => {
-  it("triggers folder picker and init on 'Choose Library Folder'", async () => {
-    const init = vi.fn().mockResolvedValue(undefined);
-    useLibraryStore.setState({ init });
-    (window.beatos.openFolderDialog as any) = vi.fn().mockResolvedValue("/tmp/MyLib");
+  beforeEach(() => {
+    useSourceStore.setState({ all: [], activeFilter: null });
+  });
 
-    render(<WelcomeScreen />);
-    await userEvent.click(screen.getByRole("button", { name: /Choose Library Folder/i }));
+  it("shows 'Add your first Source' framing", () => {
+    render(<MemoryRouter><WelcomeScreen /></MemoryRouter>);
+    expect(screen.getByText(/add your first source/i)).toBeInTheDocument();
+  });
 
-    expect(init).toHaveBeenCalledWith("/tmp/MyLib");
+  it("triggers folder picker and addSource on Choose folder", async () => {
+    const add = vi.fn().mockResolvedValue({ id: 1 });
+    useSourceStore.setState({ add: add as any });
+    (window.beatos.openFolderDialog as any) = vi.fn().mockResolvedValue("/tmp/MyBeats");
+
+    render(<MemoryRouter><WelcomeScreen /></MemoryRouter>);
+    await userEvent.click(screen.getByRole("button", { name: /Choose folder/i }));
+
+    expect(add).toHaveBeenCalledWith({ root_path: "/tmp/MyBeats" });
   });
 });

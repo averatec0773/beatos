@@ -12,8 +12,12 @@ const noop = (): Promise<any> => Promise.resolve(null);
   openFileDialog: noop,
   revealInFinder: noop,
   quitApp: noop,
-  getLastLibrary: () => Promise.resolve(null),
-  setLastLibrary: noop,
+  getHomePath: () => Promise.resolve("/Users/test"),
+  getDbPath: () => Promise.resolve("/tmp/test.db"),
+  setDbPath: () => Promise.resolve({ restartRequired: true }),
+  pickFolder: () => Promise.resolve(null),
+  copyIntoSource: noop,
+  moveIntoSource: noop,
 };
 
 global.fetch = vi.fn();
