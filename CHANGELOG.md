@@ -4,6 +4,63 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.3] - 2026-05-14
+
+### Added
+
+- **Asset attachment**: track editor gains a Files section with three slots
+  (Audio / Stems / Cover). Audio attaches auto-fill the track's BPM if it
+  was empty. Linked mode by default — files stay where they live on disk.
+- **Watch folder daemon**: opt-in via Settings; on adding a folder, BeatOS
+  scans it once and prompts to import existing files; afterwards, any new
+  audio file dropped into the folder becomes a draft track automatically.
+- **Missing-file recovery**: a startup sweep + periodic check marks moved
+  or deleted files as `missing`. Clicking "Find file" silently re-links
+  when the new file's sha256 matches the stored hash.
+- **User-created lists**: `list` + `track_list` tables. Sidebar surfaces
+  All Beats (system) + user Lists + Beattapes. Right-click a track to add
+  it to any user list.
+- **Welcome screen**: first launch (or stale library path) shows a proper
+  welcome with "Choose Library Folder" + "Use default (~/BeatOS)" buttons.
+  No more naked folder dialog on launch.
+- **Library quick switcher**: dropdown from the sidebar's "Library" title
+  swaps the active library without leaving Settings.
+- **List virtualization** via @tanstack/react-virtual — smooth scrolling
+  at 500+ tracks.
+- **Search**: Cmd+F focuses a search input filtering title / tags / genre
+  client-side.
+- **Right-click context menu** on track rows: Edit · Add to list ▸ ·
+  Reveal in Finder · Delete (with inline confirm).
+- **Hover-delete icon** on track rows for fast clean-up.
+- **Cover art**: right panel renders 320×320 (when set); track rows show
+  40×40 thumbnails. Loaded via a new `beatos-asset://` custom Electron
+  protocol so the renderer can display local files securely.
+- **Track creation flow**: clicking + Add Track now opens an EMPTY editor
+  at `/tracks/new`; no DB row is created until you click Save. ESC discards
+  cleanly.
+- **TopBar route title** shows the current route (All Beats / Editor /
+  Settings / list name).
+
+### Changed
+
+- Asset `mode` value: future inserts use `'linked'` instead of the old
+  inline-comment value `'referenced'`. The schema column itself didn't
+  change (no migration needed).
+- `init_library_root` expands `~` so `~/BeatOS` works as a library path.
+- The `migrations/` directory grew to two files. The runner already
+  applies new migrations on startup; nothing else changes.
+
+### Notes
+
+- **Managed Move** (the "Move into BeatOS library" action that
+  destructively moves files into the library root): the schema supports
+  it; the HTTP endpoint returns 501; the UI shows a disabled menu item.
+  Real implementation lands in v0.0.4.
+- **BeatStars / Airbit injection** is no longer planned for v1.0.
+  The v0.0.4 milestone will be reshuffled in a separate charter session.
+- Charter §15 v0.0.3 language clarified: Linked (default) vs Managed
+  (Move into BeatOS library; v0.0.4).
+
 ## [0.0.2] - 2026-05-14
 
 ### Added

@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 import { TopBar } from "@/components/TopBar";
 import { LibrarySidebar } from "@/components/LibrarySidebar";
+import { FirstScanModal } from "@/components/FirstScanModal";
 import { useLibraryStore } from "@/stores/library";
 
 export function AppShell(): React.JSX.Element {
@@ -44,6 +45,7 @@ export function AppShell(): React.JSX.Element {
           <Outlet />
         </main>
       </div>
+      <FirstScanModal />
     </div>
   );
 }

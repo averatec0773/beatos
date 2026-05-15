@@ -5,11 +5,13 @@ import { MemoryRouter } from "react-router-dom";
 
 import { SettingsPanel } from "@/routes/SettingsPanel";
 import { useLibraryStore } from "@/stores/library";
+import { useWatcherStore } from "@/stores/watcher";
 import { sampleLibrary } from "@/test/fixtures";
 
 describe("SettingsPanel", () => {
   it("lists libraries and marks the active one", () => {
     useLibraryStore.setState({ active: sampleLibrary, list: [sampleLibrary] });
+    useWatcherStore.setState({ folders: [], refresh: vi.fn().mockResolvedValue(undefined) });
     render(
       <MemoryRouter>
         <SettingsPanel />
@@ -33,6 +35,7 @@ describe("SettingsPanel", () => {
       list: [sampleLibrary, otherLib],
       switchTo,
     });
+    useWatcherStore.setState({ folders: [], refresh: vi.fn().mockResolvedValue(undefined) });
 
     render(
       <MemoryRouter>
