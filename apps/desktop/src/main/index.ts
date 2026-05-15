@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { spawn, ChildProcess } from "node:child_process";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
@@ -53,23 +53,24 @@ function repoRoot(): string {
   return join(__dirname, "..", "..", "..", "..");
 }
 
+function resolveDbPath(): string {
+  return readConfig().dbPath ?? join(app.getPath("music"), "BeatOS", "global.db");
+}
+
 function startSidecar(): void {
   ensureRuntimeDir();
   const hp = handshakePath();
   clearStaleHandshake(hp);
 
-  // All sidecar-written files live under Electron's userData dir so there's
-  // one canonical location. Python's defaults would otherwise resolve to
-  // ~/Library/Application Support/BeatOS/ (literal), splitting state across
-  // two directories (Electron's userData == ~/Library/Application Support/<package.json#name>/).
-  const registryPath = join(app.getPath("userData"), "known_libraries.json");
+  const dbPath = resolveDbPath();
+  mkdirSync(dirname(dbPath), { recursive: true });
 
   sidecar = spawn("uv", ["run", "python", "-m", "beatos_http"], {
     cwd: repoRoot(),
     env: {
       ...process.env,
       BEATOS_HANDSHAKE_PATH: hp,
-      BEATOS_REGISTRY_PATH: registryPath,
+      BEATOS_DB_PATH: dbPath,
     },
     stdio: ["ignore", "inherit", "inherit"],
   });
@@ -107,62 +108,6 @@ function stopSidecar(): void {
     if (!child.killed) child.kill("SIGKILL");
   }, SIDECAR_KILL_GRACE_MS);
   child.once("exit", () => clearTimeout(killTimer));
-}
-
-async function pickAutoMountTarget(port: number, cfg: ReturnType<typeof readConfig>): Promise<string | null> {
-  // 1) Prefer the most recently-used library if its folder still exists.
-  if (cfg.lastLibraryPath && existsSync(cfg.lastLibraryPath)) {
-    return cfg.lastLibraryPath;
-  }
-  if (cfg.lastLibraryPath) {
-    console.warn(`[main] lastLibraryPath gone: ${cfg.lastLibraryPath}`);
-  }
-
-  // 2) Fallback: ask the sidecar for the registry of known libraries
-  //    and pick the first one whose folder still exists on disk.
-  try {
-    const res = await fetch(`http://127.0.0.1:${port}/api/libraries`, {
-      signal: AbortSignal.timeout(2000),
-    });
-    if (!res.ok) return null;
-    const list = (await res.json()) as Array<{ root_path: string }>;
-    const found = list.find((l) => l.root_path && existsSync(l.root_path));
-    if (found) {
-      console.log(`[main] using first known library as fallback: ${found.root_path}`);
-      return found.root_path;
-    }
-  } catch (e) {
-    console.warn(`[main] could not list known libraries:`, e);
-  }
-
-  // 3) No candidates — renderer will land on /welcome.
-  return null;
-}
-
-async function autoMountLastLibrary(port: number): Promise<void> {
-  const cfg = readConfig();
-  const target = await pickAutoMountTarget(port, cfg);
-  if (!target) return;
-
-  try {
-    const res = await fetch(`http://127.0.0.1:${port}/api/libraries/init`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: target }),
-      // 5s ceiling so a hung sidecar can't block window creation forever.
-      signal: AbortSignal.timeout(5000),
-    });
-    if (res.ok) {
-      // Persist the mounted target so the next launch hits the fast path.
-      if (cfg.lastLibraryPath !== target) {
-        writeConfig({ lastLibraryPath: target });
-      }
-    } else {
-      console.warn(`[main] auto-mount of ${target} failed: HTTP ${res.status}`);
-    }
-  } catch (e) {
-    console.warn(`[main] auto-mount failed:`, e);
-  }
 }
 
 function createWindow(): void {
@@ -218,10 +163,19 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("path:home", () => app.getPath("home"));
 
-  ipcMain.handle("config:get-last-library", () => readConfig().lastLibraryPath);
+  ipcMain.handle("storage:get-db-path", () => resolveDbPath());
 
-  ipcMain.handle("config:set-last-library", (_e, path: string) => {
-    writeConfig({ lastLibraryPath: path });
+  ipcMain.handle("storage:set-db-path", (_e, newPath: string) => {
+    mkdirSync(dirname(newPath), { recursive: true });
+    writeConfig({ dbPath: newPath });
+    return { restartRequired: true };
+  });
+
+  ipcMain.handle("storage:pick-folder", async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ["openDirectory", "createDirectory"],
+    });
+    return result.canceled ? null : result.filePaths[0];
   });
 
   ipcMain.handle(
@@ -264,7 +218,6 @@ app.whenReady().then(async () => {
 
   startSidecar();
   apiPort = await waitForHandshake();
-  await autoMountLastLibrary(apiPort);
 
   createWindow();
 

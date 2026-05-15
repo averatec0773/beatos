@@ -3,10 +3,10 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from "
 import { join, dirname } from "node:path";
 
 export interface BeatosConfig {
-  lastLibraryPath: string | null;
+  dbPath: string | null;
 }
 
-const DEFAULT_CONFIG: BeatosConfig = { lastLibraryPath: null };
+const DEFAULT_CONFIG: BeatosConfig = { dbPath: null };
 
 function configPath(): string {
   return join(app.getPath("userData"), "config.json");
