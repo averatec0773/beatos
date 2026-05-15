@@ -142,3 +142,61 @@ def test_sweep_marks_missing(tmp_path):
 
     assert res.status_code == 200
     assert res.json()["marked_missing"] == 1
+
+
+def _make_jpg(path: pathlib.Path) -> None:
+    # Minimal valid-ish bytes — attach only needs the file to exist; mime is guessed
+    # from the extension. We do not inspect image bytes.
+    path.write_bytes(b"\xff\xd8\xff\xe0")
+
+
+def test_attach_with_replace_true_swaps(tmp_path):
+    """replace=true atomically swaps an existing role row."""
+    client = TestClient(create_app())
+    track_id = _create_track(client)
+    cover_a = tmp_path / "a.jpg"
+    cover_b = tmp_path / "b.jpg"
+    _make_jpg(cover_a)
+    _make_jpg(cover_b)
+
+    r1 = client.post(
+        f"/api/tracks/{track_id}/assets",
+        json={"role": "cover", "path": str(cover_a)},
+    )
+    assert r1.status_code == 200
+    first_id = r1.json()["id"]
+
+    r2 = client.post(
+        f"/api/tracks/{track_id}/assets?replace=true",
+        json={"role": "cover", "path": str(cover_b)},
+    )
+    assert r2.status_code == 200
+    second = r2.json()
+    assert second["abs_path"] == str(cover_b.resolve())
+    assert second["id"] != first_id  # old row was deleted, new one inserted
+
+
+def test_attach_out_of_source_returns_422(tmp_path):
+    """A file outside any Source surfaces a structured 422 payload."""
+    client = TestClient(create_app())
+    track_id = _create_track(client)
+    # tmp_path itself is registered as a Source in the autouse fixture, so
+    # we need a path outside tmp_path. Use the tmp_path parent dir — pytest's
+    # base tmp gives us a sibling we can write to.
+    outside_dir = tmp_path.parent / "out-of-source-dir"
+    outside_dir.mkdir(exist_ok=True)
+    rogue = outside_dir / "outside.wav"
+    _make_wav(rogue)
+
+    res = client.post(
+        f"/api/tracks/{track_id}/assets",
+        json={"role": "audio_tagged_mp3", "path": str(rogue)},
+    )
+
+    assert res.status_code == 422, res.text
+    body = res.json()
+    assert body["error"] == "out_of_source"
+    assert body["path"] == str(rogue.resolve())
+    assert isinstance(body["available_sources"], list)
+    assert len(body["available_sources"]) == 1
+    assert body["available_sources"][0]["root_path"] == str(tmp_path.resolve())

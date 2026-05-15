@@ -5,10 +5,15 @@ makes pydantic return 422 for any unknown field including description_draft.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Response
+import aiosqlite
+from fastapi import APIRouter, HTTPException, Query, Response
 
+from beatos_core.db import resolve_db_path
 from beatos_core.models import Track, TrackCreate, TrackUpdate
+from beatos_core.sources.service import get_source
 from beatos_core.tracks.service import (
+    _SELECT_COLS,
+    _deserialize,
     create_track,
     delete_track,
     get_track,
@@ -25,8 +30,26 @@ async def create(payload: TrackCreate) -> Track:
 
 
 @router.get("", response_model=list[Track])
-async def list_all() -> list[Track]:
-    return await list_tracks()
+async def list_all(source_id: int | None = Query(default=None)) -> list[Track]:
+    if source_id is None:
+        return await list_tracks()
+
+    src = await get_source(source_id)
+    if src is None:
+        return []
+
+    qualified_cols = ", ".join(f"t.{c.strip()}" for c in _SELECT_COLS.split(","))
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            f"SELECT DISTINCT {qualified_cols} FROM track t "
+            "JOIN asset a ON a.track_id = t.id "
+            "WHERE a.abs_path GLOB ? || '/*' OR a.abs_path = ? "
+            "ORDER BY t.updated_at DESC",
+            (src.root_path, src.root_path),
+        ) as cur:
+            rows = await cur.fetchall()
+    return [_deserialize(r) for r in rows]
 
 
 @router.get("/{track_id}", response_model=Track)

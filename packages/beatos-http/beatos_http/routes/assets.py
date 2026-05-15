@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pathlib
 
-from fastapi import APIRouter, HTTPException, Response
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from beatos_core.assets.move_managed import move_asset_to_managed
@@ -24,17 +24,35 @@ class RelocatePayload(BaseModel):
     new_path: str
 
 
-@router.post("/api/tracks/{track_id}/assets", response_model=Asset)
-async def attach(track_id: int, payload: AssetCreate) -> Asset:
+@router.post("/api/tracks/{track_id}/assets")
+async def attach(
+    track_id: int,
+    payload: AssetCreate,
+    replace: bool = Query(default=False),
+):
+    """Attach an asset. Returns 200 with Asset JSON, or 422 with a structured
+    {error, path, available_sources} payload when the file lives outside any
+    registered Source.
+    """
     try:
-        return await attach_asset(track_id, role=payload.role, path=payload.path)
+        asset = await attach_asset(
+            track_id, role=payload.role, path=payload.path, replace=replace
+        )
     except OutOfSourceError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "out_of_source",
+                "path": e.path,
+                "available_sources": [s.model_dump() for s in e.available_sources],
+            },
+        )
     except ValueError as e:
         msg = str(e)
         if "already has" in msg:
             raise HTTPException(status_code=409, detail=msg)
         raise HTTPException(status_code=400, detail=msg)
+    return JSONResponse(status_code=200, content=asset.model_dump(mode="json"))
 
 
 @router.delete("/api/tracks/{track_id}/assets/{asset_id}", status_code=204)
