@@ -7,8 +7,10 @@ applied file; create the next-numbered one instead.
 from __future__ import annotations
 
 import datetime as _dt
+import os
 import pathlib
 import re
+from pathlib import Path
 
 import aiosqlite
 
@@ -73,6 +75,15 @@ async def run_migrations(db_path: pathlib.Path | str) -> None:
                 (version, _dt.datetime.now(_dt.timezone.utc).isoformat()),
             )
             await conn.commit()
+
+
+def resolve_db_path() -> Path:
+    """Resolve the global db path. Honors BEATOS_DB_PATH env var, otherwise defaults
+    to ~/Music/BeatOS/global.db (cross-platform — pathlib.Path.home() handles it)."""
+    override = os.environ.get("BEATOS_DB_PATH")
+    if override:
+        return Path(override)
+    return Path.home() / "Music" / "BeatOS" / "global.db"
 
 
 def _strip_schema_version_ddl(sql: str) -> str:
