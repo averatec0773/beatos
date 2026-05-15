@@ -14,6 +14,10 @@ const beatos = {
   setDbPath: (p: string): Promise<{ restartRequired: boolean }> =>
     ipcRenderer.invoke("storage:set-db-path", p),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke("storage:pick-folder"),
+  copyIntoSource: (src: string, root: string, sub: string | null): Promise<string> =>
+    ipcRenderer.invoke("fs:copy-into-source", src, root, sub),
+  moveIntoSource: (src: string, root: string, sub: string | null): Promise<string> =>
+    ipcRenderer.invoke("fs:move-into-source", src, root, sub),
 };
 
 contextBridge.exposeInMainWorld("beatos", beatos);
