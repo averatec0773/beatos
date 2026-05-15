@@ -2,6 +2,8 @@ import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+import { TopBarRouteTitle } from "@/components/TopBarRouteTitle";
+
 export function TopBar(): React.JSX.Element {
   const navigate = useNavigate();
 
@@ -24,9 +26,11 @@ export function TopBar(): React.JSX.Element {
       >
         <ChevronRight size={16} />
       </button>
-      <div className="flex-1" />
+      <div className="ml-4 flex-1 min-w-0">
+        <TopBarRouteTitle />
+      </div>
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-        BeatOS v0.0.2
+        v0.0.3
       </div>
     </header>
   );

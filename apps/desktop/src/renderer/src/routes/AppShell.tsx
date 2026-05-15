@@ -1,19 +1,26 @@
 import React, { useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 import { TopBar } from "@/components/TopBar";
 import { LibrarySidebar } from "@/components/LibrarySidebar";
 import { useLibraryStore } from "@/stores/library";
-import { OnboardingDriver } from "@/routes/OnboardingDriver";
 
 export function AppShell(): React.JSX.Element {
   const active = useLibraryStore((s) => s.active);
   const loading = useLibraryStore((s) => s.loading);
   const refresh = useLibraryStore((s) => s.refresh);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!loading && !active && location.pathname !== "/welcome") {
+      navigate("/welcome", { replace: true });
+    }
+  }, [loading, active, location.pathname, navigate]);
 
   if (loading && !active) {
     return (
@@ -24,7 +31,8 @@ export function AppShell(): React.JSX.Element {
   }
 
   if (!active) {
-    return <OnboardingDriver />;
+    // Render nothing while the effect navigates us to /welcome
+    return <div className="min-h-screen bg-bg-base" />;
   }
 
   return (

@@ -9,6 +9,7 @@ const beatos = {
   revealInFinder: (path: string): Promise<void> =>
     ipcRenderer.invoke("shell:reveal-in-finder", path),
   quitApp: (): Promise<void> => ipcRenderer.invoke("app:quit"),
+  getHomePath: (): Promise<string> => ipcRenderer.invoke("path:home"),
   getLastLibrary: (): Promise<string | null> => ipcRenderer.invoke("config:get-last-library"),
   setLastLibrary: (path: string): Promise<void> =>
     ipcRenderer.invoke("config:set-last-library", path),

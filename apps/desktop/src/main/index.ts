@@ -187,6 +187,8 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("app:quit", () => app.quit());
 
+  ipcMain.handle("path:home", () => app.getPath("home"));
+
   ipcMain.handle("config:get-last-library", () => readConfig().lastLibraryPath);
 
   ipcMain.handle("config:set-last-library", (_e, path: string) => {
