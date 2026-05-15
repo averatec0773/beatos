@@ -4,6 +4,62 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.4] - 2026-05-15 — Multi-Source Unification
+
+### Architecture
+
+- Pivoted from per-library OS mount-point model to Steam-style unified catalog.
+- "Library" terminology replaced by **Source** in UI and schema.
+- Tracks are global; Source affiliation is derived at query time from
+  `asset.abs_path` prefix-matching against `source.root_path`.
+- Lists, search, filters, and metadata edits all span Sources.
+
+### Added
+
+- `/api/sources` CRUD + per-Source status endpoint.
+- `SourceStatusMonitor` polling daemon (5s default; emits transitions).
+- `WatcherRegistry` running one `watchdog` observer per online Source.
+- `OutOfSourceDialog` (Copy / Move / Add as Source) when a picked file lies
+  outside every registered Source — backend returns structured 422.
+- Four audio role variants (`audio_tagged_mp3`, `audio_untagged_mp3`,
+  `audio_tagged_wav`, `audio_untagged_wav`) plus `cover` and `stems` for
+  a 6-slot grid in the Track Editor.
+- `BEATOS_DB_PATH` env var; default `~/Music/BeatOS/global.db`.
+- Settings → Storage section (DB path override) + Sources section.
+- New IPC: `storage:get-db-path`, `storage:set-db-path`, `storage:pick-folder`,
+  `fs:copy-into-source`, `fs:move-into-source`.
+
+### Changed
+
+- `/api/tracks` accepts `?source_id=<id>` filter.
+- `/api/tracks/:id/assets` accepts `?replace=true` for atomic DELETE+INSERT
+  (fixes cover-attach 409 when slot is occupied).
+- Renderer `apiPost`/`apiGet`/etc. throw a typed `ApiError` carrying `status`
+  and `body` so callers can introspect structured server errors.
+- Sidebar: SOURCES + LISTS two-section layout; single-select Source filter
+  with synthetic "All Beats" row aggregating track counts.
+- `AppShell` uses `h-screen` so only the editor scrolls (carry-on #1).
+- TopBar: brand + route title + global Search + Settings icon — no more
+  back/forward nav, no version badge.
+- Welcome: "Add your first Source" framing.
+- Charter §6 rewritten (Sources, not Libraries); §18 rule 9 gained a v0.0.4
+  exception note (one-time schema reset).
+
+### Removed
+
+- `/api/library/*` and `/api/watch-folders/*` endpoints.
+- `beatos_core.library` Python module; `state.require_active`; library service.
+- `useLibraryStore`, `LibrarySidebar`, `LibrarySwitcher`, `useWatcherStore`,
+  `FirstScanModal`, `WatchFolderRow`, `OnboardingDriver`.
+- Dead fields: `track.library_id`, `track.platform_data`, `list.library_id`.
+
+### Migration
+
+- v0.0.3 was never publicly released — no migration path provided.
+- v0.0.4 is a one-time schema reset; append-only rule resumes after.
+- If you have a `~/Library/Application Support/BeatOS/` registry from a dev
+  build, delete it; BeatOS now reads `~/Music/BeatOS/global.db` by default.
+
 ## [0.0.3] - 2026-05-14
 
 ### Added
