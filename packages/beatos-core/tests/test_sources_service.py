@@ -129,3 +129,29 @@ async def test_find_source_for_path_no_prefix_false_match(tmp_path):
     found = await find_source_for_path(str(sibling / "track.wav"))
 
     assert found is None
+
+
+@pytest.mark.asyncio
+async def test_create_source_rejects_trailing_slash_duplicate(tmp_path):
+    """Creating with a trailing slash on an already-registered path must raise."""
+    folder = tmp_path / "Beats"
+    folder.mkdir()
+
+    await create_source(SourceCreate(root_path=str(folder)))
+
+    with pytest.raises(ValueError, match="already registered"):
+        await create_source(SourceCreate(root_path=str(folder) + "/"))
+
+
+@pytest.mark.asyncio
+async def test_create_source_rejects_symlink_duplicate(tmp_path):
+    """A symlink pointing at an already-registered directory must raise."""
+    folder = tmp_path / "Beats"
+    folder.mkdir()
+    link = tmp_path / "BeatsLink"
+    link.symlink_to(folder)
+
+    await create_source(SourceCreate(root_path=str(folder)))
+
+    with pytest.raises(ValueError, match="already registered"):
+        await create_source(SourceCreate(root_path=str(link)))

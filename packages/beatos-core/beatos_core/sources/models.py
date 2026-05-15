@@ -17,7 +17,8 @@ class SourceCreate(BaseModel):
         p = Path(self.root_path)
         if not p.is_absolute():
             raise ValueError("root_path must be absolute")
-        self.root_path = str(p).rstrip("/")
+        p = p.resolve()
+        self.root_path = str(p)
         if not self.name:
             self.name = p.name or self.root_path
         return self
