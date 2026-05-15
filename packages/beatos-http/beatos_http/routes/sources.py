@@ -6,6 +6,8 @@ for the connection.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import aiosqlite
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel
@@ -73,12 +75,22 @@ async def list_endpoint() -> list[SourceWithStatus]:
 @router.post("", response_model=Source, status_code=status.HTTP_201_CREATED)
 async def create_endpoint(payload: SourceCreate) -> Source:
     try:
-        return await create_source(payload)
+        src = await create_source(payload)
     except ValueError as e:
         msg = str(e)
         if "already registered" in msg:
             raise HTTPException(status.HTTP_409_CONFLICT, detail=msg)
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=msg)
+
+    # Lazy import to avoid circular import at module load time.
+    from beatos_http.app import get_watcher_registry_or_none
+
+    registry = get_watcher_registry_or_none()
+    if registry is not None:
+        root = Path(src.root_path)
+        if root.is_dir():
+            registry.start_for_source(src.id, root)
+    return src
 
 
 @router.patch("/{source_id}", response_model=Source)
@@ -96,6 +108,13 @@ async def update_endpoint(source_id: int, payload: SourceUpdate) -> Source:
 async def delete_endpoint(source_id: int) -> Response:
     if await get_source(source_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Source not found")
+
+    from beatos_http.app import get_watcher_registry_or_none
+
+    registry = get_watcher_registry_or_none()
+    if registry is not None:
+        registry.stop_for_source(source_id)
+
     await delete_source(source_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

@@ -1,24 +1,29 @@
-"""Integration tests for /api/sources routes."""
+"""Integration tests for /api/sources routes + lifespan wiring."""
 from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
 
 from beatos_core.db import run_migrations
-from beatos_http.app import create_app
+from beatos_http.app import create_app, get_watcher_registry
 
 
-@pytest.fixture(autouse=True)
-async def _fresh_db(tmp_path, monkeypatch):
-    """Each test gets its own isolated global DB with migrations applied."""
+@pytest.fixture
+def isolated_db(tmp_path, monkeypatch):
+    """Each test gets its own isolated global DB."""
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
-    await run_migrations(db_path)
-    yield
+    return db_path
 
 
-def test_create_and_list_source(tmp_path):
-    client = TestClient(create_app())
+@pytest.fixture
+def client(isolated_db):
+    """TestClient as a context manager triggers FastAPI lifespan."""
+    with TestClient(create_app()) as c:
+        yield c
+
+
+def test_create_and_list_source(client, tmp_path):
     folder = tmp_path / "beats"
     folder.mkdir()
 
@@ -36,8 +41,7 @@ def test_create_and_list_source(tmp_path):
     assert arr[0]["track_count"] == 0
 
 
-def test_create_source_conflict(tmp_path):
-    client = TestClient(create_app())
+def test_create_source_conflict(client, tmp_path):
     folder = tmp_path / "beats"
     folder.mkdir()
     r1 = client.post("/api/sources", json={"root_path": str(folder)})
@@ -47,8 +51,7 @@ def test_create_source_conflict(tmp_path):
     assert r2.status_code == 409
 
 
-def test_create_source_400_on_invalid_path(tmp_path):
-    client = TestClient(create_app())
+def test_create_source_400_on_invalid_path(client, tmp_path):
     missing = tmp_path / "does-not-exist"
 
     r = client.post("/api/sources", json={"root_path": str(missing)})
@@ -56,8 +59,7 @@ def test_create_source_400_on_invalid_path(tmp_path):
     assert r.status_code == 400
 
 
-def test_patch_source_rename(tmp_path):
-    client = TestClient(create_app())
+def test_patch_source_rename(client, tmp_path):
     folder = tmp_path / "beats"
     folder.mkdir()
     sid = client.post("/api/sources", json={"root_path": str(folder)}).json()["id"]
@@ -68,14 +70,12 @@ def test_patch_source_rename(tmp_path):
     assert r.json()["name"] == "Renamed"
 
 
-def test_patch_unknown_source_returns_404(tmp_path):
-    client = TestClient(create_app())
+def test_patch_unknown_source_returns_404(client):
     r = client.patch("/api/sources/99999", json={"name": "x"})
     assert r.status_code == 404
 
 
-def test_delete_source_returns_204(tmp_path):
-    client = TestClient(create_app())
+def test_delete_source_returns_204(client, tmp_path):
     folder = tmp_path / "beats"
     folder.mkdir()
     sid = client.post("/api/sources", json={"root_path": str(folder)}).json()["id"]
@@ -87,14 +87,12 @@ def test_delete_source_returns_204(tmp_path):
     assert r.json() == []
 
 
-def test_delete_unknown_source_returns_404(tmp_path):
-    client = TestClient(create_app())
+def test_delete_unknown_source_returns_404(client):
     r = client.delete("/api/sources/99999")
     assert r.status_code == 404
 
 
-def test_source_status_endpoint(tmp_path):
-    client = TestClient(create_app())
+def test_source_status_endpoint(client, tmp_path):
     folder = tmp_path / "beats"
     folder.mkdir()
     sid = client.post("/api/sources", json={"root_path": str(folder)}).json()["id"]
@@ -107,7 +105,50 @@ def test_source_status_endpoint(tmp_path):
     assert body["source_id"] == sid
 
 
-def test_source_status_unknown_returns_404(tmp_path):
-    client = TestClient(create_app())
+def test_source_status_unknown_returns_404(client):
     r = client.get("/api/sources/99999/status")
     assert r.status_code == 404
+
+
+def test_watcher_starts_when_source_added(client, tmp_path):
+    """Lifespan wiring: POST /api/sources starts a watcher for the new Source."""
+    folder = tmp_path / "beats"
+    folder.mkdir()
+
+    r = client.post("/api/sources", json={"root_path": str(folder)})
+    sid = r.json()["id"]
+
+    registry = get_watcher_registry()
+    assert sid in registry.active_source_ids()
+
+
+def test_watcher_stops_when_source_deleted(client, tmp_path):
+    folder = tmp_path / "beats"
+    folder.mkdir()
+    sid = client.post("/api/sources", json={"root_path": str(folder)}).json()["id"]
+    assert sid in get_watcher_registry().active_source_ids()
+
+    client.delete(f"/api/sources/{sid}")
+
+    assert sid not in get_watcher_registry().active_source_ids()
+
+
+def test_lifespan_seeds_watchers_for_existing_sources(isolated_db, tmp_path):
+    """Sources created before app startup get watchers in the seed loop."""
+    import asyncio
+
+    folder = tmp_path / "preexisting"
+    folder.mkdir()
+
+    async def _seed() -> int:
+        from beatos_core.sources.models import SourceCreate
+        from beatos_core.sources.service import create_source
+
+        await run_migrations(isolated_db)
+        src = await create_source(SourceCreate(root_path=str(folder)))
+        return src.id
+
+    seeded_id = asyncio.run(_seed())
+
+    with TestClient(create_app()) as _:
+        assert seeded_id in get_watcher_registry().active_source_ids()
