@@ -16,7 +16,6 @@ export default function App(): React.JSX.Element {
           <Route path="/welcome" element={<WelcomeScreen />} />
           <Route element={<AppShell />}>
             <Route path="/" element={<TrackListPanel />} />
-            <Route path="/tracks/new" element={<TrackEditor />} />
             <Route path="/tracks/:id/edit" element={<TrackEditor />} />
             <Route path="/lists/:id" element={<TrackListPanel />} />
             <Route path="/settings" element={<SettingsPanel />} />

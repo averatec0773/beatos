@@ -9,42 +9,18 @@ import type { Track, TrackUpdate } from "@/api/tracks";
 
 const LICENSE_TYPES = ["lease_basic", "lease_premium", "exclusive"] as const;
 
-function emptyTrack(): Track {
-  const now = new Date().toISOString();
-  return {
-    id: 0,
-    library_id: 0,
-    title: "",
-    bpm: null,
-    key_signature: null,
-    genre: null,
-    mood: null,
-    tags: null,
-    description: null,
-    description_draft: null,
-    license_type: "lease_basic",
-    price: null,
-    platform_data: null,
-    created_at: now,
-    updated_at: now,
-  } as Track;
-}
-
 export function TrackEditor(): React.JSX.Element {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isNew = params.id === undefined;
-  const createInStore = useTrackStore((s) => s.create);
   const updateInStore = useTrackStore((s) => s.update);
   const removeInStore = useTrackStore((s) => s.remove);
   const setAssetsForTrack = useAssetStore((s) => s.setForTrack);
 
-  const [track, setTrack] = useState<Track | null>(isNew ? emptyTrack() : null);
+  const [track, setTrack] = useState<Track | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isNew) return;
     if (!params.id) return;
     let cancelled = false;
     tracks
@@ -52,7 +28,6 @@ export function TrackEditor(): React.JSX.Element {
       .then((t) => {
         if (!cancelled) {
           setTrack(t);
-          // Reset asset cache for this track (will populate after first attach)
           setAssetsForTrack(t.id, []);
         }
       })
@@ -62,7 +37,7 @@ export function TrackEditor(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [params.id, isNew, setAssetsForTrack]);
+  }, [params.id, setAssetsForTrack]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
@@ -91,42 +66,19 @@ export function TrackEditor(): React.JSX.Element {
     setSaving(true);
     setError(null);
     try {
-      if (isNew) {
-        const created = await createInStore(track.title);
-        // POST only carries title in v0.0.2; update the rest in a follow-up PUT.
-        const payload: TrackUpdate = {
-          bpm: track.bpm,
-          key_signature: track.key_signature,
-          genre: track.genre,
-          mood: track.mood,
-          tags: track.tags,
-          description: track.description,
-          license_type: track.license_type,
-          price: track.price,
-        };
-        // Skip the PUT if no other fields were filled
-        const hasOtherFields = Object.values(payload).some(
-          (v) => v !== null && v !== undefined && (Array.isArray(v) ? v.length > 0 : true)
-        );
-        if (hasOtherFields) {
-          await updateInStore(created.id, payload);
-        }
-        navigate("/");
-      } else {
-        const payload: TrackUpdate = {
-          title: track.title,
-          bpm: track.bpm,
-          key_signature: track.key_signature,
-          genre: track.genre,
-          mood: track.mood,
-          tags: track.tags,
-          description: track.description,
-          license_type: track.license_type,
-          price: track.price,
-        };
-        await updateInStore(track.id, payload);
-        navigate("/");
-      }
+      const payload: TrackUpdate = {
+        title: track.title,
+        bpm: track.bpm,
+        key_signature: track.key_signature,
+        genre: track.genre,
+        mood: track.mood,
+        tags: track.tags,
+        description: track.description,
+        license_type: track.license_type,
+        price: track.price,
+      };
+      await updateInStore(track.id, payload);
+      navigate("/");
     } catch (err) {
       setError(String(err));
     } finally {
@@ -135,7 +87,7 @@ export function TrackEditor(): React.JSX.Element {
   }
 
   async function onDelete(): Promise<void> {
-    if (!track || isNew) return;
+    if (!track) return;
     if (!confirm(`Delete "${track.title}"? This cannot be undone.`)) return;
     await removeInStore(track.id);
     navigate("/");
@@ -148,7 +100,7 @@ export function TrackEditor(): React.JSX.Element {
   return (
     <main className="flex-1 overflow-y-auto p-8">
       <form onSubmit={onSave} className="max-w-3xl space-y-6">
-        {!isNew && <FilesSection trackId={track.id} />}
+        <FilesSection trackId={track.id} />
 
         <div>
           <label
@@ -162,7 +114,6 @@ export function TrackEditor(): React.JSX.Element {
             type="text"
             value={track.title}
             onChange={(e) => patch("title", e.target.value)}
-            placeholder={isNew ? "New track…" : ""}
             className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:border-accent"
           />
         </div>
@@ -301,7 +252,7 @@ export function TrackEditor(): React.JSX.Element {
             disabled={saving}
             className="px-4 py-2 rounded-md bg-accent text-white font-medium hover:opacity-90 disabled:opacity-50"
           >
-            {saving ? "Saving…" : isNew ? "Create" : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
           <button
             type="button"
@@ -311,15 +262,13 @@ export function TrackEditor(): React.JSX.Element {
             Cancel (ESC)
           </button>
           <div className="flex-1" />
-          {!isNew && (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="text-danger text-sm hover:underline"
-            >
-              Delete
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onDelete}
+            className="text-danger text-sm hover:underline"
+          >
+            Delete
+          </button>
         </div>
       </form>
     </main>

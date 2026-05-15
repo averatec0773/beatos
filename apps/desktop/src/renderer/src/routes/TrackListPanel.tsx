@@ -18,6 +18,7 @@ export function TrackListPanel(): React.JSX.Element {
   const refresh = useTrackStore((s) => s.refresh);
   const select = useTrackStore((s) => s.select);
   const remove = useTrackStore((s) => s.remove);
+  const createTrack = useTrackStore((s) => s.create);
   const filterFn = useSearchStore((s) => s.filter);
   const allLists = useListStore((s) => s.all);
   const params = useParams<{ id: string }>();
@@ -43,8 +44,12 @@ export function TrackListPanel(): React.JSX.Element {
     }
   }, [visible.length, current, select, visible]);
 
-  function onAddTrack(): void {
-    navigate("/tracks/new");
+  async function onAddTrack(): Promise<void> {
+    // Eager creation: POST the row immediately so the editor has a real
+    // track id to attach assets against. ESC/Cancel leaves an 'Untitled'
+    // row, which the user can clean up via right-click → Delete.
+    const t = await createTrack("Untitled");
+    navigate(`/tracks/${t.id}/edit`);
   }
 
   function coverIdFor(_track: { id: number }): number | null {
