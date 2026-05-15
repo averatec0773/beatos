@@ -12,11 +12,22 @@ from typing import Optional
 
 import aiosqlite
 
-from beatos_core.assets import ASSET_ROLES, AUDIO_ROLES
+from beatos_core.assets._constants import ASSET_ROLES, AUDIO_ROLES
 from beatos_core.assets.hashing import sha256_file
 from beatos_core.assets import metadata as _metadata_mod
 from beatos_core.db import resolve_db_path
 from beatos_core.models import Asset
+from beatos_core.sources.service import find_source_for_path, list_sources
+from beatos_core.sources.models import Source
+
+
+class OutOfSourceError(Exception):
+    """Raised when an attach is attempted for a file outside all registered Sources."""
+
+    def __init__(self, path: str, available_sources: list[Source]) -> None:
+        super().__init__(f"File not inside any Source: {path}")
+        self.path = path
+        self.available_sources = available_sources
 
 _SELECT_COLS = (
     "id, track_id, role, mode, abs_path, rel_path, sha256, "
@@ -66,6 +77,11 @@ async def attach_asset(
     file = pathlib.Path(path).resolve()
     if not file.exists():
         raise ValueError(f"File does not exist: {file}")
+
+    src_for_file = await find_source_for_path(str(file))
+    if src_for_file is None:
+        available = await list_sources()
+        raise OutOfSourceError(path=str(file), available_sources=available)
 
     sha = await sha256_file(file)
     size = file.stat().st_size

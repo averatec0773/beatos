@@ -28,10 +28,19 @@ def _make_wav(path: pathlib.Path, duration_seconds: float = 2.0) -> None:
 
 @pytest.fixture(autouse=True)
 async def _fresh_db(tmp_path, monkeypatch):
-    """Each test gets its own isolated global DB with migrations applied."""
+    """Each test gets its own isolated global DB with migrations applied.
+
+    Also registers tmp_path as a Source so pre-existing tests that use
+    tmp_path directly continue to satisfy the OutOfSourceError guard.
+    """
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
     await run_migrations(db_path)
+
+    from beatos_core.sources.service import create_source
+    from beatos_core.sources.models import SourceCreate
+    await create_source(SourceCreate(root_path=str(tmp_path)))
+
     yield
 
 
@@ -179,3 +188,45 @@ async def test_attach_with_replace_swaps(tmp_path):
     assert assets[0].id == second.id
     assert assets[0].id != first.id
     assert str(img2) in assets[0].abs_path
+
+
+@pytest.mark.asyncio
+async def test_attach_raises_when_path_outside_any_source(tmp_path):
+    import tempfile
+    from beatos_core.sources.service import create_source
+    from beatos_core.sources.models import SourceCreate
+    from beatos_core.assets.service import OutOfSourceError
+
+    src_dir = tmp_path / "in_source"
+    src_dir.mkdir()
+    await create_source(SourceCreate(root_path=str(src_dir)))
+
+    t_id = await _create_track("T")
+
+    # Create a rogue file in a completely separate temp directory (not under tmp_path)
+    with tempfile.TemporaryDirectory() as rogue_dir:
+        rogue = pathlib.Path(rogue_dir) / "outside.wav"
+        rogue.write_bytes(b"\x00" * 64)
+
+        with pytest.raises(OutOfSourceError) as exc:
+            await attach_asset(t_id, "audio_tagged_mp3", rogue)
+        assert exc.value.path == str(rogue.resolve())
+        # _fresh_db registers tmp_path; create_source added src_dir — 2 sources total
+        assert len(exc.value.available_sources) == 2
+
+
+@pytest.mark.asyncio
+async def test_attach_succeeds_when_path_inside_source(tmp_path):
+    from beatos_core.sources.service import create_source
+    from beatos_core.sources.models import SourceCreate
+
+    src_dir = tmp_path / "in_source"
+    src_dir.mkdir()
+    await create_source(SourceCreate(root_path=str(src_dir)))
+
+    t_id = await _create_track("T")
+    inside = src_dir / "track.mp3"
+    inside.write_bytes(b"\x00" * 1024)
+
+    a = await attach_asset(t_id, "audio_tagged_mp3", inside)
+    assert str(inside) in a.abs_path
