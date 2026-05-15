@@ -1,6 +1,7 @@
 """/api/watch-folders routes — register / scan / remove."""
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import pathlib
 from typing import Any, Literal, Optional
@@ -10,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
 from beatos_core import state
+from beatos_core.watcher.daemon import start_watcher, stop_watcher
 from beatos_core.watcher.scanner import scan_folder
 
 router = APIRouter(prefix="/api/watch-folders", tags=["watch_folders"])
@@ -33,6 +35,26 @@ class ScanExistingPayload(BaseModel):
 
 def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
+
+
+async def _restart_watcher_for_active() -> None:
+    """Stop and restart the watchdog observer for the active library with current
+    watch_folder paths. Called after add/remove so daemon stays in sync with DB."""
+    active = state.get_active()
+    if active is None:
+        return
+    stop_watcher(active.library.id)
+    async with aiosqlite.connect(active.db_path) as conn:
+        async with conn.execute(
+            "SELECT path FROM watch_folder WHERE library_id = ?",
+            (active.library.id,),
+        ) as cur:
+            rows = await cur.fetchall()
+    paths = [pathlib.Path(r[0]) for r in rows if pathlib.Path(r[0]).is_dir()]
+    if paths:
+        loop = asyncio.get_running_loop()
+        observer = start_watcher(active.library.id, paths, loop)
+        state.set_watcher(active.library.id, observer)
 
 
 @router.get("")
@@ -66,6 +88,8 @@ async def add_folder(payload: AddFolderPayload) -> dict[str, Any]:
         await conn.commit()
 
     found = await scan_folder(folder)
+    # Restart the watchdog so the new folder is observed for live events.
+    await _restart_watcher_for_active()
     return {"folder_id": folder_id, "path": str(folder), "found_files": found}
 
 
@@ -132,4 +156,6 @@ async def remove_folder(folder_id: int) -> Response:
             (folder_id, active.library.id),
         )
         await conn.commit()
+    # Restart the watchdog without the removed path.
+    await _restart_watcher_for_active()
     return Response(status_code=204)

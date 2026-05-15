@@ -9,6 +9,7 @@ Switching the active library = calling init_library_root with a different path.
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import json
 import os
@@ -121,7 +122,28 @@ async def init_library_root(root: pathlib.Path | str) -> Library:
         await conn.commit()
 
     _register(lib.name, lib.root_path, lib.created_at.isoformat())
+
+    # Stop any previous library's watchdog observer before switching active.
+    prev = state.get_active()
+    if prev is not None and prev.library.id != lib.id:
+        from beatos_core.watcher.daemon import stop_watcher
+        stop_watcher(prev.library.id)
+
     await state.set_active(state.ActiveLibrary(library=lib, db_path=db_path))
+
+    # Start watchdog observer for this library's configured folders (if any).
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT path FROM watch_folder WHERE library_id = ?", (lib.id,)
+        ) as cur:
+            watch_rows = await cur.fetchall()
+    paths = [pathlib.Path(r[0]) for r in watch_rows if pathlib.Path(r[0]).is_dir()]
+    if paths:
+        from beatos_core.watcher.daemon import start_watcher
+        loop = asyncio.get_running_loop()
+        observer = start_watcher(lib.id, paths, loop)
+        state.set_watcher(lib.id, observer)
+
     return lib
 
 
