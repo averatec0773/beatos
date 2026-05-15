@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { Track, TrackUpdate, tracks as api } from "@/api/tracks";
+import { useSourceStore } from "./sources";
 
 interface TrackState {
   list: Track[];
@@ -20,7 +21,10 @@ export const useTrackStore = create<TrackState>((set, get) => ({
   async refresh() {
     set({ loading: true });
     try {
-      const list = await api.list();
+      const filter = useSourceStore.getState().activeFilter;
+      const list = filter !== null
+        ? await api.list({ source_id: filter })
+        : await api.list({});
       set({ list, loading: false });
     } catch {
       set({ list: [], loading: false });
@@ -55,3 +59,9 @@ export const useTrackStore = create<TrackState>((set, get) => ({
     });
   },
 }));
+
+useSourceStore.subscribe((state, prev) => {
+  if (state.activeFilter !== prev.activeFilter) {
+    useTrackStore.getState().refresh();
+  }
+});
