@@ -111,6 +111,15 @@ async def init_library_root(root: pathlib.Path | str) -> Library:
         assert row is not None
         lib = _row_to_library(row, is_active_override=True)
 
+        # Seed or verify the system "All Beats" list (idempotent).
+        await conn.execute(
+            "INSERT INTO list (library_id, name, kind, position, created_at) "
+            "SELECT ?, 'All Beats', 'system', 0, ? "
+            "WHERE NOT EXISTS (SELECT 1 FROM list WHERE library_id = ? AND kind = 'system')",
+            (lib.id, now, lib.id),
+        )
+        await conn.commit()
+
     _register(lib.name, lib.root_path, lib.created_at.isoformat())
     await state.set_active(state.ActiveLibrary(library=lib, db_path=db_path))
     return lib

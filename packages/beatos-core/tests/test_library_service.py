@@ -1,6 +1,7 @@
 """Tests for beatos_core.library.service."""
 import pathlib
 
+import aiosqlite as _aiosqlite
 import pytest
 
 from beatos_core.library.service import (
@@ -86,3 +87,38 @@ async def test_init_switches_active_to_target(tmp_path):
 async def test_get_active_returns_none_when_no_library(tmp_path):
     active = await get_active_library()
     assert active is None
+
+
+@pytest.mark.asyncio
+async def test_init_seeds_system_list(tmp_path):
+    """A new library should have an 'All Beats' system list automatically."""
+    root = tmp_path / "MyLib"
+    root.mkdir()
+    await init_library_root(root)
+
+    db = root / ".beatos" / "db.sqlite"
+    async with _aiosqlite.connect(db) as conn:
+        async with conn.execute(
+            "SELECT name, kind FROM list WHERE library_id = 1"
+        ) as cur:
+            rows = await cur.fetchall()
+
+    assert ("All Beats", "system") in [(r[0], r[1]) for r in rows]
+
+
+@pytest.mark.asyncio
+async def test_init_existing_idempotent_for_system_list(tmp_path):
+    """Re-init must NOT duplicate the system list."""
+    root = tmp_path / "MyLib"
+    root.mkdir()
+    await init_library_root(root)
+    await state.set_active(None)
+    await init_library_root(root)
+
+    db = root / ".beatos" / "db.sqlite"
+    async with _aiosqlite.connect(db) as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) FROM list WHERE library_id = 1 AND kind = 'system'"
+        ) as cur:
+            (count,) = await cur.fetchone()
+    assert count == 1

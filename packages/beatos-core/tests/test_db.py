@@ -26,9 +26,11 @@ async def test_run_migrations_creates_all_tables(tmp_path):
     assert names == [
         "asset",
         "library",
+        "list",
         "schema_version",
         "settings",
         "track",
+        "track_list",
         "watch_folder",
     ]
 
@@ -46,7 +48,7 @@ async def test_run_migrations_is_idempotent(tmp_path):
         ) as cur:
             (count,) = await cur.fetchone()
 
-    assert count == 1
+    assert count == 2
 
 
 @pytest.mark.asyncio
@@ -61,4 +63,4 @@ async def test_run_migrations_records_applied_version(tmp_path):
         ) as cur:
             rows = await cur.fetchall()
 
-    assert [r[0] for r in rows] == [1]
+    assert [r[0] for r in rows] == [1, 2]
