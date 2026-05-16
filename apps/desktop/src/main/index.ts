@@ -77,7 +77,8 @@ function startSidecar(): void {
 
   const logsDir = resolveLogsDir();
   mkdirSync(logsDir, { recursive: true });
-  const sidecarLogPath = join(logsDir, "sidecar.jsonl");
+  const sidecarLogPath = process.env.BEATOS_LOG_PATH ?? join(logsDir, "sidecar.jsonl");
+  mkdirSync(dirname(sidecarLogPath), { recursive: true });
 
   sidecar = spawn("uv", ["run", "python", "-m", "beatos_http"], {
     cwd: repoRoot(),
