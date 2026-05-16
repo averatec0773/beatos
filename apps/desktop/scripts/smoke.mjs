@@ -409,6 +409,46 @@ try {
     }
     // === end v0.0.9.1 ===
 
+    // === v0.0.10: Key picker round-trip ===
+    // Open editor on a track (double-click already opens it in v0.0.9 smoke).
+    // Then click the key picker trigger, pick a key, close, assert trigger text.
+    {
+      try {
+        // If a track-editor view is not currently open from prior assertions, open it.
+        const editor = window.locator('[data-track-editor]');
+        if ((await editor.count()) === 0) {
+          await window.evaluate(() => { location.hash = "/"; });
+          await window.waitForSelector('[role="row"]', { timeout: 5000 });
+          const rowToOpen = window.locator('[role="row"]', { hasText: "Smoke1" }).first();
+          await rowToOpen.dblclick();
+          await window.waitForSelector('[data-track-editor]', { timeout: 3000 });
+        }
+        // Click the key picker trigger
+        const trigger = window.locator('[data-key-picker-trigger]').first();
+        await trigger.click();
+        // Wait for popover content (Flat keys default tab)
+        await window.waitForSelector('text=Flat keys', { timeout: 2000 });
+        // Switch to Sharp keys, pick F#, pick Minor, Close
+        await window.locator('text=Sharp keys').click();
+        await window.locator('button[aria-label="F#"]').click();
+        await window.locator('button[aria-label="Minor"]').click();
+        await window.locator('button:has-text("Close")').click();
+        // Assert trigger now displays "F# minor"
+        await window.waitForFunction(
+          () => {
+            const t = document.querySelector('[data-key-picker-trigger]');
+            return t && t.textContent && t.textContent.trim() === "F# minor";
+          },
+          undefined,
+          { timeout: 2000 }
+        );
+        console.log("smoke: key picker round-trip PASS");
+      } catch (e) {
+        failures.push(`UI: key picker round-trip — ${e.message}`);
+      }
+    }
+    // === end v0.0.10 ===
+
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
   }
