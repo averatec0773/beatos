@@ -9,6 +9,17 @@ import { sampleTrack } from "@/test/fixtures";
 import { tracks } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
 
+// useBlocker requires a data router which has JSDOM incompatibilities.
+// Mock it to return "unblocked" state for unit tests; blocker behavior is
+// covered by the smoke harness (Phase 4).
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router-dom")>();
+  return {
+    ...actual,
+    useBlocker: () => ({ state: "unblocked", proceed: undefined, reset: undefined }),
+  };
+});
+
 describe("TrackEditor", () => {
   it("requires a non-empty title to save", async () => {
     vi.spyOn(tracks, "get").mockResolvedValue({ ...sampleTrack, title: "" });

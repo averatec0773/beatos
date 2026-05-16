@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams, useBlocker } from "react-router-dom";
 
 import { tracks } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
@@ -9,6 +9,8 @@ import { CoverDropZone } from "@/components/CoverDropZone";
 import { FileRowsSection } from "@/components/FileRowsSection";
 import { KeyPicker } from "@/components/KeyPicker";
 import type { Track, TrackUpdate } from "@/api/tracks";
+import { shallowEqualEditable } from "@/lib/shallow-equal-track";
+import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
 
 const LICENSE_TYPES = ["lease_basic", "lease_premium", "exclusive"] as const;
 
@@ -22,6 +24,8 @@ export function TrackEditor(): React.JSX.Element {
   const [track, setTrack] = useState<Track | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialTrack, setInitialTrack] = useState<Track | null>(null);
+  const [navigateAfterSave, setNavigateAfterSave] = useState(false);
 
   useEffect(() => {
     if (!params.id) return;
@@ -58,15 +62,35 @@ export function TrackEditor(): React.JSX.Element {
     if (el) (el as HTMLInputElement).focus();
   }, []);
 
+  useEffect(() => {
+    if (!track) return;
+    if (!initialTrack || initialTrack.id !== track.id) {
+      setInitialTrack(track);
+    }
+  }, [track, initialTrack]);
+
+  const isDirty = useMemo(() => {
+    if (!track || !initialTrack) return false;
+    return !shallowEqualEditable(track, initialTrack);
+  }, [track, initialTrack]);
+
+  const blocker = useBlocker(isDirty);
+
+  useEffect(() => {
+    if (navigateAfterSave && !isDirty) {
+      setNavigateAfterSave(false);
+      navigate("/");
+    }
+  }, [navigateAfterSave, isDirty, navigate]);
+
   if (error && !track) return <main className="flex-1 p-8 text-danger">{error}</main>;
   if (!track) return <main className="flex-1 p-8 text-text-tertiary">Loading…</main>;
 
-  async function onSave(e: React.FormEvent<HTMLFormElement>): Promise<void> {
-    e.preventDefault();
-    if (!track) return;
+  async function saveTrack(): Promise<Track> {
+    if (!track) throw new Error("No track loaded");
     if (!track.title.trim()) {
       setError("Title is required.");
-      return;
+      throw new Error("Title is required.");
     }
     setSaving(true);
     setError(null);
@@ -83,12 +107,26 @@ export function TrackEditor(): React.JSX.Element {
         price: track.price,
         producer: track.producer,
       };
-      await updateInStore(track.id, payload);
-      navigate("/");
+      const saved = await updateInStore(track.id, payload);
+      setInitialTrack(saved);
+      setTrack(saved);
+      return saved;
     } catch (err) {
       setError(String(err));
+      throw err;
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onSave(e: React.FormEvent<HTMLFormElement>): Promise<void> {
+    e.preventDefault();
+    if (!track) return;
+    try {
+      await saveTrack();
+      setNavigateAfterSave(true);
+    } catch {
+      // error already set in saveTrack
     }
   }
 
@@ -104,6 +142,21 @@ export function TrackEditor(): React.JSX.Element {
   }
 
   return (
+    <>
+    <UnsavedChangesDialog
+      open={blocker.state === "blocked"}
+      trackTitle={track.title}
+      onSave={async () => {
+        try {
+          await saveTrack();
+          blocker.proceed?.();
+        } catch {
+          // error already set; keep dialog open by not proceeding
+        }
+      }}
+      onDiscard={() => blocker.proceed?.()}
+      onCancel={() => blocker.reset?.()}
+    />
     <main data-track-editor className="beatos-scroll flex-1 overflow-y-auto p-8">
       <form onSubmit={onSave} className="max-w-4xl space-y-6">
         <div className="grid grid-cols-[200px_1fr] gap-6 items-start">
@@ -292,5 +345,6 @@ export function TrackEditor(): React.JSX.Element {
         </div>
       </form>
     </main>
+    </>
   );
 }
