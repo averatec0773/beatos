@@ -10,6 +10,7 @@ import { configureLogger, logger } from "./logger";
 import { parseUvicornLevel } from "./log-parse";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
 import { assertSidecarLayout } from "./sidecar-helpers";
+import { createSplashWindow, closeSplashAndShowMain } from "./splash";
 
 const HANDSHAKE_TIMEOUT_MS = 5000;
 const HANDSHAKE_POLL_MS = 50;
@@ -17,6 +18,8 @@ const SIDECAR_KILL_GRACE_MS = 3000;
 
 let sidecar: ChildProcess | null = null;
 let apiPort: number | null = null;
+let splashWin: BrowserWindow | null = null;
+let splashShownAt = 0;
 
 // Register the beatos-asset:// scheme as privileged so the renderer can
 // load cover images via <img src="beatos-asset://cover/123">. file:// is
@@ -164,7 +167,10 @@ function createWindow(): void {
     },
   });
 
-  win.on("ready-to-show", () => win.show());
+  win.on("ready-to-show", () => {
+    closeSplashAndShowMain(splashWin, win, splashShownAt);
+    splashWin = null;
+  });
   win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url);
     return { action: "deny" };
@@ -180,6 +186,14 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   configureLogger();
   logger.info("[main] electron app ready");
+
+  splashWin = createSplashWindow(process.argv);
+  if (splashWin) {
+    splashWin.once("ready-to-show", () => {
+      splashShownAt = Date.now();
+      logger.info(`[splash] visible at ${splashShownAt}`);
+    });
+  }
 
   electronApp.setAppUserModelId("studio.averatec.beatos");
 
