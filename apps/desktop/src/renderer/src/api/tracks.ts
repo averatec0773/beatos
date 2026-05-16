@@ -23,12 +23,35 @@ export type TrackUpdate = Partial<
   Omit<Track, "id" | "description_draft" | "has_audio" | "created_at" | "updated_at">
 >;
 
+export interface ListParams {
+  source_id?: number;
+  list_id?: number;
+  sort_by?: string;
+  sort_dir?: "asc" | "desc";
+  producers?: string[];
+  genres?: string[];
+  moods?: string[];
+  keys?: string[];
+  bpm_min?: number | null;
+  bpm_max?: number | null;
+  has_audio?: boolean | null;
+}
+
 export const tracks = {
-  list: (opts: { source_id?: number; list_id?: number } = {}) => {
-    const params = new URLSearchParams();
-    if (opts.list_id != null) params.set("list_id", String(opts.list_id));
-    else if (opts.source_id != null) params.set("source_id", String(opts.source_id));
-    const qs = params.toString();
+  list: (params: ListParams = {}): Promise<Track[]> => {
+    const sp = new URLSearchParams();
+    if (params.list_id != null) sp.set("list_id", String(params.list_id));
+    if (params.source_id != null) sp.set("source_id", String(params.source_id));
+    if (params.sort_by) sp.set("sort_by", params.sort_by);
+    if (params.sort_dir) sp.set("sort_dir", params.sort_dir);
+    for (const p of params.producers ?? []) sp.append("producers", p);
+    for (const g of params.genres ?? []) sp.append("genres", g);
+    for (const m of params.moods ?? []) sp.append("moods", m);
+    for (const k of params.keys ?? []) sp.append("keys", k);
+    if (params.bpm_min != null) sp.set("bpm_min", String(params.bpm_min));
+    if (params.bpm_max != null) sp.set("bpm_max", String(params.bpm_max));
+    if (params.has_audio != null) sp.set("has_audio", String(params.has_audio));
+    const qs = sp.toString();
     return apiGet<Track[]>(`/api/tracks${qs ? `?${qs}` : ""}`);
   },
   create: (title: string) => apiPost<Track>("/api/tracks", { title }),

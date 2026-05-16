@@ -4,6 +4,7 @@ import { Track, TrackUpdate, tracks as api } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
 import { useSourceStore } from "./sources";
 import { useAssetStore } from "./assets";
+import { useTrackQueryStore } from "./track-query";
 
 interface TrackState {
   list: Track[];
@@ -29,13 +30,25 @@ export const useTrackStore = create<TrackState>((set, get) => ({
   async refresh(opts) {
     set({ loading: true });
     try {
-      let list: Track[];
-      if (opts?.list_id != null) {
-        list = await api.list({ list_id: opts.list_id });
-      } else {
-        const filter = useSourceStore.getState().activeFilter;
-        list = filter !== null ? await api.list({ source_id: filter }) : await api.list({});
-      }
+      const queryState = useTrackQueryStore.getState();
+      const { filters } = queryState;
+      const inList = opts?.list_id != null;
+      const sourceFilter = useSourceStore.getState().activeFilter;
+      const list = await api.list({
+        list_id: opts?.list_id,
+        source_id: inList ? undefined : (sourceFilter ?? undefined),
+        // Only forward sort when not in a list (lists use position order)
+        sort_by: inList ? undefined : queryState.sortBy,
+        sort_dir: inList ? undefined : queryState.sortDir,
+        // Filters apply to both library and list views
+        producers: filters.producers,
+        genres: filters.genres,
+        moods: filters.moods,
+        keys: filters.keys,
+        bpm_min: filters.bpm_min,
+        bpm_max: filters.bpm_max,
+        has_audio: filters.has_audio,
+      });
       set({ list, loading: false, selectedIds: new Set(), anchorId: null });
     } catch {
       set({ list: [], loading: false });
@@ -113,4 +126,8 @@ useSourceStore.subscribe((state, prev) => {
   if (state.activeFilter !== prev.activeFilter) {
     useTrackStore.getState().refresh();
   }
+});
+
+useTrackQueryStore.subscribe(() => {
+  useTrackStore.getState().refresh();
 });
