@@ -24,7 +24,7 @@ describe("configureLogger", () => {
     const log = (await import("electron-log/main")).default;
     configureLogger();
     expect(log.transports.file.resolvePathFn).toBeTypeOf("function");
-    const resolved = log.transports.file.resolvePathFn!();
+    const resolved = (log.transports.file.resolvePathFn as () => string)();
     expect(resolved).toMatch(/\/tmp\/fake-app\/apps\/desktop\/logs\/main\.log$/);
   });
 });
