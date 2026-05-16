@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { HashRouter, Route, Routes } from "react-router-dom";
-import { DndContext, DragOverlay } from "@dnd-kit/core";
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 
 import { AppShell } from "@/routes/AppShell";
 import { TrackListPanel } from "@/routes/TrackListPanel";
@@ -78,10 +78,20 @@ function GlobalDialogs(): React.JSX.Element | null {
 export default function App(): React.JSX.Element {
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
 
+  // Distance-based activation. Drag only fires when listeners are mounted
+  // on a dedicated drag handle (the cover thumbnail in TrackRow), so the
+  // row body's clicks / double-clicks are unaffected.
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+  );
+
   return (
     <ErrorBoundary>
       <SidecarCrashToast />
       <DndContext
+        sensors={sensors}
         onDragStart={({ active }) => {
           const id = String(active.id);
           if (!id.startsWith("track:")) return;

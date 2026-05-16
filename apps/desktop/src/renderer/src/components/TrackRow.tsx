@@ -35,9 +35,6 @@ export function TrackRow({
 
   return (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
       role="row"
       tabIndex={0}
       onMouseEnter={() => setHover(true)}
@@ -54,7 +51,15 @@ export function TrackRow({
       {highlighted && !isDragging && (
         <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-accent" />
       )}
-      <CoverImage assetId={coverAssetId} size={40} className="flex-shrink-0" />
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        className="flex-shrink-0 cursor-grab active:cursor-grabbing"
+        aria-label="Drag track"
+      >
+        <CoverImage assetId={coverAssetId} size={40} />
+      </div>
       <div className="flex-1 truncate">{track.title}</div>
       <div className="w-16 text-right font-mono text-xs">{track.bpm ?? "—"}</div>
       <div className="w-20 truncate text-xs">{track.key_signature ?? "—"}</div>
