@@ -51,13 +51,6 @@ export function TrackListPanel(): React.JSX.Element {
     navigate(`/tracks/${t.id}/edit`);
   }
 
-  function coverIdFor(_track: { id: number }): number | null {
-    // v0.0.3: we don't pre-fetch every track's assets. CoverImage will
-    // fall back to the placeholder. A track-to-cover-asset-id join lands
-    // in v0.0.4.
-    return null;
-  }
-
   if (list.length === 0) {
     let emptyEl: React.ReactNode;
     if (currentList) {
@@ -124,7 +117,7 @@ export function TrackListPanel(): React.JSX.Element {
               <div>
                 <TrackRow
                   track={t}
-                  coverAssetId={coverIdFor(t)}
+                  coverAssetId={t.cover_asset_id}
                   selected={current?.id === t.id}
                   isMultiSelected={selectedIds.has(t.id)}
                   onSelect={(e: React.MouseEvent) => {

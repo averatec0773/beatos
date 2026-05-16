@@ -12,6 +12,7 @@ export interface Track {
   description_draft: string | null;
   license_type: string;
   price: number | null;
+  cover_asset_id: number | null;
   created_at: string;
   updated_at: string;
 }

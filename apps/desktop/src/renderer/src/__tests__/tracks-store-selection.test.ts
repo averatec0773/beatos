@@ -15,6 +15,7 @@ function track(id: number, title = `T${id}`): Track {
     description_draft: null,
     license_type: "exclusive",
     price: null,
+    cover_asset_id: null,
     created_at: "2026-05-16",
     updated_at: "2026-05-16",
   };

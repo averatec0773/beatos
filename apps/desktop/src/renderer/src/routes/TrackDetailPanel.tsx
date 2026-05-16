@@ -52,7 +52,7 @@ export function TrackDetailPanel(): React.JSX.Element {
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-t border-border-subtle pt-3">
         Platform status
       </div>
-      <div className="text-text-tertiary text-sm">No platforms wired yet (v0.0.4+).</div>
+      <div className="text-text-tertiary text-sm">No platforms wired yet.</div>
     </aside>
   );
 }

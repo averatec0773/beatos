@@ -26,8 +26,6 @@ export const assets = {
     apiDelete(`/api/tracks/${trackId}/assets/${assetId}`),
   relocate: (trackId: number, assetId: number, newPath: string) =>
     apiPost<Asset>(`/api/tracks/${trackId}/assets/${assetId}/relocate`, { new_path: newPath }),
-  moveToManaged: (trackId: number, assetId: number) =>
-    apiPost<void>(`/api/tracks/${trackId}/assets/${assetId}/move`),
   listForTrack: (trackId: number) => apiGet<Asset[]>(`/api/tracks/${trackId}/assets`),
   sweep: () =>
     apiPost<{ checked: number; marked_missing: number; recovered: number }>(

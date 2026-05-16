@@ -12,6 +12,7 @@ from beatos_core.db import resolve_db_path
 from beatos_core.models import List as ListModel
 from beatos_core.models import Track
 from beatos_core.tracks.service import _SELECT_COLS as _TRACK_SELECT_COLS
+from beatos_core.tracks.service import _cover_subquery as _track_cover_subquery
 from beatos_core.tracks.service import _deserialize as _track_from_row
 from beatos_core.lists.service import _SELECT_COLS as _LIST_SELECT_COLS
 from beatos_core.lists.service import _row_to_list
@@ -48,9 +49,10 @@ async def tracks_in_list(list_id: int) -> list[Track]:
     db_path = resolve_db_path()
     # Qualify each column with the `track.` prefix so the join is unambiguous.
     cols = ", ".join(f"track.{c.strip()}" for c in _TRACK_SELECT_COLS.split(","))
+    cover_sq = _track_cover_subquery("track.")
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            f"SELECT {cols} FROM track "
+            f"SELECT {cols}, {cover_sq} FROM track "
             "INNER JOIN track_list ON track_list.track_id = track.id "
             "WHERE track_list.list_id = ? "
             "ORDER BY track_list.position, track.id",

@@ -46,6 +46,23 @@ _SELECT_COLS = (
     "created_at, updated_at"
 )
 
+# Subquery rendered after _SELECT_COLS to populate Track.cover_asset_id.
+# Uses a distinct alias `ax` for the inner asset reference so it cannot
+# shadow an outer `asset a` join (e.g. source_id filter route).
+_COVER_SUBQUERY_TEMPLATE = (
+    "(SELECT ax.id FROM asset ax "
+    "WHERE ax.track_id = {prefix}id AND ax.role = 'cover' LIMIT 1) AS cover_asset_id"
+)
+
+
+def _cover_subquery(prefix: str = "track.") -> str:
+    """Render the cover-id correlated subquery for a given outer-table alias.
+
+    `prefix` is the outer table reference including dot, e.g. "track." or "t.".
+    Defaults to "track." for unaliased queries.
+    """
+    return _COVER_SUBQUERY_TEMPLATE.format(prefix=prefix)
+
 
 def _deserialize(row: tuple) -> Track:
     tags = json.loads(row[6]) if row[6] else None
@@ -63,6 +80,7 @@ def _deserialize(row: tuple) -> Track:
         price=row[10],
         created_at=_dt.datetime.fromisoformat(row[11]),
         updated_at=_dt.datetime.fromisoformat(row[12]),
+        cover_asset_id=row[13] if len(row) > 13 else None,
     )
 
 
@@ -78,7 +96,7 @@ async def create_track(title: str) -> Track:
             track_id = cur.lastrowid
         await conn.commit()
         async with conn.execute(
-            f"SELECT {_SELECT_COLS} FROM track WHERE id = ?", (track_id,)
+            f"SELECT {_SELECT_COLS}, {_cover_subquery()} FROM track WHERE id = ?", (track_id,)
         ) as cur:
             row = await cur.fetchone()
     return _deserialize(row)
@@ -88,7 +106,7 @@ async def list_tracks() -> list[Track]:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            f"SELECT {_SELECT_COLS} FROM track ORDER BY updated_at DESC"
+            f"SELECT {_SELECT_COLS}, {_cover_subquery()} FROM track ORDER BY updated_at DESC"
         ) as cur:
             rows = await cur.fetchall()
     return [_deserialize(r) for r in rows]
@@ -98,7 +116,7 @@ async def get_track(track_id: int) -> Optional[Track]:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            f"SELECT {_SELECT_COLS} FROM track WHERE id = ?", (track_id,)
+            f"SELECT {_SELECT_COLS}, {_cover_subquery()} FROM track WHERE id = ?", (track_id,)
         ) as cur:
             row = await cur.fetchone()
     return _deserialize(row) if row else None

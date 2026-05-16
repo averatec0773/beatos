@@ -18,6 +18,7 @@ function makeTracks(n: number): Track[] {
     description_draft: null,
     license_type: "lease_basic",
     price: null,
+    cover_asset_id: null,
     platform_data: null,
     created_at: "2026-05-14T00:00:00Z",
     updated_at: "2026-05-14T00:00:00Z",

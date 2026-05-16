@@ -19,6 +19,10 @@ class Track(BaseModel):
     description_draft: Optional[str] = Field(default=None, description="AI-generated draft.")
     license_type: str = "lease_basic"
     price: Optional[float] = None
+    cover_asset_id: Optional[int] = Field(
+        default=None,
+        description="Id of the cover asset (asset.role='cover'); NULL if none.",
+    )
     created_at: _dt.datetime
     updated_at: _dt.datetime
 

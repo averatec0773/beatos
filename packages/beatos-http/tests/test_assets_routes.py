@@ -116,20 +116,6 @@ def test_relocate_sha256_mismatch_returns_409(tmp_path):
     assert res.status_code == 409
 
 
-def test_move_managed_returns_501(tmp_path):
-    client = TestClient(create_app())
-    track_id = _create_track(client)
-    audio = tmp_path / "beat.wav"
-    _make_wav(audio)
-    asset_id = client.post(
-        f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged_mp3", "path": str(audio)}
-    ).json()["id"]
-
-    res = client.post(f"/api/tracks/{track_id}/assets/{asset_id}/move")
-
-    assert res.status_code == 501
-
-
 def test_sweep_marks_missing(tmp_path):
     client = TestClient(create_app())
     track_id = _create_track(client)

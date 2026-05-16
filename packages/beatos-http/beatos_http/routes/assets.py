@@ -7,7 +7,6 @@ from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from beatos_core.assets.move_managed import move_asset_to_managed
 from beatos_core.assets.service import (
     OutOfSourceError,
     attach_asset,
@@ -76,15 +75,6 @@ async def relocate(track_id: int, asset_id: int, payload: RelocatePayload) -> As
         if "sha256" in msg.lower():
             raise HTTPException(status_code=409, detail=msg)
         raise HTTPException(status_code=400, detail=msg)
-
-
-@router.post("/api/tracks/{track_id}/assets/{asset_id}/move")
-async def move_into_managed(track_id: int, asset_id: int) -> Response:  # noqa: ARG001
-    try:
-        await move_asset_to_managed(asset_id)
-    except NotImplementedError as e:
-        raise HTTPException(status_code=501, detail=str(e))
-    return Response(status_code=200)
 
 
 @router.get("/api/assets/cover/{asset_id}")

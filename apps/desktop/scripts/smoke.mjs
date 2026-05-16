@@ -15,9 +15,19 @@
  * Exit codes: 0 PASS, 1 FAIL, 2 prereq missing
  */
 import { _electron as electron } from "playwright";
-import { existsSync, readFileSync, mkdtempSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+
+// Minimal valid 1x1 PNG (67 bytes).
+const TINY_PNG = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+  0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+  0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+]);
 
 const repoRoot = resolve(import.meta.dirname, "..");
 const mainEntry = join(repoRoot, "out/main/index.js");
@@ -58,17 +68,22 @@ try {
 
   if (existsSync(logPath)) {
     const lines = readFileSync(logPath, "utf-8").trim().split("\n").filter(Boolean);
+    let malformed = 0;
     const errors = lines
       .map((l) => {
         try {
           return JSON.parse(l);
         } catch {
+          malformed += 1;
           return null;
         }
       })
       .filter((e) => e && e.level === "error");
     if (errors.length > 0) {
       failures.push(`sidecar emitted ${errors.length} error(s); first: ${JSON.stringify(errors[0])}`);
+    }
+    if (malformed > 0) {
+      failures.push(`sidecar log had ${malformed} malformed JSON line(s)`);
     }
   } else {
     failures.push(`sidecar log file never appeared at ${logPath}`);
@@ -84,41 +99,62 @@ try {
     failures.push(`#root content suspiciously small (${rootSize} chars) — React likely didn't mount`);
   }
 
-  // === v0.0.6 drag-drop / List membership API assertion ===
-  // We assert membership end-to-end via API calls (deterministic), with a
-  // single dragTo() check to verify the dnd-kit wiring actually works.
+  // === drag-drop / List membership / cover-asset assertions ===
+  // Membership asserted end-to-end via API (deterministic). Cover asserted
+  // both via API (track.cover_asset_id non-null) and DOM (img renders).
   try {
     const userDataApp = await app.evaluate(({ app }) => app.getPath("userData"));
     const handshakePath = join(userDataApp, "runtime", "handshake.json");
     if (!existsSync(handshakePath)) {
       throw new Error(`handshake missing at ${handshakePath}`);
     }
-    const port = JSON.parse(readFileSync(handshakePath, "utf-8")).port;
-    const baseUrl = `http://127.0.0.1:${port}`;
+    const handshake = JSON.parse(readFileSync(handshakePath, "utf-8"));
+    if (typeof handshake.port !== "number") {
+      throw new Error(`handshake.port not a number: ${JSON.stringify(handshake)}`);
+    }
+    const baseUrl = `http://127.0.0.1:${handshake.port}`;
 
-    // Seed: a Source rooted at userData (writable, real dir), 2 tracks, 1 List.
-    const srcRes = await fetch(`${baseUrl}/api/sources`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ root_path: userData }),
-    });
-    if (!srcRes.ok) throw new Error(`POST /api/sources -> ${srcRes.status}`);
+    async function postJson(path, body) {
+      const res = await fetch(`${baseUrl}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(`POST ${path} -> ${res.status} ${detail.slice(0, 200)}`);
+      }
+      return res.status === 204 ? null : await res.json();
+    }
 
-    await fetch(`${baseUrl}/api/tracks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Smoke1" }),
+    // Seed: Source rooted at userData (writable, real dir), 2 tracks, 1 cover image, 1 List.
+    await postJson("/api/sources", { root_path: userData });
+
+    const t1 = await postJson("/api/tracks", { title: "Smoke1" });
+    const t2 = await postJson("/api/tracks", { title: "Smoke2" });
+    const list = await postJson("/api/lists", { name: "SmokeList" });
+
+    // Cover asset for Smoke1: write a tiny PNG into the Source root and attach.
+    const coverPath = join(userData, "smoke1-cover.png");
+    writeFileSync(coverPath, TINY_PNG);
+    const coverAsset = await postJson(`/api/tracks/${t1.id}/assets`, {
+      role: "cover",
+      path: coverPath,
     });
-    const t2 = await (await fetch(`${baseUrl}/api/tracks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Smoke2" }),
-    })).json();
-    const list = await (await fetch(`${baseUrl}/api/lists`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "SmokeList" }),
-    })).json();
+    if (typeof coverAsset.id !== "number") {
+      throw new Error(`attach cover returned no id: ${JSON.stringify(coverAsset)}`);
+    }
+
+    // API-level: confirm cover_asset_id flows into Track responses.
+    const tracksAfterSeed = await (await fetch(`${baseUrl}/api/tracks`)).json();
+    const t1FromApi = tracksAfterSeed.find((t) => t.id === t1.id);
+    if (!t1FromApi || t1FromApi.cover_asset_id !== coverAsset.id) {
+      failures.push(
+        `API: Smoke1.cover_asset_id expected ${coverAsset.id}, got ${t1FromApi?.cover_asset_id}`
+      );
+    } else {
+      console.log("smoke: track.cover_asset_id wiring PASS");
+    }
 
     // Force renderer to pick up the new state. After seeding, we're at #/welcome
     // (zero sources at boot). Navigate to "/" so AppShell mounts and refreshes.
@@ -128,14 +164,41 @@ try {
     await window.waitForTimeout(2500);
 
 
-    // UI drag: one track → SmokeList via dnd-kit
-    // Drag handle is the cover thumbnail (aria-label="Drag track"), NOT the
-    // row body — row body needs clean clicks for select/double-click.
+    // UI assertion: cover img actually renders inside the row.
     const row1 = window.locator('[role="row"]', { hasText: "Smoke1" }).first();
+    const coverImg = row1.locator('img[src^="beatos-asset://cover/"]');
+    if ((await coverImg.count()) === 0) {
+      failures.push("UI: Smoke1 row has no <img src=beatos-asset://cover/...>");
+    } else {
+      console.log("smoke: cover img render PASS");
+    }
+
+    // Structural: drag handle should wrap just the cover, NOT the row body.
+    // Bug class: if `{...listeners}` slips back onto the row, row clicks
+    // (select, double-click) break. Detected by comparing widths: handle
+    // should be ~40px (cover thumbnail), row should be much wider.
     const row1Handle = row1.locator('[aria-label="Drag track"]');
-    const listTarget = window.locator("text=SmokeList").first();
     if ((await row1Handle.count()) === 0) {
       failures.push("UI: drag handle for 'Smoke1' not found after seeding");
+    } else {
+      const handleBox = await row1Handle.boundingBox();
+      const rowBox = await row1.boundingBox();
+      if (handleBox && rowBox && handleBox.width > rowBox.width * 0.5) {
+        failures.push(
+          `UI: drag handle width (${handleBox.width}) >50% of row (${rowBox.width}) — ` +
+          `listeners may have slipped onto row body, breaking row clicks`
+        );
+      } else {
+        console.log("smoke: drag handle scoping PASS");
+      }
+    }
+
+    // UI drag: one track → SmokeList via dnd-kit.
+    const listTarget = window.locator("text=SmokeList").first();
+    if ((await row1Handle.count()) === 0) {
+      // already reported above
+    } else if (!(await row1Handle.isVisible())) {
+      failures.push("UI: drag handle exists in DOM but not visible (hidden/zero-size)");
     } else if ((await listTarget.count()) === 0) {
       failures.push("UI: sidebar 'SmokeList' not found after seeding");
     } else {

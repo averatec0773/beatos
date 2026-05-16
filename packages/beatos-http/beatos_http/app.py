@@ -55,10 +55,7 @@ def get_watcher_registry_or_none() -> Optional[WatcherRegistry]:
 
 
 def _on_new_file_in_source(path: Path, source_id: int) -> None:
-    """Called by watchdog on file create events.
-
-    v0.0.4 placeholder: subsequent phases will enqueue draft track creation.
-    """
+    """Called by watchdog on file create events. Currently diagnostic-only."""
     log.debug("watcher: new file in source %d: %s", source_id, path)
 
 
