@@ -116,6 +116,53 @@ def test_get_tracks_unknown_source_returns_empty(tmp_path):
     assert r.json() == []
 
 
+def test_source_filter_has_audio_reflects_audio_assets(tmp_path):
+    """?source_id=<n> must return correct has_audio per track (Phase 1 follow-up)."""
+    import asyncio
+    from beatos_core.assets.service import attach_asset
+    from beatos_core.sources.service import create_source
+    from beatos_core.sources.models import SourceCreate
+
+    client = TestClient(create_app())
+
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+
+    # Create source via service so root_path is registered.
+    source = asyncio.get_event_loop().run_until_complete(
+        create_source(SourceCreate(root_path=str(src_dir)))
+    )
+
+    # Create two tracks.
+    t_with_audio = client.post("/api/tracks", json={"title": "HasAudio"}).json()
+    t_no_audio = client.post("/api/tracks", json={"title": "NoAudio"}).json()
+
+    # Attach a non-audio asset to both so they both appear under the source filter.
+    cover1 = src_dir / "cover1.jpg"
+    cover2 = src_dir / "cover2.jpg"
+    cover1.write_bytes(b"\x00" * 64)
+    cover2.write_bytes(b"\x00" * 64)
+    asyncio.get_event_loop().run_until_complete(
+        attach_asset(t_with_audio["id"], role="cover", path=cover1)
+    )
+    asyncio.get_event_loop().run_until_complete(
+        attach_asset(t_no_audio["id"], role="cover", path=cover2)
+    )
+
+    # Attach an audio asset only to t_with_audio.
+    audio_file = src_dir / "beat.wav"
+    audio_file.write_bytes(b"\x00" * 64)
+    asyncio.get_event_loop().run_until_complete(
+        attach_asset(t_with_audio["id"], role="audio_tagged_wav", path=audio_file)
+    )
+
+    r = client.get(f"/api/tracks?source_id={source.id}")
+    assert r.status_code == 200
+    tracks = {t["title"]: t for t in r.json()}
+    assert tracks["HasAudio"]["has_audio"] is True
+    assert tracks["NoAudio"]["has_audio"] is False
+
+
 def test_get_tracks_filtered_by_list(tmp_path):
     """?list_id returns only tracks in that list, spanning Sources."""
     client = TestClient(create_app())

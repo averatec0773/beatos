@@ -15,6 +15,7 @@ from beatos_core.lists.membership import tracks_in_list
 from beatos_core.tracks.service import (
     _SELECT_COLS,
     _cover_subquery,
+    _has_audio_subquery,
     _deserialize,
     create_track,
     delete_track,
@@ -48,10 +49,11 @@ async def list_all(
 
     qualified_cols = ", ".join(f"t.{c.strip()}" for c in _SELECT_COLS.split(","))
     cover_sq = _cover_subquery("t.")
+    has_audio_sq = _has_audio_subquery("t.")
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            f"SELECT DISTINCT {qualified_cols}, {cover_sq} FROM track t "
+            f"SELECT DISTINCT {qualified_cols}, {cover_sq}, {has_audio_sq} FROM track t "
             "JOIN asset a ON a.track_id = t.id "
             "WHERE a.abs_path GLOB ? || '/*' OR a.abs_path = ? "
             "ORDER BY t.updated_at DESC",
