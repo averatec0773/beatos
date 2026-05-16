@@ -1,0 +1,17 @@
+export const IPC_CHANNELS = {
+  GET_API_BASE: "get-api-base",
+  DIALOG_OPEN_FOLDER: "dialog:open-folder",
+  DIALOG_OPEN_FILE: "dialog:open-file",
+  SHELL_REVEAL_IN_FINDER: "shell:reveal-in-finder",
+  APP_QUIT: "app:quit",
+  PATH_HOME: "path:home",
+  PATH_ENSURE_DIR: "path:ensure-dir",
+  STORAGE_GET_DB_PATH: "storage:get-db-path",
+  STORAGE_SET_DB_PATH: "storage:set-db-path",
+  STORAGE_PICK_FOLDER: "storage:pick-folder",
+  FS_COPY_INTO_SOURCE: "fs:copy-into-source",
+  FS_MOVE_INTO_SOURCE: "fs:move-into-source",
+  SIDECAR_CRASHED: "sidecar-crashed",
+} as const;
+
+export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

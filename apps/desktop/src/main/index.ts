@@ -7,6 +7,7 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 
 import { readConfig, writeConfig } from "./config";
 import { configureLogger, logger } from "./logger";
+import { IPC_CHANNELS } from "../shared/ipc-channels";
 
 const HANDSHAKE_TIMEOUT_MS = 5000;
 const HANDSHAKE_POLL_MS = 50;
@@ -91,7 +92,7 @@ function startSidecar(): void {
     apiPort = null;
     sidecar = null;
     for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send("sidecar-crashed", { code, signal });
+      win.webContents.send(IPC_CHANNELS.SIDECAR_CRASHED, { code, signal });
     }
   });
 }
@@ -164,12 +165,12 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  ipcMain.handle("get-api-base", () => {
+  ipcMain.handle(IPC_CHANNELS.GET_API_BASE, () => {
     if (apiPort == null) throw new Error("API not ready");
     return `http://127.0.0.1:${apiPort}`;
   });
 
-  ipcMain.handle("dialog:open-folder", async () => {
+  ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_FOLDER, async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openDirectory", "createDirectory"],
       title: "Choose Library Folder",
@@ -177,24 +178,24 @@ app.whenReady().then(async () => {
     return result.canceled ? null : result.filePaths[0];
   });
 
-  ipcMain.handle("app:quit", () => app.quit());
+  ipcMain.handle(IPC_CHANNELS.APP_QUIT, () => app.quit());
 
-  ipcMain.handle("path:home", () => app.getPath("home"));
+  ipcMain.handle(IPC_CHANNELS.PATH_HOME, () => app.getPath("home"));
 
-  ipcMain.handle("path:ensure-dir", (_e, dirPath: string) => {
+  ipcMain.handle(IPC_CHANNELS.PATH_ENSURE_DIR, (_e, dirPath: string) => {
     mkdirSync(dirPath, { recursive: true });
     return dirPath;
   });
 
-  ipcMain.handle("storage:get-db-path", () => resolveDbPath());
+  ipcMain.handle(IPC_CHANNELS.STORAGE_GET_DB_PATH, () => resolveDbPath());
 
-  ipcMain.handle("storage:set-db-path", (_e, newPath: string) => {
+  ipcMain.handle(IPC_CHANNELS.STORAGE_SET_DB_PATH, (_e, newPath: string) => {
     mkdirSync(dirname(newPath), { recursive: true });
     writeConfig({ dbPath: newPath });
     return { restartRequired: true };
   });
 
-  ipcMain.handle("storage:pick-folder", async () => {
+  ipcMain.handle(IPC_CHANNELS.STORAGE_PICK_FOLDER, async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openDirectory", "createDirectory"],
     });
@@ -202,7 +203,7 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle(
-    "fs:copy-into-source",
+    IPC_CHANNELS.FS_COPY_INTO_SOURCE,
     async (_e, src: string, destSourceRoot: string, subfolder: string | null) => {
       const targetDir = subfolder ? join(destSourceRoot, subfolder) : destSourceRoot;
       mkdirSync(targetDir, { recursive: true });
@@ -213,7 +214,7 @@ app.whenReady().then(async () => {
   );
 
   ipcMain.handle(
-    "fs:move-into-source",
+    IPC_CHANNELS.FS_MOVE_INTO_SOURCE,
     async (_e, src: string, destSourceRoot: string, subfolder: string | null) => {
       const targetDir = subfolder ? join(destSourceRoot, subfolder) : destSourceRoot;
       mkdirSync(targetDir, { recursive: true });
@@ -224,7 +225,7 @@ app.whenReady().then(async () => {
   );
 
   ipcMain.handle(
-    "dialog:open-file",
+    IPC_CHANNELS.DIALOG_OPEN_FILE,
     async (_e, filters: { name: string; extensions: string[] }[]) => {
       const result = await dialog.showOpenDialog({
         properties: ["openFile"],
@@ -235,7 +236,7 @@ app.whenReady().then(async () => {
     }
   );
 
-  ipcMain.handle("shell:reveal-in-finder", (_e, path: string) => {
+  ipcMain.handle(IPC_CHANNELS.SHELL_REVEAL_IN_FINDER, (_e, path: string) => {
     shell.showItemInFolder(path);
   });
 
