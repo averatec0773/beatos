@@ -312,11 +312,24 @@ try {
 
     // Double-click on a track row should open the editor route.
     // Navigate back to "/" first because the empty-list section left us at
-    // a List view that may not show all tracks.
+    // a List view that may not show all tracks. Reload so the track query
+    // runs fresh (hash-only nav doesn't always trigger a data re-fetch).
     await window.evaluate(() => { location.hash = "/"; });
-    await window.waitForSelector('[role="row"]', { timeout: 5000 });
-    const firstRow = window.locator('[role="row"]', { hasText: "Smoke1" }).first();
-    await firstRow.dblclick();
+    await window.evaluate(() => location.reload());
+    await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
+    await window.waitForSelector('[data-track-id]', { timeout: 5000 });
+    // Extra stabilisation: wait for at least 2 rows to be visible (header + track),
+    // then give React one more tick to finish rendering before we double-click.
+    await window.waitForFunction(
+      () => document.querySelectorAll('[data-track-id]').length >= 1,
+      undefined,
+      { timeout: 4000 }
+    );
+    await window.waitForTimeout(400);
+    const firstRow = window.locator('[data-track-id]').first();
+    // Double-click on the title text area to avoid the disabled play button.
+    const titleSpan = firstRow.locator('[data-track-title]').first();
+    await titleSpan.dblclick();
     try {
       await window.waitForSelector('[data-track-editor]', { timeout: 3000 });
       console.log("smoke: double-click → editor PASS");
@@ -622,6 +635,99 @@ try {
     }
 
     // === end v0.0.11 ===
+
+    // === v0.0.11.1: unsaved changes dialog + column resizer drag ===
+
+    // Assertion 16: unsaved changes dialog → Discard
+    {
+      try {
+        // Ensure editor is open; reuse Smoke1.
+        const editor = window.locator('[data-track-editor]');
+        if ((await editor.count()) === 0) {
+          await window.evaluate(() => { location.hash = "/"; });
+          await window.waitForSelector('[role="row"]', { timeout: 5000 });
+          const rowToOpen = window.locator('[role="row"]', { hasText: "Smoke1" }).first();
+          await rowToOpen.dblclick();
+          await window.waitForSelector('[data-track-editor]', { timeout: 3000 });
+        }
+
+        // Dirty the form: fill the title input with a smoke-only value.
+        const titleInput = window.locator('#track-title');
+        await titleInput.fill('smoke-dirty-title');
+
+        // Click "Cancel (ESC)" in the editor footer — triggers useBlocker.
+        await window.locator('button:has-text("Cancel (ESC)")').first().click();
+
+        // Dialog should appear within 2s.
+        await window.waitForSelector('[data-unsaved-dialog]', { timeout: 2000 });
+
+        // Click "Discard" — blocker.proceed() navigates back to "/".
+        await window.locator('[data-unsaved-dialog] button:has-text("Discard")').first().click();
+
+        // Wait for dialog to disappear and editor to close.
+        await window.waitForFunction(
+          () => !document.querySelector('[data-unsaved-dialog]'),
+          undefined,
+          { timeout: 3000 }
+        );
+        await window.waitForFunction(
+          () => !document.querySelector('[data-track-editor]'),
+          undefined,
+          { timeout: 3000 }
+        );
+        console.log("smoke: unsaved changes dialog Discard PASS");
+      } catch (e) {
+        failures.push(`UI: unsaved changes dialog — ${e.message}`);
+      }
+    }
+
+    // Assertion 17: column resizer drag (BPM column)
+    {
+      try {
+        // Should be back at "/" after assertion 16 discard.
+        await window.waitForSelector('[data-track-id]', { timeout: 5000 });
+
+        // Measure initial BPM column width via its bounding box.
+        const bpmHeader = window.locator('[data-column="bpm"]').first();
+        const initialBox = await bpmHeader.boundingBox();
+        if (!initialBox) throw new Error('[data-column="bpm"] not visible');
+        const initialWidth = initialBox.width;
+
+        // Locate the BPM column resizer divider.
+        const resizer = window.locator('[data-column-resizer="bpm"]').first();
+        const resizerBox = await resizer.boundingBox();
+        if (!resizerBox) throw new Error('[data-column-resizer="bpm"] not visible');
+
+        // Synthesize pointer events to drag 40px right.
+        const cx = resizerBox.x + resizerBox.width / 2;
+        const cy = resizerBox.y + resizerBox.height / 2;
+        await window.mouse.move(cx, cy);
+        await window.mouse.down();
+        await window.mouse.move(cx + 40, cy, { steps: 5 });
+        await window.mouse.up();
+
+        // Wait a tick for React re-render.
+        await window.waitForTimeout(300);
+
+        // Re-measure BPM column width.
+        const newBox = await bpmHeader.boundingBox();
+        if (!newBox) throw new Error('[data-column="bpm"] disappeared after drag');
+        const newWidth = newBox.width;
+
+        // Assert new width is at least initial + 30 (10px slack for clamping).
+        if (newWidth >= initialWidth + 30) {
+          console.log(`smoke: column resizer drag PASS (bpm: ${Math.round(initialWidth)}px → ${Math.round(newWidth)}px)`);
+        } else {
+          failures.push(
+            `UI: column resizer drag — expected bpm width ≥ ${initialWidth + 30}, got ${newWidth} (initial ${initialWidth})`
+          );
+        }
+      } catch (e) {
+        failures.push(`UI: column resizer drag — ${e.message}`);
+      }
+    }
+
+    // === end v0.0.11.1 ===
 
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);

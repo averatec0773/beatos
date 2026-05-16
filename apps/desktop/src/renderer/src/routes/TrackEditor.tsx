@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams, useBlocker } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { tracks } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
@@ -26,6 +26,7 @@ export function TrackEditor(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [initialTrack, setInitialTrack] = useState<Track | null>(null);
   const [navigateAfterSave, setNavigateAfterSave] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!params.id) return;
@@ -49,14 +50,6 @@ export function TrackEditor(): React.JSX.Element {
   }, [params.id, setAssetsForTrack]);
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent): void {
-      if (e.key === "Escape") navigate("/");
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [navigate]);
-
-  useEffect(() => {
     // Auto-focus title on mount
     const el = document.getElementById("track-title");
     if (el) (el as HTMLInputElement).focus();
@@ -74,7 +67,21 @@ export function TrackEditor(): React.JSX.Element {
     return !shallowEqualEditable(track, initialTrack);
   }, [track, initialTrack]);
 
-  const blocker = useBlocker(isDirty);
+  function handleNavigateAway(): void {
+    if (isDirty) {
+      setDialogOpen(true);
+    } else {
+      navigate("/");
+    }
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === "Escape") handleNavigateAway();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isDirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (navigateAfterSave && !isDirty) {
@@ -144,18 +151,19 @@ export function TrackEditor(): React.JSX.Element {
   return (
     <>
     <UnsavedChangesDialog
-      open={blocker.state === "blocked"}
+      open={dialogOpen}
       trackTitle={track.title}
       onSave={async () => {
         try {
           await saveTrack();
-          blocker.proceed?.();
+          setDialogOpen(false);
+          navigate("/");
         } catch {
-          // error already set; keep dialog open by not proceeding
+          // error already set; keep dialog open
         }
       }}
-      onDiscard={() => blocker.proceed?.()}
-      onCancel={() => blocker.reset?.()}
+      onDiscard={() => { setDialogOpen(false); navigate("/"); }}
+      onCancel={() => setDialogOpen(false)}
     />
     <main data-track-editor className="beatos-scroll flex-1 overflow-y-auto p-8">
       <form onSubmit={onSave} className="max-w-4xl space-y-6">
@@ -329,7 +337,7 @@ export function TrackEditor(): React.JSX.Element {
           </button>
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={handleNavigateAway}
             className="px-4 py-2 rounded-md border border-border-subtle text-text-primary hover:bg-bg-row-hover"
           >
             Cancel (ESC)
