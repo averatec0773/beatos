@@ -79,6 +79,7 @@ export function TrackEditor(): React.JSX.Element {
         description: track.description,
         license_type: track.license_type,
         price: track.price,
+        producer: track.producer,
       };
       await updateInStore(track.id, payload);
       navigate("/");
@@ -169,7 +170,7 @@ export function TrackEditor(): React.JSX.Element {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <label
               htmlFor="track-mood"
@@ -182,6 +183,21 @@ export function TrackEditor(): React.JSX.Element {
               type="text"
               value={track.mood ?? ""}
               onChange={(e) => patch("mood", e.target.value || null)}
+              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="track-producer"
+              className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+            >
+              Producer
+            </label>
+            <input
+              id="track-producer"
+              type="text"
+              value={track.producer ?? ""}
+              onChange={(e) => patch("producer", e.target.value || null)}
               className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
             />
           </div>

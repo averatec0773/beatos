@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 
 import { CoverImage } from "@/components/CoverImage";
+import { TrackRowPlayButton } from "@/components/TrackRowPlayButton";
 import type { Track } from "@/api/tracks";
 
 interface Props {
@@ -60,6 +61,7 @@ export function TrackRow({
       >
         <CoverImage assetId={coverAssetId} size={40} />
       </div>
+      <TrackRowPlayButton trackId={track.id} hasAudio={track.has_audio ?? false} />
       <div className="flex-1 truncate">{track.title}</div>
       <div className="w-16 text-right font-mono text-xs">{track.bpm ?? "—"}</div>
       <div className="w-20 truncate text-xs">{track.key_signature ?? "—"}</div>

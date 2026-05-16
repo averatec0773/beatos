@@ -4,6 +4,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { TopBar } from "@/components/TopBar";
 import { SidebarPanel } from "@/routes/SidebarPanel";
 import { ApiErrorState } from "@/components/ApiErrorState";
+import { BottomPlayerBar } from "@/components/BottomPlayerBar";
 import { useSourceStore } from "@/stores/sources";
 
 export function AppShell(): React.JSX.Element {
@@ -31,12 +32,13 @@ export function AppShell(): React.JSX.Element {
   return (
     <div className="h-screen bg-bg-base text-text-primary flex flex-col">
       <TopBar />
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         <SidebarPanel />
-        <main className="flex-1 flex overflow-hidden">
+        <main className="flex-1 flex overflow-hidden min-w-0">
           <Outlet />
         </main>
       </div>
+      <BottomPlayerBar />
     </div>
   );
 }

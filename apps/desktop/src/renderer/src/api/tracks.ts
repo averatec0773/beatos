@@ -12,13 +12,15 @@ export interface Track {
   description_draft: string | null;
   license_type: string;
   price: number | null;
+  producer: string | null;
+  has_audio: boolean;
   cover_asset_id: number | null;
   created_at: string;
   updated_at: string;
 }
 
 export type TrackUpdate = Partial<
-  Omit<Track, "id" | "description_draft" | "created_at" | "updated_at">
+  Omit<Track, "id" | "description_draft" | "has_audio" | "created_at" | "updated_at">
 >;
 
 export const tracks = {
