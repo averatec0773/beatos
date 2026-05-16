@@ -1,24 +1,56 @@
 import React from "react";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
-interface Props {
-  onAddTrack: () => void;
-}
+type Variant =
+  | { variant: "no-tracks"; onAddTrack: () => void }
+  | { variant: "empty-list"; listName: string }
+  | { variant: "no-search-results"; query: string; onClear: () => void };
 
-export function EmptyState({ onAddTrack }: Props): React.JSX.Element {
+type Props = Variant;
+
+export function EmptyState(props: Props): React.JSX.Element {
+  if (props.variant === "no-tracks") {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center max-w-sm">
+          <h2 className="text-xl font-semibold text-text-primary">No tracks yet</h2>
+          <p className="mt-2 text-text-secondary text-sm">Add your first track to get started.</p>
+          <button
+            onClick={props.onAddTrack}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-accent text-white font-medium hover:opacity-90"
+          >
+            <Plus size={14} /> Add Track
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (props.variant === "empty-list") {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center max-w-sm">
+          <h2 className="text-xl font-semibold text-text-primary">
+            List &ldquo;{props.listName}&rdquo; is empty
+          </h2>
+          <p className="mt-2 text-text-secondary text-sm">
+            Drag tracks from All Beats to add them here.
+          </p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-2">
-          All Beats
-        </div>
-        <div className="text-2xl font-semibold mb-6">Your library is empty</div>
+      <div className="text-center max-w-sm">
+        <h2 className="text-xl font-semibold text-text-primary">
+          No tracks match &ldquo;{props.query}&rdquo;
+        </h2>
+        <p className="mt-2 text-text-secondary text-sm">Try a shorter or different search.</p>
         <button
-          onClick={onAddTrack}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-accent text-white font-medium hover:opacity-90"
+          onClick={props.onClear}
+          className="mt-4 inline-flex items-center gap-2 text-sm text-text-tertiary hover:text-text-primary"
         >
-          <Plus size={16} />
-          Add Track
+          <X size={12} /> Clear search
         </button>
       </div>
     </div>

@@ -21,6 +21,7 @@ export function TrackListPanel(): React.JSX.Element {
   const remove = useTrackStore((s) => s.remove);
   const createTrack = useTrackStore((s) => s.create);
   const filterFn = useSearchStore((s) => s.filter);
+  const searchQuery = useSearchStore((s) => s.query);
   const allLists = useListStore((s) => s.all);
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -58,11 +59,23 @@ export function TrackListPanel(): React.JSX.Element {
   }
 
   if (list.length === 0) {
+    let emptyEl: React.ReactNode;
+    if (currentList) {
+      emptyEl = <EmptyState variant="empty-list" listName={currentList.name} />;
+    } else if (searchQuery) {
+      emptyEl = (
+        <EmptyState
+          variant="no-search-results"
+          query={searchQuery}
+          onClear={() => useSearchStore.getState().setQuery("")}
+        />
+      );
+    } else {
+      emptyEl = <EmptyState variant="no-tracks" onAddTrack={onAddTrack} />;
+    }
     return (
       <>
-        <section className="flex-1 flex flex-col">
-          <EmptyState onAddTrack={onAddTrack} />
-        </section>
+        <section className="flex-1 flex flex-col">{emptyEl}</section>
         <TrackDetailPanel />
       </>
     );
