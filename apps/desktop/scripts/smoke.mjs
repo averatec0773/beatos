@@ -15,7 +15,7 @@
  * Exit codes: 0 PASS, 1 FAIL, 2 prereq missing
  */
 import { _electron as electron } from "playwright";
-import { existsSync, readFileSync, writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdtempSync, mkdirSync, promises as fsPromises } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -28,6 +28,20 @@ const TINY_PNG = Buffer.from([
   0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
   0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 ]);
+
+/**
+ * Poll for a renderer-side condition until true or timeout. Returns nothing
+ * on success; throws on timeout. `predicate` runs in the renderer via
+ * page.evaluate so it sees the live DOM.
+ */
+async function waitFor(page, predicate, { timeout = 5000, interval = 100, label } = {}) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (await page.evaluate(predicate)) return;
+    await page.waitForTimeout(interval);
+  }
+  throw new Error(`waitFor timeout (${timeout}ms): ${label ?? "unnamed predicate"}`);
+}
 
 const repoRoot = resolve(import.meta.dirname, "..");
 const mainEntry = join(repoRoot, "out/main/index.js");
@@ -48,7 +62,7 @@ let exitCode = 0;
 const failures = [];
 
 const app = await electron.launch({
-  args: [mainEntry, "--smoke"],
+  args: [mainEntry, "--smoke", "--no-splash"],
   env: {
     ...process.env,
     BEATOS_DB_PATH: dbPath,
@@ -59,12 +73,20 @@ const app = await electron.launch({
 
 try {
   const window = await app.firstWindow({ timeout: 15_000 });
+  // With --no-splash, only the main window should exist. If the splash
+  // appears in smoke runs it would break firstWindow() semantics.
+  const allWindows = app.windows();
+  if (allWindows.length !== 1) {
+    failures.push(
+      `expected exactly 1 window (--no-splash), saw ${allWindows.length}`
+    );
+  }
   window.on("pageerror", (err) => {
     failures.push(`renderer pageerror: ${err.message}`);
   });
   await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
-
-  await window.waitForTimeout(2000);
+  // Wait until React has mounted something meaningful into #root.
+  await window.waitForSelector("#root > *", { timeout: 5000 });
 
   if (existsSync(logPath)) {
     const lines = readFileSync(logPath, "utf-8").trim().split("\n").filter(Boolean);
@@ -161,8 +183,7 @@ try {
     await window.evaluate(() => { location.hash = "/"; });
     await window.evaluate(() => location.reload());
     await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
-    await window.waitForTimeout(2500);
-
+    await window.waitForSelector('[role="row"]', { timeout: 5000 });
 
     // UI assertion: cover img actually renders inside the row.
     const row1 = window.locator('[role="row"]', { hasText: "Smoke1" }).first();
@@ -219,7 +240,21 @@ try {
         await window.mouse.move(tx, ty, { steps: 10 });
         await window.mouse.up();
       }
-      await window.waitForTimeout(800);
+      // Poll the backend from Node (not the renderer) — avoids execution-context
+      // destruction if the app navigates to the list view after the drop.
+      {
+        const pollStart = Date.now();
+        let memberOk = false;
+        while (Date.now() - pollStart < 3000) {
+          const r = await fetch(`${baseUrl}/api/tracks?list_id=${list.id}`);
+          const arr = await r.json();
+          if (Array.isArray(arr) && arr.length >= 1) { memberOk = true; break; }
+          await new Promise((res) => setTimeout(res, 100));
+        }
+        if (!memberOk) {
+          throw new Error("drag-drop membership reflected on backend: timeout 3000ms");
+        }
+      }
       const members = await (await fetch(`${baseUrl}/api/tracks?list_id=${list.id}`)).json();
       if (!Array.isArray(members) || members.length !== 1) {
         failures.push(`UI drag-drop: expected 1 member, got ${JSON.stringify(members)}`);
@@ -249,19 +284,33 @@ try {
     });
     await window.evaluate(() => location.reload());
     await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
-    await window.waitForTimeout(1500);
+    await window.waitForSelector("text=EmptyList", { timeout: 5000 });
     const emptyTarget = window.locator("text=EmptyList").first();
     if ((await emptyTarget.count()) === 0) {
       failures.push("UI: 'EmptyList' not found in sidebar after refresh");
     } else {
       await emptyTarget.click();
-      await window.waitForTimeout(800);
+      await window.waitForSelector("text=/is empty/i", { timeout: 3000 });
       const html = await window.content();
       if (!/is empty/i.test(html) || !/drag tracks from all beats/i.test(html)) {
         failures.push("UI: empty-list state copy missing 'is empty' or drag hint");
       } else {
         console.log("smoke: empty-list copy PASS");
       }
+    }
+
+    // Double-click on a track row should open the editor route.
+    // Navigate back to "/" first because the empty-list section left us at
+    // a List view that may not show all tracks.
+    await window.evaluate(() => { location.hash = "/"; });
+    await window.waitForSelector('[role="row"]', { timeout: 5000 });
+    const firstRow = window.locator('[role="row"]', { hasText: "Smoke1" }).first();
+    await firstRow.dblclick();
+    try {
+      await window.waitForSelector('[data-track-editor]', { timeout: 3000 });
+      console.log("smoke: double-click → editor PASS");
+    } catch (e) {
+      failures.push(`UI: double-click did not open editor — ${e.message}`);
     }
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
@@ -280,7 +329,16 @@ try {
   console.error("smoke: harness error:", err.message);
 } finally {
   await app.close();
-  console.log(`smoke: userData kept at ${userData} for inspection`);
+  if (process.argv.includes("--keep-userdata")) {
+    console.log(`smoke: userData kept at ${userData}`);
+  } else {
+    try {
+      await fsPromises.rm(userData, { recursive: true, force: true });
+      console.log(`smoke: userData cleaned at ${userData}`);
+    } catch (e) {
+      console.warn(`smoke: failed to clean userData ${userData}: ${e.message}`);
+    }
+  }
 }
 
 process.exit(exitCode);

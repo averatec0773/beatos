@@ -101,7 +101,7 @@ export function TrackEditor(): React.JSX.Element {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto p-8">
+    <main data-track-editor className="flex-1 overflow-y-auto p-8">
       <form onSubmit={onSave} className="max-w-3xl space-y-6">
         <FilesSection trackId={track.id} />
 
