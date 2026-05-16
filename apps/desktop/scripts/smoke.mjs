@@ -129,14 +129,33 @@ try {
 
 
     // UI drag: one track → SmokeList via dnd-kit
-    const row1 = window.locator("text=Smoke1").first();
+    // Drag handle is the cover thumbnail (aria-label="Drag track"), NOT the
+    // row body — row body needs clean clicks for select/double-click.
+    const row1 = window.locator('[role="row"]', { hasText: "Smoke1" }).first();
+    const row1Handle = row1.locator('[aria-label="Drag track"]');
     const listTarget = window.locator("text=SmokeList").first();
-    if ((await row1.count()) === 0) {
-      failures.push("UI: row 'Smoke1' not found after seeding");
+    if ((await row1Handle.count()) === 0) {
+      failures.push("UI: drag handle for 'Smoke1' not found after seeding");
     } else if ((await listTarget.count()) === 0) {
       failures.push("UI: sidebar 'SmokeList' not found after seeding");
     } else {
-      await row1.dragTo(listTarget);
+      // Manual mouse drive — dragTo skips intermediate positions and dnd-kit's
+      // distance constraint never trips. We move in explicit steps.
+      const sourceBox = await row1Handle.boundingBox();
+      const targetBox = await listTarget.boundingBox();
+      if (!sourceBox || !targetBox) {
+        failures.push("UI: could not compute bounding boxes for drag");
+      } else {
+        const sx = sourceBox.x + sourceBox.width / 2;
+        const sy = sourceBox.y + sourceBox.height / 2;
+        const tx = targetBox.x + targetBox.width / 2;
+        const ty = targetBox.y + targetBox.height / 2;
+        await window.mouse.move(sx, sy);
+        await window.mouse.down();
+        await window.mouse.move(sx + 10, sy + 10, { steps: 5 });
+        await window.mouse.move(tx, ty, { steps: 10 });
+        await window.mouse.up();
+      }
       await window.waitForTimeout(800);
       const members = await (await fetch(`${baseUrl}/api/tracks?list_id=${list.id}`)).json();
       if (!Array.isArray(members) || members.length !== 1) {
