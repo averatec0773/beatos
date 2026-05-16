@@ -3,11 +3,13 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { TopBar } from "@/components/TopBar";
 import { SidebarPanel } from "@/routes/SidebarPanel";
+import { ApiErrorState } from "@/components/ApiErrorState";
 import { useSourceStore } from "@/stores/sources";
 
 export function AppShell(): React.JSX.Element {
   const sources = useSourceStore((s) => s.all);
   const hasLoaded = useSourceStore((s) => s.hasLoaded);
+  const loadError = useSourceStore((s) => s.loadError);
   const refresh = useSourceStore((s) => s.refresh);
   const location = useLocation();
   const navigate = useNavigate();
@@ -17,10 +19,14 @@ export function AppShell(): React.JSX.Element {
   }, [hasLoaded, refresh]);
 
   useEffect(() => {
-    if (hasLoaded && sources.length === 0 && location.pathname !== "/welcome") {
+    if (hasLoaded && !loadError && sources.length === 0 && location.pathname !== "/welcome") {
       navigate("/welcome", { replace: true });
     }
-  }, [hasLoaded, sources.length, location.pathname, navigate]);
+  }, [hasLoaded, loadError, sources.length, location.pathname, navigate]);
+
+  if (loadError) {
+    return <ApiErrorState error={loadError} onRetry={() => refresh()} />;
+  }
 
   return (
     <div className="h-screen bg-bg-base text-text-primary flex flex-col">

@@ -5,6 +5,7 @@ interface SourceState {
   all: Source[];
   activeFilter: number | null;
   hasLoaded: boolean;
+  loadError: Error | null;
   refresh: () => Promise<void>;
   add: (payload: SourceCreate) => Promise<Source>;
   rename: (id: number, name: string) => Promise<void>;
@@ -16,14 +17,16 @@ export const useSourceStore = create<SourceState>((set, get) => ({
   all: [],
   activeFilter: null,
   hasLoaded: false,
+  loadError: null,
 
   async refresh() {
     try {
       const all = await sources.list();
-      set({ all, hasLoaded: true });
+      set({ all, hasLoaded: true, loadError: null });
     } catch (e) {
-      console.warn("[sources] refresh failed:", e);
-      set({ hasLoaded: true });
+      const err = e instanceof Error ? e : new Error(String(e));
+      console.warn("[sources] refresh failed:", err);
+      set({ hasLoaded: true, loadError: err });
     }
   },
 
