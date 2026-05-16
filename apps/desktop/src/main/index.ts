@@ -187,11 +187,18 @@ app.whenReady().then(async () => {
   configureLogger();
   logger.info("[main] electron app ready");
 
+  // Splash is created BEFORE IPC handlers / protocol / sidecar so it's visible
+  // during the ~1-5s boot. Splash window has no preload + no nodeIntegration +
+  // sandbox:true — it MUST NOT depend on any IPC, since handlers below this
+  // point haven't been registered yet.
   splashWin = createSplashWindow(process.argv);
   if (splashWin) {
+    // Set fallback timestamp at create time so the 600ms floor is enforced
+    // even if main's ready-to-show fires before splash's. Refined below.
+    splashShownAt = Date.now();
     splashWin.once("ready-to-show", () => {
       splashShownAt = Date.now();
-      logger.info(`[splash] visible at ${splashShownAt}`);
+      logger.info(`[splash] visible at ${new Date(splashShownAt).toISOString()}`);
     });
   }
 
@@ -298,11 +305,25 @@ app.whenReady().then(async () => {
     }
   });
 
-  startSidecar();
-  apiPort = await waitForHandshake();
+  try {
+    startSidecar();
+    apiPort = await waitForHandshake();
+    createWindow();
+  } catch (err) {
+    logger.error(`[main] bootstrap failed: ${err instanceof Error ? err.message : String(err)}`);
+    if (splashWin && !splashWin.isDestroyed()) {
+      splashWin.close();
+      splashWin = null;
+    }
+    dialog.showErrorBox(
+      "BeatOS could not start",
+      err instanceof Error ? err.message : String(err)
+    );
+    app.quit();
+    return;
+  }
 
-  createWindow();
-
+  // No splash on macOS dock-icon reopen — intentional (user just hid the app).
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
