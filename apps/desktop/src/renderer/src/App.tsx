@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Route, Routes } from "react-router-dom";
 import { DndContext, DragOverlay } from "@dnd-kit/core";
 
 import { AppShell } from "@/routes/AppShell";
@@ -124,7 +124,7 @@ export default function App(): React.JSX.Element {
         }}
         onDragCancel={() => setActiveDrag(null)}
       >
-        <BrowserRouter>
+        <HashRouter>
           <GlobalDialogs />
           <Routes>
             <Route path="/welcome" element={<WelcomeScreen />} />
@@ -135,7 +135,7 @@ export default function App(): React.JSX.Element {
               <Route path="/settings" element={<SettingsPanel />} />
             </Route>
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
         <DragOverlay>
           {activeDrag ? <DragOverlayPreview count={activeDrag.count} title={activeDrag.title} /> : null}
         </DragOverlay>
