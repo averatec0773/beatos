@@ -11,6 +11,7 @@ import { TrackDetailPanel } from "@/routes/TrackDetailPanel";
 import { TrackContextMenu } from "@/components/TrackContextMenu";
 import { VirtualTrackList } from "@/components/VirtualTrackList";
 import { TableHeader } from "@/components/TableHeader";
+import { FilterChipBar } from "@/components/FilterChipBar";
 
 export function TrackListPanel(): React.JSX.Element {
   const list = useTrackStore((s) => s.list);
@@ -92,6 +93,7 @@ export function TrackListPanel(): React.JSX.Element {
             {visible.length} track{visible.length === 1 ? "" : "s"}
           </span>
         </header>
+        <FilterChipBar />
         <TableHeader />
         <VirtualTrackList
           tracks={visible}
