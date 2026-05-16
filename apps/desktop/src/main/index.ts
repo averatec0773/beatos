@@ -58,7 +58,11 @@ function repoRoot(): string {
 }
 
 function resolveDbPath(): string {
-  return readConfig().dbPath ?? join(app.getPath("music"), "BeatOS", "global.db");
+  return (
+    process.env.BEATOS_DB_PATH ??
+    readConfig().dbPath ??
+    join(app.getPath("music"), "BeatOS", "global.db")
+  );
 }
 
 function resolveLogsDir(): string {
