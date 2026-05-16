@@ -19,9 +19,14 @@ class Track(BaseModel):
     description_draft: Optional[str] = Field(default=None, description="AI-generated draft.")
     license_type: str = "lease_basic"
     price: Optional[float] = None
+    producer: Optional[str] = None
     cover_asset_id: Optional[int] = Field(
         default=None,
         description="Id of the cover asset (asset.role='cover'); NULL if none.",
+    )
+    has_audio: bool = Field(
+        default=False,
+        description="True if track has at least one non-missing audio asset. Derived.",
     )
     created_at: _dt.datetime
     updated_at: _dt.datetime
@@ -52,3 +57,4 @@ class TrackUpdate(BaseModel):
     description: Optional[str] = None
     license_type: Optional[str] = None
     price: Optional[float] = None
+    producer: Optional[str] = None

@@ -18,7 +18,26 @@ async def _fresh_db(tmp_path, monkeypatch):
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
     await run_migrations(db_path)
+
+    # Register tmp_path as a source so attach_asset calls succeed.
+    from beatos_core.sources.service import create_source
+    from beatos_core.sources.models import SourceCreate
+    await create_source(SourceCreate(root_path=str(tmp_path)))
+
     yield
+
+
+@pytest.fixture
+def attach_audio_helper(tmp_path):
+    """Return an async helper that attaches an audio file asset to a track."""
+    from beatos_core.assets.service import attach_asset
+
+    async def _helper(track_id: int, role: str = "audio_tagged_wav") -> None:
+        audio = tmp_path / f"audio_{track_id}_{role}.wav"
+        audio.write_bytes(b"\x00" * 64)
+        await attach_asset(track_id, role=role, path=audio)
+
+    return _helper
 
 
 @pytest.mark.asyncio
@@ -68,3 +87,22 @@ async def test_lists_for_track_returns_member_lists():
     found = await lists_for_track(track.id)
     names = sorted(l.name for l in found)
     assert names == ["Lofi", "Trap"]
+
+
+@pytest.mark.asyncio
+async def test_tracks_in_list_returns_has_audio(attach_audio_helper):
+    lst = await create_list(name="Test", kind="user")
+    t = await create_track("with audio")
+    await attach_audio_helper(t.id, role="audio_tagged_mp3")
+    await add_track_to_list(t.id, lst.id)
+    rows = await tracks_in_list(lst.id)
+    assert rows[0].has_audio is True
+
+
+@pytest.mark.asyncio
+async def test_tracks_in_list_has_audio_false_without_audio():
+    lst = await create_list(name="Test2", kind="user")
+    t = await create_track("no audio")
+    await add_track_to_list(t.id, lst.id)
+    rows = await tracks_in_list(lst.id)
+    assert rows[0].has_audio is False
