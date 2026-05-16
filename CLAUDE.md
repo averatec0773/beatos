@@ -47,3 +47,21 @@ At the start of every session:
 ### Memory
 - [rules](memory/rules.md)
 - [notes](memory/notes.md)
+
+## v0.0.5+ — AI Dev Loop
+
+Prefer running the smoke harness over asking the user to click + screenshot:
+
+- `cd apps/desktop && npm run dev:fresh` — kill orphans, start fresh; logs to `apps/desktop/logs/`
+- `npm run smoke` — built-app smoke (run `npm run build` first)
+- `npm run logs:tail` — tail Electron + sidecar JSONL
+
+Log files (dev):
+- `apps/desktop/logs/main.log` — Electron main + `[sidecar]`-tagged stderr lines
+- `apps/desktop/logs/sidecar.jsonl` — structured Python sidecar (one JSON per line, includes `request_id`)
+
+MCP servers (template in `.claude/settings.local.json.example`):
+- **playwright-electron** — drive the running app, screenshot, evaluate
+- **local-logs** — tail JSONL, filter by level
+
+If these tools are available, don't ask the user to click+screenshot — verify directly.
