@@ -23,7 +23,11 @@ apps/desktop/
     features/                ← one folder per domain feature (library, tracks, inject, settings)
     stores/                  ← Zustand stores
     lib/                     ← cross-feature helpers
-  resources/sidecar/         ← PyInstaller artifacts (populated in v0.0.6)
+  resources/sidecar/         ← PyInstaller artifacts (populated in v0.0.7)
+  logs/                      ← electron-log main.log + structlog sidecar.jsonl (gitignored)
+  scripts/
+    dev-reset.sh             ← kill orphan uvicorn / free ports / clear logs
+    smoke.mjs                ← Playwright _electron smoke harness
   electron.vite.config.ts    ← electron-vite config
   electron-builder.yml       ← packaging config
 
@@ -70,6 +74,22 @@ $XDG_RUNTIME_DIR/beatos/handshake.json                       (Linux, if XDG_RUNT
 ```
 
 In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.json'`. The Python side reads `BEATOS_HANDSHAKE_PATH` env var (set by Electron main) and falls back to a platform-default if unset (useful when running the sidecar standalone for tests).
+
+## v0.0.4.1 + v0.0.5 — Dev Loop Additions
+
+| Capability | Location | Purpose |
+|---|---|---|
+| Sidecar stdio capture | `apps/desktop/src/main/index.ts` (pipe + readline) | sidecar stderr/stdout tagged `[sidecar]` and routed to electron-log |
+| electron-log file sink | `apps/desktop/src/main/logger.ts` | dev: `apps/desktop/logs/main.log`; prod: `~/Library/Logs/BeatOS/main.log` |
+| Sidecar crash IPC | `main/index.ts:sidecar.on('exit')` → `IPC_CHANNELS.SIDECAR_CRASHED` | renderer shows toast + `api/client.ts` invalidates `cachedBase` |
+| `sources.loadError` | `stores/sources.ts` | distinguishes API failure from "no sources" — drives `<ApiErrorState>` vs `/welcome` |
+| IPC channel constants | `src/shared/ipc-channels.ts` | typed, single source of truth for main + preload |
+| structlog + correlation IDs | `packages/beatos-http/beatos_http/logging_config.py` + `app.py` middleware | one JSON per line at `BEATOS_LOG_PATH` (default `apps/desktop/logs/sidecar.jsonl`), every line includes `request_id` |
+| Boot integration test | `packages/beatos-http/tests/test_boot_integration.py` | spawns real subprocess, asserts handshake + `/api/health` + JSONL output |
+| `BEATOS_LOG_PATH` env contract | passed by Electron main, honored by sidecar `logging_config._default_log_path()` | callers (smoke harness, tests) can redirect by setting env var; Electron defers to existing value |
+| Smoke harness | `apps/desktop/scripts/smoke.mjs` | Playwright `_electron`: launches built app, asserts boot + zero ERROR-level JSONL lines |
+| Dev reset | `apps/desktop/scripts/dev-reset.sh` | kills orphan uvicorn, frees 5000-5050, clears logs |
+| npm scripts | `dev:fresh`, `smoke`, `logs:tail` | agent-runnable verification — see `memory/feedback_run_the_tools_you_built.md` |
 
 ## What NOT to change without reading context first
 

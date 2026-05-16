@@ -101,7 +101,7 @@ Start from Spotify's dark palette, then nudge toward BeatOS personality.
 | `--text-primary` | `#ffffff` | Titles, primary metadata |
 | `--text-secondary` | `#b3b3b3` | Subtitles, secondary metadata, labels |
 | `--text-tertiary` | `#6a6a6a` | Disabled, placeholder, hint |
-| `--accent` | **TBD — pick one** in Phase 2. Suggestions: `#1db954` Spotify green, `#e94f37` warm red, `#7c5cff` violet, `#00d9c0` aqua. | Primary CTAs, selection ring, "Now Playing"-style highlights |
+| `--accent` | `#7c5cff` (violet) — locked since v0.0.1 in `apps/desktop/src/renderer/src/assets/main.css`. | Primary CTAs, selection ring, "Now Playing"-style highlights |
 | `--accent-soft` | `<accent>` at 18% alpha | Subtle accent backgrounds, hover trails |
 | `--danger` | `#f15e6c` | Destructive actions, missing-asset warning |
 | `--success` | `#3ecf8e` | "Inject succeeded", confirmed states |
