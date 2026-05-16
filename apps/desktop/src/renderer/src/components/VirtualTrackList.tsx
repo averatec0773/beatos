@@ -8,7 +8,7 @@ interface Props {
   renderRow: (track: Track, index: number) => React.ReactNode;
 }
 
-const ROW_HEIGHT = 48; // h-12
+const ROW_HEIGHT = 64; // h-16
 
 export function VirtualTrackList({ tracks, renderRow }: Props): React.JSX.Element {
   const parentRef = useRef<HTMLDivElement | null>(null);
