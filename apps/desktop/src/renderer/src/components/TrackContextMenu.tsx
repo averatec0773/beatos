@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Edit, Folder, Trash2, ListPlus } from "lucide-react";
+import { Edit, Folder, Trash2, ListPlus, ListMinus } from "lucide-react";
 
 import {
   ContextMenu,
@@ -17,8 +17,10 @@ interface Props {
   trackId: number;
   trackTitle: string;
   audioPath: string | null;
+  currentListId?: number | null;
   onEdit: () => void;
   onDelete: () => void;
+  onRemoveFromList?: () => void;
   children: React.ReactNode;
 }
 
@@ -26,8 +28,10 @@ export function TrackContextMenu({
   trackId,
   trackTitle,
   audioPath,
+  currentListId,
   onEdit,
   onDelete,
+  onRemoveFromList,
   children,
 }: Props): React.JSX.Element {
   // IMPORTANT: select the stable `all` array, then derive userLists with useMemo.
@@ -35,6 +39,7 @@ export function TrackContextMenu({
   // useSyncExternalStore to spin in an infinite re-render loop.
   const allLists = useListStore((s) => s.all);
   const addToList = useListStore((s) => s.addTrack);
+  const removeFromList = useListStore((s) => s.removeTrack);
   const userLists = useMemo(
     () => allLists.filter((l) => l.kind !== "system"),
     [allLists]
@@ -68,6 +73,16 @@ export function TrackContextMenu({
               ))}
             </ContextMenuSubContent>
           </ContextMenuSub>
+        )}
+        {currentListId != null && (
+          <ContextMenuItem
+            onClick={async () => {
+              await removeFromList(currentListId, trackId);
+              onRemoveFromList?.();
+            }}
+          >
+            <ListMinus size={14} className="mr-2" /> Remove from this list
+          </ContextMenuItem>
         )}
         <ContextMenuItem disabled={!audioPath} onClick={onReveal}>
           <Folder size={14} className="mr-2" /> Reveal in Finder

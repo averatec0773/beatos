@@ -1,13 +1,15 @@
 import { create } from "zustand";
 
 import { Track, TrackUpdate, tracks as api } from "@/api/tracks";
+import { assets as assetsApi } from "@/api/assets";
 import { useSourceStore } from "./sources";
+import { useAssetStore } from "./assets";
 
 interface TrackState {
   list: Track[];
   current: Track | null;
   loading: boolean;
-  refresh(): Promise<void>;
+  refresh(opts?: { list_id?: number }): Promise<void>;
   select(id: number | null): void;
   create(title: string): Promise<Track>;
   update(id: number, updates: TrackUpdate): Promise<Track>;
@@ -18,13 +20,16 @@ export const useTrackStore = create<TrackState>((set, get) => ({
   list: [],
   current: null,
   loading: false,
-  async refresh() {
+  async refresh(opts) {
     set({ loading: true });
     try {
-      const filter = useSourceStore.getState().activeFilter;
-      const list = filter !== null
-        ? await api.list({ source_id: filter })
-        : await api.list({});
+      let list: Track[];
+      if (opts?.list_id != null) {
+        list = await api.list({ list_id: opts.list_id });
+      } else {
+        const filter = useSourceStore.getState().activeFilter;
+        list = filter !== null ? await api.list({ source_id: filter }) : await api.list({});
+      }
       set({ list, loading: false });
     } catch {
       set({ list: [], loading: false });
@@ -37,6 +42,12 @@ export const useTrackStore = create<TrackState>((set, get) => ({
     }
     const found = get().list.find((t) => t.id === id) ?? null;
     set({ current: found });
+    if (found) {
+      assetsApi
+        .listForTrack(found.id)
+        .then((list) => useAssetStore.getState().setForTrack(found.id, list))
+        .catch((e) => console.warn("[tracks.select] fetch assets failed:", e));
+    }
   },
   async create(title) {
     const t = await api.create(title);

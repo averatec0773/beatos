@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { matchPath, useLocation, useNavigate } from "react-router-dom";
 
 import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
@@ -17,6 +17,13 @@ export function SidebarPanel(): React.JSX.Element {
   const createList = useListStore((s) => s.create);
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const listRouteMatch = matchPath("/lists/:id", location.pathname);
+  const activeListId = listRouteMatch ? Number(listRouteMatch.params.id) : null;
+  const onListRoute = activeListId != null;
+
+  const [addingList, setAddingList] = useState(false);
+  const [newListName, setNewListName] = useState("");
 
   useEffect(() => {
     refreshSources();
@@ -35,15 +42,31 @@ export function SidebarPanel(): React.JSX.Element {
   function onAddSource(): void {
     navigate("/settings");
   }
-  async function onAddList(): Promise<void> {
-    const name = window.prompt("List name?");
-    if (!name || !name.trim()) return;
+
+  function onAddListClick(): void {
+    setNewListName("");
+    setAddingList(true);
+  }
+
+  async function commitNewList(): Promise<void> {
+    const name = newListName.trim();
+    if (!name) {
+      setAddingList(false);
+      return;
+    }
     try {
-      const created = await createList(name.trim());
+      const created = await createList(name);
+      setAddingList(false);
+      setNewListName("");
       navigate(`/lists/${created.id}`);
     } catch (e) {
       alert(`Failed to create list: ${e instanceof Error ? e.message : String(e)}`);
     }
+  }
+
+  function cancelNewList(): void {
+    setAddingList(false);
+    setNewListName("");
   }
 
   return (
@@ -73,7 +96,7 @@ export function SidebarPanel(): React.JSX.Element {
               status: "online",
               track_count: totalTracks,
             }}
-            active={activeFilter === null}
+            active={!onListRoute && activeFilter === null}
             onClick={() => {
               setFilter(null);
               navigate("/");
@@ -84,7 +107,7 @@ export function SidebarPanel(): React.JSX.Element {
           <SourceRow
             key={s.id}
             source={s}
-            active={activeFilter === s.id}
+            active={!onListRoute && activeFilter === s.id}
             onClick={() => {
               setFilter(s.id);
               navigate("/");
@@ -100,23 +123,46 @@ export function SidebarPanel(): React.JSX.Element {
           </span>
           <button
             type="button"
-            onClick={onAddList}
+            onClick={onAddListClick}
             className="text-text-tertiary hover:text-text-primary"
             aria-label="Add List"
           >
             <Plus size={12} />
           </button>
         </header>
-        {userLists.map((l) => (
-          <button
-            key={l.id}
-            type="button"
-            onClick={() => navigate(`/lists/${l.id}`)}
-            className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-row-hover rounded-md"
-          >
-            {l.name}
-          </button>
-        ))}
+        {addingList && (
+          <div className="px-3 py-1">
+            <input
+              autoFocus
+              type="text"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitNewList();
+                else if (e.key === "Escape") cancelNewList();
+              }}
+              onBlur={commitNewList}
+              placeholder="List name"
+              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-2 py-1 text-sm focus:outline-none focus:border-accent"
+            />
+          </div>
+        )}
+        {userLists.map((l) => {
+          const isActive = activeListId === l.id;
+          return (
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => navigate(`/lists/${l.id}`)}
+              className={[
+                "w-full px-3 py-1.5 text-left text-sm rounded-md",
+                isActive ? "bg-bg-row-active text-accent" : "text-text-primary hover:bg-bg-row-hover",
+              ].join(" ")}
+            >
+              {l.name}
+            </button>
+          );
+        })}
       </div>
     </aside>
   );

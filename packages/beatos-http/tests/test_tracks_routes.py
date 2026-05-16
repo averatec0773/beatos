@@ -114,3 +114,30 @@ def test_get_tracks_unknown_source_returns_empty(tmp_path):
 
     assert r.status_code == 200
     assert r.json() == []
+
+
+def test_get_tracks_filtered_by_list(tmp_path):
+    """?list_id returns only tracks in that list, spanning Sources."""
+    client = TestClient(create_app())
+
+    t1 = client.post("/api/tracks", json={"title": "T1"}).json()
+    t2 = client.post("/api/tracks", json={"title": "T2"}).json()
+    t3 = client.post("/api/tracks", json={"title": "T3"}).json()
+
+    list_id = client.post("/api/lists", json={"name": "Trap"}).json()["id"]
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t1["id"]})
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t3["id"]})
+
+    r = client.get(f"/api/tracks?list_id={list_id}")
+    assert r.status_code == 200
+    assert {t["title"] for t in r.json()} == {"T1", "T3"}
+
+    # list_id beats source_id.
+    r2 = client.get(f"/api/tracks?list_id={list_id}&source_id=99999")
+    assert {t["title"] for t in r2.json()} == {"T1", "T3"}
+
+    # Unknown list yields empty.
+    r3 = client.get("/api/tracks?list_id=99999")
+    assert r3.status_code == 200
+    assert r3.json() == []
+    _ = t2  # silence linter; t2 deliberately not in list

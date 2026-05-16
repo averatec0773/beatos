@@ -1,10 +1,18 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 import { useTrackStore } from "@/stores/tracks";
+import { useAssetStore } from "@/stores/assets";
 import { CoverImage } from "@/components/CoverImage";
 
 export function TrackDetailPanel(): React.JSX.Element {
   const current = useTrackStore((s) => s.current);
+  const byTrack = useAssetStore((s) => s.byTrack);
+  const coverAsset = useMemo(() => {
+    if (!current) return null;
+    const list = byTrack[current.id];
+    if (!list) return null;
+    return list.find((a) => a.role === "cover") ?? null;
+  }, [byTrack, current]);
 
   if (!current) {
     return (
@@ -22,7 +30,7 @@ export function TrackDetailPanel(): React.JSX.Element {
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
         Now Focused
       </div>
-      <CoverImage assetId={null} size={320} className="w-full" />
+      <CoverImage assetId={coverAsset?.id ?? null} size={320} className="w-full" />
       <div>
         <div className="text-2xl font-bold leading-tight">{current.title}</div>
         <div className="text-text-secondary text-sm mt-1">

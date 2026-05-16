@@ -21,9 +21,12 @@ export type TrackUpdate = Partial<
 >;
 
 export const tracks = {
-  list: (opts: { source_id?: number } = {}) => {
-    const qs = opts.source_id != null ? `?source_id=${opts.source_id}` : "";
-    return apiGet<Track[]>(`/api/tracks${qs}`);
+  list: (opts: { source_id?: number; list_id?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (opts.list_id != null) params.set("list_id", String(opts.list_id));
+    else if (opts.source_id != null) params.set("source_id", String(opts.source_id));
+    const qs = params.toString();
+    return apiGet<Track[]>(`/api/tracks${qs ? `?${qs}` : ""}`);
   },
   create: (title: string) => apiPost<Track>("/api/tracks", { title }),
   get: (id: number) => apiGet<Track>(`/api/tracks/${id}`),

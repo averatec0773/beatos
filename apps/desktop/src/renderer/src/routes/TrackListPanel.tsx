@@ -28,10 +28,7 @@ export function TrackListPanel(): React.JSX.Element {
   const currentList = listId ? allLists.find((l) => l.id === listId) : null;
 
   useEffect(() => {
-    refresh();
-    // Note: when listId is set, v0.0.3 currently shows the full track list.
-    // Per-list filtering via GET /api/lists/:id/tracks lands in v0.0.4.
-    // This is intentional per the plan's acceptance criteria §9.
+    refresh(listId != null ? { list_id: listId } : undefined);
   }, [refresh, listId]);
 
   const visible = useMemo(() => filterFn(list), [list, filterFn]);
@@ -102,8 +99,12 @@ export function TrackListPanel(): React.JSX.Element {
               trackId={t.id}
               trackTitle={t.title}
               audioPath={null}
+              currentListId={listId}
               onEdit={() => navigate(`/tracks/${t.id}/edit`)}
               onDelete={() => remove(t.id)}
+              onRemoveFromList={() =>
+                refresh(listId != null ? { list_id: listId } : undefined)
+              }
             >
               <div>
                 <TrackRow

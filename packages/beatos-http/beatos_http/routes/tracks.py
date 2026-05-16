@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Query, Response
 from beatos_core.db import resolve_db_path
 from beatos_core.models import Track, TrackCreate, TrackUpdate
 from beatos_core.sources.service import get_source
+from beatos_core.lists.membership import tracks_in_list
 from beatos_core.tracks.service import (
     _SELECT_COLS,
     _deserialize,
@@ -30,7 +31,13 @@ async def create(payload: TrackCreate) -> Track:
 
 
 @router.get("", response_model=list[Track])
-async def list_all(source_id: int | None = Query(default=None)) -> list[Track]:
+async def list_all(
+    source_id: int | None = Query(default=None),
+    list_id: int | None = Query(default=None),
+) -> list[Track]:
+    if list_id is not None:
+        return await tracks_in_list(list_id)
+
     if source_id is None:
         return await list_tracks()
 
