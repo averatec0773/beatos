@@ -6,7 +6,7 @@ const COLS: { label: string; field: SortBy | null; widthClass: string; align?: s
   { label: "",        field: null,            widthClass: "w-12 flex-shrink-0" },
   { label: "",        field: null,            widthClass: "w-7 flex-shrink-0" },
   { label: "Title",   field: "title",         widthClass: "flex-1 min-w-0" },
-  { label: "BPM",     field: "bpm",           widthClass: "w-20", align: "justify-end" },
+  { label: "BPM",     field: "bpm",           widthClass: "w-20" },
   { label: "Key",     field: "key_signature", widthClass: "w-24" },
   { label: "Genre",   field: "genre",         widthClass: "w-36" },
   { label: "Updated", field: "updated_at",    widthClass: "w-24" },

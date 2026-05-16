@@ -70,7 +70,7 @@ export function TrackRow({
           {track.producer ?? ""}
         </span>
       </div>
-      <div className="w-20 text-right font-mono text-xs">{track.bpm ?? "—"}</div>
+      <div className="w-20 text-left font-mono text-xs">{track.bpm ?? "—"}</div>
       <div className="w-24 truncate text-xs">{track.key_signature ?? "—"}</div>
       <div className="w-36 truncate text-xs">{track.genre ?? "—"}</div>
       <div className="w-24 truncate font-mono text-xs text-text-tertiary">

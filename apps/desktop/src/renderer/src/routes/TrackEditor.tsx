@@ -104,7 +104,7 @@ export function TrackEditor(): React.JSX.Element {
   }
 
   return (
-    <main data-track-editor className="flex-1 overflow-y-auto p-8">
+    <main data-track-editor className="beatos-scroll flex-1 overflow-y-auto p-8">
       <form onSubmit={onSave} className="max-w-4xl space-y-6">
         <div className="grid grid-cols-[200px_1fr] gap-6 items-start">
           <CoverDropZone trackId={track.id} />

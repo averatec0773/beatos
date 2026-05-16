@@ -154,7 +154,7 @@ function AboutSection(): React.JSX.Element {
 
 export function SettingsPanel(): React.JSX.Element {
   return (
-    <main className="flex-1 overflow-y-auto p-8">
+    <main className="beatos-scroll flex-1 overflow-y-auto p-8">
       <div className="max-w-2xl">
         <h1 className="text-2xl font-bold mb-1">Settings</h1>
         <p className="text-text-secondary text-sm mb-8">

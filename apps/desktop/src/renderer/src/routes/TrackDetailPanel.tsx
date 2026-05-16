@@ -16,7 +16,7 @@ export function TrackDetailPanel(): React.JSX.Element {
 
   if (!current) {
     return (
-      <aside className="w-[360px] bg-bg-elevated border-l border-border-subtle p-4">
+      <aside className="beatos-scroll w-[360px] bg-bg-elevated border-l border-border-subtle p-4">
         <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
           Now Focused
         </div>
@@ -26,7 +26,7 @@ export function TrackDetailPanel(): React.JSX.Element {
   }
 
   return (
-    <aside className="w-[360px] bg-bg-elevated border-l border-border-subtle p-4 flex flex-col gap-4 overflow-y-auto">
+    <aside className="beatos-scroll w-[360px] bg-bg-elevated border-l border-border-subtle p-4 flex flex-col gap-4 overflow-y-auto">
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
         Now Focused
       </div>

@@ -54,3 +54,8 @@ body,
 .font-mono {
   font-variant-numeric: tabular-nums;
 }
+
+/* Hide native scrollbar on macOS "Always show" mode for inner content panels.
+   Does not affect the AppShell outer scroll, VirtualTrackList, or Sidebar. */
+.beatos-scroll::-webkit-scrollbar { width: 0; background: transparent; }
+.beatos-scroll { scrollbar-width: none; }
