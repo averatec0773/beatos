@@ -9,6 +9,7 @@
   "compilerOptions": {
     "composite": true,
     "jsx": "react-jsx",
+    "types": ["vitest/globals"],
     "baseUrl": ".",
     "paths": {
       "@renderer/*": [
