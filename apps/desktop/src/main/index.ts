@@ -7,6 +7,7 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 
 import { readConfig, writeConfig } from "./config";
 import { configureLogger, logger } from "./logger";
+import { parseUvicornLevel } from "./log-parse";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
 
 const HANDSHAKE_TIMEOUT_MS = 5000;
@@ -91,9 +92,10 @@ function startSidecar(): void {
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  const tagStream = (stream: NodeJS.ReadableStream, level: "info" | "error"): void => {
+  const tagStream = (stream: NodeJS.ReadableStream, fallback: "info" | "error"): void => {
     const rl = readline.createInterface({ input: stream });
     rl.on("line", (line) => {
+      const level = parseUvicornLevel(line, fallback);
       logger[level](`[sidecar] ${line}`);
     });
   };
