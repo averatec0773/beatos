@@ -9,8 +9,12 @@ interface TrackState {
   list: Track[];
   current: Track | null;
   loading: boolean;
+  selectedIds: Set<number>;
+  anchorId: number | null;
   refresh(opts?: { list_id?: number }): Promise<void>;
   select(id: number | null): void;
+  selectOne(id: number, mode: "replace" | "toggle" | "range"): void;
+  clearSelection(): void;
   create(title: string): Promise<Track>;
   update(id: number, updates: TrackUpdate): Promise<Track>;
   remove(id: number): Promise<void>;
@@ -20,6 +24,8 @@ export const useTrackStore = create<TrackState>((set, get) => ({
   list: [],
   current: null,
   loading: false,
+  selectedIds: new Set(),
+  anchorId: null,
   async refresh(opts) {
     set({ loading: true });
     try {
@@ -30,7 +36,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
         const filter = useSourceStore.getState().activeFilter;
         list = filter !== null ? await api.list({ source_id: filter }) : await api.list({});
       }
-      set({ list, loading: false });
+      set({ list, loading: false, selectedIds: new Set(), anchorId: null });
     } catch {
       set({ list: [], loading: false });
     }
@@ -48,6 +54,38 @@ export const useTrackStore = create<TrackState>((set, get) => ({
         .then((list) => useAssetStore.getState().setForTrack(found.id, list))
         .catch((e) => console.warn("[tracks.select] fetch assets failed:", e));
     }
+  },
+  selectOne(id, mode) {
+    const state = get();
+    if (mode === "replace") {
+      set({ selectedIds: new Set([id]), anchorId: id });
+      return;
+    }
+    if (mode === "toggle") {
+      const next = new Set(state.selectedIds);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      set({ selectedIds: next, anchorId: id });
+      return;
+    }
+    // range
+    if (state.anchorId == null) {
+      set({ selectedIds: new Set([id]), anchorId: id });
+      return;
+    }
+    const ids = state.list.map((t) => t.id);
+    const aIdx = ids.indexOf(state.anchorId);
+    const bIdx = ids.indexOf(id);
+    if (aIdx < 0 || bIdx < 0) {
+      set({ selectedIds: new Set([id]), anchorId: id });
+      return;
+    }
+    const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
+    set({ selectedIds: new Set(ids.slice(lo, hi + 1)) });
+    // anchorId stays unchanged for range
+  },
+  clearSelection() {
+    set({ selectedIds: new Set(), anchorId: null });
   },
   async create(title) {
     const t = await api.create(title);
