@@ -37,7 +37,7 @@ async def create(payload: TrackCreate) -> Track:
 async def list_all(
     source_id: int | None = Query(default=None),
     list_id: int | None = Query(default=None),
-    sort_by: str = Query(default="updated_at"),
+    sort_by: str | None = Query(default=None),
     sort_dir: str = Query(default="desc"),
     producers: list[str] = Query(default_factory=list),
     genres: list[str] = Query(default_factory=list),
@@ -49,6 +49,8 @@ async def list_all(
 ) -> list[Track]:
     try:
         if list_id is not None:
+            # When sort_by is absent, tracks_in_list defaults to position order.
+            # When sort_by is explicitly provided, pass it through.
             return await tracks_in_list(
                 list_id,
                 sort_by=sort_by,
@@ -62,9 +64,12 @@ async def list_all(
                 has_audio=has_audio,
             )
 
+        # For library / source views, default to updated_at DESC when not specified.
+        effective_sort_by = sort_by if sort_by is not None else "updated_at"
+
         if source_id is None:
             return await list_tracks(
-                sort_by=sort_by,
+                sort_by=effective_sort_by,
                 sort_dir=sort_dir,
                 producers=producers or None,
                 genres=genres or None,

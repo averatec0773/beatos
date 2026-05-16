@@ -295,3 +295,63 @@ def test_distinct_endpoint_genre(tmp_path):
     res = client.get("/api/tracks/distinct/genre")
     assert res.status_code == 200
     assert res.json() == ["hip-hop"]
+
+
+def test_list_id_default_position_order(tmp_path):
+    """GET /api/tracks?list_id=N without sort_by returns tracks in position ASC order."""
+    import asyncio
+    import aiosqlite
+    from beatos_core.db import resolve_db_path
+
+    client = TestClient(create_app())
+
+    t1 = client.post("/api/tracks", json={"title": "Alpha"}).json()
+    t2 = client.post("/api/tracks", json={"title": "Beta"}).json()
+    t3 = client.post("/api/tracks", json={"title": "Gamma"}).json()
+
+    list_id = client.post("/api/lists", json={"name": "Ordered"}).json()["id"]
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t1["id"]})
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t2["id"]})
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t3["id"]})
+
+    db_path = resolve_db_path()
+
+    async def _set_positions():
+        async with aiosqlite.connect(db_path) as conn:
+            await conn.execute(
+                "UPDATE track_list SET position = ? WHERE track_id = ? AND list_id = ?",
+                (30, t1["id"], list_id),
+            )
+            await conn.execute(
+                "UPDATE track_list SET position = ? WHERE track_id = ? AND list_id = ?",
+                (10, t2["id"], list_id),
+            )
+            await conn.execute(
+                "UPDATE track_list SET position = ? WHERE track_id = ? AND list_id = ?",
+                (20, t3["id"], list_id),
+            )
+            await conn.commit()
+
+    asyncio.get_event_loop().run_until_complete(_set_positions())
+
+    res = client.get(f"/api/tracks?list_id={list_id}")
+    assert res.status_code == 200
+    assert [t["title"] for t in res.json()] == ["Beta", "Gamma", "Alpha"]
+
+
+def test_list_id_explicit_sort_by_title(tmp_path):
+    """GET /api/tracks?list_id=N&sort_by=title&sort_dir=asc returns tracks by title."""
+    client = TestClient(create_app())
+
+    t1 = client.post("/api/tracks", json={"title": "Zebra"}).json()
+    t2 = client.post("/api/tracks", json={"title": "Mango"}).json()
+    t3 = client.post("/api/tracks", json={"title": "Apple"}).json()
+
+    list_id = client.post("/api/lists", json={"name": "TitleSorted"}).json()["id"]
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t1["id"]})
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t2["id"]})
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t3["id"]})
+
+    res = client.get(f"/api/tracks?list_id={list_id}&sort_by=title&sort_dir=asc")
+    assert res.status_code == 200
+    assert [t["title"] for t in res.json()] == ["Apple", "Mango", "Zebra"]

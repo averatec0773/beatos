@@ -138,3 +138,39 @@ async def test_tracks_in_list_sort_by_title_asc():
 
     rows = await tracks_in_list(lst.id, sort_by="title", sort_dir="asc")
     assert [r.title for r in rows] == ["A", "B", "C"]
+
+
+@pytest.mark.asyncio
+async def test_tracks_in_list_default_position_order():
+    """tracks_in_list() with no sort_by must return tracks in position ASC order."""
+    import aiosqlite
+    from beatos_core.db import resolve_db_path
+
+    lst = await create_list(name="PositionTest", kind="user")
+    first = await create_track("First")
+    second = await create_track("Second")
+    third = await create_track("Third")
+
+    await add_track_to_list(first.id, lst.id)
+    await add_track_to_list(second.id, lst.id)
+    await add_track_to_list(third.id, lst.id)
+
+    # Assign explicit positions so the expected order is unambiguous.
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute(
+            "UPDATE track_list SET position = ? WHERE track_id = ? AND list_id = ?",
+            (10, first.id, lst.id),
+        )
+        await conn.execute(
+            "UPDATE track_list SET position = ? WHERE track_id = ? AND list_id = ?",
+            (20, second.id, lst.id),
+        )
+        await conn.execute(
+            "UPDATE track_list SET position = ? WHERE track_id = ? AND list_id = ?",
+            (5, third.id, lst.id),
+        )
+        await conn.commit()
+
+    rows = await tracks_in_list(lst.id)
+    assert [r.title for r in rows] == ["Third", "First", "Second"]

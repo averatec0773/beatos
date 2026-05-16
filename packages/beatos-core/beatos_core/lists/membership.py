@@ -49,7 +49,7 @@ async def remove_track_from_list(track_id: int, list_id: int) -> None:
 async def tracks_in_list(
     list_id: int,
     *,
-    sort_by: str = "updated_at",
+    sort_by: str | None = None,
     sort_dir: str = "desc",
     producers: list[str] | None = None,
     genres: list[str] | None = None,
@@ -59,8 +59,13 @@ async def tracks_in_list(
     bpm_max: int | None = None,
     has_audio: bool | None = None,
 ) -> list[Track]:
-    """Return tracks in a list with optional sort + filter."""
-    if sort_by not in SORTABLE_FIELDS:
+    """Return tracks in a list with optional sort + filter.
+
+    When sort_by is None (default), results are ordered by list_track.position
+    then track.id — preserving the user-curated order. When sort_by is provided
+    it must be a member of SORTABLE_FIELDS.
+    """
+    if sort_by is not None and sort_by not in SORTABLE_FIELDS:
         raise ValueError(f"sort_by must be one of {sorted(SORTABLE_FIELDS)}; got {sort_by!r}")
     if sort_dir not in SORT_DIRS:
         raise ValueError(f"sort_dir must be 'asc' or 'desc'; got {sort_dir!r}")
@@ -82,12 +87,17 @@ async def tracks_in_list(
 
     params: list = [list_id] + filter_params
 
+    if sort_by is None:
+        order_clause = "track_list.position ASC, track.id ASC"
+    else:
+        order_clause = f"track.{sort_by} {sort_dir.upper()}, track.id ASC"
+
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
             f"SELECT {cols}, {cover_sq}, {has_audio_sq} FROM track "
             "INNER JOIN track_list ON track_list.track_id = track.id "
             f"WHERE {where_clause} "
-            f"ORDER BY track.{sort_by} {sort_dir.upper()}, track.id ASC",
+            f"ORDER BY {order_clause}",
             params,
         ) as cur:
             rows = await cur.fetchall()
