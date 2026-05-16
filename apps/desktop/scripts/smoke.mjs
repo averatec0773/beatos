@@ -29,6 +29,39 @@ const TINY_PNG = Buffer.from([
   0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 ]);
 
+// Minimal valid WAV: 8 kHz, 8-bit mono, 5 s silence (40000 samples of 0x80).
+// 5 s guarantees the audio element stays in "playing" state long enough for
+// the smoke's waitForSelector to catch data-playing="true" before onEnded fires.
+function makeTinyWav() {
+  const numSamples = 40000; // 5 s @ 8000 Hz
+  const sampleRate = 8000;
+  const numChannels = 1;
+  const bitsPerSample = 8;
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const dataSize = numSamples * blockAlign;
+  const buf = Buffer.alloc(44 + dataSize);
+  let off = 0;
+  // RIFF chunk
+  buf.write("RIFF", off); off += 4;
+  buf.writeUInt32LE(36 + dataSize, off); off += 4;
+  buf.write("WAVE", off); off += 4;
+  // fmt  sub-chunk
+  buf.write("fmt ", off); off += 4;
+  buf.writeUInt32LE(16, off); off += 4;          // sub-chunk size
+  buf.writeUInt16LE(1, off); off += 2;           // PCM
+  buf.writeUInt16LE(numChannels, off); off += 2;
+  buf.writeUInt32LE(sampleRate, off); off += 4;
+  buf.writeUInt32LE(byteRate, off); off += 4;
+  buf.writeUInt16LE(blockAlign, off); off += 2;
+  buf.writeUInt16LE(bitsPerSample, off); off += 2;
+  // data sub-chunk
+  buf.write("data", off); off += 4;
+  buf.writeUInt32LE(dataSize, off); off += 4;
+  buf.fill(0x80, off); // 0x80 = silence for unsigned 8-bit PCM
+  return buf;
+}
+
 const repoRoot = resolve(import.meta.dirname, "..");
 const mainEntry = join(repoRoot, "out/main/index.js");
 
@@ -290,6 +323,67 @@ try {
     } catch (e) {
       failures.push(`UI: double-click did not open editor — ${e.message}`);
     }
+
+    // === v0.0.9: bottom player bar + play button assertions ===
+
+    // Seed: attach a real WAV to Smoke1 so it has has_audio=true.
+    // Smoke2 remains cover-free and audio-free (has_audio=false).
+    const audioPath = join(userData, "smoke1-audio.wav");
+    writeFileSync(audioPath, makeTinyWav());
+    const audioAsset = await postJson(`/api/tracks/${t1.id}/assets`, {
+      role: "audio_tagged_wav",
+      path: audioPath,
+    });
+    if (typeof audioAsset.id !== "number") {
+      failures.push(`attach audio returned no id: ${JSON.stringify(audioAsset)}`);
+    }
+
+    // Reload so the renderer fetches updated has_audio flags.
+    await window.evaluate(() => { location.hash = "/"; });
+    await window.evaluate(() => location.reload());
+    await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
+    await window.waitForSelector('[role="row"]', { timeout: 5000 });
+
+    // Assertion 9: bottom player bar renders within 3s of app view.
+    try {
+      await window.waitForSelector("[data-bottom-player]", { timeout: 3000 });
+      console.log("smoke: bottom player bar renders PASS");
+    } catch (e) {
+      failures.push(`UI: [data-bottom-player] not found — ${e.message}`);
+    }
+
+    // Assertion 10: play button disabled on rows with no audio (Smoke2).
+    {
+      const noAudioBtn = window.locator('[data-has-audio="false"][data-row-play-button]').first();
+      if ((await noAudioBtn.count()) > 0) {
+        const disabled = await noAudioBtn.isDisabled();
+        if (disabled) {
+          console.log("smoke: no-audio play button disabled PASS");
+        } else {
+          failures.push("UI: play button for no-audio track is not disabled");
+        }
+      } else {
+        console.log("smoke: no-audio play button disabled SKIP (no such row visible)");
+      }
+    }
+
+    // Assertion 11: click play on audio row → bottom bar shows data-playing="true".
+    {
+      const playableBtn = window.locator('[data-has-audio="true"][data-row-play-button]').first();
+      if ((await playableBtn.count()) > 0) {
+        await playableBtn.click();
+        try {
+          await window.waitForSelector('[data-bottom-player][data-playing="true"]', { timeout: 3000 });
+          console.log("smoke: click play → playback starts PASS");
+        } catch (e) {
+          failures.push(`UI: [data-bottom-player][data-playing="true"] never appeared — ${e.message}`);
+        }
+      } else {
+        console.log("smoke: click play → playback starts SKIP (no playable row visible)");
+      }
+    }
+    // === end v0.0.9 ===
+
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
   }
