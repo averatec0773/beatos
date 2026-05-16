@@ -7,6 +7,7 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 
 import { readConfig, writeConfig } from "./config";
 import { configureLogger, logger } from "./logger";
+import { handleAssetRequest } from "./asset-protocol";
 import { parseUvicornLevel } from "./log-parse";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
 import { assertSidecarLayout } from "./sidecar-helpers";
@@ -290,27 +291,9 @@ app.whenReady().then(async () => {
     shell.openExternal(url);
   });
 
-  protocol.handle("beatos-asset", async (request) => {
-    // URL shape: beatos-asset://cover/<asset_id>
-    try {
-      const url = new URL(request.url);
-      if (url.host !== "cover") return new Response(null, { status: 404 });
-      const assetId = url.pathname.replace(/^\//, "");
-      if (apiPort == null) return new Response(null, { status: 503 });
-      const upstream = await fetch(`http://127.0.0.1:${apiPort}/api/assets/cover/${assetId}`);
-      if (!upstream.ok) return new Response(null, { status: upstream.status });
-      // Pass through body + content-type
-      return new Response(upstream.body, {
-        status: 200,
-        headers: {
-          "content-type": upstream.headers.get("content-type") ?? "image/jpeg",
-        },
-      });
-    } catch (e) {
-      console.warn("[protocol:beatos-asset] error", e);
-      return new Response(null, { status: 500 });
-    }
-  });
+  protocol.handle("beatos-asset", (request) =>
+    handleAssetRequest(request, { apiPort: () => apiPort })
+  );
 
   try {
     startSidecar();
