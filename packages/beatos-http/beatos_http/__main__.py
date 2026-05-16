@@ -9,6 +9,10 @@ from __future__ import annotations
 
 import socket
 
+from beatos_http.logging_config import configure as _configure_logging
+
+_configure_logging()
+
 import uvicorn
 
 from beatos_http.app import create_app

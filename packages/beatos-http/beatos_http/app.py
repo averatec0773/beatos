@@ -14,6 +14,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
+import structlog
+from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -122,6 +124,19 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="BeatOS HTTP", version="0.0.4", lifespan=lifespan)
+
+    app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
+
+    @app.middleware("http")
+    async def bind_request_id(request, call_next):
+        from asgi_correlation_id.context import correlation_id
+
+        structlog.contextvars.clear_contextvars()
+        structlog.contextvars.bind_contextvars(request_id=correlation_id.get())
+        try:
+            return await call_next(request)
+        finally:
+            structlog.contextvars.clear_contextvars()
 
     app.add_middleware(
         CORSMiddleware,
