@@ -9,7 +9,7 @@ from beatos_core.lists.membership import (
     tracks_in_list,
 )
 from beatos_core.lists.service import create_list
-from beatos_core.tracks.service import create_track
+from beatos_core.tracks.service import create_track, update_track
 
 
 @pytest.fixture(autouse=True)
@@ -106,3 +106,35 @@ async def test_tracks_in_list_has_audio_false_without_audio():
     await add_track_to_list(t.id, lst.id)
     rows = await tracks_in_list(lst.id)
     assert rows[0].has_audio is False
+
+
+@pytest.mark.asyncio
+async def test_tracks_in_list_filter_by_producer():
+    lst = await create_list(name="Filtered", kind="user")
+    t1 = await create_track("T1")
+    t2 = await create_track("T2")
+    t3 = await create_track("T3")
+    await update_track(t1.id, {"producer": "Alice"})
+    await update_track(t2.id, {"producer": "Bob"})
+    # t3 has no producer
+    await add_track_to_list(t1.id, lst.id)
+    await add_track_to_list(t2.id, lst.id)
+    await add_track_to_list(t3.id, lst.id)
+
+    rows = await tracks_in_list(lst.id, producers=["Alice"])
+    assert len(rows) == 1
+    assert rows[0].title == "T1"
+
+
+@pytest.mark.asyncio
+async def test_tracks_in_list_sort_by_title_asc():
+    lst = await create_list(name="Sorted", kind="user")
+    c = await create_track("C")
+    a = await create_track("A")
+    b = await create_track("B")
+    await add_track_to_list(c.id, lst.id)
+    await add_track_to_list(a.id, lst.id)
+    await add_track_to_list(b.id, lst.id)
+
+    rows = await tracks_in_list(lst.id, sort_by="title", sort_dir="asc")
+    assert [r.title for r in rows] == ["A", "B", "C"]

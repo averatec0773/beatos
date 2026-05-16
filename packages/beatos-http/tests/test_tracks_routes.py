@@ -188,3 +188,110 @@ def test_get_tracks_filtered_by_list(tmp_path):
     assert r3.status_code == 200
     assert r3.json() == []
     _ = t2  # silence linter; t2 deliberately not in list
+
+
+def test_list_tracks_sort_by_title_asc(tmp_path):
+    client = TestClient(create_app())
+    client.post("/api/tracks", json={"title": "C"})
+    client.post("/api/tracks", json={"title": "A"})
+    client.post("/api/tracks", json={"title": "B"})
+
+    res = client.get("/api/tracks?sort_by=title&sort_dir=asc")
+    assert res.status_code == 200
+    assert [t["title"] for t in res.json()] == ["A", "B", "C"]
+
+
+def test_list_tracks_sort_by_title_desc(tmp_path):
+    client = TestClient(create_app())
+    client.post("/api/tracks", json={"title": "C"})
+    client.post("/api/tracks", json={"title": "A"})
+    client.post("/api/tracks", json={"title": "B"})
+
+    res = client.get("/api/tracks?sort_by=title&sort_dir=desc")
+    assert res.status_code == 200
+    assert [t["title"] for t in res.json()] == ["C", "B", "A"]
+
+
+def test_list_tracks_invalid_sort_by_returns_400(tmp_path):
+    client = TestClient(create_app())
+    res = client.get("/api/tracks?sort_by=description")
+    assert res.status_code == 400
+
+
+def test_list_tracks_invalid_sort_dir_returns_400(tmp_path):
+    client = TestClient(create_app())
+    res = client.get("/api/tracks?sort_dir=sideways")
+    assert res.status_code == 400
+
+
+def test_list_tracks_filter_by_producers(tmp_path):
+    client = TestClient(create_app())
+    t1 = client.post("/api/tracks", json={"title": "T1"}).json()
+    t2 = client.post("/api/tracks", json={"title": "T2"}).json()
+    t3 = client.post("/api/tracks", json={"title": "T3"}).json()
+    client.put(f"/api/tracks/{t1['id']}", json={"producer": "Alice"})
+    client.put(f"/api/tracks/{t2['id']}", json={"producer": "Bob"})
+    client.put(f"/api/tracks/{t3['id']}", json={"producer": "Charlie"})
+
+    res = client.get("/api/tracks?producers=Alice&producers=Bob")
+    assert res.status_code == 200
+    assert {t["title"] for t in res.json()} == {"T1", "T2"}
+
+
+def test_list_tracks_filter_bpm_range(tmp_path):
+    client = TestClient(create_app())
+    t1 = client.post("/api/tracks", json={"title": "Slow"}).json()
+    t2 = client.post("/api/tracks", json={"title": "Mid"}).json()
+    t3 = client.post("/api/tracks", json={"title": "Fast"}).json()
+    client.put(f"/api/tracks/{t1['id']}", json={"bpm": 80})
+    client.put(f"/api/tracks/{t2['id']}", json={"bpm": 120})
+    client.put(f"/api/tracks/{t3['id']}", json={"bpm": 160})
+
+    res = client.get("/api/tracks?bpm_min=100&bpm_max=140")
+    assert res.status_code == 200
+    assert {t["title"] for t in res.json()} == {"Mid"}
+
+
+def test_list_tracks_in_list_with_filter(tmp_path):
+    client = TestClient(create_app())
+    t1 = client.post("/api/tracks", json={"title": "T1"}).json()
+    t2 = client.post("/api/tracks", json={"title": "T2"}).json()
+    client.put(f"/api/tracks/{t1['id']}", json={"producer": "Alice"})
+    client.put(f"/api/tracks/{t2['id']}", json={"producer": "Bob"})
+    list_id = client.post("/api/lists", json={"name": "MyList"}).json()["id"]
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t1["id"]})
+    client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t2["id"]})
+
+    res = client.get(f"/api/tracks?list_id={list_id}&producers=Alice")
+    assert res.status_code == 200
+    assert len(res.json()) == 1
+    assert res.json()[0]["title"] == "T1"
+
+
+def test_distinct_endpoint_producer(tmp_path):
+    client = TestClient(create_app())
+    t1 = client.post("/api/tracks", json={"title": "T1"}).json()
+    t2 = client.post("/api/tracks", json={"title": "T2"}).json()
+    client.put(f"/api/tracks/{t1['id']}", json={"producer": "Alice"})
+    client.put(f"/api/tracks/{t2['id']}", json={"producer": "Bob"})
+
+    res = client.get("/api/tracks/distinct/producer")
+    assert res.status_code == 200
+    assert isinstance(res.json(), list)
+    assert res.json() == ["Alice", "Bob"]
+
+
+def test_distinct_endpoint_invalid_field_returns_400(tmp_path):
+    client = TestClient(create_app())
+    res = client.get("/api/tracks/distinct/description")
+    assert res.status_code == 400
+
+
+def test_distinct_endpoint_genre(tmp_path):
+    client = TestClient(create_app())
+    t1 = client.post("/api/tracks", json={"title": "T1"}).json()
+    client.put(f"/api/tracks/{t1['id']}", json={"genre": "hip-hop"})
+
+    res = client.get("/api/tracks/distinct/genre")
+    assert res.status_code == 200
+    assert res.json() == ["hip-hop"]

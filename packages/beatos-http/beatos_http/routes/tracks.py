@@ -21,6 +21,7 @@ from beatos_core.tracks.service import (
     delete_track,
     get_track,
     list_tracks,
+    list_distinct_values,
     update_track,
 )
 
@@ -36,12 +37,45 @@ async def create(payload: TrackCreate) -> Track:
 async def list_all(
     source_id: int | None = Query(default=None),
     list_id: int | None = Query(default=None),
+    sort_by: str = Query(default="updated_at"),
+    sort_dir: str = Query(default="desc"),
+    producers: list[str] = Query(default_factory=list),
+    genres: list[str] = Query(default_factory=list),
+    moods: list[str] = Query(default_factory=list),
+    keys: list[str] = Query(default_factory=list),
+    bpm_min: int | None = Query(default=None),
+    bpm_max: int | None = Query(default=None),
+    has_audio: bool | None = Query(default=None),
 ) -> list[Track]:
-    if list_id is not None:
-        return await tracks_in_list(list_id)
+    try:
+        if list_id is not None:
+            return await tracks_in_list(
+                list_id,
+                sort_by=sort_by,
+                sort_dir=sort_dir,
+                producers=producers or None,
+                genres=genres or None,
+                moods=moods or None,
+                keys=keys or None,
+                bpm_min=bpm_min,
+                bpm_max=bpm_max,
+                has_audio=has_audio,
+            )
 
-    if source_id is None:
-        return await list_tracks()
+        if source_id is None:
+            return await list_tracks(
+                sort_by=sort_by,
+                sort_dir=sort_dir,
+                producers=producers or None,
+                genres=genres or None,
+                moods=moods or None,
+                keys=keys or None,
+                bpm_min=bpm_min,
+                bpm_max=bpm_max,
+                has_audio=has_audio,
+            )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     src = await get_source(source_id)
     if src is None:
@@ -61,6 +95,14 @@ async def list_all(
         ) as cur:
             rows = await cur.fetchall()
     return [_deserialize(r) for r in rows]
+
+
+@router.get("/distinct/{field}", response_model=list[str])
+async def distinct_values(field: str) -> list[str]:
+    try:
+        return await list_distinct_values(field)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/{track_id}", response_model=Track)

@@ -30,6 +30,13 @@ _WRITABLE_FIELDS = {
 
 _FORBIDDEN_FIELDS = {"description_draft"}
 
+SORTABLE_FIELDS = frozenset({
+    "title", "bpm", "key_signature", "genre", "producer",
+    "updated_at", "created_at",
+})
+SORT_DIRS = frozenset({"asc", "desc"})
+DISTINCT_FIELDS = frozenset({"producer", "genre", "mood", "key_signature"})
+
 
 def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
@@ -127,14 +134,90 @@ async def create_track(title: str) -> Track:
     return _deserialize(row)
 
 
-async def list_tracks() -> list[Track]:
+def _build_where(
+    *,
+    producers: list[str] | None,
+    genres: list[str] | None,
+    moods: list[str] | None,
+    keys: list[str] | None,
+    bpm_min: int | None,
+    bpm_max: int | None,
+    has_audio: bool | None,
+) -> tuple[str, list]:
+    clauses: list[str] = []
+    params: list = []
+    for field, values in [
+        ("producer", producers), ("genre", genres), ("mood", moods), ("key_signature", keys),
+    ]:
+        if values:
+            placeholders = ", ".join("?" for _ in values)
+            clauses.append(f"{field} IN ({placeholders})")
+            params.extend(values)
+    if bpm_min is not None:
+        clauses.append("bpm >= ?")
+        params.append(bpm_min)
+    if bpm_max is not None:
+        clauses.append("bpm <= ?")
+        params.append(bpm_max)
+    if has_audio is True:
+        clauses.append(
+            "EXISTS (SELECT 1 FROM asset ax3 "
+            "WHERE ax3.track_id = track.id AND ax3.missing = 0 "
+            "AND ax3.role IN ('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav'))"
+        )
+    elif has_audio is False:
+        clauses.append(
+            "NOT EXISTS (SELECT 1 FROM asset ax3 "
+            "WHERE ax3.track_id = track.id AND ax3.missing = 0 "
+            "AND ax3.role IN ('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav'))"
+        )
+    return (" AND ".join(clauses), params)
+
+
+async def list_tracks(
+    *,
+    sort_by: str = "updated_at",
+    sort_dir: str = "desc",
+    producers: list[str] | None = None,
+    genres: list[str] | None = None,
+    moods: list[str] | None = None,
+    keys: list[str] | None = None,
+    bpm_min: int | None = None,
+    bpm_max: int | None = None,
+    has_audio: bool | None = None,
+) -> list[Track]:
+    if sort_by not in SORTABLE_FIELDS:
+        raise ValueError(f"sort_by must be one of {sorted(SORTABLE_FIELDS)}; got {sort_by!r}")
+    if sort_dir not in SORT_DIRS:
+        raise ValueError(f"sort_dir must be 'asc' or 'desc'; got {sort_dir!r}")
+
+    where, params = _build_where(
+        producers=producers, genres=genres, moods=moods, keys=keys,
+        bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
+    )
+    sql = (
+        f"SELECT {_SELECT_COLS}, {_cover_subquery()}, {_has_audio_subquery()} "
+        f"FROM track "
+        + (f"WHERE {where} " if where else "")
+        + f"ORDER BY {sort_by} {sort_dir.upper()}, id ASC"
+    )
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(sql, params) as cur:
+            rows = await cur.fetchall()
+    return [_deserialize(r) for r in rows]
+
+
+async def list_distinct_values(field: str) -> list[str]:
+    if field not in DISTINCT_FIELDS:
+        raise ValueError(f"field must be one of {sorted(DISTINCT_FIELDS)}; got {field!r}")
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            f"SELECT {_SELECT_COLS}, {_cover_subquery()}, {_has_audio_subquery()} FROM track ORDER BY updated_at DESC"
+            f"SELECT DISTINCT {field} FROM track WHERE {field} IS NOT NULL ORDER BY {field}"
         ) as cur:
             rows = await cur.fetchall()
-    return [_deserialize(r) for r in rows]
+    return [r[0] for r in rows]
 
 
 async def get_track(track_id: int) -> Optional[Track]:

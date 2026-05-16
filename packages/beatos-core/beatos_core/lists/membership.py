@@ -15,6 +15,7 @@ from beatos_core.tracks.service import _SELECT_COLS as _TRACK_SELECT_COLS
 from beatos_core.tracks.service import _cover_subquery as _track_cover_subquery
 from beatos_core.tracks.service import _has_audio_subquery as _track_has_audio_subquery
 from beatos_core.tracks.service import _deserialize as _track_from_row
+from beatos_core.tracks.service import _build_where, SORTABLE_FIELDS, SORT_DIRS
 from beatos_core.lists.service import _SELECT_COLS as _LIST_SELECT_COLS
 from beatos_core.lists.service import _row_to_list
 
@@ -45,20 +46,49 @@ async def remove_track_from_list(track_id: int, list_id: int) -> None:
         await conn.commit()
 
 
-async def tracks_in_list(list_id: int) -> list[Track]:
-    """Return tracks in a list, ordered by membership position then track id."""
+async def tracks_in_list(
+    list_id: int,
+    *,
+    sort_by: str = "updated_at",
+    sort_dir: str = "desc",
+    producers: list[str] | None = None,
+    genres: list[str] | None = None,
+    moods: list[str] | None = None,
+    keys: list[str] | None = None,
+    bpm_min: int | None = None,
+    bpm_max: int | None = None,
+    has_audio: bool | None = None,
+) -> list[Track]:
+    """Return tracks in a list with optional sort + filter."""
+    if sort_by not in SORTABLE_FIELDS:
+        raise ValueError(f"sort_by must be one of {sorted(SORTABLE_FIELDS)}; got {sort_by!r}")
+    if sort_dir not in SORT_DIRS:
+        raise ValueError(f"sort_dir must be 'asc' or 'desc'; got {sort_dir!r}")
+
     db_path = resolve_db_path()
     # Qualify each column with the `track.` prefix so the join is unambiguous.
     cols = ", ".join(f"track.{c.strip()}" for c in _TRACK_SELECT_COLS.split(","))
     cover_sq = _track_cover_subquery("track.")
     has_audio_sq = _track_has_audio_subquery("track.")
+
+    filter_where, filter_params = _build_where(
+        producers=producers, genres=genres, moods=moods, keys=keys,
+        bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
+    )
+
+    where_clause = "track_list.list_id = ?"
+    if filter_where:
+        where_clause = f"{where_clause} AND {filter_where}"
+
+    params: list = [list_id] + filter_params
+
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
             f"SELECT {cols}, {cover_sq}, {has_audio_sq} FROM track "
             "INNER JOIN track_list ON track_list.track_id = track.id "
-            "WHERE track_list.list_id = ? "
-            "ORDER BY track_list.position, track.id",
-            (list_id,),
+            f"WHERE {where_clause} "
+            f"ORDER BY track.{sort_by} {sort_dir.upper()}, track.id ASC",
+            params,
         ) as cur:
             rows = await cur.fetchall()
     return [_track_from_row(r) for r in rows]
