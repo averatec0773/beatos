@@ -14,6 +14,8 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
+    "dev:fresh": "bash scripts/dev-reset.sh && npm run dev",
+    "logs:tail": "tail -f logs/main.log logs/sidecar.jsonl",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
