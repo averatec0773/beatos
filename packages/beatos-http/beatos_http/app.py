@@ -30,6 +30,7 @@ log = logging.getLogger(__name__)
 _ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "null",
 ]
 
 # Module-level runtime state (per-process singletons).
@@ -140,7 +141,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_ALLOWED_ORIGINS,
+        allow_origin_regex=r".*",
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
     )
