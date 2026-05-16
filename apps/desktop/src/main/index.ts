@@ -60,6 +60,13 @@ function resolveDbPath(): string {
   return readConfig().dbPath ?? join(app.getPath("music"), "BeatOS", "global.db");
 }
 
+function resolveLogsDir(): string {
+  if (is.dev) {
+    return join(app.getAppPath(), "logs");
+  }
+  return join(app.getPath("logs"), "BeatOS");
+}
+
 function startSidecar(): void {
   ensureRuntimeDir();
   const hp = handshakePath();
@@ -68,12 +75,17 @@ function startSidecar(): void {
   const dbPath = resolveDbPath();
   mkdirSync(dirname(dbPath), { recursive: true });
 
+  const logsDir = resolveLogsDir();
+  mkdirSync(logsDir, { recursive: true });
+  const sidecarLogPath = join(logsDir, "sidecar.jsonl");
+
   sidecar = spawn("uv", ["run", "python", "-m", "beatos_http"], {
     cwd: repoRoot(),
     env: {
       ...process.env,
       BEATOS_HANDSHAKE_PATH: hp,
       BEATOS_DB_PATH: dbPath,
+      BEATOS_LOG_PATH: sidecarLogPath,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
