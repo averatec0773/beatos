@@ -29,20 +29,6 @@ const TINY_PNG = Buffer.from([
   0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 ]);
 
-/**
- * Poll for a renderer-side condition until true or timeout. Returns nothing
- * on success; throws on timeout. `predicate` runs in the renderer via
- * page.evaluate so it sees the live DOM.
- */
-async function waitFor(page, predicate, { timeout = 5000, interval = 100, label } = {}) {
-  const start = Date.now();
-  while (Date.now() - start < timeout) {
-    if (await page.evaluate(predicate)) return;
-    await page.waitForTimeout(interval);
-  }
-  throw new Error(`waitFor timeout (${timeout}ms): ${label ?? "unnamed predicate"}`);
-}
-
 const repoRoot = resolve(import.meta.dirname, "..");
 const mainEntry = join(repoRoot, "out/main/index.js");
 
