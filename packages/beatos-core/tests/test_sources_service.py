@@ -50,11 +50,21 @@ async def test_create_source_rejects_duplicate_path(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_create_source_rejects_nonexistent_path(tmp_path):
+async def test_create_source_accepts_nonexistent_path(tmp_path):
+    # An offline Source (e.g., external drive unplugged at registration time)
+    # is a legal state per charter §6.
     missing = tmp_path / "DoesNotExist"
+    src = await create_source(SourceCreate(root_path=str(missing)))
+    assert src.root_path == str(missing.resolve())
 
-    with pytest.raises(ValueError, match="does not exist"):
-        await create_source(SourceCreate(root_path=str(missing)))
+
+@pytest.mark.asyncio
+async def test_create_source_rejects_non_directory(tmp_path):
+    f = tmp_path / "file.txt"
+    f.write_text("x")
+
+    with pytest.raises(ValueError, match="not a directory"):
+        await create_source(SourceCreate(root_path=str(f)))
 
 
 @pytest.mark.asyncio

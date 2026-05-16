@@ -29,9 +29,7 @@ def _row_to_source(row) -> Source:
 
 async def create_source(payload: SourceCreate) -> Source:
     p = Path(payload.root_path)
-    if not p.exists():
-        raise ValueError(f"Path does not exist: {p}")
-    if not p.is_dir():
+    if p.exists() and not p.is_dir():
         raise ValueError(f"Path is not a directory: {p}")
 
     db_path = resolve_db_path()

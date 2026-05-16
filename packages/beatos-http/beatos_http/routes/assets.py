@@ -13,6 +13,7 @@ from beatos_core.assets.service import (
     attach_asset,
     detach_asset,
     get_asset,
+    list_assets_for_track,
     relocate_asset,
 )
 from beatos_core.models import Asset, AssetCreate
@@ -22,6 +23,11 @@ router = APIRouter(tags=["assets"])
 
 class RelocatePayload(BaseModel):
     new_path: str
+
+
+@router.get("/api/tracks/{track_id}/assets", response_model=list[Asset])
+async def list_for_track(track_id: int) -> list[Asset]:
+    return await list_assets_for_track(track_id)
 
 
 @router.post("/api/tracks/{track_id}/assets")

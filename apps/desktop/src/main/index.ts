@@ -163,6 +163,11 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("path:home", () => app.getPath("home"));
 
+  ipcMain.handle("path:ensure-dir", (_e, dirPath: string) => {
+    mkdirSync(dirPath, { recursive: true });
+    return dirPath;
+  });
+
   ipcMain.handle("storage:get-db-path", () => resolveDbPath());
 
   ipcMain.handle("storage:set-db-path", (_e, newPath: string) => {

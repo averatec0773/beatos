@@ -51,10 +51,20 @@ def test_create_source_conflict(client, tmp_path):
     assert r2.status_code == 409
 
 
-def test_create_source_400_on_invalid_path(client, tmp_path):
+def test_create_source_accepts_offline_path(client, tmp_path):
+    # Offline Source at creation time is allowed per charter §6.
     missing = tmp_path / "does-not-exist"
 
     r = client.post("/api/sources", json={"root_path": str(missing)})
+
+    assert r.status_code == 201
+
+
+def test_create_source_400_when_path_is_a_file(client, tmp_path):
+    f = tmp_path / "not-a-dir.txt"
+    f.write_text("x")
+
+    r = client.post("/api/sources", json={"root_path": str(f)})
 
     assert r.status_code == 400
 

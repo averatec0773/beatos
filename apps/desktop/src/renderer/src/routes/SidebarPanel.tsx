@@ -14,6 +14,7 @@ export function SidebarPanel(): React.JSX.Element {
 
   const allLists = useListStore((s) => s.all);
   const refreshLists = useListStore((s) => s.refresh);
+  const createList = useListStore((s) => s.create);
 
   const navigate = useNavigate();
 
@@ -34,8 +35,15 @@ export function SidebarPanel(): React.JSX.Element {
   function onAddSource(): void {
     navigate("/settings");
   }
-  function onAddList(): void {
-    navigate("/settings");
+  async function onAddList(): Promise<void> {
+    const name = window.prompt("List name?");
+    if (!name || !name.trim()) return;
+    try {
+      const created = await createList(name.trim());
+      navigate(`/lists/${created.id}`);
+    } catch (e) {
+      alert(`Failed to create list: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   return (

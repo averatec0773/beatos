@@ -31,6 +31,7 @@ export function WelcomeScreen(): React.JSX.Element {
     try {
       const home = await window.beatos.getHomePath();
       const defaultPath = `${home}/Music/Beats`;
+      await window.beatos.ensureDir(defaultPath);
       await addSource({ root_path: defaultPath });
       navigate("/", { replace: true });
     } catch (e) {
