@@ -449,6 +449,180 @@ try {
     }
     // === end v0.0.10 ===
 
+    // === v0.0.11: filter chip add/remove + sort title round-trip ===
+
+    async function putJson(path, body) {
+      const res = await fetch(`${baseUrl}${path}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(`PUT ${path} -> ${res.status} ${detail.slice(0, 200)}`);
+      }
+      return res.status === 204 ? null : await res.json();
+    }
+
+    // Setup: attach producer to t1 (Smoke1) so we can filter by it.
+    await putJson(`/api/tracks/${t1.id}`, { producer: "smoke-producer" });
+
+    // Navigate to "/" to ensure the main library view is showing.
+    await window.evaluate(() => { location.hash = "/"; });
+    await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
+    await window.waitForSelector('[data-track-id]', { timeout: 5000 });
+
+    // Assertion 14: filter chip add/remove
+    {
+      try {
+        // Click "+ Add filter"
+        const addFilterBtn = window.locator('[data-add-filter]').first();
+        await addFilterBtn.click();
+
+        // Wait for the field list to appear (the popover content with "Producer" option)
+        await window.waitForSelector('text=Producer', { timeout: 3000 });
+
+        // Click "Producer" in the field list
+        // Use the popover's field-list item (a button containing only "Producer")
+        const producerOption = window.locator('button:has-text("Producer")').first();
+        await producerOption.click();
+
+        // Wait for the producer value picker (distinct values list) to appear
+        // The MultiValuePicker shows a loading state then the values
+        await window.waitForFunction(
+          () => {
+            // Look for a label containing "smoke-producer" (the checkbox item)
+            const labels = Array.from(document.querySelectorAll('label'));
+            return labels.some((l) => l.textContent && l.textContent.includes('smoke-producer'));
+          },
+          undefined,
+          { timeout: 5000 }
+        );
+
+        // Toggle the checkbox for "smoke-producer"
+        const smokeProducerLabel = window.locator('label', { hasText: 'smoke-producer' }).first();
+        await smokeProducerLabel.click();
+
+        // Click "Apply"
+        await window.locator('button:has-text("Apply")').first().click();
+
+        // Wait for the filter chip to appear
+        await window.waitForSelector('[data-filter-chip][data-field="producers"]', { timeout: 3000 });
+        console.log("smoke: filter chip appears PASS");
+
+        // Assert visible row count is 1 (only Smoke1 has smoke-producer)
+        await window.waitForFunction(
+          () => document.querySelectorAll('[data-track-id]').length === 1,
+          undefined,
+          { timeout: 3000 }
+        );
+        const filteredCount = await window.evaluate(
+          () => document.querySelectorAll('[data-track-id]').length
+        );
+        if (filteredCount !== 1) {
+          failures.push(`filter chip: expected 1 visible track row, got ${filteredCount}`);
+        } else {
+          console.log("smoke: filter chip row count PASS");
+        }
+
+        // Click the × on the chip to remove the filter
+        const chip = window.locator('[data-filter-chip][data-field="producers"]').first();
+        const removeSpan = chip.locator('span[aria-label="Remove producer filter"]').first();
+        await removeSpan.click();
+
+        // Wait for chip to disappear
+        await window.waitForFunction(
+          () => document.querySelector('[data-filter-chip][data-field="producers"]') === null,
+          undefined,
+          { timeout: 3000 }
+        );
+        console.log("smoke: filter chip remove PASS");
+
+        // Verify row count is back to 2
+        await window.waitForFunction(
+          () => document.querySelectorAll('[data-track-id]').length === 2,
+          undefined,
+          { timeout: 3000 }
+        );
+        const restoredCount = await window.evaluate(
+          () => document.querySelectorAll('[data-track-id]').length
+        );
+        if (restoredCount !== 2) {
+          failures.push(`filter chip remove: expected 2 rows restored, got ${restoredCount}`);
+        } else {
+          console.log("smoke: filter chip restore PASS");
+        }
+      } catch (e) {
+        failures.push(`UI: filter chip add/remove — ${e.message}`);
+      }
+    }
+
+    // Assertion 15: sort title round-trip
+    {
+      try {
+        // We should already be on the main library view after assertion 14 cleanup.
+        // Verify 2 rows are visible.
+        await window.waitForSelector('[data-track-id]', { timeout: 5000 });
+        await window.waitForFunction(
+          () => document.querySelectorAll('[data-track-id]').length >= 2,
+          undefined,
+          { timeout: 5000 }
+        );
+
+        // Click the Title column header to sort ascending
+        const titleHeaderBtn = window.locator('[data-column="title"]').first();
+        await titleHeaderBtn.click();
+
+        // Wait for the Zustand store update + API re-fetch + React re-render
+        await window.waitForTimeout(1200);
+
+        // Capture titles and count atomically in a single evaluate.
+        // [data-track-title] is on the <span> containing the track title inside TrackRow.
+        const ascResult = await window.evaluate(() => {
+          const rows = Array.from(document.querySelectorAll('[data-track-id]'));
+          const titles = rows.map((el) => {
+            const span = el.querySelector('[data-track-title]');
+            return span ? (span.textContent ?? "").trim() : "";
+          });
+          return { count: rows.length, titles };
+        });
+
+        if (ascResult.count !== 2) {
+          failures.push(`sort asc: expected 2 rows, got ${ascResult.count}`);
+        } else if (ascResult.titles[0] > ascResult.titles[1]) {
+          failures.push(`sort asc: expected ascending order, got ${JSON.stringify(ascResult.titles)}`);
+        } else {
+          console.log(`smoke: sort title asc PASS (${ascResult.titles.join(', ')})`);
+        }
+
+        // Click again to toggle to descending
+        await titleHeaderBtn.click();
+        // Wait for the re-fetch + re-render
+        await window.waitForTimeout(1200);
+
+        const descResult = await window.evaluate(() => {
+          const rows = Array.from(document.querySelectorAll('[data-track-id]'));
+          const titles = rows.map((el) => {
+            const span = el.querySelector('[data-track-title]');
+            return span ? (span.textContent ?? "").trim() : "";
+          });
+          return { count: rows.length, titles };
+        });
+
+        if (descResult.count !== 2) {
+          failures.push(`sort desc: expected 2 rows, got ${descResult.count}`);
+        } else if (descResult.titles[0] < descResult.titles[1]) {
+          failures.push(`sort desc: expected descending order, got ${JSON.stringify(descResult.titles)}`);
+        } else {
+          console.log(`smoke: sort title desc PASS (${descResult.titles.join(', ')})`);
+        }
+      } catch (e) {
+        failures.push(`UI: sort title round-trip — ${e.message}`);
+      }
+    }
+
+    // === end v0.0.11 ===
+
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
   }

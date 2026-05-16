@@ -38,6 +38,7 @@ export function TrackRow({
   return (
     <div
       role="row"
+      data-track-id={track.id}
       tabIndex={0}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -64,7 +65,7 @@ export function TrackRow({
       </div>
       <TrackRowPlayButton trackId={track.id} hasAudio={track.has_audio ?? false} />
       <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <span className="text-sm font-medium text-text-primary truncate">{track.title}</span>
+        <span data-track-title className="text-sm font-medium text-text-primary truncate">{track.title}</span>
         <span className="text-xs text-text-tertiary truncate">
           {track.producer ?? ""}
         </span>
