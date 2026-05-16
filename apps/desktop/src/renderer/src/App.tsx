@@ -13,6 +13,7 @@ import { SidecarCrashToast } from "@/components/SidecarCrashToast";
 import { DragOverlayPreview } from "@/components/DragOverlayPreview";
 import { useDialogStore } from "@/stores/dialogs";
 import { useSourceStore } from "@/stores/sources";
+import { useTrackStore } from "@/stores/tracks";
 
 interface ActiveDrag {
   trackId: number;
@@ -83,7 +84,21 @@ export default function App(): React.JSX.Element {
           const id = String(active.id);
           if (!id.startsWith("track:")) return;
           const trackId = Number(id.slice("track:".length));
-          setActiveDrag({ trackId, count: 1 });
+          const state = useTrackStore.getState();
+          const selected = state.selectedIds;
+          let count: number;
+          let title: string | undefined;
+          if (selected.has(trackId) && selected.size > 1) {
+            count = selected.size;
+            title = undefined;
+          } else {
+            if (!selected.has(trackId)) {
+              state.selectOne(trackId, "replace");
+            }
+            count = 1;
+            title = state.list.find((t) => t.id === trackId)?.title;
+          }
+          setActiveDrag({ trackId, count, title });
         }}
         onDragEnd={() => setActiveDrag(null)}
         onDragCancel={() => setActiveDrag(null)}

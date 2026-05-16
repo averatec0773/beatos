@@ -16,6 +16,8 @@ export function TrackListPanel(): React.JSX.Element {
   const current = useTrackStore((s) => s.current);
   const refresh = useTrackStore((s) => s.refresh);
   const select = useTrackStore((s) => s.select);
+  const selectedIds = useTrackStore((s) => s.selectedIds);
+  const selectOne = useTrackStore((s) => s.selectOne);
   const remove = useTrackStore((s) => s.remove);
   const createTrack = useTrackStore((s) => s.create);
   const filterFn = useSearchStore((s) => s.filter);
@@ -111,7 +113,17 @@ export function TrackListPanel(): React.JSX.Element {
                   track={t}
                   coverAssetId={coverIdFor(t)}
                   selected={current?.id === t.id}
-                  onSelect={() => select(t.id)}
+                  isMultiSelected={selectedIds.has(t.id)}
+                  onSelect={(e: React.MouseEvent) => {
+                    if (e.shiftKey) {
+                      selectOne(t.id, "range");
+                    } else if (e.metaKey || e.ctrlKey) {
+                      selectOne(t.id, "toggle");
+                    } else {
+                      selectOne(t.id, "replace");
+                      select(t.id);
+                    }
+                  }}
                   onOpen={() => navigate(`/tracks/${t.id}/edit`)}
                   onDelete={() => {
                     if (confirm(`Delete "${t.title}"?`)) remove(t.id);

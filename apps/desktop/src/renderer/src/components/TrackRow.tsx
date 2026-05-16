@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Trash2 } from "lucide-react";
+import { useDraggable } from "@dnd-kit/core";
 
 import { CoverImage } from "@/components/CoverImage";
 import type { Track } from "@/api/tracks";
@@ -8,7 +9,8 @@ interface Props {
   track: Track;
   coverAssetId: number | null;
   selected: boolean;
-  onSelect: () => void;
+  isMultiSelected?: boolean;
+  onSelect: (event: React.MouseEvent) => void;
   onOpen: () => void;
   onDelete: () => void;
 }
@@ -17,14 +19,25 @@ export function TrackRow({
   track,
   coverAssetId,
   selected,
+  isMultiSelected = false,
   onSelect,
   onOpen,
   onDelete,
 }: Props): React.JSX.Element {
   const [hover, setHover] = useState(false);
 
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `track:${track.id}`,
+    data: { trackId: track.id, title: track.title },
+  });
+
+  const highlighted = isMultiSelected || selected;
+
   return (
     <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       role="row"
       tabIndex={0}
       onMouseEnter={() => setHover(true)}
@@ -35,9 +48,12 @@ export function TrackRow({
         if (e.key === "Enter") onOpen();
       }}
       className={`h-12 px-4 flex items-center cursor-pointer relative gap-3 text-sm
-        ${selected ? "bg-bg-row-selected text-text-primary" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}
+        ${isDragging ? "opacity-50" : ""}
+        ${highlighted ? "bg-bg-row-selected text-text-primary border-l-2 border-accent" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}
     >
-      {selected && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-accent" />}
+      {highlighted && !isDragging && (
+        <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-accent" />
+      )}
       <CoverImage assetId={coverAssetId} size={40} className="flex-shrink-0" />
       <div className="flex-1 truncate">{track.title}</div>
       <div className="w-16 text-right font-mono text-xs">{track.bpm ?? "—"}</div>
