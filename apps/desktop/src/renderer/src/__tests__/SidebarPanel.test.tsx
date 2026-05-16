@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { DndContext } from "@dnd-kit/core";
 import { SidebarPanel } from "@/routes/SidebarPanel";
 import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
@@ -21,7 +22,7 @@ beforeEach(() => {
 });
 
 it("renders SOURCES and LISTS sections", () => {
-  render(<MemoryRouter><SidebarPanel /></MemoryRouter>);
+  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
   expect(screen.getByText(/sources/i)).toBeInTheDocument();
   expect(screen.getByText(/lists/i)).toBeInTheDocument();
   expect(screen.getByText("Main")).toBeInTheDocument();
@@ -30,14 +31,14 @@ it("renders SOURCES and LISTS sections", () => {
 });
 
 it("clicking a Source sets activeFilter", () => {
-  render(<MemoryRouter><SidebarPanel /></MemoryRouter>);
+  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
   fireEvent.click(screen.getByText("Main"));
   expect(useSourceStore.getState().activeFilter).toBe(1);
 });
 
 it("clicking All Beats clears activeFilter", () => {
   useSourceStore.setState({ activeFilter: 1 });
-  render(<MemoryRouter><SidebarPanel /></MemoryRouter>);
+  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
   fireEvent.click(screen.getByText("All Beats"));
   expect(useSourceStore.getState().activeFilter).toBeNull();
 });

@@ -14,6 +14,8 @@ import { DragOverlayPreview } from "@/components/DragOverlayPreview";
 import { useDialogStore } from "@/stores/dialogs";
 import { useSourceStore } from "@/stores/sources";
 import { useTrackStore } from "@/stores/tracks";
+import { useListStore } from "@/stores/lists";
+import { lists as listsApi } from "@/api/lists";
 
 interface ActiveDrag {
   trackId: number;
@@ -100,7 +102,26 @@ export default function App(): React.JSX.Element {
           }
           setActiveDrag({ trackId, count, title });
         }}
-        onDragEnd={() => setActiveDrag(null)}
+        onDragEnd={async ({ active, over }) => {
+          setActiveDrag(null);
+          if (!over?.id) return;
+          const overId = String(over.id);
+          if (!overId.startsWith("list:")) return;
+          const listId = Number(overId.slice("list:".length));
+          const state = useTrackStore.getState();
+          const sourceTrackId = Number(String(active.id).slice("track:".length));
+          let trackIds = Array.from(state.selectedIds);
+          if (trackIds.length === 0) trackIds = [sourceTrackId];
+
+          const results = await Promise.allSettled(
+            trackIds.map((tid) => listsApi.addTrack(listId, tid))
+          );
+          const failed = results.filter((r) => r.status === "rejected").length;
+          if (failed > 0) {
+            console.warn(`[dnd] ${failed}/${trackIds.length} adds failed to list ${listId}`);
+          }
+          await useListStore.getState().refresh();
+        }}
         onDragCancel={() => setActiveDrag(null)}
       >
         <BrowserRouter>
