@@ -62,8 +62,15 @@ export function BottomPlayerBar() {
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
-    if (status === "playing") a.play().catch(() => {});
-    else if (status === "paused") a.pause();
+    if (status === "playing") {
+      // If we're resuming after the track ended (queue end, repeat=off),
+      // audio.ended is true and audio.currentTime is at duration. Chromium's
+      // .play() on an ended element is unreliable — explicitly rewind first.
+      if (a.ended) a.currentTime = 0;
+      a.play().catch(() => {});
+    } else if (status === "paused") {
+      a.pause();
+    }
   }, [status]);
 
   // Sync volume/mute

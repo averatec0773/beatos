@@ -368,6 +368,7 @@ try {
     }
 
     // Assertion 11: click play on audio row → bottom bar shows data-playing="true".
+    let playbackStartedForAssertion12 = false;
     {
       const playableBtn = window.locator('[data-has-audio="true"][data-row-play-button]').first();
       if ((await playableBtn.count()) > 0) {
@@ -375,6 +376,7 @@ try {
         try {
           await window.waitForSelector('[data-bottom-player][data-playing="true"]', { timeout: 3000 });
           console.log("smoke: click play → playback starts PASS");
+          playbackStartedForAssertion12 = true;
         } catch (e) {
           failures.push(`UI: [data-bottom-player][data-playing="true"] never appeared — ${e.message}`);
         }
@@ -383,6 +385,29 @@ try {
       }
     }
     // === end v0.0.9 ===
+
+    // === v0.0.9.1: regression — resume after track ends ===
+    // Bug surfaced post-v0.0.9: when a track played to natural end with
+    // repeat=off, audio.ended=true and clicking play again no-op'd (Chromium
+    // .play() on ended element is unreliable). Fix resets currentTime=0 first.
+    // Smoke uses the 5s WAV from makeTinyWav() — wait it out, then click the
+    // bottom-bar play button and assert playback resumes.
+    if (playbackStartedForAssertion12) {
+      try {
+        // Wait for the track (5s WAV, single-track queue) to end → status="paused".
+        await window.waitForSelector('[data-bottom-player][data-playing="false"]', { timeout: 8000 });
+        // Click the central play/pause button in the bottom bar.
+        const bottomPlayBtn = window.locator('[data-bottom-player] [data-play-button]').first();
+        await bottomPlayBtn.click();
+        await window.waitForSelector('[data-bottom-player][data-playing="true"]', { timeout: 3000 });
+        console.log("smoke: resume after end PASS");
+      } catch (e) {
+        failures.push(`UI: resume after end failed — ${e.message}`);
+      }
+    } else {
+      console.log("smoke: resume after end SKIP (prerequisite assertion 11 did not start playback)");
+    }
+    // === end v0.0.9.1 ===
 
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
