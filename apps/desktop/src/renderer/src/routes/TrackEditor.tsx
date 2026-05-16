@@ -5,7 +5,9 @@ import { tracks } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
-import { FilesSection } from "@/components/FilesSection";
+import { CoverDropZone } from "@/components/CoverDropZone";
+import { FileRowsSection } from "@/components/FileRowsSection";
+import { KeyPicker } from "@/components/KeyPicker";
 import type { Track, TrackUpdate } from "@/api/tracks";
 
 const LICENSE_TYPES = ["lease_basic", "lease_premium", "exclusive"] as const;
@@ -103,165 +105,164 @@ export function TrackEditor(): React.JSX.Element {
 
   return (
     <main data-track-editor className="flex-1 overflow-y-auto p-8">
-      <form onSubmit={onSave} className="max-w-3xl space-y-6">
-        <FilesSection trackId={track.id} />
+      <form onSubmit={onSave} className="max-w-4xl space-y-6">
+        <div className="grid grid-cols-[200px_1fr] gap-6 items-start">
+          <CoverDropZone trackId={track.id} />
 
-        <div>
-          <label
-            htmlFor="track-title"
-            className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-          >
-            Title
-          </label>
-          <input
-            id="track-title"
-            type="text"
-            value={track.title}
-            onChange={(e) => patch("title", e.target.value)}
-            className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:border-accent"
-          />
+          <div className="space-y-4">
+            <div>
+              <label
+                htmlFor="track-title"
+                className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+              >
+                Title
+              </label>
+              <input
+                id="track-title"
+                type="text"
+                value={track.title}
+                onChange={(e) => patch("title", e.target.value)}
+                className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:border-accent"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label
+                  htmlFor="track-bpm"
+                  className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+                >
+                  BPM
+                </label>
+                <input
+                  id="track-bpm"
+                  type="number"
+                  value={track.bpm ?? ""}
+                  onChange={(e) => patch("bpm", e.target.value === "" ? null : Number(e.target.value))}
+                  className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 font-mono"
+                />
+              </div>
+              <div>
+                <label
+                  className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+                >
+                  Key
+                </label>
+                <KeyPicker value={track.key_signature ?? null} onChange={(v) => patch("key_signature", v)} />
+              </div>
+              <div>
+                <label
+                  htmlFor="track-genre"
+                  className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+                >
+                  Genre
+                </label>
+                <input
+                  id="track-genre"
+                  type="text"
+                  value={track.genre ?? ""}
+                  onChange={(e) => patch("genre", e.target.value || null)}
+                  className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label
+                  htmlFor="track-mood"
+                  className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+                >
+                  Mood
+                </label>
+                <input
+                  id="track-mood"
+                  type="text"
+                  value={track.mood ?? ""}
+                  onChange={(e) => patch("mood", e.target.value || null)}
+                  className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="track-producer"
+                  className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+                >
+                  Producer
+                </label>
+                <input
+                  id="track-producer"
+                  type="text"
+                  value={track.producer ?? ""}
+                  onChange={(e) => patch("producer", e.target.value || null)}
+                  className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="track-license"
+                  className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+                >
+                  License
+                </label>
+                <select
+                  id="track-license"
+                  value={track.license_type}
+                  onChange={(e) => patch("license_type", e.target.value)}
+                  className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+                >
+                  {LICENSE_TYPES.map((l) => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="track-tags"
+                className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+              >
+                Tags (comma-separated)
+              </label>
+              <input
+                id="track-tags"
+                type="text"
+                value={track.tags ? track.tags.join(", ") : ""}
+                onChange={(e) =>
+                  patch(
+                    "tags",
+                    e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                  )
+                }
+                className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="track-description"
+                className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+              >
+                Description
+              </label>
+              <textarea
+                id="track-description"
+                value={track.description ?? ""}
+                onChange={(e) => patch("description", e.target.value || null)}
+                rows={4}
+                className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 resize-y"
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label
-              htmlFor="track-bpm"
-              className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-            >
-              BPM
-            </label>
-            <input
-              id="track-bpm"
-              type="number"
-              value={track.bpm ?? ""}
-              onChange={(e) => patch("bpm", e.target.value === "" ? null : Number(e.target.value))}
-              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 font-mono"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="track-key"
-              className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-            >
-              Key
-            </label>
-            <input
-              id="track-key"
-              type="text"
-              value={track.key_signature ?? ""}
-              onChange={(e) => patch("key_signature", e.target.value || null)}
-              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="track-genre"
-              className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-            >
-              Genre
-            </label>
-            <input
-              id="track-genre"
-              type="text"
-              value={track.genre ?? ""}
-              onChange={(e) => patch("genre", e.target.value || null)}
-              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label
-              htmlFor="track-mood"
-              className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-            >
-              Mood
-            </label>
-            <input
-              id="track-mood"
-              type="text"
-              value={track.mood ?? ""}
-              onChange={(e) => patch("mood", e.target.value || null)}
-              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="track-producer"
-              className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-            >
-              Producer
-            </label>
-            <input
-              id="track-producer"
-              type="text"
-              value={track.producer ?? ""}
-              onChange={(e) => patch("producer", e.target.value || null)}
-              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="track-license"
-              className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-            >
-              License
-            </label>
-            <select
-              id="track-license"
-              value={track.license_type}
-              onChange={(e) => patch("license_type", e.target.value)}
-              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
-            >
-              {LICENSE_TYPES.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label
-            htmlFor="track-tags"
-            className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-          >
-            Tags (comma-separated)
-          </label>
-          <input
-            id="track-tags"
-            type="text"
-            value={track.tags ? track.tags.join(", ") : ""}
-            onChange={(e) =>
-              patch(
-                "tags",
-                e.target.value
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-              )
-            }
-            className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="track-description"
-            className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-          >
-            Description
-          </label>
-          <textarea
-            id="track-description"
-            value={track.description ?? ""}
-            onChange={(e) => patch("description", e.target.value || null)}
-            rows={4}
-            className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 resize-y"
-          />
-        </div>
+        <FileRowsSection trackId={track.id} />
 
         {error && <div className="text-danger text-sm">{error}</div>}
 
