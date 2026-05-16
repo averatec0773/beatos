@@ -74,6 +74,18 @@ export function BottomPlayerBar() {
     a.muted = muted;
   }, [volume, muted]);
 
+  // Sync store-initiated seeks (e.g. prev() restart) → audio.currentTime
+  // Skip tiny deltas to avoid feedback with onTimeUpdate (which writes the
+  // other direction). 0.5s threshold is comfortably above HTML5 timeupdate
+  // granularity (~250ms).
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (Math.abs(a.currentTime - position) > 0.5) {
+      a.currentTime = position;
+    }
+  }, [position]);
+
   const enabled = currentTrackId != null && status !== "error";
   const playing = status === "playing";
 
@@ -91,7 +103,13 @@ export function BottomPlayerBar() {
         onLoadedMetadata={(e) =>
           usePlayerStore.getState()._setDuration(e.currentTarget.duration)
         }
-        onEnded={() => usePlayerStore.getState()._onEnded()}
+        onEnded={(e) => {
+          const s = usePlayerStore.getState();
+          if (s.repeat === "one") {
+            e.currentTarget.currentTime = 0;
+          }
+          s._onEnded();
+        }}
       />
 
       {/* Left: cover + meta */}
