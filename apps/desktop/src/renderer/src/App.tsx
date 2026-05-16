@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { DndContext, DragOverlay } from "@dnd-kit/core";
 
 import { AppShell } from "@/routes/AppShell";
 import { TrackListPanel } from "@/routes/TrackListPanel";
@@ -9,8 +10,15 @@ import { WelcomeScreen } from "@/routes/WelcomeScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OutOfSourceDialog } from "@/components/OutOfSourceDialog";
 import { SidecarCrashToast } from "@/components/SidecarCrashToast";
+import { DragOverlayPreview } from "@/components/DragOverlayPreview";
 import { useDialogStore } from "@/stores/dialogs";
 import { useSourceStore } from "@/stores/sources";
+
+interface ActiveDrag {
+  trackId: number;
+  count: number;
+  title?: string;
+}
 
 function GlobalDialogs(): React.JSX.Element | null {
   const req = useDialogStore((s) => s.outOfSource);
@@ -65,21 +73,37 @@ function GlobalDialogs(): React.JSX.Element | null {
 }
 
 export default function App(): React.JSX.Element {
+  const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+
   return (
     <ErrorBoundary>
       <SidecarCrashToast />
-      <BrowserRouter>
-        <GlobalDialogs />
-        <Routes>
-          <Route path="/welcome" element={<WelcomeScreen />} />
-          <Route element={<AppShell />}>
-            <Route path="/" element={<TrackListPanel />} />
-            <Route path="/tracks/:id/edit" element={<TrackEditor />} />
-            <Route path="/lists/:id" element={<TrackListPanel />} />
-            <Route path="/settings" element={<SettingsPanel />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <DndContext
+        onDragStart={({ active }) => {
+          const id = String(active.id);
+          if (!id.startsWith("track:")) return;
+          const trackId = Number(id.slice("track:".length));
+          setActiveDrag({ trackId, count: 1 });
+        }}
+        onDragEnd={() => setActiveDrag(null)}
+        onDragCancel={() => setActiveDrag(null)}
+      >
+        <BrowserRouter>
+          <GlobalDialogs />
+          <Routes>
+            <Route path="/welcome" element={<WelcomeScreen />} />
+            <Route element={<AppShell />}>
+              <Route path="/" element={<TrackListPanel />} />
+              <Route path="/tracks/:id/edit" element={<TrackEditor />} />
+              <Route path="/lists/:id" element={<TrackListPanel />} />
+              <Route path="/settings" element={<SettingsPanel />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+        <DragOverlay>
+          {activeDrag ? <DragOverlayPreview count={activeDrag.count} title={activeDrag.title} /> : null}
+        </DragOverlay>
+      </DndContext>
     </ErrorBoundary>
   );
 }
