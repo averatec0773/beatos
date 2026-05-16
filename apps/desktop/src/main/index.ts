@@ -9,7 +9,7 @@ import { readConfig, writeConfig } from "./config";
 import { configureLogger, logger } from "./logger";
 import { parseUvicornLevel } from "./log-parse";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
-import { assertSidecarBinary } from "./index-helpers";
+import { assertSidecarLayout } from "./sidecar-helpers";
 
 const HANDSHAKE_TIMEOUT_MS = 5000;
 const HANDSHAKE_POLL_MS = 50;
@@ -78,7 +78,7 @@ function startSidecar(): void {
   const hp = handshakePath();
   clearStaleHandshake(hp);
 
-  assertSidecarBinary(repoRoot(), __dirname);
+  assertSidecarLayout(repoRoot(), __dirname);
 
   const dbPath = resolveDbPath();
   mkdirSync(dirname(dbPath), { recursive: true });

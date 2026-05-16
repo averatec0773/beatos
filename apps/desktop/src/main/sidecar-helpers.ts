@@ -7,7 +7,7 @@ import { join } from "node:path";
  * spawn would otherwise hang on the 5s handshake before failing with a
  * cryptic error. Throw immediately with diagnostic context instead.
  */
-export function assertSidecarBinary(repoRoot: string, dirname: string): void {
+export function assertSidecarLayout(repoRoot: string, dirname: string): void {
   const pyprojectPath = join(repoRoot, "pyproject.toml");
   if (!existsSync(pyprojectPath)) {
     throw new Error(

@@ -3,25 +3,27 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { assertSidecarBinary } from "../index-helpers";
+import { assertSidecarLayout } from "../sidecar-helpers";
 
-describe("assertSidecarBinary", () => {
+describe("assertSidecarLayout", () => {
   it("returns silently when pyproject.toml exists at the given root", () => {
     const root = mkdtempSync(join(tmpdir(), "sidecar-assert-ok-"));
     writeFileSync(join(root, "pyproject.toml"), "[project]\nname='x'\n");
-    expect(() => assertSidecarBinary(root, "/fake/__dirname")).not.toThrow();
+    expect(() => assertSidecarLayout(root, "/fake/__dirname")).not.toThrow();
   });
 
-  it("throws a diagnostic error when pyproject.toml is missing", () => {
+  it("throws a diagnostic error mentioning failure, layout, and __dirname when pyproject.toml is missing", () => {
     const root = mkdtempSync(join(tmpdir(), "sidecar-assert-bad-"));
-    expect(() => assertSidecarBinary(root, "/fake/__dirname")).toThrow(
-      /Sidecar bootstrap failed/
-    );
-    expect(() => assertSidecarBinary(root, "/fake/__dirname")).toThrow(
-      /electron-builder layout/
-    );
-    expect(() => assertSidecarBinary(root, "/fake/__dirname")).toThrow(
-      /__dirname=\/fake\/__dirname/
-    );
+    let caught: unknown = null;
+    try {
+      assertSidecarLayout(root, "/fake/__dirname");
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(Error);
+    const msg = (caught as Error).message;
+    expect(msg).toMatch(/Sidecar bootstrap failed/);
+    expect(msg).toMatch(/electron-builder layout/);
+    expect(msg).toMatch(/__dirname=\/fake\/__dirname/);
   });
 });
