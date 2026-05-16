@@ -2,9 +2,11 @@ import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
 import { join, dirname, basename } from "node:path";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, promises as fsPromises } from "node:fs";
 import { spawn, ChildProcess } from "node:child_process";
+import readline from "node:readline";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 
 import { readConfig, writeConfig } from "./config";
+import { configureLogger, logger } from "./logger";
 
 const HANDSHAKE_TIMEOUT_MS = 5000;
 const HANDSHAKE_POLL_MS = 50;
@@ -72,11 +74,21 @@ function startSidecar(): void {
       BEATOS_HANDSHAKE_PATH: hp,
       BEATOS_DB_PATH: dbPath,
     },
-    stdio: ["ignore", "inherit", "inherit"],
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
+  const tagStream = (stream: NodeJS.ReadableStream, level: "info" | "error"): void => {
+    const rl = readline.createInterface({ input: stream });
+    rl.on("line", (line) => {
+      logger[level](`[sidecar] ${line}`);
+    });
+  };
+  if (sidecar.stdout) tagStream(sidecar.stdout, "info");
+  if (sidecar.stderr) tagStream(sidecar.stderr, "error");
+
   sidecar.on("exit", (code, signal) => {
-    console.log(`[sidecar] exited code=${code} signal=${signal}`);
+    logger.warn(`[sidecar] process exited code=${code} signal=${signal}`);
+    apiPort = null;
     sidecar = null;
   });
 }
@@ -140,6 +152,9 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
+  configureLogger();
+  logger.info("[main] electron app ready");
+
   electronApp.setAppUserModelId("studio.averatec.beatos");
 
   app.on("browser-window-created", (_, window) => {

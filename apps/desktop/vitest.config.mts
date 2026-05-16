@@ -6,12 +6,12 @@ import { dirname, resolve } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react() as never],
   test: {
     environment: "jsdom",
     setupFiles: ["./src/renderer/src/test/setup.ts"],
     globals: true,
-    include: ["src/renderer/src/**/*.test.{ts,tsx}"],
+    include: ["src/renderer/src/**/*.test.{ts,tsx}", "src/main/**/*.test.ts"],
     passWithNoTests: true,
   },
   resolve: {
