@@ -11,6 +11,8 @@ extraResources:
     to: sidecar
     filter:
       - "**/*"
+  - from: resources/icon.png
+    to: icon.png
 
 mac:
   category: public.app-category.music
