@@ -186,3 +186,67 @@ def test_attach_out_of_source_returns_422(tmp_path):
     assert isinstance(body["available_sources"], list)
     assert len(body["available_sources"]) == 1
     assert body["available_sources"][0]["root_path"] == str(tmp_path.resolve())
+
+
+# ---------------------------------------------------------------------------
+# /api/assets/audio/{id} — Phase 2
+# ---------------------------------------------------------------------------
+
+
+def test_audio_endpoint_returns_file(tmp_path):
+    client = TestClient(create_app())
+    track_id = _create_track(client)
+    wav = tmp_path / "beat.wav"
+    _make_wav(wav)
+    asset_id = client.post(
+        f"/api/tracks/{track_id}/assets",
+        json={"role": "audio_tagged_wav", "path": str(wav)},
+    ).json()["id"]
+
+    res = client.get(f"/api/assets/audio/{asset_id}")
+
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("audio/")
+    assert int(res.headers["content-length"]) > 0
+
+
+def test_audio_endpoint_404_for_unknown():
+    client = TestClient(create_app())
+
+    res = client.get("/api/assets/audio/999999")
+
+    assert res.status_code == 404
+
+
+def test_audio_endpoint_rejects_non_audio_asset(tmp_path):
+    client = TestClient(create_app())
+    track_id = _create_track(client)
+    cover = tmp_path / "cover.jpg"
+    _make_jpg(cover)
+    asset_id = client.post(
+        f"/api/tracks/{track_id}/assets",
+        json={"role": "cover", "path": str(cover)},
+    ).json()["id"]
+
+    res = client.get(f"/api/assets/audio/{asset_id}")
+
+    assert res.status_code == 400
+
+
+def test_audio_endpoint_supports_range(tmp_path):
+    client = TestClient(create_app())
+    track_id = _create_track(client)
+    wav = tmp_path / "beat.wav"
+    _make_wav(wav)
+    asset_id = client.post(
+        f"/api/tracks/{track_id}/assets",
+        json={"role": "audio_tagged_wav", "path": str(wav)},
+    ).json()["id"]
+
+    res = client.get(
+        f"/api/assets/audio/{asset_id}",
+        headers={"Range": "bytes=0-1023"},
+    )
+
+    assert res.status_code == 206
+    assert "content-range" in {k.lower() for k in res.headers.keys()}

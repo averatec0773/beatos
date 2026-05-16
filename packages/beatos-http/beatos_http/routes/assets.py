@@ -88,3 +88,26 @@ async def cover_stream(asset_id: int) -> FileResponse:
     if not p.exists():
         raise HTTPException(status_code=404, detail="Cover file missing.")
     return FileResponse(p, media_type=asset.mime_type or "image/jpeg")
+
+
+from beatos_core.assets._constants import AUDIO_ROLES as _AUDIO_ROLES  # noqa: E402
+
+_AUDIO_MIME = {
+    "audio_tagged_mp3": "audio/mpeg",
+    "audio_untagged_mp3": "audio/mpeg",
+    "audio_tagged_wav": "audio/wav",
+    "audio_untagged_wav": "audio/wav",
+}
+
+
+@router.get("/api/assets/audio/{asset_id}")
+async def audio_stream(asset_id: int) -> FileResponse:
+    asset = await get_asset(asset_id)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    if asset.role not in _AUDIO_ROLES:
+        raise HTTPException(status_code=400, detail="Asset is not audio.")
+    p = pathlib.Path(asset.abs_path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Audio file missing.")
+    return FileResponse(p, media_type=asset.mime_type or _AUDIO_MIME[asset.role])
