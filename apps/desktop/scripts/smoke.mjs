@@ -228,22 +228,18 @@ try {
       }
       // Poll the backend from Node (not the renderer) — avoids execution-context
       // destruction if the app navigates to the list view after the drop.
-      {
-        const pollStart = Date.now();
-        let memberOk = false;
-        while (Date.now() - pollStart < 3000) {
-          const r = await fetch(`${baseUrl}/api/tracks?list_id=${list.id}`);
-          const arr = await r.json();
-          if (Array.isArray(arr) && arr.length >= 1) { memberOk = true; break; }
-          await new Promise((res) => setTimeout(res, 100));
-        }
-        if (!memberOk) {
-          throw new Error("drag-drop membership reflected on backend: timeout 3000ms");
-        }
+      const pollStart = Date.now();
+      let pollResult = null;
+      while (Date.now() - pollStart < 3000) {
+        const r = await fetch(`${baseUrl}/api/tracks?list_id=${list.id}`);
+        const arr = await r.json();
+        if (Array.isArray(arr) && arr.length === 1) { pollResult = arr; break; }
+        await new Promise((res) => setTimeout(res, 100));
       }
-      const members = await (await fetch(`${baseUrl}/api/tracks?list_id=${list.id}`)).json();
-      if (!Array.isArray(members) || members.length !== 1) {
-        failures.push(`UI drag-drop: expected 1 member, got ${JSON.stringify(members)}`);
+      if (pollResult === null) {
+        // Re-fetch one more time to capture the actual state for the failure message.
+        const final = await (await fetch(`${baseUrl}/api/tracks?list_id=${list.id}`)).json();
+        failures.push(`UI drag-drop: expected 1 member after 3000ms, got ${JSON.stringify(final)}`);
       } else {
         console.log("smoke: dnd-kit UI drag PASS");
       }
@@ -272,17 +268,13 @@ try {
     await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
     await window.waitForSelector("text=EmptyList", { timeout: 5000 });
     const emptyTarget = window.locator("text=EmptyList").first();
-    if ((await emptyTarget.count()) === 0) {
-      failures.push("UI: 'EmptyList' not found in sidebar after refresh");
+    await emptyTarget.click();
+    await window.waitForSelector("text=/is empty/i", { timeout: 3000 });
+    const html = await window.content();
+    if (!/is empty/i.test(html) || !/drag tracks from all beats/i.test(html)) {
+      failures.push("UI: empty-list state copy missing 'is empty' or drag hint");
     } else {
-      await emptyTarget.click();
-      await window.waitForSelector("text=/is empty/i", { timeout: 3000 });
-      const html = await window.content();
-      if (!/is empty/i.test(html) || !/drag tracks from all beats/i.test(html)) {
-        failures.push("UI: empty-list state copy missing 'is empty' or drag hint");
-      } else {
-        console.log("smoke: empty-list copy PASS");
-      }
+      console.log("smoke: empty-list copy PASS");
     }
 
     // Double-click on a track row should open the editor route.
