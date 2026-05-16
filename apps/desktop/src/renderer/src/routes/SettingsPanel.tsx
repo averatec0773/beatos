@@ -135,6 +135,7 @@ function AboutSection(): React.JSX.Element {
           type="button"
           onClick={() => void window.beatos.openExternal("https://averatec.studio")}
           className="text-accent hover:underline text-left"
+          aria-label="Open averatec.studio in browser"
         >
           averatec.studio
         </button>
@@ -142,6 +143,7 @@ function AboutSection(): React.JSX.Element {
           type="button"
           onClick={() => void window.beatos.openExternal("https://github.com/averatec0773/beatos")}
           className="text-accent hover:underline text-left"
+          aria-label="Open project repository on GitHub in browser"
         >
           View on GitHub
         </button>

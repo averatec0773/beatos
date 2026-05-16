@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import type { Source } from "@/api/sources";
 import { SidebarItemContextMenu } from "@/components/SidebarItemContextMenu";
 import { DeleteSidebarItemDialog } from "@/components/DeleteSidebarItemDialog";
@@ -18,15 +18,19 @@ export function SourceRow({ source, active, onClick, onDeleted }: Props): React.
   const [renaming, setRenaming] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const committedRef = useRef(false);
 
   const isOffline = source.status === "offline";
 
   function startRename(): void {
+    committedRef.current = false;
     setDraftName(source.name);
     setRenaming(true);
   }
 
   async function commitRename(): Promise<void> {
+    if (committedRef.current) return;
+    committedRef.current = true;
     const trimmed = draftName.trim();
     setRenaming(false);
     if (!trimmed || trimmed === source.name) return;
@@ -38,6 +42,7 @@ export function SourceRow({ source, active, onClick, onDeleted }: Props): React.
   }
 
   function cancelRename(): void {
+    committedRef.current = true;
     setRenaming(false);
   }
 
@@ -64,17 +69,10 @@ export function SourceRow({ source, active, onClick, onDeleted }: Props): React.
               if (e.key === "Enter") void commitRename();
               else if (e.key === "Escape") cancelRename();
             }}
-            onBlur={cancelRename}
+            onBlur={() => { void commitRename(); }}
             className="w-full bg-bg-elevated border border-accent rounded-md px-2 py-1 text-sm focus:outline-none"
           />
         </div>
-        <DeleteSidebarItemDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          title={`Delete Source "${source.name}"?`}
-          description="Your tracks and files stay where they are — only BeatOS's registration is removed."
-          onConfirm={confirmDelete}
-        />
       </>
     );
   }

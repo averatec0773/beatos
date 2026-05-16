@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { matchPath, useLocation, useNavigate } from "react-router-dom";
 import { useDroppable } from "@dnd-kit/core";
@@ -28,13 +28,17 @@ function SidebarListRow({
   const [renaming, setRenaming] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const committedRef = useRef(false);
 
   function startRename(): void {
+    committedRef.current = false;
     setDraftName(list.name);
     setRenaming(true);
   }
 
   async function commitRename(): Promise<void> {
+    if (committedRef.current) return;
+    committedRef.current = true;
     const trimmed = draftName.trim();
     setRenaming(false);
     if (!trimmed || trimmed === list.name) return;
@@ -46,6 +50,7 @@ function SidebarListRow({
   }
 
   function cancelRename(): void {
+    committedRef.current = true;
     setRenaming(false);
   }
 
@@ -72,17 +77,10 @@ function SidebarListRow({
               if (e.key === "Enter") void commitRename();
               else if (e.key === "Escape") cancelRename();
             }}
-            onBlur={cancelRename}
+            onBlur={() => { void commitRename(); }}
             className="w-full bg-bg-elevated border border-accent rounded-md px-2 py-1 text-sm focus:outline-none"
           />
         </div>
-        <DeleteSidebarItemDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          title={`Delete List "${list.name}"?`}
-          description="The list is removed but member tracks stay in your library."
-          onConfirm={confirmDelete}
-        />
       </>
     );
   }
