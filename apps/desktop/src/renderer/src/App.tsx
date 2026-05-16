@@ -8,6 +8,7 @@ import { SettingsPanel } from "@/routes/SettingsPanel";
 import { WelcomeScreen } from "@/routes/WelcomeScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OutOfSourceDialog } from "@/components/OutOfSourceDialog";
+import { SidecarCrashToast } from "@/components/SidecarCrashToast";
 import { useDialogStore } from "@/stores/dialogs";
 import { useSourceStore } from "@/stores/sources";
 
@@ -66,6 +67,7 @@ function GlobalDialogs(): React.JSX.Element | null {
 export default function App(): React.JSX.Element {
   return (
     <ErrorBoundary>
+      <SidecarCrashToast />
       <BrowserRouter>
         <GlobalDialogs />
         <Routes>

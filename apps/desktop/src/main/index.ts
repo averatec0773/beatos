@@ -90,6 +90,9 @@ function startSidecar(): void {
     logger.warn(`[sidecar] process exited code=${code} signal=${signal}`);
     apiPort = null;
     sidecar = null;
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send("sidecar-crashed", { code, signal });
+    }
   });
 }
 
