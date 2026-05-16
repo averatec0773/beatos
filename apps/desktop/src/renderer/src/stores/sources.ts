@@ -18,8 +18,13 @@ export const useSourceStore = create<SourceState>((set, get) => ({
   hasLoaded: false,
 
   async refresh() {
-    const all = await sources.list();
-    set({ all, hasLoaded: true });
+    try {
+      const all = await sources.list();
+      set({ all, hasLoaded: true });
+    } catch (e) {
+      console.warn("[sources] refresh failed:", e);
+      set({ hasLoaded: true });
+    }
   },
 
   async add(payload) {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { tracks } from "@/api/tracks";
+import { assets as assetsApi } from "@/api/assets";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { FilesSection } from "@/components/FilesSection";
@@ -23,12 +24,14 @@ export function TrackEditor(): React.JSX.Element {
   useEffect(() => {
     if (!params.id) return;
     let cancelled = false;
-    tracks
-      .get(Number(params.id))
-      .then((t) => {
+    Promise.all([
+      tracks.get(Number(params.id)),
+      assetsApi.listForTrack(Number(params.id)),
+    ])
+      .then(([t, assetList]) => {
         if (!cancelled) {
           setTrack(t);
-          setAssetsForTrack(t.id, []);
+          setAssetsForTrack(t.id, assetList);
         }
       })
       .catch((e) => {

@@ -7,10 +7,12 @@ import { TrackEditor } from "@/routes/TrackEditor";
 import { useTrackStore } from "@/stores/tracks";
 import { sampleTrack } from "@/test/fixtures";
 import { tracks } from "@/api/tracks";
+import { assets as assetsApi } from "@/api/assets";
 
 describe("TrackEditor", () => {
   it("requires a non-empty title to save", async () => {
     vi.spyOn(tracks, "get").mockResolvedValue({ ...sampleTrack, title: "" });
+    vi.spyOn(assetsApi, "listForTrack").mockResolvedValue([]);
     const update = vi.fn().mockResolvedValue(sampleTrack);
     useTrackStore.setState({ update });
 
@@ -30,6 +32,7 @@ describe("TrackEditor", () => {
 
   it("saves and navigates back on Save with a title", async () => {
     vi.spyOn(tracks, "get").mockResolvedValue(sampleTrack);
+    vi.spyOn(assetsApi, "listForTrack").mockResolvedValue([]);
     const update = vi.fn().mockResolvedValue(sampleTrack);
     useTrackStore.setState({ update });
 
