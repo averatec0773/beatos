@@ -12,7 +12,14 @@ export function TopBar(): React.JSX.Element {
       className="h-12 flex-shrink-0 border-b border-border-subtle px-3 flex items-center gap-3 select-none bg-bg-base"
       style={{ paddingLeft: "84px" }}
     >
-      <span className="text-sm font-semibold tracking-tight">BeatOS</span>
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="text-sm font-semibold tracking-tight hover:text-accent"
+        aria-label="Go to All Beats"
+      >
+        BeatOS
+      </button>
       <div className="h-4 w-px bg-border-subtle" />
       <TopBarRouteTitle />
       <div className="flex-1" />

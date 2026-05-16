@@ -4,6 +4,7 @@ import { sources, type Source, type SourceCreate } from "@/api/sources";
 interface SourceState {
   all: Source[];
   activeFilter: number | null;
+  hasLoaded: boolean;
   refresh: () => Promise<void>;
   add: (payload: SourceCreate) => Promise<Source>;
   rename: (id: number, name: string) => Promise<void>;
@@ -14,10 +15,11 @@ interface SourceState {
 export const useSourceStore = create<SourceState>((set, get) => ({
   all: [],
   activeFilter: null,
+  hasLoaded: false,
 
   async refresh() {
     const all = await sources.list();
-    set({ all });
+    set({ all, hasLoaded: true });
   },
 
   async add(payload) {

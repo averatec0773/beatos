@@ -66,7 +66,10 @@ export function SidebarPanel(): React.JSX.Element {
               track_count: totalTracks,
             }}
             active={activeFilter === null}
-            onClick={() => setFilter(null)}
+            onClick={() => {
+              setFilter(null);
+              navigate("/");
+            }}
           />
         )}
         {sources.map((s) => (
@@ -74,7 +77,10 @@ export function SidebarPanel(): React.JSX.Element {
             key={s.id}
             source={s}
             active={activeFilter === s.id}
-            onClick={() => setFilter(s.id)}
+            onClick={() => {
+              setFilter(s.id);
+              navigate("/");
+            }}
           />
         ))}
       </div>
