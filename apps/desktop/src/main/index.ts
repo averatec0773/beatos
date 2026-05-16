@@ -283,6 +283,13 @@ app.whenReady().then(async () => {
     shell.showItemInFolder(path);
   });
 
+  ipcMain.handle(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, (_e, url: string) => {
+    if (!/^https?:\/\//i.test(url)) {
+      throw new Error(`Refused to open non-http(s) URL: ${url}`);
+    }
+    shell.openExternal(url);
+  });
+
   protocol.handle("beatos-asset", async (request) => {
     // URL shape: beatos-asset://cover/<asset_id>
     try {

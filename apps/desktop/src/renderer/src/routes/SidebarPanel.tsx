@@ -7,34 +7,114 @@ import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
 import { type List } from "@/api/lists";
 import { SourceRow } from "@/components/SourceRow";
+import { SidebarItemContextMenu } from "@/components/SidebarItemContextMenu";
+import { DeleteSidebarItemDialog } from "@/components/DeleteSidebarItemDialog";
 
 function SidebarListRow({
   list,
   active,
   onClick,
+  onDeleted,
 }: {
   list: List;
   active: boolean;
   onClick: () => void;
+  onDeleted?: () => void;
 }): React.JSX.Element {
   const { setNodeRef, isOver } = useDroppable({ id: `list:${list.id}` });
+  const rename = useListStore((s) => s.rename);
+  const remove = useListStore((s) => s.remove);
+
+  const [renaming, setRenaming] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  function startRename(): void {
+    setDraftName(list.name);
+    setRenaming(true);
+  }
+
+  async function commitRename(): Promise<void> {
+    const trimmed = draftName.trim();
+    setRenaming(false);
+    if (!trimmed || trimmed === list.name) return;
+    try {
+      await rename(list.id, trimmed);
+    } catch (e) {
+      alert(`Failed to rename: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  function cancelRename(): void {
+    setRenaming(false);
+  }
+
+  async function confirmDelete(): Promise<void> {
+    setDeleteOpen(false);
+    try {
+      await remove(list.id);
+      onDeleted?.();
+    } catch (e) {
+      alert(`Failed to delete: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  if (renaming) {
+    return (
+      <>
+        <div className="px-3 py-1">
+          <input
+            autoFocus
+            type="text"
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void commitRename();
+              else if (e.key === "Escape") cancelRename();
+            }}
+            onBlur={cancelRename}
+            className="w-full bg-bg-elevated border border-accent rounded-md px-2 py-1 text-sm focus:outline-none"
+          />
+        </div>
+        <DeleteSidebarItemDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title={`Delete List "${list.name}"?`}
+          description="The list is removed but member tracks stay in your library."
+          onConfirm={confirmDelete}
+        />
+      </>
+    );
+  }
+
   return (
-    <button
-      ref={setNodeRef}
-      type="button"
-      onClick={onClick}
-      className={[
-        "w-full px-3 py-1.5 text-left text-sm rounded-md flex items-center justify-between",
-        active
-          ? "bg-bg-row-active text-accent"
-          : isOver
-            ? "bg-accent-soft border-l-2 border-accent text-text-primary"
-            : "text-text-primary hover:bg-bg-row-hover",
-      ].join(" ")}
-    >
-      <span className="truncate">{list.name}</span>
-      {isOver && <span className="text-accent">+</span>}
-    </button>
+    <>
+      <SidebarItemContextMenu onRename={startRename} onDelete={() => setDeleteOpen(true)}>
+        <button
+          ref={setNodeRef}
+          type="button"
+          onClick={onClick}
+          className={[
+            "w-full px-3 py-1.5 text-left text-sm rounded-md flex items-center justify-between",
+            active
+              ? "bg-bg-row-active text-accent"
+              : isOver
+                ? "bg-accent-soft border-l-2 border-accent text-text-primary"
+                : "text-text-primary hover:bg-bg-row-hover",
+          ].join(" ")}
+        >
+          <span className="truncate">{list.name}</span>
+          {isOver && <span className="text-accent">+</span>}
+        </button>
+      </SidebarItemContextMenu>
+      <DeleteSidebarItemDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete List "${list.name}"?`}
+        description="The list is removed but member tracks stay in your library."
+        onConfirm={confirmDelete}
+      />
+    </>
   );
 }
 
@@ -144,6 +224,12 @@ export function SidebarPanel(): React.JSX.Element {
               setFilter(s.id);
               navigate("/");
             }}
+            onDeleted={() => {
+              if (activeFilter === s.id) {
+                setFilter(null);
+                navigate("/");
+              }
+            }}
           />
         ))}
       </div>
@@ -185,6 +271,11 @@ export function SidebarPanel(): React.JSX.Element {
             list={l}
             active={activeListId === l.id}
             onClick={() => navigate(`/lists/${l.id}`)}
+            onDeleted={() => {
+              if (activeListId === l.id) {
+                navigate("/");
+              }
+            }}
           />
         ))}
       </div>

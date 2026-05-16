@@ -43,7 +43,7 @@ describe("closeDelayMs", () => {
 
   it("returns the remainder when elapsed < SPLASH_MIN_DISPLAY_MS", () => {
     expect(closeDelayMs(0, 100)).toBe(SPLASH_MIN_DISPLAY_MS - 100);
-    expect(closeDelayMs(0, 599)).toBe(1);
+    expect(closeDelayMs(0, SPLASH_MIN_DISPLAY_MS - 1)).toBe(1);
   });
 
   it("never returns a negative value", () => {

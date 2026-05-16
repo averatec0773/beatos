@@ -3,6 +3,7 @@ export const IPC_CHANNELS = {
   DIALOG_OPEN_FOLDER: "dialog:open-folder",
   DIALOG_OPEN_FILE: "dialog:open-file",
   SHELL_REVEAL_IN_FINDER: "shell:reveal-in-finder",
+  SHELL_OPEN_EXTERNAL: "shell:open-external",
   APP_QUIT: "app:quit",
   PATH_HOME: "path:home",
   PATH_ENSURE_DIR: "path:ensure-dir",

@@ -9,6 +9,8 @@ const beatos = {
   ): Promise<string | null> => ipcRenderer.invoke(IPC_CHANNELS.DIALOG_OPEN_FILE, filters),
   revealInFinder: (path: string): Promise<void> =>
     ipcRenderer.invoke(IPC_CHANNELS.SHELL_REVEAL_IN_FINDER, path),
+  openExternal: (url: string): Promise<void> =>
+    ipcRenderer.invoke(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, url),
   quitApp: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.APP_QUIT),
   getHomePath: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.PATH_HOME),
   ensureDir: (dir: string): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.PATH_ENSURE_DIR, dir),

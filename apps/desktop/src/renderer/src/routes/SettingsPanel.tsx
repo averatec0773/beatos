@@ -121,6 +121,35 @@ function SourcesSection(): React.JSX.Element {
   );
 }
 
+function AboutSection(): React.JSX.Element {
+  return (
+    <section className="mt-10 pt-6 border-t border-border-subtle">
+      <h2 className="text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-3">
+        About
+      </h2>
+      <div className="text-sm text-text-secondary">
+        Made by <span className="text-text-primary font-medium">averatec0773</span>
+      </div>
+      <div className="mt-3 flex flex-col gap-2 text-sm">
+        <button
+          type="button"
+          onClick={() => void window.beatos.openExternal("https://averatec.studio")}
+          className="text-accent hover:underline text-left"
+        >
+          averatec.studio
+        </button>
+        <button
+          type="button"
+          onClick={() => void window.beatos.openExternal("https://github.com/averatec0773/beatos")}
+          className="text-accent hover:underline text-left"
+        >
+          View on GitHub
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export function SettingsPanel(): React.JSX.Element {
   return (
     <main className="flex-1 overflow-y-auto p-8">
@@ -131,6 +160,7 @@ export function SettingsPanel(): React.JSX.Element {
         </p>
         <StorageSection />
         <SourcesSection />
+        <AboutSection />
       </div>
     </main>
   );

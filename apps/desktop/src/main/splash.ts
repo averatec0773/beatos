@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { is } from "@electron-toolkit/utils";
 
-export const SPLASH_MIN_DISPLAY_MS = 600;
+export const SPLASH_MIN_DISPLAY_MS = 1000;
 
 const SPLASH_WIDTH = 480;
 const SPLASH_HEIGHT = 320;
@@ -126,8 +126,34 @@ export function createSplashWindow(argv: readonly string[]): BrowserWindow | nul
 }
 
 /**
- * Coordinate splash close + main show. Honors a 600ms minimum-display floor so
- * splash never flashes faster than the eye can register the logo.
+ * Fade out the splash window's opacity over the given duration, then close.
+ * Caller is responsible for showing the main window — typically right when
+ * fade begins so the user sees a smooth crossfade.
+ */
+export function fadeOutAndClose(splash: BrowserWindow, durationMs = 250): void {
+  if (splash.isDestroyed()) return;
+  const steps = 10;
+  const stepMs = durationMs / steps;
+  let step = 0;
+  const timer = setInterval(() => {
+    step++;
+    if (splash.isDestroyed()) {
+      clearInterval(timer);
+      return;
+    }
+    const opacity = Math.max(0, 1 - step / steps);
+    splash.setOpacity(opacity);
+    if (step >= steps) {
+      clearInterval(timer);
+      if (!splash.isDestroyed()) splash.close();
+    }
+  }, stepMs);
+}
+
+/**
+ * Coordinate splash close + main show. Honors a 1000ms minimum-display floor so
+ * splash never flashes faster than the eye can register the logo. Fades out
+ * the splash over 250ms while showing the main window simultaneously.
  */
 export function closeSplashAndShowMain(
   splash: BrowserWindow | null,
@@ -141,11 +167,11 @@ export function closeSplashAndShowMain(
   const delay = closeDelayMs(shownAt, Date.now());
   if (delay === 0) {
     mainWin.show();
-    splash.close();
+    fadeOutAndClose(splash);
     return;
   }
   setTimeout(() => {
     mainWin.show();
-    if (!splash.isDestroyed()) splash.close();
+    if (!splash.isDestroyed()) fadeOutAndClose(splash);
   }, delay);
 }
