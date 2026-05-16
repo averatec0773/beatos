@@ -250,3 +250,4 @@ def test_audio_endpoint_supports_range(tmp_path):
 
     assert res.status_code == 206
     assert "content-range" in {k.lower() for k in res.headers.keys()}
+    assert res.headers["content-range"].startswith("bytes ")

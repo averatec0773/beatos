@@ -15,6 +15,7 @@ from beatos_core.assets.service import (
     list_assets_for_track,
     relocate_asset,
 )
+from beatos_core.assets._constants import AUDIO_ROLES as _AUDIO_ROLES
 from beatos_core.models import Asset, AssetCreate
 
 router = APIRouter(tags=["assets"])
@@ -89,8 +90,6 @@ async def cover_stream(asset_id: int) -> FileResponse:
         raise HTTPException(status_code=404, detail="Cover file missing.")
     return FileResponse(p, media_type=asset.mime_type or "image/jpeg")
 
-
-from beatos_core.assets._constants import AUDIO_ROLES as _AUDIO_ROLES  # noqa: E402
 
 _AUDIO_MIME = {
     "audio_tagged_mp3": "audio/mpeg",
