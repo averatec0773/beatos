@@ -34,7 +34,6 @@ At the start of every session:
 ### Skills
 <!-- Auto-loaded by Claude Code based on each skill's description field. -->
 - [setup](.claude/skills/setup/SKILL.md)
-- [git](.claude/skills/git/SKILL.md)
 - [memory](.claude/skills/memory/SKILL.md)
 - [changelog](.claude/skills/changelog/SKILL.md)
 - [skill-creator](.claude/skills/skill-creator/SKILL.md)
