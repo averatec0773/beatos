@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Folder, Home } from "lucide-react";
 
@@ -6,9 +6,19 @@ import { useSourceStore } from "@/stores/sources";
 
 export function WelcomeScreen(): React.JSX.Element {
   const addSource = useSourceStore((s) => s.add);
+  const refresh = useSourceStore((s) => s.refresh);
+  const sourcesCount = useSourceStore((s) => s.all.length);
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (sourcesCount > 0) navigate("/", { replace: true });
+  }, [sourcesCount, navigate]);
 
   async function onChooseFolder(): Promise<void> {
     setError(null);
