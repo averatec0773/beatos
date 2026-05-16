@@ -186,7 +186,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         if (s.repeat === "all") {
           nextPos = 0;
         } else {
-          set({ status: "paused", position: 0 });
+          set({ status: "paused" });
           return;
         }
       }

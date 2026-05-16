@@ -82,7 +82,7 @@ describe("toggleShuffle", () => {
     expect(s.shuffle).toBe(true);
     expect(s.queueShuffleOrder).not.toBeNull();
     expect(s.queueShuffleOrder!.length).toBe(3);
-    expect(new Set(s.queueShuffleOrder!)).toEqual(new Set([0, 1, 2]));
+    expect([...s.queueShuffleOrder!].sort((a, b) => a - b)).toEqual([0, 1, 2]);
     expect(s.queueShuffleOrder![0]).toBe(1);
   });
 
