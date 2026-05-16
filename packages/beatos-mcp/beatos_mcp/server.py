@@ -1,7 +1,7 @@
 """Tool registration for the BeatOS MCP server.
 
 The `mcp` Python SDK (≥1.0) exposes a `Server` class to which we attach tool
-handlers. v0.0.1 only registers `ping`; full surface arrives in v0.0.5.
+handlers. Currently registers `ping` only; MCP surface expansion is unscheduled.
 """
 from __future__ import annotations
 
