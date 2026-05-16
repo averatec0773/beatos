@@ -57,7 +57,6 @@ function splashHtml(): string {
     align-items: center; justify-content: center;
     gap: 16px;
     user-select: none; -webkit-user-select: none;
-    -webkit-app-region: drag;
   }
   .logo { width: 96px; height: 96px; }
   .title { color: #ffffff; font-size: 24px; font-weight: 600; }
@@ -94,6 +93,14 @@ function splashHtml(): string {
 export function createSplashWindow(argv: readonly string[]): BrowserWindow | null {
   if (!shouldShowSplash(argv)) return null;
 
+  let htmlContent: string;
+  try {
+    htmlContent = splashHtml();
+  } catch (e) {
+    console.warn("[splash] failed to build HTML, skipping splash:", e);
+    return null;
+  }
+
   const splash = new BrowserWindow({
     width: SPLASH_WIDTH,
     height: SPLASH_HEIGHT,
@@ -113,9 +120,7 @@ export function createSplashWindow(argv: readonly string[]): BrowserWindow | nul
   });
 
   splash.once("ready-to-show", () => splash.show());
-  splash.loadURL(
-    `data:text/html;charset=utf-8,${encodeURIComponent(splashHtml())}`
-  );
+  splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
 
   return splash;
 }

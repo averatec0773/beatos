@@ -50,3 +50,10 @@ describe("closeDelayMs", () => {
     expect(closeDelayMs(0, SPLASH_MIN_DISPLAY_MS + 9999)).toBe(0);
   });
 });
+
+describe("createSplashWindow", () => {
+  it("returns null when --no-splash flag is present", async () => {
+    const mod = await import("../splash");
+    expect(mod.createSplashWindow(["/path/main.js", "--no-splash"])).toBeNull();
+  });
+});
