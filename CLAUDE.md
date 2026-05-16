@@ -5,7 +5,7 @@
 
 **Name:** BeatOS
 **Description:** Local-first desktop application for beat producers — catalog beats and their assets, publish to multiple platforms via browser automation, expose the library to AI agents via MCP.
-**Stack:** Electron 33 + React 19 + Vite + Tailwind + shadcn/ui (renderer); Python 3.11 + FastAPI + aiosqlite + mcp (sidecar); SQLite (storage); Playwright over CDP (browser automation, v0.0.4+).
+**Stack:** Electron 39 + React 19 + Vite + Tailwind + Radix UI primitives (renderer); Python 3.11 + FastAPI + aiosqlite + structlog + mcp (sidecar); SQLite (storage); Playwright `_electron` (smoke harness, v0.0.5+).
 **Owner:** averatec (single-user, AI-assisted development).
 
 > All files except `README.md` are agent instructions. Treat them as authoritative.
