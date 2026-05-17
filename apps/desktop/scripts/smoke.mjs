@@ -876,6 +876,51 @@ try {
 
     // === end v0.0.12 ===
 
+    // === v0.0.13: audio analysis endpoint shape ===
+    // Note: Smoke1's attached audio is 5s silence (makeTinyWav). The analyze
+    // endpoint will return valid shape but BPM/key may be 0/null (silence has
+    // no detectable beat or harmonic content). Just verify the API contract.
+    {
+      try {
+        const res = await fetch(`${baseUrl}/api/tracks/${t1.id}/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          failures.push(`POST /analyze for Smoke1 returned ${res.status}: ${text.slice(0, 200)}`);
+        } else {
+          const body = await res.json();
+          // Assert the shape — all expected keys present
+          const requiredKeys = [
+            "asset_id", "sha256",
+            "bpm", "bpm_confidence",
+            "key", "key_confidence",
+            "duration_seconds",
+            "analyzed_at",
+          ];
+          const missing = requiredKeys.filter((k) => !(k in body));
+          if (missing.length) {
+            failures.push(`analyze response missing keys: ${missing.join(", ")}`);
+          } else if (
+            typeof body.asset_id !== "number" ||
+            typeof body.duration_seconds !== "number" ||
+            body.duration_seconds < 4.0 || body.duration_seconds > 6.0
+          ) {
+            failures.push(
+              `analyze response sanity check failed: asset_id=${body.asset_id} duration=${body.duration_seconds}`
+            );
+          } else {
+            console.log(`smoke: analyze endpoint shape PASS (duration=${body.duration_seconds.toFixed(2)}s)`);
+          }
+        }
+      } catch (e) {
+        failures.push(`analyze endpoint error: ${e.message}`);
+      }
+    }
+    // === end v0.0.13 ===
+
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
   }
