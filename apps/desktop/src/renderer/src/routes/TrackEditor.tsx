@@ -1,15 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Wand2 } from "lucide-react";
 
 import { tracks } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
 import { distinct } from "@/api/distinct";
+import { analysis } from "@/api/analysis";
+import type { AudioAnalysisResult } from "@/api/analysis";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { CoverDropZone } from "@/components/CoverDropZone";
 import { FileRowsSection } from "@/components/FileRowsSection";
 import { KeyPicker } from "@/components/KeyPicker";
 import { ChipMultiSelect } from "@/components/ChipMultiSelect";
+import { AnalyzeResultDialog } from "@/components/AnalyzeResultDialog";
 import type { Track, TrackUpdate } from "@/api/tracks";
 import { shallowEqualEditable } from "@/lib/shallow-equal-track";
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
@@ -32,6 +36,9 @@ export function TrackEditor(): React.JSX.Element {
   const [navigateAfterSave, setNavigateAfterSave] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [producerOptions, setProducerOptions] = useState<{ value: string; label: string }[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeResult, setAnalyzeResult] = useState<AudioAnalysisResult | null>(null);
+  const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
 
   useEffect(() => {
     distinct.values("producer").then((vals) => {
@@ -159,6 +166,21 @@ export function TrackEditor(): React.JSX.Element {
     setTrack((cur) => (cur ? { ...cur, [field]: value } : cur));
   }
 
+  async function runAnalyze(): Promise<void> {
+    if (!track) return;
+    setAnalyzing(true);
+    try {
+      const result = await analysis.analyze(track.id);
+      setAnalyzeResult(result);
+      setAnalyzeDialogOpen(true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert(`Analysis failed: ${msg}`);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   return (
     <>
     <UnsavedChangesDialog
@@ -175,6 +197,18 @@ export function TrackEditor(): React.JSX.Element {
       }}
       onDiscard={() => { setDialogOpen(false); navigate("/"); }}
       onCancel={() => setDialogOpen(false)}
+    />
+    <AnalyzeResultDialog
+      open={analyzeDialogOpen}
+      result={analyzeResult}
+      currentBpm={track.bpm ?? null}
+      currentKey={track.key_signature ?? null}
+      onApply={(update) => {
+        if (update.bpm != null) patch("bpm", update.bpm);
+        if (update.key_signature != null) patch("key_signature", update.key_signature);
+        setAnalyzeDialogOpen(false);
+      }}
+      onClose={() => setAnalyzeDialogOpen(false)}
     />
     <main data-track-editor className="beatos-scroll flex-1 overflow-y-auto p-8">
       <form onSubmit={onSave} className="max-w-4xl space-y-6">
@@ -237,6 +271,22 @@ export function TrackEditor(): React.JSX.Element {
                   maxSelections={1}
                 />
               </div>
+            </div>
+
+            <div className="flex items-center gap-2 -mt-2">
+              <button
+                type="button"
+                data-analyze-button
+                disabled={!track.has_audio || analyzing}
+                onClick={runAnalyze}
+                className="flex items-center gap-1 text-xs text-accent hover:underline disabled:opacity-50 disabled:hover:no-underline"
+              >
+                <Wand2 className="h-3 w-3" />
+                {analyzing ? "Analyzing audio…" : "Analyze audio (BPM + Key)"}
+              </button>
+              {!track.has_audio && (
+                <span className="text-xs text-text-tertiary">— attach audio first</span>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-4">
