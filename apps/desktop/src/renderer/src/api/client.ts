@@ -10,7 +10,12 @@ export class ApiError extends Error {
   status: number;
   body: unknown;
   constructor(status: number, body: unknown, message: string) {
-    super(message);
+    // If body contains a FastAPI {detail} field, append it for clarity
+    const detail =
+      body && typeof body === "object" && "detail" in (body as Record<string, unknown>)
+        ? String((body as { detail: unknown }).detail)
+        : null;
+    super(detail ? `${message} — ${detail}` : message);
     this.name = "ApiError";
     this.status = status;
     this.body = body;

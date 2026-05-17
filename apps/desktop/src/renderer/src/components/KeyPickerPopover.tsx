@@ -116,11 +116,11 @@ export function KeyPickerPopover({ initialValue, onCommit, onClear, onClose }: P
         </button>
         <button
           type="button"
-          aria-label="Close"
+          aria-label="Save"
           onClick={handleClose}
           className="px-4 py-1.5 rounded-md bg-accent text-white text-sm font-medium hover:opacity-90"
         >
-          Close
+          Save
         </button>
       </div>
     </div>

@@ -33,7 +33,7 @@ describe("KeyPickerPopover", () => {
     fireEvent.click(screen.getByText("Sharp keys"));
     fireEvent.click(screen.getByRole("button", { name: "F#" }));
     fireEvent.click(screen.getByRole("button", { name: "Minor" }));
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onCommit).toHaveBeenCalledWith("F# minor");
     expect(onClose).toHaveBeenCalled();
   });
@@ -42,7 +42,7 @@ describe("KeyPickerPopover", () => {
     const onCommit = vi.fn();
     render(<KeyPickerPopover initialValue={null} onCommit={onCommit} onClear={vi.fn()} onClose={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "F" }));
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onCommit).not.toHaveBeenCalled();
   });
 

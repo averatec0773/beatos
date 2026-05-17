@@ -133,7 +133,7 @@ export function ChipMultiSelect({
         value.map((v) => (
           <span
             key={v}
-            className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-text-primary"
+            className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-3 py-1 text-sm font-medium text-text-primary"
           >
             {getLabel(v)}
             <button
@@ -166,9 +166,9 @@ export function ChipMultiSelect({
               type="button"
               data-add-button
               onClick={openPopover}
-              className="inline-flex items-center gap-1 rounded-full border border-border-subtle px-3 py-1 text-xs text-text-tertiary hover:bg-bg-elevated hover:text-text-primary focus:outline-none"
+              className="inline-flex items-center gap-1 rounded-full border border-border-subtle px-3 py-1 text-sm text-text-tertiary hover:bg-bg-elevated hover:text-text-primary focus:outline-none"
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-3.5 w-3.5" />
               {placeholder ?? "Add"}
             </button>
           )}

@@ -213,7 +213,20 @@ export function TrackEditor(): React.JSX.Element {
     <main data-track-editor className="beatos-scroll flex-1 overflow-y-auto p-8">
       <form onSubmit={onSave} className="max-w-4xl space-y-6">
         <div className="grid grid-cols-[200px_1fr] gap-6 items-start">
-          <CoverDropZone trackId={track.id} />
+          <div className="flex flex-col items-stretch gap-2">
+            <CoverDropZone trackId={track.id} />
+            <button
+              type="button"
+              data-analyze-button
+              disabled={!track.has_audio || analyzing}
+              onClick={runAnalyze}
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-border-subtle px-3 py-2 text-xs text-text-primary hover:bg-bg-row-hover disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              title={!track.has_audio ? "Attach audio first" : "Analyze BPM and Key"}
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              {analyzing ? "Analyzing…" : "Analyze audio"}
+            </button>
+          </div>
 
           <div className="space-y-4">
             <div>
@@ -271,22 +284,6 @@ export function TrackEditor(): React.JSX.Element {
                   maxSelections={1}
                 />
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 -mt-2">
-              <button
-                type="button"
-                data-analyze-button
-                disabled={!track.has_audio || analyzing}
-                onClick={runAnalyze}
-                className="flex items-center gap-1 text-xs text-accent hover:underline disabled:opacity-50 disabled:hover:no-underline"
-              >
-                <Wand2 className="h-3 w-3" />
-                {analyzing ? "Analyzing audio…" : "Analyze audio (BPM + Key)"}
-              </button>
-              {!track.has_audio && (
-                <span className="text-xs text-text-tertiary">— attach audio first</span>
-              )}
             </div>
 
             <div className="grid grid-cols-3 gap-4">

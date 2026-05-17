@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
 
 const beatos = {
@@ -30,6 +30,8 @@ const beatos = {
   startDragFile: (absPath: string): void => {
     ipcRenderer.send(IPC_CHANNELS.DRAG_OUT_FILE, { absPath });
   },
+  /** Returns the absolute filesystem path for a File from a drop / file input. */
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
 };
 
 contextBridge.exposeInMainWorld("beatos", beatos);

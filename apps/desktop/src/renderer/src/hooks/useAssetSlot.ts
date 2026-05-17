@@ -6,7 +6,8 @@ import type { Source } from "@/api/sources";
 
 interface UseAssetSlotResult {
   asset: Asset | null;
-  pickAndAttach: (replace: boolean) => Promise<void>;
+  /** If `explicitPath` is provided, bypass the OS file picker. */
+  pickAndAttach: (replace: boolean, explicitPath?: string) => Promise<void>;
   detach: () => Promise<void>;
   relocate: () => Promise<void>;
   reveal: () => void;
@@ -27,8 +28,8 @@ export function useAssetSlot(
   const asset = assetsForTrack.find((a) => a.role === role) ?? null;
   const filterExtensions = extensions.map((e) => e.replace(/^\./, ""));
 
-  const pickAndAttach = async (replace: boolean) => {
-    const picked = await window.beatos.openFileDialog([
+  const pickAndAttach = async (replace: boolean, explicitPath?: string) => {
+    const picked = explicitPath ?? await window.beatos.openFileDialog([
       { name: label, extensions: filterExtensions },
     ]);
     if (!picked) return;

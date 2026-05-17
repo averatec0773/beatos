@@ -441,11 +441,12 @@ try {
         await trigger.click();
         // Wait for popover content (Flat keys default tab)
         await window.waitForSelector('text=Flat keys', { timeout: 2000 });
-        // Switch to Sharp keys, pick F#, pick Minor, Close
+        // Switch to Sharp keys, pick F#, pick Minor, Save (KeyPicker popover Save button)
         await window.locator('text=Sharp keys').click();
         await window.locator('button[aria-label="F#"]').click();
         await window.locator('button[aria-label="Minor"]').click();
-        await window.locator('button:has-text("Close")').click();
+        // Use aria-label to target the popover's Save, not the form's submit button
+        await window.locator('button[aria-label="Save"]').click();
         // Assert trigger now displays "F# minor"
         await window.waitForFunction(
           () => {

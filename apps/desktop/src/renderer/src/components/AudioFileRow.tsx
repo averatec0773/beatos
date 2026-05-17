@@ -21,8 +21,47 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
   const sources = useSourceStore((s) => s.all);
   const offline = asset ? isPathOffline(asset.abs_path, sources) : false;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const filename = asset ? (asset.abs_path.split("/").pop() ?? asset.abs_path) : null;
+
+  function extensionAccepted(name: string): boolean {
+    const lower = name.toLowerCase();
+    return extensions.some((ext) => lower.endsWith(ext.toLowerCase()));
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      setDragOver(true);
+    }
+  }
+  function handleDragLeave(): void {
+    setDragOver(false);
+  }
+  async function handleDrop(e: React.DragEvent<HTMLDivElement>): Promise<void> {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (!extensionAccepted(file.name)) {
+      alert(`${label} requires one of: ${extensions.join(", ")}`);
+      return;
+    }
+    let absPath: string;
+    try {
+      absPath = window.beatos.getPathForFile(file);
+    } catch {
+      alert("Could not read file path. Try the + Add file button.");
+      return;
+    }
+    if (!absPath) {
+      alert("Dropped file has no accessible path.");
+      return;
+    }
+    await pickAndAttach(asset != null ? true : false, absPath);
+  }
 
   if (asset && asset.missing) {
     return (
@@ -47,7 +86,12 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
         data-role={role}
         data-file-row
         data-empty="true"
-        className="flex items-center gap-3 px-3 py-2 rounded-md border border-dashed border-border-subtle"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`flex items-center gap-3 px-3 py-2 rounded-md border border-dashed transition-colors ${
+          dragOver ? "border-accent bg-accent/10" : "border-border-subtle"
+        }`}
       >
         <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">{label}</span>
         <span className="text-text-tertiary text-sm">—</span>
@@ -67,7 +111,12 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
     <div
       data-role={role}
       data-file-row
-      className="group relative flex items-center gap-3 px-3 py-2 rounded-md border border-border-subtle bg-bg-elevated"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`group relative flex items-center gap-3 px-3 py-2 rounded-md border bg-bg-elevated transition-colors ${
+        dragOver ? "border-accent" : "border-border-subtle"
+      }`}
     >
       <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">{label}</span>
       <span className="flex-1 text-sm text-text-primary truncate" title={asset.abs_path}>{filename}</span>

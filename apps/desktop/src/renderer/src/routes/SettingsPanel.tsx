@@ -130,23 +130,29 @@ function AboutSection(): React.JSX.Element {
       <div className="text-sm text-text-secondary">
         Made by <span className="text-text-primary font-medium">averatec0773</span>
       </div>
-      <div className="mt-3 flex flex-col gap-2 text-sm">
-        <button
-          type="button"
-          onClick={() => void window.beatos.openExternal("https://averatec.studio")}
-          className="text-accent hover:underline text-left"
-          aria-label="Open averatec.studio in browser"
-        >
-          averatec.studio
-        </button>
-        <button
-          type="button"
-          onClick={() => void window.beatos.openExternal("https://github.com/averatec0773/beatos")}
-          className="text-accent hover:underline text-left"
-          aria-label="Open project repository on GitHub in browser"
-        >
-          View on GitHub
-        </button>
+      <div className="mt-3 flex flex-col gap-1.5 text-sm">
+        <div>
+          <span className="text-text-secondary">My website: </span>
+          <button
+            type="button"
+            onClick={() => void window.beatos.openExternal("https://averatec.studio")}
+            className="text-accent underline hover:no-underline"
+            aria-label="Open averatec.studio in browser"
+          >
+            averatec.studio
+          </button>
+        </div>
+        <div>
+          <span className="text-text-secondary">Project repo: </span>
+          <button
+            type="button"
+            onClick={() => void window.beatos.openExternal("https://github.com/averatec0773/beatos")}
+            className="text-accent underline hover:no-underline"
+            aria-label="Open project repository on GitHub in browser"
+          >
+            github.com/averatec0773/beatos
+          </button>
+        </div>
       </div>
     </section>
   );
