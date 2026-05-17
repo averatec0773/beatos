@@ -23,6 +23,7 @@ At the start of every session:
 1. Read the skill file before any dangerous or irreversible operation.
 2. Follow conventions. Do not invent new patterns unless explicitly asked.
 3. Read `memory/rules.md` and apply all rules for the duration of this session.
+4. **Ship gate**: before creating *and pushing* a version tag (`git tag -a vX.Y.Z … && git push origin vX.Y.Z`), confirm `CHANGELOG.md` has an entry for that exact version. If missing, invoke the [changelog](.claude/skills/changelog/SKILL.md) skill first. No silent ships — every tag pushed to remote must have a published changelog entry.
 
 ## Settings
 
@@ -42,6 +43,10 @@ At the start of every session:
 - [architecture](conventions/architecture.md)
 - [design-direction](conventions/design-direction.md)
 - [testing](conventions/testing.md)
+- [vocab-genre-mood-scene](conventions/vocab-genre-mood-scene.md)
+
+### Docs
+- [beatos-charter](docs/beatos-charter.md) — canonical product spec; design docs add deltas only
 
 ### Memory
 - [rules](memory/rules.md)

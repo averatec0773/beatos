@@ -39,8 +39,10 @@ packages/beatos-core/        ← business logic
     library/                 ← library lifecycle service
     tracks/                  ← track CRUD + queries
     assets/                  ← reference / managed mode, relocate
-    automation/              ← Playwright CDP engine (v0.0.4+)
-    adapters/                ← per-platform upload form drivers
+    sources/                 ← v0.0.4 source registry + status monitor
+    lists/                   ← user-list CRUD + membership
+    watcher/                 ← watchdog registry (per-source observer)
+    audio_analysis/          ← v0.0.13 librosa BPM + Key pipeline
 
 packages/beatos-http/        ← FastAPI facade for the renderer
   beatos_http/
@@ -54,6 +56,9 @@ packages/beatos-mcp/         ← MCP stdio facade for AI agents
     server.py                ← tool registration
     tools/                   ← one module per tool group
     __main__.py              ← stdio MCP server entry
+
+packages/beatos-platforms/   ← v0.0.12 per-platform vocab maps
+  <platform>/                ← e.g. netease/ — {genre,mood}-map.json stubs
 ```
 
 ## Key components
@@ -64,6 +69,10 @@ packages/beatos-mcp/         ← MCP stdio facade for AI agents
 | Handshake writer | `packages/beatos-http/beatos_http/handshake.py` | Writes `{"port": <int>, "started_at": <iso>}` to a known path on startup, before uvicorn accepts connections. |
 | Handshake reader | `apps/desktop/electron/main.ts` | Polls the handshake file with a 5s timeout, then creates the `BrowserWindow`. |
 | Adapter registry | `packages/beatos-core/beatos_core/adapters/registry.py` | Maps platform name → adapter class. New platforms slot in here. |
+| Audio analysis cache | `packages/beatos-core/beatos_core/audio_analysis/service.py` + migration `007` | librosa BPM+Key pipeline; results keyed by `(asset_id, sha256)` so a file is analyzed once per content hash. |
+| Player store | `apps/desktop/src/renderer/src/stores/player.ts` | Zustand singleton managing the lone `<audio>` element; transport + queue + role state. |
+| Role-priority resolver | `apps/desktop/src/renderer/src/lib/audio-resolve.ts` | Picks an audio asset from a track using `tagged_wav > untagged_wav > tagged_mp3 > untagged_mp3`. |
+| Filter chip bar | `apps/desktop/src/renderer/src/components/FilterChipBar.tsx` + `stores/track-query.ts` | Drives `/api/tracks` `sort_by`/`sort_dir`/filter params; AND across fields, OR within a field. |
 
 ## Handshake file location
 
@@ -90,6 +99,104 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Smoke harness | `apps/desktop/scripts/smoke.mjs` | Playwright `_electron`: launches built app, asserts boot + zero ERROR-level JSONL lines |
 | Dev reset | `apps/desktop/scripts/dev-reset.sh` | kills orphan uvicorn, frees 5000-5050, clears logs |
 | npm scripts | `dev:fresh`, `smoke`, `logs:tail` | agent-runnable verification — see `memory/feedback_run_the_tools_you_built.md` |
+
+## v0.0.6 → v0.0.13 Structural Additions
+
+### v0.0.6 — Drag-Add Lists + Production-Bug Sweep
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `@dnd-kit/core` drag layer | `apps/desktop/src/renderer/src/App.tsx` (`DndContext` + `DragOverlay`) | Drives sidebar drag-add; chosen over HTML5 native because Playwright `_electron` cannot drive native drag. |
+| Multi-select state | `stores/tracks.ts` (`selectedIds: Set<number>` + `anchorId`) | Click modifiers: plain=replace, cmd/ctrl=toggle, shift=range from anchor. |
+| `EmptyState` discriminated union | `components/EmptyState.tsx` | Variants: `no-tracks` / `empty-list` / `no-search-results`; chosen by route + search state. |
+| HashRouter (not BrowserRouter) | `App.tsx` | `file://` URLs match no routes under BrowserRouter — production rendered empty until smoke caught it. Never revert. |
+| CORS open regex | `packages/beatos-http/beatos_http/app.py` (`allow_origin_regex=r".*"`) | `file://` origin is `null`; allow-lists miss it. Safe: sidecar binds `127.0.0.1`. |
+| `BEATOS_DB_PATH` env contract | `apps/desktop/src/main/config.ts` (`resolveDbPath`) | Caller env wins, then config, then default. Same shape as `BEATOS_LOG_PATH`. |
+| Sidecar log-level prefix parser | `apps/desktop/src/main/log-parse.ts` | Maps `INFO:` / `WARNING:` / `ERROR:` uvicorn stderr prefixes to electron-log levels. |
+
+### v0.0.7 — Cover Wiring + Audit Cleanup
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `_cover_subquery(prefix)` | `packages/beatos-core/beatos_core/tracks/service.py` | Correlated subquery against `asset` (role='cover'); injected into every Track SELECT (list, get, source filter, list membership). Caller controls the outer alias. |
+| `Track.cover_asset_id` field | `packages/beatos-core/beatos_core/models/track.py` | Derived (no schema change — `UNIQUE(track_id, role)` already enforces 1-to-1). |
+| Smoke `postJson` helper | `apps/desktop/scripts/smoke.mjs` | Surfaces status + body for failed seed calls (was a catch-all). |
+| Drag handle on cover only | `components/TrackRow` cover wrapper | Keeps row body clean for click + double-click. |
+
+### v0.0.8 — Splash + Sidecar Fail-Fast
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `assertSidecarLayout(repoRoot, dirname)` | `apps/desktop/src/main/sidecar-helpers.ts` | Fail-fast `pyproject.toml` existence check before `spawn`; replaces 5s silent handshake hang if electron-builder layout drifts. |
+| Splash window | `apps/desktop/src/main/splash.ts` (pure helpers `shouldShowSplash` + `closeDelayMs` unit-tested) | 480×320 frameless transparent; HTML inlined as `data:` URL (no dev/prod path divergence). 1s min display + 250ms fade. |
+| `--no-splash` CLI flag | `main/index.ts` argv parse | Smoke harness opts out; asserts `app.windows().length === 1`. |
+| Smoke clean-userData default | `scripts/smoke.mjs` | `--keep-userdata` opt-in; no more `/tmp/beatos-smoke-*` accumulation. |
+
+### v0.0.9 — Audio Playback
+
+| Capability | Location | Purpose |
+|---|---|---|
+| Role-priority resolver | `lib/audio-resolve.ts` | `tagged_wav > untagged_wav > tagged_mp3 > untagged_mp3`. |
+| `usePlayerStore` singleton | `stores/player.ts` | One `<audio>` element; transport + queue + shuffle + repeat + role state. |
+| Bottom player UI | `components/BottomPlayerBar.tsx` + `RoleSwitcher.tsx` + `TrackRowPlayButton` (in `TrackRow`) | Spotify-style bar; per-row play button driven off `has_audio`. |
+| Audio HTTP route | `packages/beatos-http/beatos_http/routes/assets.py` (`GET /api/assets/audio/{id}`) | `FileResponse` for native HTTP Range. |
+| `beatos-asset://audio/{id}` | `apps/desktop/src/main/asset-protocol.ts` | Mirrors existing `cover/{id}` protocol; forwards Range header. |
+| `Track.has_audio` derived | `tracks/service.py` `_has_audio_subquery` | Wired into `service.py`, `lists/membership.py`, source-filter route. |
+| CSP `media-src beatos-asset:` | `apps/desktop/src/renderer/index.html` | Required in production CSP — dev CSP is loosened, silently masked the gap. |
+| Migration 005 `track.producer` | `migrations/005_track_producer.sql` | Per-track producer column; player-bar subtitle `producer · BPM · Key`. |
+
+### v0.0.10 — TrackEditor Refactor
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `KeyPicker` + `KeyPickerPopover` | `components/KeyPicker.tsx` + `KeyPickerPopover.tsx` | Splice-style Flat/Sharp tabs + note grid + parallel Major/Minor. Stored value normalized to `"F# minor"` / `"Eb major"`. |
+| Radix Popover primitive | `components/ui/popover.tsx` | Shared primitive (used by KeyPicker, ChipMultiSelect, FilterChipBar). |
+| `useAssetSlot` hook | `hooks/useAssetSlot.ts` | Slot-state abstraction backing the file-row UI. |
+| Row-based files UI | `components/AudioFileRow.tsx` + `FileRowsSection.tsx` | 5 full-width rows (4 audio roles + Stems); empty rows render "+ Add file". |
+| Format helpers | `lib/format-bytes.ts` + `lib/parse-key.ts` (`parseKey` / `formatKey`) | Unit-tested; key parse handles legacy `"F#m"` / `"Cmaj"` until next save. |
+
+### v0.0.11 — Library Table Redesign
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `/api/tracks` sort + filter | `packages/beatos-http/beatos_http/routes/tracks.py` | `sort_by` / `sort_dir` / per-field filters (Producer, Genre, Mood, Key, BPM range, `has_audio`). |
+| `/api/tracks/distinct/{field}` | `routes/tracks.py` + `renderer/api/distinct.ts` | Powers chip-bar filter pickers. |
+| `SORTABLE_FIELDS` / `DISTINCT_FIELDS` whitelists | `routes/tracks.py` | Whitelist before f-string interpolation; values stay parameterized. SQL-injection guard. |
+| `useTrackQueryStore` | `stores/track-query.ts` | Sort + filter state; subscribes to `useTrackStore.refresh()`. |
+| `FilterChipBar` + `FilterFieldPopover` | `components/FilterChipBar.tsx` + `FilterFieldPopover.tsx` | Single Popover with two views (`field-list` / field picker) — Radix has no nested popovers. |
+| Sortable `TableHeader` | `components/TableHeader.tsx` | Click toggles asc/desc; single active column. |
+
+### v0.0.11.1 — Resizable Cols + Unsaved Dialog
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `useColumnWidthStore` + `<ColumnResizer>` | `stores/column-widths.ts` + `components/ColumnResizer.tsx` | Session-scoped column widths; drag handles between columns. |
+| `UnsavedChangesDialog` + `shallowEqualEditable` | `components/UnsavedChangesDialog.tsx` + `lib/shallow-equal-track.ts` | TrackEditor dirty tracking; Save / Discard / Cancel. |
+| `.beatos-scroll` CSS class | renderer global CSS | Hides macOS scrollbar gutter on inner panels (TrackDetailPanel / TrackEditor / SettingsPanel / VirtualTrackList). |
+| Manual `dialogOpen` state | `TrackEditor.tsx` | Replaces react-router `useBlocker` — incompatible with component-based `<HashRouter>` (needs data router). Crashed editor on render. Never reintroduce `useBlocker` here. |
+
+### v0.0.12 — Multi-Value Tags + Native Drag-Out
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `ChipMultiSelect` | `components/ChipMultiSelect.tsx` (Radix Popover) | Reusable multi-value picker; Producer allows custom-add, Genre/Mood are vocab-only. `maxSelections=1` renders as a single-select dropdown. |
+| JSON-array TEXT columns | `migrations/006_multi_value_fields.sql` | `producer` / `genre` / `mood` migrated idempotently into single-element arrays. |
+| Multi-value filtering | `tracks/service.py` | `EXISTS (SELECT 1 FROM json_each(...) WHERE value IN (?,?))` — "any match" within field, AND across fields. |
+| Multi-value sorting | `tracks/service.py` | `json_extract($[0])` — first-element sort. |
+| Renderer vocab | `data/genres.ts` (74) + `data/moods.ts` (50) | English `en` is canonical stored key; `zh` is display-only. |
+| Platform vocab maps | `packages/beatos-platforms/<platform>/{genre,mood}-map.json` | Identity stubs; ready for publish-to-platform adapters in v0.1+. |
+| Native cover drag-out | `main/index.ts` `DRAG_OUT_FILE` IPC → `webContents.startDrag` | Drag TrackEditor 200×200 cover into Finder / other apps. Path validation rejects relative + traversal + missing files. |
+
+### v0.0.13 — Audio Analysis (BPM + Key)
+
+| Capability | Location | Purpose |
+|---|---|---|
+| Audio analysis pipeline | `packages/beatos-core/beatos_core/audio_analysis/` (`bpm.py`, `key.py`, `pipeline.py`, `service.py`, `models.py`) | HPSS → percussive → `beat_track` for BPM (hop_length=256); HPSS → harmonic → `chroma_cqt` → Krumhansl-Schmuckler for Key. librosa dep. |
+| `POST /api/tracks/{id}/analyze` | `packages/beatos-http/beatos_http/routes/analysis.py` | Returns `{bpm, bpm_conf, key, key_conf}`; sync API (5–15s on real tracks). |
+| `analysis_cache` table | `migrations/007_analysis_cache.sql` | Keyed by `(asset_id, sha256)`; CASCADE on asset delete. One analysis per content hash. |
+| Renderer API client | `renderer/api/analysis.ts` + `lib/audio-analysis-constants.ts` | Confidence thresholds (BPM ≥ 0.7, Key ≥ 0.6) live in constants module. |
+| Fire-and-forget auto-fill | `lib/auto-analyze.ts` (`maybeAutoAnalyze`) called from `stores/assets.ts` `attach` | Only writes BPM/Key when the field is empty AND confidence clears threshold. |
+| `AnalyzeResultDialog` + Wand2 button | `components/AnalyzeResultDialog.tsx` + TrackEditor toolbar | Per-field accept dialog with "Replace existing" toggle; `⚠ Low` prefix on sub-threshold results. |
 
 ## What NOT to change without reading context first
 
