@@ -68,7 +68,7 @@ export function TrackRow({
       >
         <span data-track-title className="text-sm font-medium text-text-primary truncate">{track.title}</span>
         <span className="text-xs text-text-tertiary truncate">
-          {track.producer ?? ""}
+          {(track.producer ?? []).join(", ")}
         </span>
       </div>
       {/* 1px resizer spacer — matches ColumnResizer width so columns stay aligned */}
@@ -77,7 +77,9 @@ export function TrackRow({
       <div className="w-1 flex-shrink-0" />
       <div className="truncate text-xs" style={{ width: widths.key, flexShrink: 0 }}>{track.key_signature ?? "—"}</div>
       <div className="w-1 flex-shrink-0" />
-      <div className="truncate text-xs" style={{ width: widths.genre, flexShrink: 0 }}>{track.genre ?? "—"}</div>
+      <div className="truncate text-xs" style={{ width: widths.genre, flexShrink: 0 }}>
+        {track.genre && track.genre.length > 0 ? `${track.genre[0]}${track.genre.length > 1 ? ` +${track.genre.length - 1}` : ""}` : "—"}
+      </div>
       <div className="w-1 flex-shrink-0" />
       <div className="truncate font-mono text-xs text-text-tertiary" style={{ width: widths.updated, flexShrink: 0 }}>
         {formatRowDate(track.updated_at)}

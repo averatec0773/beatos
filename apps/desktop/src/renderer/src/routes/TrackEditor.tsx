@@ -221,8 +221,8 @@ export function TrackEditor(): React.JSX.Element {
                 <input
                   id="track-genre"
                   type="text"
-                  value={track.genre ?? ""}
-                  onChange={(e) => patch("genre", e.target.value || null)}
+                  value={(track.genre ?? []).join(", ")}
+                  onChange={(e) => patch("genre", e.target.value ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : null)}
                   className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
                 />
               </div>
@@ -239,8 +239,8 @@ export function TrackEditor(): React.JSX.Element {
                 <input
                   id="track-mood"
                   type="text"
-                  value={track.mood ?? ""}
-                  onChange={(e) => patch("mood", e.target.value || null)}
+                  value={(track.mood ?? []).join(", ")}
+                  onChange={(e) => patch("mood", e.target.value ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : null)}
                   className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
                 />
               </div>
@@ -254,8 +254,8 @@ export function TrackEditor(): React.JSX.Element {
                 <input
                   id="track-producer"
                   type="text"
-                  value={track.producer ?? ""}
-                  onChange={(e) => patch("producer", e.target.value || null)}
+                  value={(track.producer ?? []).join(", ")}
+                  onChange={(e) => patch("producer", e.target.value ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : null)}
                   className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
                 />
               </div>

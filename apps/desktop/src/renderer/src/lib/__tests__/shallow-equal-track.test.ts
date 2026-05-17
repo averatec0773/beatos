@@ -5,13 +5,13 @@ type EditableFields = {
   title: string;
   bpm: number | null;
   key_signature: string | null;
-  genre: string | null;
-  mood: string | null;
+  genre: string[] | null;
+  mood: string[] | null;
   tags: string[] | null;
   description: string | null;
   license_type: string;
   price: number | null;
-  producer: string | null;
+  producer: string[] | null;
 };
 
 function base(): EditableFields {
@@ -19,13 +19,13 @@ function base(): EditableFields {
     title: "Test Beat",
     bpm: 140,
     key_signature: "Cm",
-    genre: "Trap",
-    mood: "Dark",
+    genre: ["Trap"],
+    mood: ["Dark"],
     tags: ["a", "b"],
     description: "A test beat",
     license_type: "lease_basic",
     price: 29.99,
-    producer: "averatec",
+    producer: ["averatec"],
   };
 }
 

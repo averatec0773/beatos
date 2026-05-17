@@ -5,14 +5,14 @@ export interface Track {
   title: string;
   bpm: number | null;
   key_signature: string | null;
-  genre: string | null;
-  mood: string | null;
+  genre: string[] | null;
+  mood: string[] | null;
   tags: string[] | null;
   description: string | null;
   description_draft: string | null;
   license_type: string;
   price: number | null;
-  producer: string | null;
+  producer: string[] | null;
   has_audio: boolean;
   cover_asset_id: number | null;
   created_at: string;

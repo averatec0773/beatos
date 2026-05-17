@@ -1,9 +1,10 @@
 export function formatPlayerSubtitle(opts: {
-  producer: string | null;
+  producer: string | string[] | null;
   bpm: number | null;
   key: string | null;
 }): string {
-  const p = opts.producer || "—";
+  const raw = opts.producer;
+  const p = Array.isArray(raw) ? (raw.length > 0 ? raw.join(", ") : "—") : raw || "—";
   const b = opts.bpm != null ? `${opts.bpm} BPM` : "— BPM";
   const k = opts.key || "—";
   return `${p} · ${b} · ${k}`;

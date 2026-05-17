@@ -23,7 +23,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     if (!q) return tracks;
     return tracks.filter((t) => {
       if (normalize(t.title).includes(q)) return true;
-      if (t.genre && normalize(t.genre).includes(q)) return true;
+      if (t.genre && t.genre.some((g) => normalize(g).includes(q))) return true;
       if (t.tags && t.tags.some((tag) => normalize(tag).includes(q))) return true;
       return false;
     });
