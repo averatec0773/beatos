@@ -922,6 +922,44 @@ try {
     }
     // === end v0.0.13 ===
 
+    // === v0.0.13.2: failure-path coverage ===
+    // Assertion 22: POST /analyze on a track with NO audio asset (Smoke2)
+    // should return 404 with a detail mentioning "audio". This catches the
+    // class of bug where:
+    //   - The analyze route isn't registered (FastAPI default "Not Found")
+    //   - Our explicit raise HTTPException(404, "No audio asset...") regresses
+    // v0.0.13.1 surfaced ApiError detail; this assertion proves detail flows.
+    {
+      try {
+        const res = await fetch(`${baseUrl}/api/tracks/${t2.id}/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        if (res.status !== 404) {
+          const text = await res.text().catch(() => "");
+          const msg = `expected 404 on no-audio analyze, got ${res.status}: ${text.slice(0, 200)}`;
+          console.error(`smoke: FAIL — ${msg}`);
+          failures.push(msg);
+        } else {
+          const body = await res.json().catch(() => ({}));
+          const detail = String(body.detail ?? "").toLowerCase();
+          if (!detail.includes("audio")) {
+            const msg = `404 detail should mention "audio", got: ${JSON.stringify(body)}`;
+            console.error(`smoke: FAIL — ${msg}`);
+            failures.push(msg);
+          } else {
+            console.log(`smoke: analyze 404 on no-audio track PASS (detail="${body.detail}")`);
+          }
+        }
+      } catch (e) {
+        const msg = `analyze 404 negative test error: ${e.message}`;
+        console.error(`smoke: FAIL — ${msg}`);
+        failures.push(msg);
+      }
+    }
+    // === end v0.0.13.2 ===
+
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
   }

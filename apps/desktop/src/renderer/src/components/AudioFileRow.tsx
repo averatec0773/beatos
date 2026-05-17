@@ -31,36 +31,43 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
   }
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
-    if (e.dataTransfer.types.includes("Files")) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-      setDragOver(true);
-    }
+    // Always preventDefault when over a drop zone — otherwise the drop event
+    // never fires. types.includes("Files") was unreliable on first dragover
+    // frame (caused silent rejection in v0.0.13.1).
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    if (!dragOver) setDragOver(true);
   }
   function handleDragLeave(): void {
     setDragOver(false);
   }
   async function handleDrop(e: React.DragEvent<HTMLDivElement>): Promise<void> {
     e.preventDefault();
+    e.stopPropagation();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (!file) return;
+    if (!file) {
+      console.warn("[file-row drop] dataTransfer.files is empty");
+      return;
+    }
     if (!extensionAccepted(file.name)) {
-      alert(`${label} requires one of: ${extensions.join(", ")}`);
+      alert(`${label} requires one of: ${extensions.join(", ")} (got ${file.name})`);
       return;
     }
     let absPath: string;
     try {
       absPath = window.beatos.getPathForFile(file);
-    } catch {
+    } catch (err) {
+      console.warn("[file-row drop] getPathForFile threw", err);
       alert("Could not read file path. Try the + Add file button.");
       return;
     }
     if (!absPath) {
-      alert("Dropped file has no accessible path.");
+      console.warn("[file-row drop] getPathForFile returned empty");
+      alert("Dropped file has no accessible path. Try the + Add file button.");
       return;
     }
-    await pickAndAttach(asset != null ? true : false, absPath);
+    await pickAndAttach(asset != null, absPath);
   }
 
   if (asset && asset.missing) {
