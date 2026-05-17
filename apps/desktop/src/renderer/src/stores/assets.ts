@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
 import { Asset, AssetRole, assets as api } from "@/api/assets";
+import { isAudioRole } from "@/lib/audio-analysis-constants";
+import { maybeAutoAnalyze } from "@/lib/auto-analyze";
 
 interface AssetState {
   /** Assets keyed by track_id (only the currently-loaded editor track is cached). */
@@ -23,6 +25,9 @@ export const useAssetStore = create<AssetState>((set) => ({
       const filtered = options?.replace ? existing.filter((x) => x.role !== role) : existing;
       return { byTrack: { ...s.byTrack, [trackId]: [...filtered, a] } };
     });
+    if (isAudioRole(role)) {
+      void maybeAutoAnalyze(trackId);
+    }
     return a;
   },
   async detach(trackId, assetId) {
