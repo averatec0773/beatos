@@ -23,19 +23,13 @@ export function TableHeader(): React.JSX.Element {
   return (
     <div
       role="row"
-      className="h-9 px-4 flex items-center text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-b border-border-subtle bg-bg-base"
+      className="h-9 px-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-b border-border-subtle bg-bg-base"
     >
-      {/* Cover thumbnail slot */}
+      {/* Cover thumbnail slot (play button now overlays the cover in TrackRow) */}
       <button
         type="button"
         disabled
         className="w-12 flex-shrink-0 cursor-default"
-      />
-      {/* Play button slot */}
-      <button
-        type="button"
-        disabled
-        className="w-7 flex-shrink-0 cursor-default"
       />
 
       {/* Title */}

@@ -39,7 +39,9 @@ export function ColumnResizer({ columnKey, currentWidth, getCurrentRenderedWidth
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      className="w-1 h-full flex-shrink-0 cursor-col-resize hover:bg-accent/30 active:bg-accent/60"
-    />
+      className="group relative w-3 h-full flex-shrink-0 cursor-col-resize -mx-1 select-none"
+    >
+      <div className="absolute left-1/2 top-2 bottom-2 w-px -translate-x-1/2 bg-border-subtle group-hover:bg-accent group-active:bg-accent transition-colors" />
+    </div>
   );
 }

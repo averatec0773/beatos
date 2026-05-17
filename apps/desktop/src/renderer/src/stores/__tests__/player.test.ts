@@ -198,6 +198,50 @@ describe("next/prev with repeat", () => {
   });
 });
 
+describe("togglePlay recovery", () => {
+  it("retries loadAndPlay when status='error' with currentTrackId set", async () => {
+    // First attempt fails (no audio asset resolvable)
+    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([
+      mockAsset(99, "cover"),
+    ]);
+    await usePlayerStore.getState().playFromQueue({
+      trackIds: [5], startIndex: 0, source: { kind: "all" },
+    });
+    expect(usePlayerStore.getState().status).toBe("error");
+
+    // Now an audio asset is available — togglePlay should retry
+    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([
+      mockAsset(10, "audio_tagged_wav"),
+    ]);
+    usePlayerStore.getState().togglePlay();
+    // wait microtask for the async loadAndPlay to settle
+    await new Promise((r) => setTimeout(r, 0));
+    expect(usePlayerStore.getState().status).toBe("playing");
+    expect(usePlayerStore.getState().currentAssetId).toBe(10);
+  });
+
+  it("retries loadAndPlay when status='idle' with currentTrackId set", async () => {
+    usePlayerStore.setState({
+      currentTrackId: 7,
+      currentAssetId: null,
+      currentRole: null,
+      status: "idle",
+    });
+    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([
+      mockAsset(20, "audio_tagged_wav"),
+    ]);
+    usePlayerStore.getState().togglePlay();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(usePlayerStore.getState().status).toBe("playing");
+  });
+
+  it("no-op when status='error' but no currentTrackId", () => {
+    usePlayerStore.setState({ status: "error", currentTrackId: null });
+    usePlayerStore.getState().togglePlay();
+    expect(usePlayerStore.getState().status).toBe("error");
+  });
+});
+
 describe("setPreferredRole", () => {
   it("re-resolves asset if preferred role is available", async () => {
     vi.mocked(assetsApi.listForTrack).mockResolvedValue([

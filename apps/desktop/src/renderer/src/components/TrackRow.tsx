@@ -60,12 +60,12 @@ export function TrackRow({
         ref={setNodeRef}
         {...listeners}
         {...attributes}
-        className="flex-shrink-0 cursor-grab active:cursor-grabbing"
+        className="group relative w-12 h-12 flex-shrink-0 cursor-grab active:cursor-grabbing"
         aria-label="Drag track"
       >
         <CoverImage assetId={coverAssetId} size={48} />
+        <TrackRowPlayButton trackId={track.id} hasAudio={track.has_audio ?? false} />
       </div>
-      <TrackRowPlayButton trackId={track.id} hasAudio={track.has_audio ?? false} />
       <div
         className={widths.title === 0 ? "flex-1 min-w-0 flex flex-col justify-center" : "flex flex-col justify-center"}
         style={widths.title === 0 ? undefined : { width: widths.title, flexShrink: 0, minWidth: 0 }}

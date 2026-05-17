@@ -115,8 +115,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     togglePlay() {
       const s = get();
-      if (s.status === "playing") set({ status: "paused" });
-      else if (s.status === "paused") set({ status: "playing" });
+      if (s.status === "playing") {
+        set({ status: "paused" });
+      } else if (s.status === "paused") {
+        set({ status: "playing" });
+      } else if ((s.status === "error" || s.status === "idle") && s.currentTrackId != null) {
+        // Recover from a stuck state — re-attempt load. Without this, clicking
+        // the row play button on a track in error/idle status would no-op.
+        loadAndPlay(s.currentTrackId, s.preferredRole).catch((e) => {
+          console.warn("[player] retry from error/idle failed", e);
+        });
+      }
     },
 
     seek(seconds) {

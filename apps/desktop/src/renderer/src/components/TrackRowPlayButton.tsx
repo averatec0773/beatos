@@ -1,6 +1,5 @@
 import { Play, Pause } from "lucide-react";
 
-import { Button } from "./ui/button";
 import { usePlayerStore } from "@/stores/player";
 import { useTrackStore } from "@/stores/tracks";
 import { useSourceStore } from "@/stores/sources";
@@ -34,19 +33,25 @@ export function TrackRowPlayButton({
     usePlayerStore.getState().playFromQueue({ trackIds: ids, startIndex, source });
   };
 
+  // Overlay-style: shown by row hover (parent toggles opacity) or when this
+  // row is the currently-playing track. Visual is a centered round button on
+  // a dark scrim above the cover thumbnail.
   return (
-    <Button
-      size="icon"
-      variant="ghost"
-      className="h-7 w-7"
+    <button
+      type="button"
       disabled={!hasAudio}
       title={hasAudio ? (playing ? "Pause" : "Play") : "No audio asset"}
       onClick={onClick}
       data-has-audio={hasAudio ? "true" : "false"}
       data-row-play-button
       aria-label={hasAudio ? (playing ? "Pause" : "Play") : "No audio asset"}
+      className={`absolute inset-0 flex items-center justify-center rounded-md
+        transition-opacity
+        ${playing ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
+        ${hasAudio ? "bg-black/55 hover:bg-black/70 text-white cursor-pointer" : "bg-black/40 text-white/60 cursor-not-allowed"}
+      `}
     >
-      {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-    </Button>
+      {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+    </button>
   );
 }
