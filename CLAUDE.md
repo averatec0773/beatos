@@ -42,7 +42,6 @@ At the start of every session:
 ### Conventions
 - [architecture](conventions/architecture.md)
 - [design-direction](conventions/design-direction.md)
-- [testing](conventions/testing.md)
 - [vocab-genre-mood-scene](conventions/vocab-genre-mood-scene.md)
 
 ### Docs
