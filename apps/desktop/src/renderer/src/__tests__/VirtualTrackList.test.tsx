@@ -24,6 +24,7 @@ function makeTracks(n: number): Track[] {
     platform_data: null,
     created_at: "2026-05-14T00:00:00Z",
     updated_at: "2026-05-14T00:00:00Z",
+    deleted_at: null,
   }));
 }
 

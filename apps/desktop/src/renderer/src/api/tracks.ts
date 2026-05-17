@@ -17,6 +17,7 @@ export interface Track {
   cover_asset_id: number | null;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 export type TrackUpdate = Partial<
@@ -58,4 +59,7 @@ export const tracks = {
   get: (id: number) => apiGet<Track>(`/api/tracks/${id}`),
   update: (id: number, updates: TrackUpdate) => apiPut<Track>(`/api/tracks/${id}`, updates),
   remove: (id: number) => apiDelete(`/api/tracks/${id}`),
+  restore: (id: number) => apiPost<Track>(`/api/tracks/${id}/restore`),
+  purge: (id: number) => apiDelete(`/api/tracks/${id}?purge=true`),
+  listTrash: () => apiGet<Track[]>("/api/tracks/trash"),
 };

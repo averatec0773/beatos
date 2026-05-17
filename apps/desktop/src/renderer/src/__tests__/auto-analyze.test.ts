@@ -29,6 +29,7 @@ function makeTrack(overrides: Partial<Track> = {}): Track {
     cover_asset_id: null,
     created_at: "2026-05-17",
     updated_at: "2026-05-17",
+    deleted_at: null,
     ...overrides,
   };
 }

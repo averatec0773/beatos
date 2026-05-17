@@ -5,6 +5,7 @@ import { assets as assetsApi } from "@/api/assets";
 import { useSourceStore } from "./sources";
 import { useAssetStore } from "./assets";
 import { useTrackQueryStore } from "./track-query";
+import { useTrashStore } from "./trash";
 
 interface TrackState {
   list: Track[];
@@ -119,6 +120,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
       list: get().list.filter((x) => x.id !== id),
       current: get().current?.id === id ? null : get().current,
     });
+    void useTrashStore.getState().refresh();
   },
 }));
 

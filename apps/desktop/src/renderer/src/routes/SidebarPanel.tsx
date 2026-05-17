@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { matchPath, useLocation, useNavigate } from "react-router-dom";
 import { useDroppable } from "@dnd-kit/core";
 
 import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
+import { useTrashStore } from "@/stores/trash";
 import { type List } from "@/api/lists";
 import { SourceRow } from "@/components/SourceRow";
 import { SidebarItemContextMenu } from "@/components/SidebarItemContextMenu";
@@ -126,6 +127,9 @@ export function SidebarPanel(): React.JSX.Element {
   const refreshLists = useListStore((s) => s.refresh);
   const createList = useListStore((s) => s.create);
 
+  const trashCount = useTrashStore((s) => s.list.length);
+  const refreshTrash = useTrashStore((s) => s.refresh);
+
   const navigate = useNavigate();
   const location = useLocation();
   const listRouteMatch = matchPath("/lists/:id", location.pathname);
@@ -138,9 +142,10 @@ export function SidebarPanel(): React.JSX.Element {
   useEffect(() => {
     refreshSources();
     refreshLists();
+    void refreshTrash();
     const id = setInterval(() => refreshSources(), 5000);
     return () => clearInterval(id);
-  }, [refreshSources, refreshLists]);
+  }, [refreshSources, refreshLists, refreshTrash]);
 
   const userLists = useMemo(() => allLists.filter((l) => l.kind !== "system"), [allLists]);
   const allBeats = useMemo(() => allLists.find((l) => l.kind === "system"), [allLists]);
@@ -276,6 +281,30 @@ export function SidebarPanel(): React.JSX.Element {
             }}
           />
         ))}
+      </div>
+      <div>
+        <header className="px-3 mb-1">
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-text-tertiary">
+            Trash
+          </span>
+        </header>
+        <button
+          type="button"
+          data-trash-link
+          onClick={() => navigate("/trash")}
+          className={[
+            "w-full px-3 py-1.5 text-left text-sm rounded-md flex items-center gap-2",
+            location.pathname === "/trash"
+              ? "bg-bg-row-active text-accent"
+              : "text-text-primary hover:bg-bg-row-hover",
+          ].join(" ")}
+        >
+          <Trash2 size={14} />
+          <span className="flex-1">Trash</span>
+          {trashCount > 0 && (
+            <span className="text-[10px] text-text-tertiary">{trashCount}</span>
+          )}
+        </button>
       </div>
     </aside>
   );

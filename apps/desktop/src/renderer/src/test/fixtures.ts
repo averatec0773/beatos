@@ -17,6 +17,7 @@ export const sampleTrack: Track = {
   cover_asset_id: null,
   created_at: "2026-05-14T00:00:00+00:00",
   updated_at: "2026-05-14T00:00:00+00:00",
+  deleted_at: null,
 };
 
 export const sampleTrackWithArrayFields: Track = {

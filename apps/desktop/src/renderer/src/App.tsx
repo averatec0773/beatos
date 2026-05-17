@@ -7,6 +7,7 @@ import { TrackListPanel } from "@/routes/TrackListPanel";
 import { TrackEditor } from "@/routes/TrackEditor";
 import { SettingsPanel } from "@/routes/SettingsPanel";
 import { WelcomeScreen } from "@/routes/WelcomeScreen";
+import { TrashPanel } from "@/routes/TrashPanel";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OutOfSourceDialog } from "@/components/OutOfSourceDialog";
 import { SidecarCrashToast } from "@/components/SidecarCrashToast";
@@ -143,6 +144,7 @@ export default function App(): React.JSX.Element {
               <Route path="/tracks/:id/edit" element={<TrackEditor />} />
               <Route path="/lists/:id" element={<TrackListPanel />} />
               <Route path="/settings" element={<SettingsPanel />} />
+              <Route path="/trash" element={<TrashPanel />} />
             </Route>
           </Routes>
         </HashRouter>

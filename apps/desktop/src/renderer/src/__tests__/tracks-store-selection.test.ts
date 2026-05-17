@@ -20,6 +20,7 @@ function track(id: number, title = `T${id}`): Track {
     cover_asset_id: null,
     created_at: "2026-05-16",
     updated_at: "2026-05-16",
+    deleted_at: null,
   };
 }
 
