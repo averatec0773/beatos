@@ -30,11 +30,24 @@ export function TrackDetailPanel(): React.JSX.Element {
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
         Now Focused
       </div>
-      <CoverImage assetId={coverAsset?.id ?? null} size={320} className="w-full" />
+      <div
+        draggable={coverAsset != null && !coverAsset.missing}
+        onDragStart={(e) => {
+          if (!coverAsset || coverAsset.missing) return;
+          e.preventDefault();
+          window.beatos.startDragFile(coverAsset.abs_path);
+        }}
+        data-cover-drag-source
+        className="w-full"
+      >
+        <CoverImage assetId={coverAsset?.id ?? null} size={320} className="w-full" />
+      </div>
       <div>
         <div className="text-2xl font-bold leading-tight">{current.title}</div>
         <div className="text-text-secondary text-sm mt-1">
-          {current.genre ? current.genre : <span className="text-text-tertiary">No genre</span>}
+          {current.genre && current.genre.length > 0
+            ? current.genre.join(", ")
+            : <span className="text-text-tertiary">No genre</span>}
         </div>
       </div>
       <dl className="grid grid-cols-2 gap-2 text-sm">
@@ -43,7 +56,7 @@ export function TrackDetailPanel(): React.JSX.Element {
         <dt className="text-text-tertiary">Key</dt>
         <dd>{current.key_signature ?? "—"}</dd>
         <dt className="text-text-tertiary">Mood</dt>
-        <dd>{current.mood ?? "—"}</dd>
+        <dd>{current.mood && current.mood.length > 0 ? current.mood.join(", ") : "—"}</dd>
         <dt className="text-text-tertiary">License</dt>
         <dd>{current.license_type}</dd>
         <dt className="text-text-tertiary">Price</dt>
