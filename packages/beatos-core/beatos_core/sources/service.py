@@ -97,6 +97,30 @@ async def update_source(source_id: int, payload: SourceUpdate) -> Optional[Sourc
     return await get_source(source_id)
 
 
+async def reorder_sources(ids: list[int]) -> None:
+    """Assign positions 0, 1, 2, … to sources in the given id order.
+
+    Raises ValueError if ids is empty, contains duplicates, or references
+    a source_id that doesn't exist in the table.
+    """
+    if not ids:
+        raise ValueError("ids must not be empty")
+    if len(ids) != len(set(ids)):
+        raise ValueError("ids contains duplicates")
+
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT id FROM source WHERE id IN (%s)" % ",".join("?" * len(ids)), ids) as cur:
+            found = {r[0] for r in await cur.fetchall()}
+        unknown = set(ids) - found
+        if unknown:
+            raise ValueError(f"Unknown source id(s): {sorted(unknown)}")
+
+        for position, source_id in enumerate(ids):
+            await conn.execute("UPDATE source SET position = ? WHERE id = ?", (position, source_id))
+        await conn.commit()
+
+
 async def delete_source(source_id: int) -> None:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:

@@ -202,3 +202,20 @@ async def test_get_source_status_returns_none_for_missing_id():
     from beatos_core.sources.service import get_source_status
 
     assert await get_source_status(99999) is None
+
+
+@pytest.mark.asyncio
+async def test_update_source_position(tmp_path):
+    folder = tmp_path / "Beats"
+    folder.mkdir()
+    src = await create_source(SourceCreate(root_path=str(folder)))
+    assert src.position == 0
+
+    updated = await update_source(src.id, SourceUpdate(position=5))
+
+    assert updated is not None
+    assert updated.position == 5
+
+    fetched = await get_source(src.id)
+    assert fetched is not None
+    assert fetched.position == 5

@@ -143,6 +143,46 @@ def test_watcher_stops_when_source_deleted(client, tmp_path):
     assert sid not in get_watcher_registry().active_source_ids()
 
 
+def test_reorder_sources_assigns_positions(client, tmp_path):
+    folders = [tmp_path / f"src{i}" for i in range(3)]
+    for f in folders:
+        f.mkdir()
+    ids = [client.post("/api/sources", json={"root_path": str(f)}).json()["id"] for f in folders]
+    src1, src2, src3 = ids
+
+    r = client.post("/api/sources/reorder", json={"ids": [src3, src1, src2]})
+    assert r.status_code == 204
+
+    sources = {s["id"]: s["position"] for s in client.get("/api/sources").json()}
+    assert sources[src3] == 0
+    assert sources[src1] == 1
+    assert sources[src2] == 2
+
+
+def test_reorder_sources_unknown_id_returns_400(client, tmp_path):
+    folder = tmp_path / "src"
+    folder.mkdir()
+    sid = client.post("/api/sources", json={"root_path": str(folder)}).json()["id"]
+
+    r = client.post("/api/sources/reorder", json={"ids": [sid, 99999]})
+    assert r.status_code == 400
+    assert "99999" in r.json()["detail"]
+
+
+def test_reorder_sources_empty_array_returns_400(client):
+    r = client.post("/api/sources/reorder", json={"ids": []})
+    assert r.status_code == 400
+
+
+def test_reorder_sources_duplicate_ids_returns_400(client, tmp_path):
+    folder = tmp_path / "src"
+    folder.mkdir()
+    sid = client.post("/api/sources", json={"root_path": str(folder)}).json()["id"]
+
+    r = client.post("/api/sources/reorder", json={"ids": [sid, sid]})
+    assert r.status_code == 400
+
+
 def test_lifespan_seeds_watchers_for_existing_sources(isolated_db, tmp_path):
     """Sources created before app startup get watchers in the seed loop."""
     import asyncio

@@ -1,7 +1,7 @@
 """/api/lists routes — list lifecycle and track membership."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel
 
 from beatos_core.lists.membership import add_track_to_list, remove_track_from_list
@@ -9,6 +9,7 @@ from beatos_core.lists.service import (
     create_list,
     delete_list,
     list_lists,
+    reorder_lists,
     update_list,
 )
 from beatos_core.models import List as ListModel, ListCreate, ListUpdate
@@ -18,6 +19,10 @@ router = APIRouter(prefix="/api/lists", tags=["lists"])
 
 class AddTrackPayload(BaseModel):
     track_id: int
+
+
+class ReorderPayload(BaseModel):
+    ids: list[int]
 
 
 @router.get("", response_model=list[ListModel])
@@ -49,6 +54,15 @@ async def remove(list_id: int) -> Response:
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return Response(status_code=204)
+
+
+@router.post("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+async def reorder_endpoint(payload: ReorderPayload) -> Response:
+    try:
+        await reorder_lists(payload.ids)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{list_id}/tracks")

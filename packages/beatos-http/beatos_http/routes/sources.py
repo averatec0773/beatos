@@ -25,10 +25,15 @@ from beatos_core.sources.service import (
     get_source,
     get_source_status,
     list_sources,
+    reorder_sources,
     update_source,
 )
 
 router = APIRouter(prefix="/api/sources", tags=["sources"])
+
+
+class ReorderPayload(BaseModel):
+    ids: list[int]
 
 
 class SourceWithStatus(BaseModel):
@@ -116,6 +121,15 @@ async def delete_endpoint(source_id: int) -> Response:
         registry.stop_for_source(source_id)
 
     await delete_source(source_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+async def reorder_endpoint(payload: ReorderPayload) -> Response:
+    try:
+        await reorder_sources(payload.ids)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

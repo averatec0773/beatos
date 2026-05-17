@@ -55,3 +55,41 @@ def test_membership_add_and_remove(tmp_path):
 
     rem = client.delete(f"/api/lists/{list_id}/tracks/{track_id}")
     assert rem.status_code == 204
+
+
+def test_reorder_lists_assigns_positions(tmp_path):
+    client = TestClient(create_app())
+    l1 = client.post("/api/lists", json={"name": "Alpha"}).json()["id"]
+    l2 = client.post("/api/lists", json={"name": "Beta"}).json()["id"]
+    l3 = client.post("/api/lists", json={"name": "Gamma"}).json()["id"]
+
+    r = client.post("/api/lists/reorder", json={"ids": [l3, l1, l2]})
+    assert r.status_code == 204
+
+    lists = {l["id"]: l["position"] for l in client.get("/api/lists").json()}
+    assert lists[l3] == 0
+    assert lists[l1] == 1
+    assert lists[l2] == 2
+
+
+def test_reorder_lists_unknown_id_returns_400(tmp_path):
+    client = TestClient(create_app())
+    l1 = client.post("/api/lists", json={"name": "Alpha"}).json()["id"]
+
+    r = client.post("/api/lists/reorder", json={"ids": [l1, 99999]})
+    assert r.status_code == 400
+    assert "99999" in r.json()["detail"]
+
+
+def test_reorder_lists_empty_array_returns_400(tmp_path):
+    client = TestClient(create_app())
+    r = client.post("/api/lists/reorder", json={"ids": []})
+    assert r.status_code == 400
+
+
+def test_reorder_lists_duplicate_ids_returns_400(tmp_path):
+    client = TestClient(create_app())
+    l1 = client.post("/api/lists", json={"name": "Alpha"}).json()["id"]
+
+    r = client.post("/api/lists/reorder", json={"ids": [l1, l1]})
+    assert r.status_code == 400

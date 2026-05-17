@@ -96,6 +96,34 @@ async def update_list(list_id: int, updates: dict[str, Any]) -> ListModel:
     return await get_list(list_id)  # type: ignore[return-value]
 
 
+async def reorder_lists(ids: list[int]) -> None:
+    """Assign positions 0, 1, 2, … to lists in the given id order.
+
+    Raises ValueError if ids is empty, contains duplicates, or references
+    a list_id that doesn't exist in the table.
+    Note: system lists can technically be included; the renderer is responsible
+    for excluding them from the SortableContext (v0.0.14 caveat).
+    """
+    if not ids:
+        raise ValueError("ids must not be empty")
+    if len(ids) != len(set(ids)):
+        raise ValueError("ids contains duplicates")
+
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT id FROM list WHERE id IN (%s)" % ",".join("?" * len(ids)), ids
+        ) as cur:
+            found = {r[0] for r in await cur.fetchall()}
+        unknown = set(ids) - found
+        if unknown:
+            raise ValueError(f"Unknown list id(s): {sorted(unknown)}")
+
+        for position, list_id in enumerate(ids):
+            await conn.execute("UPDATE list SET position = ? WHERE id = ?", (position, list_id))
+        await conn.commit()
+
+
 async def delete_list(list_id: int) -> None:
     """Delete a list. System lists are protected."""
     existing = await get_list(list_id)
