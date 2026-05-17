@@ -478,7 +478,8 @@ try {
     }
 
     // Setup: attach producer to t1 (Smoke1) so we can filter by it.
-    await putJson(`/api/tracks/${t1.id}`, { producer: "smoke-producer" });
+    // producer is now a multi-value JSON array field (v0.0.12).
+    await putJson(`/api/tracks/${t1.id}`, { producer: ["smoke-producer"] });
 
     // Navigate to "/" to ensure the main library view is showing.
     await window.evaluate(() => { location.hash = "/"; });
@@ -728,6 +729,152 @@ try {
     }
 
     // === end v0.0.11.1 ===
+
+    // === v0.0.12: chip pickers + cover drag-source ===
+
+    // Helper: ensure the track editor is open on Smoke1.
+    async function ensureEditorOpen() {
+      const editor = window.locator('[data-track-editor]');
+      if ((await editor.count()) > 0) return;
+      await window.evaluate(() => { location.hash = "/"; });
+      await window.evaluate(() => location.reload());
+      await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
+      await window.waitForSelector('[data-track-id]', { timeout: 5000 });
+      await window.waitForFunction(
+        () => document.querySelectorAll('[data-track-id]').length >= 1,
+        undefined,
+        { timeout: 4000 }
+      );
+      await window.waitForTimeout(300);
+      const row = window.locator('[data-track-id]').first();
+      const titleSpan = row.locator('[data-track-title]').first();
+      await titleSpan.dblclick();
+      await window.waitForSelector('[data-track-editor]', { timeout: 3000 });
+    }
+
+    // Assertion 18: Genre chip select
+    {
+      try {
+        await ensureEditorOpen();
+
+        // Locate Genre picker
+        const genreField = window.locator('[data-field="genre"]');
+        const addBtn = genreField.locator('[data-add-button]').first();
+        await addBtn.click();
+
+        // Wait for popover to render — look for genre option text
+        await window.waitForFunction(
+          () => {
+            const labels = Array.from(document.querySelectorAll('label'));
+            return labels.some((l) => l.textContent && l.textContent.includes('流行 (Pop)'));
+          },
+          undefined,
+          { timeout: 3000 }
+        );
+
+        // Click checkbox for 流行 (Pop)
+        const popLabel = window.locator('label', { hasText: '流行 (Pop)' }).first();
+        await popLabel.click();
+
+        // Click Apply
+        await window.locator('button:has-text("Apply")').first().click();
+
+        // Verify chip with "流行 (Pop)" appears in Genre field
+        await window.waitForFunction(
+          () => {
+            const field = document.querySelector('[data-field="genre"]');
+            return field && field.textContent && field.textContent.includes('流行 (Pop)');
+          },
+          undefined,
+          { timeout: 3000 }
+        );
+        console.log("smoke: genre chip select (流行/Pop) PASS");
+      } catch (e) {
+        failures.push(`UI: genre chip select — ${e.message}`);
+      }
+    }
+
+    // Assertion 19: Producer custom add + persist verification
+    {
+      try {
+        await ensureEditorOpen();
+
+        // Locate Producer picker
+        const producerField = window.locator('[data-field="producer"]');
+        const addBtn = producerField.locator('[data-add-button]').first();
+        await addBtn.click();
+
+        // Wait for popover with custom-add input (placeholder: "Type to add…")
+        await window.waitForSelector('input[placeholder="Type to add…"]', { timeout: 3000 });
+
+        // Type a custom producer name
+        const customInput = window.locator('input[placeholder="Type to add…"]').first();
+        await customInput.fill('smoke-custom-producer');
+
+        // Click the inner "Add" button (aria-label="Add custom value")
+        await window.locator('button[aria-label="Add custom value"]').first().click();
+
+        // Click Apply
+        await window.locator('button:has-text("Apply")').first().click();
+
+        // Verify chip with "smoke-custom-producer" appears in Producer field
+        await window.waitForFunction(
+          () => {
+            const field = document.querySelector('[data-field="producer"]');
+            return field && field.textContent && field.textContent.includes('smoke-custom-producer');
+          },
+          undefined,
+          { timeout: 3000 }
+        );
+        console.log("smoke: producer custom chip PASS");
+
+        // Save the track so the producer value is persisted to the sidecar.
+        await window.locator('button[type="submit"]').first().click();
+        // After save, navigate back to "/" (saveTrack sets navigateAfterSave)
+        await window.waitForFunction(
+          () => !document.querySelector('[data-track-editor]'),
+          undefined,
+          { timeout: 5000 }
+        );
+
+        // Verify via sidecar API
+        const distinctRes = await fetch(`${baseUrl}/api/tracks/distinct/producer`);
+        const distinctVals = await distinctRes.json();
+        if (Array.isArray(distinctVals) && distinctVals.includes('smoke-custom-producer')) {
+          console.log("smoke: producer distinct API includes smoke-custom-producer PASS");
+        } else {
+          failures.push(`API: distinct/producer missing 'smoke-custom-producer'; got ${JSON.stringify(distinctVals)}`);
+        }
+      } catch (e) {
+        failures.push(`UI: producer custom add — ${e.message}`);
+      }
+    }
+
+    // Assertion 20: Cover drag-source attribute
+    {
+      try {
+        await ensureEditorOpen();
+
+        // Query for cover drag source — Smoke1 has a cover attached earlier
+        const dragSources = window.locator('[data-cover-drag-source]');
+        const count = await dragSources.count();
+        if (count !== 1) {
+          failures.push(`UI: expected 1 [data-cover-drag-source], found ${count}`);
+        } else {
+          // Verify draggable="true" attribute
+          const draggable = await dragSources.first().getAttribute('draggable');
+          if (draggable === 'true') {
+            console.log("smoke: cover drag-source draggable=true PASS");
+          } else {
+            failures.push(`UI: [data-cover-drag-source] draggable="${draggable}", expected "true"`);
+          }
+        }
+      } catch (e) {
+        failures.push(`UI: cover drag-source attribute — ${e.message}`);
+      }
+    }
+
+    // === end v0.0.12 ===
 
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
