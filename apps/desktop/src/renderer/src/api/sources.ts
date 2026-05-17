@@ -31,4 +31,7 @@ export const sources = {
     apiGet<{ source_id: number; status: "online" | "offline"; last_checked_at: string }>(
       `/api/sources/${id}/status`
     ),
+  reorder: async (ids: number[]): Promise<void> => {
+    await apiPost("/api/sources/reorder", { ids });
+  },
 };

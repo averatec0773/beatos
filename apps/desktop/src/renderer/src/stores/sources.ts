@@ -10,6 +10,7 @@ interface SourceState {
   add: (payload: SourceCreate) => Promise<Source>;
   rename: (id: number, name: string) => Promise<void>;
   remove: (id: number) => Promise<void>;
+  reorder: (ids: number[]) => Promise<void>;
   setFilter: (id: number | null) => void;
 }
 
@@ -47,6 +48,20 @@ export const useSourceStore = create<SourceState>((set, get) => ({
       activeFilter: s.activeFilter === id ? null : s.activeFilter,
     }));
     await get().refresh();
+  },
+
+  async reorder(ids) {
+    const prev = get().all;
+    const optimistic = ids
+      .map((id) => prev.find((s) => s.id === id))
+      .filter((s): s is Source => s != null);
+    set({ all: optimistic });
+    try {
+      await sources.reorder(ids);
+    } catch (e) {
+      console.warn("[sources] reorder failed, reverting:", e);
+      await get().refresh();
+    }
   },
 
   setFilter(id) {

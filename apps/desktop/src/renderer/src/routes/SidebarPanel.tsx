@@ -2,14 +2,74 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { matchPath, useLocation, useNavigate } from "react-router-dom";
 import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
 import { useTrashStore } from "@/stores/trash";
 import { type List } from "@/api/lists";
+import { type Source } from "@/api/sources";
 import { SourceRow } from "@/components/SourceRow";
 import { SidebarItemContextMenu } from "@/components/SidebarItemContextMenu";
 import { DeleteSidebarItemDialog } from "@/components/DeleteSidebarItemDialog";
+
+function SortableSourceRow({
+  source,
+  active,
+  onClick,
+  onDeleted,
+}: {
+  source: Source;
+  active: boolean;
+  onClick: () => void;
+  onDeleted?: () => void;
+}): React.JSX.Element {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `source:${source.id}`,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <SourceRow
+        source={source}
+        active={active}
+        onClick={onClick}
+        onDeleted={onDeleted}
+      />
+    </div>
+  );
+}
+
+function SortableListRow({
+  list,
+  active,
+  onClick,
+  onDeleted,
+}: {
+  list: List;
+  active: boolean;
+  onClick: () => void;
+  onDeleted?: () => void;
+}): React.JSX.Element {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `list:${list.id}`,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <SidebarListRow list={list} active={active} onClick={onClick} onDeleted={onDeleted} />
+    </div>
+  );
+}
 
 function SidebarListRow({
   list,
@@ -22,7 +82,7 @@ function SidebarListRow({
   onClick: () => void;
   onDeleted?: () => void;
 }): React.JSX.Element {
-  const { setNodeRef, isOver } = useDroppable({ id: `list:${list.id}` });
+  const { setNodeRef, isOver } = useDroppable({ id: `list-drop:${list.id}` });
   const rename = useListStore((s) => s.rename);
   const remove = useListStore((s) => s.remove);
 
@@ -218,23 +278,28 @@ export function SidebarPanel(): React.JSX.Element {
             }}
           />
         )}
-        {sources.map((s) => (
-          <SourceRow
-            key={s.id}
-            source={s}
-            active={!onListRoute && activeFilter === s.id}
-            onClick={() => {
-              setFilter(s.id);
-              navigate("/");
-            }}
-            onDeleted={() => {
-              if (activeFilter === s.id) {
-                setFilter(null);
+        <SortableContext
+          items={sources.map((s) => `source:${s.id}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          {sources.map((s) => (
+            <SortableSourceRow
+              key={s.id}
+              source={s}
+              active={!onListRoute && activeFilter === s.id}
+              onClick={() => {
+                setFilter(s.id);
                 navigate("/");
-              }
-            }}
-          />
-        ))}
+              }}
+              onDeleted={() => {
+                if (activeFilter === s.id) {
+                  setFilter(null);
+                  navigate("/");
+                }
+              }}
+            />
+          ))}
+        </SortableContext>
       </div>
 
       <div>
@@ -268,19 +333,24 @@ export function SidebarPanel(): React.JSX.Element {
             />
           </div>
         )}
-        {userLists.map((l) => (
-          <SidebarListRow
-            key={l.id}
-            list={l}
-            active={activeListId === l.id}
-            onClick={() => navigate(`/lists/${l.id}`)}
-            onDeleted={() => {
-              if (activeListId === l.id) {
-                navigate("/");
-              }
-            }}
-          />
-        ))}
+        <SortableContext
+          items={userLists.map((l) => `list:${l.id}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          {userLists.map((l) => (
+            <SortableListRow
+              key={l.id}
+              list={l}
+              active={activeListId === l.id}
+              onClick={() => navigate(`/lists/${l.id}`)}
+              onDeleted={() => {
+                if (activeListId === l.id) {
+                  navigate("/");
+                }
+              }}
+            />
+          ))}
+        </SortableContext>
       </div>
       <div>
         <header className="px-3 mb-1">

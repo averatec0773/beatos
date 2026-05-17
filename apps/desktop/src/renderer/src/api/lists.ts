@@ -20,4 +20,7 @@ export const lists = {
     apiPost<void>(`/api/lists/${listId}/tracks`, { track_id: trackId }),
   removeTrack: (listId: number, trackId: number) =>
     apiDelete(`/api/lists/${listId}/tracks/${trackId}`),
+  reorder: async (ids: number[]): Promise<void> => {
+    await apiPost("/api/lists/reorder", { ids });
+  },
 };

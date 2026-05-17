@@ -948,6 +948,102 @@ try {
     }
     // === end v0.0.13.2 ===
 
+    // === v0.0.14: drop-create API path, trash flow, sidebar reorder API ===
+
+    // Assertion 23: drop-create via API path
+    // Playwright can't synthesize OS-level file drops in Electron, so we verify
+    // the underlying API wiring (track create + asset attach) that the drop handler calls.
+    {
+      try {
+        const dropPath = join(userData, "drop-test.wav");
+        writeFileSync(dropPath, makeTinyWav());
+        const dropTrack = await postJson("/api/tracks", { title: "drop-test" });
+        await postJson(`/api/tracks/${dropTrack.id}/assets`, { role: "audio_tagged_wav", path: dropPath });
+        const allTracks = await (await fetch(`${baseUrl}/api/tracks`)).json();
+        const found = Array.isArray(allTracks) && allTracks.some((t) => t.title === "drop-test");
+        if (found) {
+          console.log("smoke: drop-create track API path PASS");
+        } else {
+          failures.push(`drop-create: 'drop-test' not found in track list after create+attach`);
+        }
+      } catch (e) {
+        failures.push(`drop-create assertion error: ${e.message}`);
+      }
+    }
+
+    // Assertion 24: soft-delete + restore (trash flow)
+    {
+      try {
+        const trashTrack = await postJson("/api/tracks", { title: "trash-test" });
+        // Soft-delete via DELETE
+        const delRes = await fetch(`${baseUrl}/api/tracks/${trashTrack.id}`, { method: "DELETE" });
+        if (!delRes.ok) {
+          failures.push(`trash: soft-delete returned ${delRes.status}`);
+        } else {
+          // GET /api/tracks/trash should include it
+          const trash = await (await fetch(`${baseUrl}/api/tracks/trash`)).json();
+          const foundInTrash = Array.isArray(trash) && trash.some((t) => t.id === trashTrack.id);
+          if (!foundInTrash) {
+            failures.push(`trash: newly trashed track ${trashTrack.id} not in /api/tracks/trash`);
+          } else {
+            // Restore
+            const restoreRes = await fetch(`${baseUrl}/api/tracks/${trashTrack.id}/restore`, { method: "POST" });
+            if (!restoreRes.ok) {
+              failures.push(`trash: restore returned ${restoreRes.status}`);
+            } else {
+              // Verify removed from trash
+              const trash2 = await (await fetch(`${baseUrl}/api/tracks/trash`)).json();
+              const stillThere = trash2.some((t) => t.id === trashTrack.id);
+              if (stillThere) {
+                failures.push(`trash: restored track still appears in trash list`);
+              } else {
+                console.log("smoke: trash soft-delete + restore PASS");
+              }
+            }
+          }
+        }
+      } catch (e) {
+        failures.push(`trash flow assertion error: ${e.message}`);
+      }
+    }
+
+    // Assertion 25: sidebar source reorder API
+    {
+      try {
+        // Ensure at least 2 sources exist (seed created 1; create a 2nd)
+        const srcBDir = join(userData, "src-b");
+        mkdirSync(srcBDir, { recursive: true });
+        await postJson("/api/sources", { root_path: srcBDir });
+        const existing = await (await fetch(`${baseUrl}/api/sources`)).json();
+        if (!Array.isArray(existing) || existing.length < 2) {
+          console.log(`smoke: sidebar source reorder API SKIP (need 2+ sources, got ${existing?.length})`);
+        } else {
+          const reverseIds = existing.map((s) => s.id).reverse();
+          const r = await fetch(`${baseUrl}/api/sources/reorder`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: reverseIds }),
+          });
+          if (!r.ok) {
+            const text = await r.text().catch(() => "");
+            failures.push(`sidebar reorder: POST /api/sources/reorder returned ${r.status}: ${text.slice(0, 200)}`);
+          } else {
+            const after = await (await fetch(`${baseUrl}/api/sources`)).json();
+            const newOrder = after.map((s) => s.id);
+            if (JSON.stringify(newOrder) === JSON.stringify(reverseIds)) {
+              console.log("smoke: sidebar source reorder API PASS");
+            } else {
+              failures.push(`sidebar reorder: expected ${JSON.stringify(reverseIds)}, got ${JSON.stringify(newOrder)}`);
+            }
+          }
+        }
+      } catch (e) {
+        failures.push(`sidebar reorder assertion error: ${e.message}`);
+      }
+    }
+
+    // === end v0.0.14 ===
+
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
   }

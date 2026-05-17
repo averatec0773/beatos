@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 
 import { AppShell } from "@/routes/AppShell";
 import { TrackListPanel } from "@/routes/TrackListPanel";
@@ -116,11 +117,40 @@ export default function App(): React.JSX.Element {
         onDragEnd={async ({ active, over }) => {
           setActiveDrag(null);
           if (!over?.id) return;
+          const activeId = String(active.id);
           const overId = String(over.id);
-          if (!overId.startsWith("list:")) return;
-          const listId = Number(overId.slice("list:".length));
+
+          if (activeId.startsWith("source:") && overId.startsWith("source:") && activeId !== overId) {
+            const srcStore = useSourceStore.getState();
+            const all = srcStore.all;
+            const oldIdx = all.findIndex((s) => `source:${s.id}` === activeId);
+            const newIdx = all.findIndex((s) => `source:${s.id}` === overId);
+            if (oldIdx < 0 || newIdx < 0) return;
+            const reordered = arrayMove(all, oldIdx, newIdx);
+            void srcStore.reorder(reordered.map((s) => s.id));
+            return;
+          }
+
+          if (activeId.startsWith("list:") && overId.startsWith("list:") && activeId !== overId) {
+            const listStore = useListStore.getState();
+            const userLists = listStore.all.filter((l) => l.kind !== "system");
+            const oldIdx = userLists.findIndex((l) => `list:${l.id}` === activeId);
+            const newIdx = userLists.findIndex((l) => `list:${l.id}` === overId);
+            if (oldIdx < 0 || newIdx < 0) return;
+            const reordered = arrayMove(userLists, oldIdx, newIdx);
+            void listStore.reorder(reordered.map((l) => l.id));
+            return;
+          }
+
+          if (!activeId.startsWith("track:")) return;
+          const isListDrop = overId.startsWith("list-drop:");
+          const isListSortable = overId.startsWith("list:");
+          if (!isListDrop && !isListSortable) return;
+          const listId = isListDrop
+            ? Number(overId.slice("list-drop:".length))
+            : Number(overId.slice("list:".length));
           const state = useTrackStore.getState();
-          const sourceTrackId = Number(String(active.id).slice("track:".length));
+          const sourceTrackId = Number(activeId.slice("track:".length));
           let trackIds = Array.from(state.selectedIds);
           if (trackIds.length === 0) trackIds = [sourceTrackId];
 
