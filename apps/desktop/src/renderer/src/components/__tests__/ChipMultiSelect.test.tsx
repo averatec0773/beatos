@@ -192,9 +192,9 @@ describe("ChipMultiSelect", () => {
     expect(container.querySelector("[data-add-button]")).toBeInTheDocument();
   });
 
-  it("maxSelections=1 replaces selection on each pick", () => {
+  it("maxSelections=1 renders single-select trigger (no chips), replaces on pick", () => {
     const onChange = vi.fn();
-    render(
+    const { container } = render(
       <ChipMultiSelect
         value={["pop"]}
         options={OPTIONS}
@@ -202,8 +202,11 @@ describe("ChipMultiSelect", () => {
         maxSelections={1}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: /add/i }));
-    // Pick Trap — should replace pop
+    // Single-select trigger lives on the data-add-button (label = current value)
+    const trigger = container.querySelector("[data-add-button]") as HTMLButtonElement;
+    expect(trigger).toBeTruthy();
+    expect(trigger.textContent).toContain("Pop");
+    fireEvent.click(trigger);
     fireEvent.click(screen.getByLabelText("Trap Rap"));
     fireEvent.click(screen.getByRole("button", { name: /apply/i }));
     expect(onChange).toHaveBeenCalledWith(["trap"]);

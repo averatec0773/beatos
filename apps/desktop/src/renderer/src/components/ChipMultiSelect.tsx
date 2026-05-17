@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, ChevronDown } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -121,36 +121,57 @@ export function ChipMultiSelect({
   // (always selectable), so disable only kicks in when max > 1.
   const atCap = maxSelections != null && maxSelections > 1 && draft.length >= maxSelections;
 
+  // Single-select rendering: when maxSelections === 1, render a classic
+  // dropdown-style trigger (no chips + Add button). The button shows the
+  // current value or a placeholder; the popover lets the user pick / clear.
+  const isSingleSelect = maxSelections === 1;
+  const singleValue = value[0] ?? null;
+
   return (
-    <div data-chip-multiselect className="flex flex-wrap items-center gap-1.5">
-      {value.map((v) => (
-        <span
-          key={v}
-          className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-medium text-text-primary"
-        >
-          {getLabel(v)}
-          <button
-            type="button"
-            aria-label={`Remove ${getLabel(v)}`}
-            onClick={() => removeChip(v)}
-            className="rounded-full p-0.5 hover:bg-accent/30 focus:outline-none"
+    <div data-chip-multiselect className={isSingleSelect ? "" : "flex flex-wrap items-center gap-1.5"}>
+      {!isSingleSelect &&
+        value.map((v) => (
+          <span
+            key={v}
+            className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-text-primary"
           >
-            <X className="h-3 w-3" />
-          </button>
-        </span>
-      ))}
+            {getLabel(v)}
+            <button
+              type="button"
+              aria-label={`Remove ${getLabel(v)}`}
+              onClick={() => removeChip(v)}
+              className="rounded-full p-0.5 hover:bg-accent/30 focus:outline-none"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
 
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
-          <button
-            type="button"
-            data-add-button
-            onClick={openPopover}
-            className="inline-flex items-center gap-1 rounded-full border border-border-subtle px-2.5 py-0.5 text-xs text-text-tertiary hover:bg-bg-elevated hover:text-text-primary focus:outline-none"
-          >
-            <Plus className="h-3 w-3" />
-            {placeholder ?? "Add"}
-          </button>
+          {isSingleSelect ? (
+            <button
+              type="button"
+              data-add-button
+              onClick={openPopover}
+              className="inline-flex w-full items-center justify-between gap-2 rounded-md border border-border-subtle bg-bg-elevated px-3 py-2 text-sm text-left hover:border-text-tertiary focus:outline-none focus:border-accent"
+            >
+              <span className={singleValue ? "text-text-primary truncate" : "text-text-tertiary"}>
+                {singleValue ? getLabel(singleValue) : (placeholder ?? "Select…")}
+              </span>
+              <ChevronDown className="h-4 w-4 text-text-tertiary flex-shrink-0" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              data-add-button
+              onClick={openPopover}
+              className="inline-flex items-center gap-1 rounded-full border border-border-subtle px-3 py-1 text-xs text-text-tertiary hover:bg-bg-elevated hover:text-text-primary focus:outline-none"
+            >
+              <Plus className="h-3 w-3" />
+              {placeholder ?? "Add"}
+            </button>
+          )}
         </PopoverTrigger>
         <PopoverContent align="start" className="w-64 p-0">
           <div className="flex flex-col">
