@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Wand2 } from "lucide-react";
 
@@ -16,11 +16,37 @@ import { ChipMultiSelect } from "@/components/ChipMultiSelect";
 import { AnalyzeResultDialog } from "@/components/AnalyzeResultDialog";
 import type { Track, TrackUpdate } from "@/api/tracks";
 import { shallowEqualEditable } from "@/lib/shallow-equal-track";
-import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
 import { BEATOS_GENRES, genreLabel } from "@/data/genres";
 import { BEATOS_MOODS } from "@/data/moods";
 
 const LICENSE_TYPES = ["lease_basic", "lease_premium", "exclusive"] as const;
+const AUTOSAVE_DEBOUNCE_MS = 800;
+
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+function buildPayload(t: Track): TrackUpdate {
+  return {
+    title: t.title,
+    bpm: t.bpm,
+    key_signature: t.key_signature,
+    genre: t.genre,
+    mood: t.mood,
+    tags: t.tags,
+    description: t.description,
+    license_type: t.license_type,
+    price: t.price,
+    producer: t.producer,
+  };
+}
+
+function formatSavedAgo(ms: number | null): string {
+  if (ms == null) return "";
+  const delta = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (delta < 5) return "just now";
+  if (delta < 60) return `${delta}s ago`;
+  if (delta < 3600) return `${Math.floor(delta / 60)}m ago`;
+  return "long ago";
+}
 
 export function TrackEditor(): React.JSX.Element {
   const params = useParams<{ id: string }>();
@@ -28,25 +54,22 @@ export function TrackEditor(): React.JSX.Element {
   const updateInStore = useTrackStore((s) => s.update);
   const removeInStore = useTrackStore((s) => s.remove);
   const setAssetsForTrack = useAssetStore((s) => s.setForTrack);
-  // Stable selector: select the whole list, derive current with useMemo.
-  // Used to absorb upstream auto-analyze patches into the form below.
   const trackList = useTrackStore((s) => s.list);
 
   const [track, setTrack] = useState<Track | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [initialTrack, setInitialTrack] = useState<Track | null>(null);
-  const [navigateAfterSave, setNavigateAfterSave] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [producerOptions, setProducerOptions] = useState<{ value: string; label: string }[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<AudioAnalysisResult | null>(null);
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
+  const [, setNowTick] = useState(0);
 
-  // Re-fetch producers whenever the editor opens a different track. Producer
-  // is a global vocab (any producer used on any track), so navigating from
-  // track A → track B must refresh — useEffect([]) is stale across SPA route
-  // changes that re-use the same TrackEditor instance.
+  // Re-fetch producers per track id (vocab is global; useEffect([]) is stale
+  // across SPA route changes that reuse the same TrackEditor instance).
   useEffect(() => {
     distinct.values("producer").then((vals) => {
       setProducerOptions(vals.map((p) => ({ value: p, label: p })));
@@ -67,19 +90,17 @@ export function TrackEditor(): React.JSX.Element {
         }
       })
       .catch((e) => {
-        if (!cancelled) setError(String(e));
+        if (!cancelled) setLoadError(String(e));
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [params.id, setAssetsForTrack]);
 
   useEffect(() => {
-    // Auto-focus title on mount
     const el = document.getElementById("track-title");
     if (el) (el as HTMLInputElement).focus();
   }, []);
 
+  // Initial baseline (only on first load of a given track id)
   useEffect(() => {
     if (!track) return;
     if (!initialTrack || initialTrack.id !== track.id) {
@@ -87,9 +108,9 @@ export function TrackEditor(): React.JSX.Element {
     }
   }, [track, initialTrack]);
 
-  // Reactivity for auto-analyze: when the upstream store gains bpm/key while
-  // the editor's local copy still has nulls in those slots, sync them in.
-  // Only fills nulls — never overwrites edits the user has typed.
+  // Absorb upstream auto-analyze patches into form fields that are still
+  // empty. Writes to both `track` and `initialTrack` so the patch does not
+  // register as a user-dirty edit (which would re-fire auto-save).
   const liveTrack = useMemo(() => {
     if (!params.id) return null;
     const id = Number(params.id);
@@ -105,7 +126,6 @@ export function TrackEditor(): React.JSX.Element {
     }
     if (Object.keys(patches).length === 0) return;
     setTrack((cur) => (cur ? { ...cur, ...patches } : cur));
-    // Move baseline so the auto-fill does not show up as user-dirty edits.
     setInitialTrack((cur) => (cur ? { ...cur, ...patches } : cur));
   }, [liveTrack?.bpm, liveTrack?.key_signature, track?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -114,75 +134,69 @@ export function TrackEditor(): React.JSX.Element {
     return !shallowEqualEditable(track, initialTrack);
   }, [track, initialTrack]);
 
-  function handleNavigateAway(): void {
-    if (isDirty) {
-      setDialogOpen(true);
-    } else {
-      navigate("/");
+  const titleEmpty = track != null && !track.title.trim();
+
+  // The single save action. Always sends the snapshot it was called with —
+  // if newer edits exist post-save, isDirty stays true and the effect below
+  // schedules another save against the latest snapshot.
+  const performSave = useCallback(
+    async (snapshot: Track) => {
+      setSaveState("saving");
+      setSaveErrorMsg(null);
+      try {
+        const saved = await updateInStore(snapshot.id, buildPayload(snapshot));
+        // Baseline = what we sent. Newer local edits remain dirty.
+        setInitialTrack(saved);
+        setSaveState("saved");
+        setLastSavedAt(Date.now());
+      } catch (err) {
+        setSaveState("error");
+        setSaveErrorMsg(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [updateInStore]
+  );
+
+  // Debounced auto-save. Gated on dirty + valid title + no in-flight save +
+  // no prior error (user must click Retry to clear an error — prevents
+  // tight retry loops against a persistent failure like an offline sidecar).
+  useEffect(() => {
+    if (!track || !initialTrack) return;
+    if (!isDirty) return;
+    if (saveState === "saving" || saveState === "error") return;
+    if (!track.title.trim()) return;
+    const id = window.setTimeout(() => { void performSave(track); }, AUTOSAVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
+  }, [track, initialTrack, isDirty, saveState, performSave]);
+
+  // Tick "Xs ago" once per second so the label stays current.
+  useEffect(() => {
+    if (saveState !== "saved") return;
+    const id = window.setInterval(() => setNowTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [saveState]);
+
+  // Flush a pending save before navigating away. Fire-and-forget — by the
+  // time the promise resolves the editor has unmounted, but the API call
+  // still lands in the store. Skips if save is in-flight (it'll complete
+  // on its own) or if title is empty (would error out).
+  const flushAndClose = useCallback(() => {
+    if (track && isDirty && saveState === "idle" && track.title.trim()) {
+      void performSave(track);
     }
-  }
+    navigate("/");
+  }, [track, isDirty, saveState, performSave, navigate]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
-      if (e.key === "Escape") handleNavigateAway();
+      if (e.key === "Escape") flushAndClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isDirty]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [flushAndClose]);
 
-  useEffect(() => {
-    if (navigateAfterSave && !isDirty) {
-      setNavigateAfterSave(false);
-      navigate("/");
-    }
-  }, [navigateAfterSave, isDirty, navigate]);
-
-  if (error && !track) return <main className="flex-1 p-8 text-danger">{error}</main>;
+  if (loadError && !track) return <main className="flex-1 p-8 text-danger">{loadError}</main>;
   if (!track) return <main className="flex-1 p-8 text-text-tertiary">Loading…</main>;
-
-  async function saveTrack(): Promise<Track> {
-    if (!track) throw new Error("No track loaded");
-    if (!track.title.trim()) {
-      setError("Title is required.");
-      throw new Error("Title is required.");
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      const payload: TrackUpdate = {
-        title: track.title,
-        bpm: track.bpm,
-        key_signature: track.key_signature,
-        genre: track.genre,
-        mood: track.mood,
-        tags: track.tags,
-        description: track.description,
-        license_type: track.license_type,
-        price: track.price,
-        producer: track.producer,
-      };
-      const saved = await updateInStore(track.id, payload);
-      setInitialTrack(saved);
-      setTrack(saved);
-      return saved;
-    } catch (err) {
-      setError(String(err));
-      throw err;
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function onSave(e: React.FormEvent<HTMLFormElement>): Promise<void> {
-    e.preventDefault();
-    if (!track) return;
-    try {
-      await saveTrack();
-      setNavigateAfterSave(true);
-    } catch {
-      // error already set in saveTrack
-    }
-  }
 
   async function onDelete(): Promise<void> {
     if (!track) return;
@@ -210,23 +224,42 @@ export function TrackEditor(): React.JSX.Element {
     }
   }
 
+  function renderSaveIndicator(): React.JSX.Element | null {
+    if (titleEmpty) {
+      return (
+        <span data-save-status="title-required" className="text-danger text-xs">
+          Title required to save
+        </span>
+      );
+    }
+    if (saveState === "saving") {
+      return <span data-save-status="saving" className="text-text-tertiary text-xs">Saving…</span>;
+    }
+    if (saveState === "error") {
+      return (
+        <button
+          type="button"
+          onClick={() => track && void performSave(track)}
+          data-save-status="error"
+          className="text-danger text-xs hover:underline"
+          title={saveErrorMsg ?? undefined}
+        >
+          Save failed — retry
+        </button>
+      );
+    }
+    if (saveState === "saved" && lastSavedAt != null) {
+      return (
+        <span data-save-status="saved" className="text-text-tertiary text-xs">
+          Saved · {formatSavedAgo(lastSavedAt)}
+        </span>
+      );
+    }
+    return null;
+  }
+
   return (
     <>
-    <UnsavedChangesDialog
-      open={dialogOpen}
-      trackTitle={track.title}
-      onSave={async () => {
-        try {
-          await saveTrack();
-          setDialogOpen(false);
-          navigate("/");
-        } catch {
-          // error already set; keep dialog open
-        }
-      }}
-      onDiscard={() => { setDialogOpen(false); navigate("/"); }}
-      onCancel={() => setDialogOpen(false)}
-    />
     <AnalyzeResultDialog
       open={analyzeDialogOpen}
       result={analyzeResult}
@@ -240,7 +273,7 @@ export function TrackEditor(): React.JSX.Element {
       onClose={() => setAnalyzeDialogOpen(false)}
     />
     <main data-track-editor className="beatos-scroll flex-1 overflow-y-auto p-8">
-      <form onSubmit={onSave} className="max-w-4xl space-y-6">
+      <form className="max-w-4xl space-y-6" onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-[200px_1fr] gap-6 items-start">
           <div className="flex flex-col items-stretch gap-2">
             <CoverDropZone trackId={track.id} />
@@ -259,18 +292,24 @@ export function TrackEditor(): React.JSX.Element {
 
           <div className="space-y-4">
             <div>
-              <label
-                htmlFor="track-title"
-                className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-              >
-                Title
-              </label>
+              <div className="flex items-baseline justify-between mb-1">
+                <label
+                  htmlFor="track-title"
+                  className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary"
+                >
+                  Title
+                </label>
+                {renderSaveIndicator()}
+              </div>
               <input
                 id="track-title"
                 type="text"
                 value={track.title}
                 onChange={(e) => patch("title", e.target.value)}
-                className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:border-accent"
+                aria-invalid={titleEmpty}
+                className={`w-full bg-bg-elevated border rounded-md px-3 py-2 text-text-primary focus:outline-none ${
+                  titleEmpty ? "border-danger focus:border-danger" : "border-border-subtle focus:border-accent"
+                }`}
               />
             </div>
 
@@ -412,22 +451,13 @@ export function TrackEditor(): React.JSX.Element {
 
         <FileRowsSection trackId={track.id} />
 
-        {error && <div className="text-danger text-sm">{error}</div>}
-
         <div className="flex items-center gap-3">
           <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 rounded-md bg-accent text-white font-medium hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save"}
-          </button>
-          <button
             type="button"
-            onClick={handleNavigateAway}
+            onClick={flushAndClose}
             className="px-4 py-2 rounded-md border border-border-subtle text-text-primary hover:bg-bg-row-hover"
           >
-            Cancel (ESC)
+            Close (ESC)
           </button>
           <div className="flex-1" />
           <button

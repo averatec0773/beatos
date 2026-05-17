@@ -657,9 +657,10 @@ try {
 
     // === end v0.0.11 ===
 
-    // === v0.0.11.1: unsaved changes dialog + column resizer drag ===
+    // === v0.0.15: auto-save (replaces the v0.0.11.1 UnsavedChangesDialog flow) ===
 
-    // Assertion 16: unsaved changes dialog → Discard
+    // Assertion 16: typing into the title triggers a debounced save that
+    // lands on the server within ~2s, without a manual Save click.
     {
       try {
         // Ensure editor is open; reuse Smoke1.
@@ -672,33 +673,90 @@ try {
           await window.waitForSelector('[data-track-editor]', { timeout: 3000 });
         }
 
-        // Dirty the form: fill the title input with a smoke-only value.
         const titleInput = window.locator('#track-title');
-        await titleInput.fill('smoke-dirty-title');
+        const newTitle = `smoke-auto-${Date.now()}`;
+        await titleInput.fill(newTitle);
 
-        // Click "Cancel (ESC)" in the editor footer — triggers useBlocker.
-        await window.locator('button:has-text("Cancel (ESC)")').first().click();
+        // Poll the server until the title persists (debounce + save round-trip).
+        let persisted = false;
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 100));
+          const res = await fetch(`${baseUrl}/api/tracks/${t1.id}`);
+          if (res.ok) {
+            const body = await res.json();
+            if (body.title === newTitle) { persisted = true; break; }
+          }
+        }
+        if (!persisted) {
+          failures.push(`auto-save: server title never became ${JSON.stringify(newTitle)} within 3s`);
+        } else {
+          // UI also reaches the "saved" status indicator.
+          await window.waitForSelector('[data-save-status="saved"]', { timeout: 1500 });
+          console.log("smoke: auto-save persists title without Save click PASS");
+        }
 
-        // Dialog should appear within 2s.
-        await window.waitForSelector('[data-unsaved-dialog]', { timeout: 2000 });
+        // Restore the original title so downstream sort/filter assertions stay deterministic.
+        await titleInput.fill("Smoke1");
+        // Wait for restoration round-trip
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 100));
+          const res = await fetch(`${baseUrl}/api/tracks/${t1.id}`);
+          if (res.ok && (await res.json()).title === "Smoke1") break;
+        }
 
-        // Click "Discard" — blocker.proceed() navigates back to "/".
-        await window.locator('[data-unsaved-dialog] button:has-text("Discard")').first().click();
-
-        // Wait for dialog to disappear and editor to close.
-        await window.waitForFunction(
-          () => !document.querySelector('[data-unsaved-dialog]'),
-          undefined,
-          { timeout: 3000 }
-        );
+        // Close the editor before later assertions navigate elsewhere.
+        await window.locator('button:has-text("Close (ESC)")').first().click();
         await window.waitForFunction(
           () => !document.querySelector('[data-track-editor]'),
           undefined,
           { timeout: 3000 }
         );
-        console.log("smoke: unsaved changes dialog Discard PASS");
       } catch (e) {
-        failures.push(`UI: unsaved changes dialog — ${e.message}`);
+        failures.push(`UI: auto-save — ${e.message}`);
+      }
+    }
+
+    // Assertion 16b: empty title gates auto-save (no save fires; indicator shows "Title required").
+    {
+      try {
+        await window.evaluate(() => { location.hash = "/"; });
+        await window.waitForSelector('[role="row"]', { timeout: 5000 });
+        const rowToOpen = window.locator('[role="row"]', { hasText: "Smoke1" }).first();
+        await rowToOpen.dblclick();
+        await window.waitForSelector('[data-track-editor]', { timeout: 3000 });
+
+        const titleInput = window.locator('#track-title');
+        await titleInput.fill("");
+        // Wait past the debounce — empty title should NOT save.
+        await new Promise((r) => setTimeout(r, 1500));
+
+        const titleRequired = await window.locator('[data-save-status="title-required"]').count();
+        if (titleRequired === 0) {
+          failures.push(`auto-save: empty title did not show "Title required" indicator`);
+        }
+        // Server title should still be "Smoke1" (unchanged).
+        const server = await (await fetch(`${baseUrl}/api/tracks/${t1.id}`)).json();
+        if (server.title !== "Smoke1") {
+          failures.push(`auto-save: empty title leaked to server — got ${JSON.stringify(server.title)}`);
+        }
+        if (titleRequired > 0 && server.title === "Smoke1") {
+          console.log("smoke: empty title gates auto-save PASS");
+        }
+        // Restore title before continuing.
+        await titleInput.fill("Smoke1");
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 100));
+          const res = await fetch(`${baseUrl}/api/tracks/${t1.id}`);
+          if (res.ok && (await res.json()).title === "Smoke1") break;
+        }
+        await window.locator('button:has-text("Close (ESC)")').first().click();
+        await window.waitForFunction(
+          () => !document.querySelector('[data-track-editor]'),
+          undefined,
+          { timeout: 3000 }
+        );
+      } catch (e) {
+        failures.push(`UI: auto-save empty title — ${e.message}`);
       }
     }
 
@@ -848,9 +906,10 @@ try {
         );
         console.log("smoke: producer custom chip PASS");
 
-        // Save the track so the producer value is persisted to the sidecar.
-        await window.locator('button[type="submit"]').first().click();
-        // After save, navigate back to "/" (saveTrack sets navigateAfterSave)
+        // Auto-save persists the chip — wait for the indicator and confirm via API.
+        // (No more manual Save button in v0.0.15.)
+        await window.waitForSelector('[data-save-status="saved"]', { timeout: 5000 });
+        await window.locator('button:has-text("Close (ESC)")').first().click();
         await window.waitForFunction(
           () => !document.querySelector('[data-track-editor]'),
           undefined,
