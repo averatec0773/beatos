@@ -5,6 +5,7 @@ import { TopBar } from "@/components/TopBar";
 import { SidebarPanel } from "@/routes/SidebarPanel";
 import { ApiErrorState } from "@/components/ApiErrorState";
 import { BottomPlayerBar } from "@/components/BottomPlayerBar";
+import { Toast } from "@/components/Toast";
 import { useSourceStore } from "@/stores/sources";
 
 export function AppShell(): React.JSX.Element {
@@ -39,6 +40,7 @@ export function AppShell(): React.JSX.Element {
         </main>
       </div>
       <BottomPlayerBar />
+      <Toast />
     </div>
   );
 }

@@ -28,6 +28,9 @@ export function TrackEditor(): React.JSX.Element {
   const updateInStore = useTrackStore((s) => s.update);
   const removeInStore = useTrackStore((s) => s.remove);
   const setAssetsForTrack = useAssetStore((s) => s.setForTrack);
+  // Stable selector: select the whole list, derive current with useMemo.
+  // Used to absorb upstream auto-analyze patches into the form below.
+  const trackList = useTrackStore((s) => s.list);
 
   const [track, setTrack] = useState<Track | null>(null);
   const [saving, setSaving] = useState(false);
@@ -40,11 +43,15 @@ export function TrackEditor(): React.JSX.Element {
   const [analyzeResult, setAnalyzeResult] = useState<AudioAnalysisResult | null>(null);
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
 
+  // Re-fetch producers whenever the editor opens a different track. Producer
+  // is a global vocab (any producer used on any track), so navigating from
+  // track A → track B must refresh — useEffect([]) is stale across SPA route
+  // changes that re-use the same TrackEditor instance.
   useEffect(() => {
     distinct.values("producer").then((vals) => {
       setProducerOptions(vals.map((p) => ({ value: p, label: p })));
     }).catch(() => {/* non-fatal */});
-  }, []);
+  }, [params.id]);
 
   useEffect(() => {
     if (!params.id) return;
@@ -79,6 +86,28 @@ export function TrackEditor(): React.JSX.Element {
       setInitialTrack(track);
     }
   }, [track, initialTrack]);
+
+  // Reactivity for auto-analyze: when the upstream store gains bpm/key while
+  // the editor's local copy still has nulls in those slots, sync them in.
+  // Only fills nulls — never overwrites edits the user has typed.
+  const liveTrack = useMemo(() => {
+    if (!params.id) return null;
+    const id = Number(params.id);
+    return trackList.find((t) => t.id === id) ?? null;
+  }, [trackList, params.id]);
+
+  useEffect(() => {
+    if (!liveTrack || !track || liveTrack.id !== track.id) return;
+    const patches: Partial<Track> = {};
+    if (track.bpm == null && liveTrack.bpm != null) patches.bpm = liveTrack.bpm;
+    if (track.key_signature == null && liveTrack.key_signature != null) {
+      patches.key_signature = liveTrack.key_signature;
+    }
+    if (Object.keys(patches).length === 0) return;
+    setTrack((cur) => (cur ? { ...cur, ...patches } : cur));
+    // Move baseline so the auto-fill does not show up as user-dirty edits.
+    setInitialTrack((cur) => (cur ? { ...cur, ...patches } : cur));
+  }, [liveTrack?.bpm, liveTrack?.key_signature, track?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isDirty = useMemo(() => {
     if (!track || !initialTrack) return false;

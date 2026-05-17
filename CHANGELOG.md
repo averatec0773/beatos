@@ -4,6 +4,59 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.14.1] - 2026-05-17 — Playback for DAW-produced WAVs
+
+### Fixed
+
+- **Recurring "Playback stuck" / "SRC_NOT_SUPPORTED" bug** with WAV files
+  exported from DAWs (Pro Tools, FL Studio, Logic). Root cause: Electron 39's
+  Chromium WAV decoder silently rejects RIFF files that contain a `JUNK`
+  chunk before `fmt ` (sector-align padding) or `cue `/`LIST`/`smpl` chunks
+  after `data` (markers, metadata). Multiple prior fixes targeted transport
+  (Range header, buffering, MIME normalization, retry watchdogs) and
+  consequently never resolved the actual parser-level rejection. Diagnosed
+  with a new `apps/desktop/scripts/diagnose-playback.mjs` harness that
+  captured the SRC_NOT_SUPPORTED fire within 80 ms — too fast to be a
+  transport issue.
+
+### Added
+
+- `repairWavIfNeeded()` in `apps/desktop/src/main/asset-protocol.ts`:
+  rebuilds a minimal `RIFF`→`fmt `→`data` WAV from any input, preserving
+  every audio byte verbatim. Zero-copy fast path for clean WAVs; runs only
+  for WAVs that actually need it. Bounded against malformed chunk sizes.
+- 8 unit tests in `apps/desktop/src/main/__tests__/asset-protocol.test.ts`
+  covering clean / DAW / non-WAV / un-repairable / malformed-size inputs.
+- Smoke regression assertion #30: synthetically constructs a DAW-style WAV
+  (JUNK + trailing `cue ` chunks), attaches it, clicks play, and verifies
+  `audio.duration > 0` and `audio.currentTime` advances after 1.5 s.
+- `apps/desktop/scripts/diagnose-playback.mjs`: standalone harness for
+  future audio playback investigations. Takes a `BEATOS_TEST_AUDIO=` path
+  or `--tiny`/`--large` flags; instruments every HTMLMediaElement event.
+
+### Changed
+
+- Asset protocol now buffers the full upstream body before responding
+  (required to apply WAV repair across the whole file) and returns 200 OK
+  without `Accept-Ranges`. Chrome's two-phase WAV probe over a proxied
+  range chain was a fragile signal source even when the bytes were valid;
+  one bounded full-file fetch is simpler and the per-play cost (~10-30 ms
+  for typical files) is imperceptible. Non-audio assets (covers) unaffected.
+- Normalize `audio/x-wav` and `audio/vnd.wave` MIMEs to `audio/wav` — the
+  Chromium media stack accepts the variants but is picky about edge cases.
+- Bottom player: dropped the 5 s blanket "stuck-load" watchdog (was based
+  on the wrong theory that loading could silently take >5 s). `onError`
+  catches all real failures within 80 ms; the watchdog only generated
+  false positives on slow disks. State machine simplified.
+
+### Notes
+
+- The fix is purely byte-level RIFF surgery — no transcoding, no codec
+  dependency, no audio quality impact.
+- 30 smoke assertions / 212 vitest / 213 sidecar pytest all pass.
+
+---
+
 ## [0.0.14] - 2026-05-17 — Drag-and-Trash
 
 ### Added

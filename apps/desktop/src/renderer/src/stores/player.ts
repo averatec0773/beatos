@@ -116,6 +116,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     togglePlay() {
       const s = get();
       if (s.status === "playing") {
+        // Stuck-playing recovery: status says "playing" but no metadata loaded.
+        // Click should retry the load instead of pausing into a dead state.
+        if (s.duration === 0 && s.currentTrackId != null) {
+          loadAndPlay(s.currentTrackId, s.preferredRole).catch((e) => {
+            console.warn("[player] stuck-playing retry failed", e);
+          });
+          return;
+        }
         set({ status: "paused" });
       } else if (s.status === "paused") {
         set({ status: "playing" });

@@ -13,6 +13,7 @@ import {
 
 import { usePlayerStore } from "@/stores/player";
 import { useTrackStore } from "@/stores/tracks";
+import { useToastStore } from "@/stores/toast";
 import { CoverImage } from "./CoverImage";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { Slider } from "./ui/slider";
@@ -93,8 +94,11 @@ export function BottomPlayerBar() {
     }
   }, [position]);
 
-  const enabled = currentTrackId != null && status !== "error";
+  // Keep the button clickable while in "error" — togglePlay's recovery branch
+  // re-runs loadAndPlay so a user-tap can recover from a stuck load.
+  const enabled = currentTrackId != null;
   const playing = status === "playing";
+  const errored = status === "error";
 
   return (
     <footer
@@ -110,6 +114,30 @@ export function BottomPlayerBar() {
         onLoadedMetadata={(e) =>
           usePlayerStore.getState()._setDuration(e.currentTarget.duration)
         }
+        onError={(e) => {
+          const err = e.currentTarget.error;
+          const code = err?.code;
+          const codeName =
+            code === 1 ? "ABORTED" :
+            code === 2 ? "NETWORK" :
+            code === 3 ? "DECODE" :
+            code === 4 ? "SRC_NOT_SUPPORTED" : "UNKNOWN";
+          const src = e.currentTarget.currentSrc;
+          console.warn(
+            "[player] audio error code=", code, codeName,
+            "message=", err?.message ?? "(none)",
+            "src=", src
+          );
+          usePlayerStore.getState()._setStatus("error");
+          useToastStore.getState().show(
+            "error",
+            `Playback failed (${codeName}). Click play to retry.`,
+            6000
+          );
+        }}
+        onStalled={() => {
+          console.warn("[player] audio stalled");
+        }}
         onEnded={(e) => {
           const s = usePlayerStore.getState();
           if (s.repeat === "one") {
@@ -154,7 +182,10 @@ export function BottomPlayerBar() {
             disabled={!enabled}
             onClick={() => usePlayerStore.getState().togglePlay()}
             data-play-button
-            aria-label={playing ? "Pause" : "Play"}
+            data-status={status}
+            aria-label={errored ? "Retry" : playing ? "Pause" : "Play"}
+            title={errored ? "Playback failed — click to retry" : undefined}
+            className={errored ? "ring-2 ring-red-500/60" : undefined}
           >
             {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>

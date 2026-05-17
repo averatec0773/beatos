@@ -62,6 +62,36 @@ function makeTinyWav() {
   return buf;
 }
 
+/**
+ * Build a "DAW-style" WAV: clean fmt+data wrapped with a JUNK chunk before
+ * fmt (Pro Tools/FL Studio sector-align padding) and a fake cue chunk after
+ * data (markers). Chromium's WAV decoder pre-v0.0.14.1 rejected these with
+ * empty-message MEDIA_ERR_SRC_NOT_SUPPORTED; the asset-protocol repair pass
+ * sidesteps that. This fixture pins the regression.
+ */
+function makeDawStyleWav() {
+  const clean = makeTinyWav(); // 44-byte header + 40000 bytes of data = 40044
+  const junkLen = 28;
+  const trailerLen = 100;
+  const out = Buffer.alloc(12 + 8 + junkLen + (clean.length - 12) + trailerLen);
+  let off = 0;
+  // RIFF + size + WAVE
+  out.write("RIFF", off); off += 4;
+  out.writeUInt32LE(out.length - 8, off); off += 4;
+  out.write("WAVE", off); off += 4;
+  // JUNK chunk (28 zero bytes — sector-align padding)
+  out.write("JUNK", off); off += 4;
+  out.writeUInt32LE(junkLen, off); off += 4;
+  off += junkLen;
+  // fmt + data copied verbatim from clean (skip its 12-byte RIFF header)
+  clean.copy(out, off, 12);
+  off += clean.length - 12;
+  // Trailer: simulate a "cue " chunk with bogus body — must be ignored
+  out.write("cue ", off); off += 4;
+  out.writeUInt32LE(trailerLen - 8, off); off += 4;
+  return out;
+}
+
 const repoRoot = resolve(import.meta.dirname, "..");
 const mainEntry = join(repoRoot, "out/main/index.js");
 
@@ -385,6 +415,7 @@ try {
         console.log("smoke: click play → playback starts SKIP (no playable row visible)");
       }
     }
+
     // === end v0.0.9 ===
 
     // === v0.0.9.1: regression — resume after track ends ===
@@ -1043,6 +1074,68 @@ try {
     }
 
     // === end v0.0.14 ===
+
+    // === v0.0.14.1 regression: DAW-produced WAVs decode end-to-end ===
+    // Pinpoints the asset-protocol.ts WAV repair pass. A WAV with JUNK
+    // before fmt and a trailing cue chunk used to fail Chromium's parser
+    // (empty-message MEDIA_ERR_SRC_NOT_SUPPORTED). After repair the audio
+    // element must reach readyState>=2 with duration>0 and a currentTime
+    // that actually advances. Runs LAST so the extra track/reload don't
+    // contaminate count-sensitive earlier assertions.
+    try {
+      const dawWavPath = join(userData, "smoke-daw.wav");
+      writeFileSync(dawWavPath, makeDawStyleWav());
+      const dawTrack = await postJson("/api/tracks", { title: "SmokeDaw" });
+      await postJson(`/api/tracks/${dawTrack.id}/assets`, {
+        role: "audio_tagged_wav",
+        path: dawWavPath,
+      });
+      // Navigate explicitly to / so we leave any /trash or /track/N route
+      // a prior assertion left us on.
+      await window.evaluate(() => { window.location.hash = "#/"; });
+      await new Promise((r) => setTimeout(r, 200));
+      await window.reload();
+      await window.waitForLoadState("domcontentloaded");
+      // Clear any active source filter so SmokeDaw (created without source) is visible.
+      await window.evaluate(() => { window.location.hash = "#/"; });
+      await new Promise((r) => setTimeout(r, 800));
+      const dawRow = window.locator("[data-track-id]").filter({ hasText: "SmokeDaw" }).first();
+      if ((await dawRow.count()) === 0) {
+        const titles = await window.evaluate(() =>
+          [...document.querySelectorAll("[data-track-id]")].map((el) =>
+            el.querySelector("[data-track-title]")?.textContent ?? el.textContent?.slice(0, 40)
+          )
+        );
+        failures.push(`daw-wav: SmokeDaw row not visible. Visible rows: ${JSON.stringify(titles)}`);
+      } else {
+        await dawRow.locator("[data-row-play-button]").click();
+        await new Promise((r) => setTimeout(r, 1500));
+        const s = await window.evaluate(() => {
+          const a = document.querySelector("audio");
+          if (!a) return null;
+          return {
+            readyState: a.readyState,
+            duration: a.duration,
+            currentTime: a.currentTime,
+            error: a.error ? { code: a.error.code, message: a.error.message } : null,
+          };
+        });
+        if (!s) failures.push("daw-wav: no audio element");
+        else if (s.error)
+          failures.push(`daw-wav: error code=${s.error.code} message=${s.error.message}`);
+        else if (!(s.duration > 0))
+          failures.push(`daw-wav: duration not > 0 (${s.duration}), readyState=${s.readyState}`);
+        else if (!(s.currentTime > 0))
+          failures.push(`daw-wav: currentTime did not advance (${s.currentTime})`);
+        else
+          console.log(
+            `smoke: DAW-style WAV (JUNK + trailing) plays PASS (duration=${s.duration.toFixed(2)}s, t=${s.currentTime.toFixed(2)}s)`
+          );
+      }
+    } catch (e) {
+      failures.push(`daw-wav assertion error: ${e.message}`);
+    }
+    // === end v0.0.14.1 ===
 
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
