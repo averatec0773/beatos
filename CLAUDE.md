@@ -1,70 +1,76 @@
-# Project Harness
+# BeatOS — Agent Harness
 
-## Project
+**BeatOS** is a local-first desktop app for beat producers: catalog beats + assets, publish to platforms via browser automation, expose the library to AI agents over MCP. Single-user, no server, no telemetry.
 
+**Stack:** Electron 39 + React 19 + Vite + Tailwind + Radix (renderer) · Python 3.11 + FastAPI + aiosqlite + structlog + mcp (sidecar) · SQLite · Playwright `_electron` (smoke harness).
 
-**Name:** BeatOS
-**Description:** Local-first desktop application for beat producers — catalog beats and their assets, publish to multiple platforms via browser automation, expose the library to AI agents via MCP.
-**Stack:** Electron 39 + React 19 + Vite + Tailwind + Radix UI primitives (renderer); Python 3.11 + FastAPI + aiosqlite + structlog + mcp (sidecar); SQLite (storage); Playwright `_electron` (smoke harness, v0.0.5+).
-**Owner:** averatec (single-user, AI-assisted development).
+**Monorepo:** `apps/desktop/` (Electron shell + React) · `packages/beatos-core/` (pure Python logic) · `packages/beatos-http/` (FastAPI facade) · `packages/beatos-mcp/` (MCP facade) · `packages/beatos-platforms/` (per-platform vocab maps).
 
 > All files except `README.md` are agent instructions. Treat them as authoritative.
 
-## Session Start Protocol
+## Session start
 
-At the start of every session:
-
-1. Run `git fetch && git status` — confirm the local repo is up to date with remote. If behind, pull before proceeding.
-2. Run `git log --oneline -10` — orient to recent history.
+1. `git fetch && git status` — confirm up to date with remote; pull if behind.
+2. `git log --oneline -10` — orient to recent history.
 3. Confirm working directory before any write or destructive operation.
 
-## Core Rules
+## Critical agent rules
 
-1. Read the skill file before any dangerous or irreversible operation.
-2. Follow conventions. Do not invent new patterns unless explicitly asked.
-3. Read `memory/rules.md` and apply all rules for the duration of this session.
-4. **Ship gate**: before creating *and pushing* a version tag (`git tag -a vX.Y.Z … && git push origin vX.Y.Z`), confirm `CHANGELOG.md` has an entry for that exact version. If missing, invoke the [changelog](.claude/skills/changelog/SKILL.md) skill first. No silent ships — every tag pushed to remote must have a published changelog entry.
+1. **`track.description` is sacred** — user-authored only. AI output goes to `track.description_draft`. Promoting a draft is an explicit user action.
+2. **Migrations are append-only.** Never edit an applied `migrations/*.sql`; add `00N+1_*.sql`. (Single exception in v0.0.4 — never repeat.)
+3. **`beatos-core` has no web / RPC / Electron deps.** If you reach for `fastapi` / `mcp` / Electron-side imports in core, you are in the wrong layer.
+4. **MCP / inject is human-in-the-loop.** Two-phase commit (`token` → `confirm_*`) on any write tool. Never programmatically submit a platform upload form.
+5. **Zustand v5 stable selectors** — never `.filter` / `.map` / `.find` inside a selector (infinite re-render → black screen). Select the list, derive in `useMemo`.
+6. **Always `preventDefault` in `dragover`** — including when `dataTransfer.types.includes("Files")` is false. Otherwise `drop` never fires (lesson re-applied across v0.0.13.2 / v0.0.14).
 
-## Settings
+For per-file context (which columns, which patterns) read [conventions/architecture.md](conventions/architecture.md) §"What NOT to change without reading context first".
 
-- Shared permissions → [.claude/settings.json](.claude/settings.json)
-- Personal overrides → `.claude/settings.local.json` (gitignored, auto-created on first session from `.claude/settings.local.json.example`)
+## Commands
+
+```bash
+# from apps/desktop/
+npm run dev:fresh              # kill orphan uvicorn + start dev (Vite + sidecar)
+npm run build                  # typecheck + electron-vite build
+npm run smoke                  # built-app smoke harness (run build first)
+npm run logs:tail              # tail Electron main.log + sidecar.jsonl
+npx vitest run                 # renderer + main tests (212 as of v0.0.14.1)
+npx vitest run path/to/x.test.ts   # single file
+node scripts/diagnose-playback.mjs --tiny  # audio playback diagnostic
+
+# from repo root
+uv run pytest                  # sidecar tests (213 as of v0.0.14)
+uv run pytest packages/beatos-http/tests/test_x.py::test_y   # single test
+```
+
+Logs (dev): `apps/desktop/logs/main.log` (Electron + `[sidecar]`-tagged stderr) · `apps/desktop/logs/sidecar.jsonl` (structured, one JSON per line, includes `request_id`).
+
+## Ship gate
+
+Before `git tag -a vX.Y.Z … && git push origin vX.Y.Z`, confirm `CHANGELOG.md` has an entry for that exact version. If missing → invoke the [changelog](.claude/skills/changelog/SKILL.md) skill first. **No silent ships.**
+
+## AI dev loop (v0.0.5+)
+
+If the smoke harness or MCP tools below are available, **drive the app directly** — don't ask the user to click + screenshot.
+
+MCP servers (template in `.claude/settings.local.json.example`):
+- **playwright-electron** — drive the running app, screenshot, evaluate against the renderer
 
 ## Index
 
-### Skills
-<!-- Auto-loaded by Claude Code based on each skill's description field. -->
-- [setup](.claude/skills/setup/SKILL.md)
-- [memory](.claude/skills/memory/SKILL.md)
-- [changelog](.claude/skills/changelog/SKILL.md)
-- [skill-creator](.claude/skills/skill-creator/SKILL.md)
-
 ### Conventions
-- [architecture](conventions/architecture.md)
-- [design-direction](conventions/design-direction.md)
-- [vocab-genre-mood-scene](conventions/vocab-genre-mood-scene.md)
+- [architecture](conventions/architecture.md) — vision, glossary, layering rules, directory map, per-version capability tables, MCP surface, "what NOT to change"
+- [design-direction](conventions/design-direction.md) — visual direction
+- [vocab-genre-mood-scene](conventions/vocab-genre-mood-scene.md) — genre/mood vocab (NetEase-aligned)
 
-### Docs
-- [beatos-charter](docs/beatos-charter.md) — canonical product spec; design docs add deltas only
+### Roadmap
+- [ROADMAP](ROADMAP.md) — pending v0.0.X + v0.1.0 + future v0.2+
+
+### Skills (`.claude/skills/`)
+- [setup](.claude/skills/setup/SKILL.md) · [memory](.claude/skills/memory/SKILL.md) · [changelog](.claude/skills/changelog/SKILL.md) · [skill-creator](.claude/skills/skill-creator/SKILL.md)
 
 ### Memory
-- [rules](memory/rules.md)
-- [notes](memory/notes.md)
+- [rules](memory/rules.md) · [notes](memory/notes.md)
 
-## v0.0.5+ — AI Dev Loop
-
-Prefer running the smoke harness over asking the user to click + screenshot:
-
-- `cd apps/desktop && npm run dev:fresh` — kill orphans, start fresh; logs to `apps/desktop/logs/`
-- `npm run smoke` — built-app smoke (run `npm run build` first)
-- `npm run logs:tail` — tail Electron + sidecar JSONL
-
-Log files (dev):
-- `apps/desktop/logs/main.log` — Electron main + `[sidecar]`-tagged stderr lines
-- `apps/desktop/logs/sidecar.jsonl` — structured Python sidecar (one JSON per line, includes `request_id`)
-
-MCP servers (template in `.claude/settings.local.json.example`):
-- **playwright-electron** — drive the running app, screenshot, evaluate
-- **local-logs** — tail JSONL, filter by level
-
-If these tools are available, don't ask the user to click+screenshot — verify directly.
+### Settings
+- Shared → [.claude/settings.json](.claude/settings.json)
+- Personal overrides → `.claude/settings.local.json` (gitignored, auto-created from `.example`)

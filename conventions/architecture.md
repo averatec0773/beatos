@@ -1,6 +1,27 @@
 # Architecture
 
-This is the *code-level* architecture for AI agents touching files in this repo. Product architecture, mental models, and rationale live in the BeatOS charter (local-only).
+Code-level architecture for AI agents touching files in this repo. Product context first, then layering rules, directory map, per-version capability tables, and the MCP surface plan. For pending work see [ROADMAP.md](../ROADMAP.md); for shipped history see [CHANGELOG.md](../CHANGELOG.md).
+
+## Vision
+
+BeatOS is a local-first desktop app for beat producers — catalog beats and their assets, publish to multiple platforms via browser automation, expose the library to AI agents over MCP. Single-user, no server, no telemetry. Target user: indie beat-makers with 50-500 beats selling on 2+ platforms (BeatStars, Airbit, NetEase).
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| **Track** | A beat record with metadata + 0+ assets. Globally unique; not owned by any Source. |
+| **Asset** | File attached to a Track via `role` (`audio_tagged_wav`, `audio_untagged_mp3`, `cover`, `stems`). |
+| **Source** | Registered folder on disk that BeatOS watches. Source affiliation is computed at runtime by matching asset `abs_path` against Source `root_path`. |
+| **List** | User-curated playlist; membership preserved across soft-delete / restore. |
+| **Adapter** | Platform-specific browser-automation class (`inject(page, track_data)`). Not yet implemented (v0.1.0 candidate). |
+| **Inject** | User action: run adapter against open browser page. Code fills the form, user submits. Never auto-submit. |
+| **Sidecar** | The Python backend (`packages/beatos-*`), launched as child process by Electron main. |
+| **MCP** | Model Context Protocol — AI-agent stdio facade. Mirrors HTTP reads; writes require two-phase `confirm_*` commit. |
+
+## Data model: Sources, not Libraries
+
+Tracks are global — they belong to BeatOS as a whole, not to any Source. Source affiliation is derived at runtime by path-prefix matching. A Source going offline (drive unplugged) does NOT remove its tracks; they become read-only for file ops, fully editable for metadata. Lists / search / filter span all Sources. Settled in v0.0.4 after the per-Source mount-point model was rejected.
 
 ## Layering rules
 
@@ -210,6 +231,20 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Whole-row drag handle | `components/TrackRow.tsx` | dnd-kit `{listeners, attributes}` moved from cover wrapper to row root. PointerSensor activation distance 5px prevents accidental drags on click/dblclick. |
 | Drop-to-create-track | `lib/create-track-from-file.ts` + `routes/TrackListPanel.tsx` drop zone | Drop `.wav`/`.mp3` anywhere on library → one track per file with smart Source path match (file under Source root). attach failure rolls back the orphan track. Always-`preventDefault` on `dragover` (lesson reinforced from v0.0.13.2). |
 | Single DndContext, multi-type routing | `App.tsx` `onDragEnd` switches on id prefix | `track:` / `source:` / `list:` prefixes route to add-to-list / source-reorder / list-reorder respectively. Avoids nested DndContexts. |
+
+## MCP surface (aspirational)
+
+`packages/beatos-mcp/` currently only exposes `ping`. The planned surface (any read tool mirrors an existing HTTP route; any write tool requires two-phase commit):
+
+| Tool | Type | Notes |
+|---|---|---|
+| `list_tracks(filter?)` / `get_track(id)` / `search_tracks(query)` | read | Mirror `/api/tracks*`. |
+| `list_platforms()` | read | Once adapters exist. |
+| `inject_to_platform(track_id, platform)` | write | Returns `confirm_token`; agent must call `confirm_inject(token)` separately. |
+| `draft_description(track_id)` | write | Writes to `description_draft` only — never to user's `description`. v0.2 RAG-ready. |
+| `suggest_tags(track_id)` / `find_similar(track_id)` | read | v0.2 / v0.3 (audio + text RAG). |
+
+Trust boundary = local stdio process; no network auth needed. See [ROADMAP.md](../ROADMAP.md) for the build sequence.
 
 ## What NOT to change without reading context first
 
