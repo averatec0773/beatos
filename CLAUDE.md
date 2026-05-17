@@ -22,10 +22,14 @@
 4. **MCP / inject is human-in-the-loop.** Two-phase commit (`token` → `confirm_*`) on any write tool. Never programmatically submit a platform upload form.
 5. **Zustand v5 stable selectors** — never `.filter` / `.map` / `.find` inside a selector (infinite re-render → black screen). Select the list, derive in `useMemo`.
 6. **Always `preventDefault` in `dragover`** — including when `dataTransfer.types.includes("Files")` is false. Otherwise `drop` never fires (lesson re-applied across v0.0.13.2 / v0.0.14).
+7. **SPA route reuse** — when a route stays mounted across param changes (`/track/1` → `/track/2` keeps `<TrackEditor>` mounted with new `params`), `useEffect([])` does NOT re-run. Per-track effects must depend on `params.id` (caught at v0.0.14.1: producer distinct went stale across tracks).
+8. **Upstream-store → local-form sync** must update both the form state AND the dirty baseline (e.g. `initialTrack`), otherwise the upstream patch (auto-analyze writing bpm/key) registers as a user edit and re-fires auto-save in a loop.
 
 For per-file context (which columns, which patterns) read [conventions/architecture.md](conventions/architecture.md) §"What NOT to change without reading context first".
 
 ## Commands
+
+> Run `npm` / `npx` commands from `apps/desktop/`. Sidecar Python tests run from repo root via `uv run`. IDE TypeScript diagnostics ("Cannot find module …") are frequently stale after file changes — trust `npm run build`, not the editor.
 
 ```bash
 # from apps/desktop/
@@ -33,9 +37,15 @@ npm run dev:fresh              # kill orphan uvicorn + start dev (Vite + sidecar
 npm run build                  # typecheck + electron-vite build
 npm run smoke                  # built-app smoke harness (run build first)
 npm run logs:tail              # tail Electron main.log + sidecar.jsonl
-npx vitest run                 # renderer + main tests (212 as of v0.0.14.1)
+npx vitest run                 # renderer + main tests (214 as of v0.0.15-pre)
 npx vitest run path/to/x.test.ts   # single file
 node scripts/diagnose-playback.mjs --tiny  # audio playback diagnostic
+
+# Debounced / async effects in vitest require:
+#   vi.useFakeTimers({ shouldAdvanceTime: true })
+#   userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+#   await vi.advanceTimersByTimeAsync(ms)
+# Canonical example: src/renderer/src/__tests__/TrackEditor.test.tsx
 
 # from repo root
 uv run pytest                  # sidecar tests (213 as of v0.0.14)
@@ -51,6 +61,13 @@ Before `git tag -a vX.Y.Z … && git push origin vX.Y.Z`, confirm `CHANGELOG.md`
 ## AI dev loop (v0.0.5+)
 
 If the smoke harness or MCP tools below are available, **drive the app directly** — don't ask the user to click + screenshot.
+
+- **Audio playback issues** → `node scripts/diagnose-playback.mjs [--tiny|--large]` or `BEATOS_TEST_AUDIO=/path/to.wav node scripts/diagnose-playback.mjs`. Captures every HTMLMediaElement event with timestamps. Byte-level WAV repair lives in `src/main/asset-protocol.ts::repairWavIfNeeded`.
+
+**Playwright `_electron` gotchas:**
+- `app.evaluate` / `window.evaluate` only support top-level imports; `await import(...)` inside throws "dynamic import callback was not specified". Pull imports out and pass values in via the second arg.
+- Renderer `fetch()` cannot reach `beatos-asset://` — CSP `connect-src` excludes custom schemes. Probe protocols via `app.evaluate` from the main process, or through the `<audio>` / `<img>` element (`media-src` / `img-src` allow it).
+- Smoke assertion order is load-bearing — earlier checks assume specific tracks/sources/routes exist. State-mutating new tests should append AFTER the existing block (the DAW-WAV regression #30 sits at the end for this reason).
 
 MCP servers (template in `.claude/settings.local.json.example`):
 - **playwright-electron** — drive the running app, screenshot, evaluate against the renderer
