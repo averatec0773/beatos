@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { Trash2 } from "lucide-react";
+import React from "react";
 import { useDraggable } from "@dnd-kit/core";
 
 import { CoverImage } from "@/components/CoverImage";
@@ -15,7 +14,8 @@ interface Props {
   isMultiSelected?: boolean;
   onSelect: (event: React.MouseEvent) => void;
   onOpen: () => void;
-  onDelete: () => void;
+  // onDelete kept in API surface but unused — delete now via right-click context menu only
+  onDelete?: () => void;
 }
 
 export function TrackRow({
@@ -25,9 +25,7 @@ export function TrackRow({
   isMultiSelected = false,
   onSelect,
   onOpen,
-  onDelete,
 }: Props): React.JSX.Element {
-  const [hover, setHover] = useState(false);
   const widths = useColumnWidthStore((s) => s.widths);
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -42,8 +40,6 @@ export function TrackRow({
       role="row"
       data-track-id={track.id}
       tabIndex={0}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
       onClick={onSelect}
       onDoubleClick={onOpen}
       onKeyDown={(e) => {
@@ -86,19 +82,6 @@ export function TrackRow({
       <div className="truncate font-mono text-xs text-text-tertiary" style={{ width: widths.updated, flexShrink: 0 }}>
         {formatRowDate(track.updated_at)}
       </div>
-      {hover && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="w-7 h-7 flex items-center justify-center rounded-full text-text-tertiary hover:text-danger hover:bg-bg-row-hover"
-          aria-label="Delete"
-        >
-          <Trash2 size={14} />
-        </button>
-      )}
     </div>
   );
 }
