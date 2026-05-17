@@ -22,6 +22,9 @@ from beatos_core.tracks.service import (
     get_track,
     list_tracks,
     list_distinct_values,
+    list_trash,
+    purge_track,
+    restore_track,
     update_track,
 )
 
@@ -94,7 +97,7 @@ async def list_all(
         async with conn.execute(
             f"SELECT DISTINCT {qualified_cols}, {cover_sq}, {has_audio_sq} FROM track t "
             "JOIN asset a ON a.track_id = t.id "
-            "WHERE a.abs_path GLOB ? || '/*' OR a.abs_path = ? "
+            "WHERE (a.abs_path GLOB ? || '/*' OR a.abs_path = ?) AND t.deleted_at IS NULL "
             "ORDER BY t.updated_at DESC",
             (src.root_path, src.root_path),
         ) as cur:
@@ -108,6 +111,11 @@ async def distinct_values(field: str) -> list[str]:
         return await list_distinct_values(field)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/trash", response_model=list[Track])
+async def list_trashed() -> list[Track]:
+    return await list_trash()
 
 
 @router.get("/{track_id}", response_model=Track)
@@ -127,7 +135,18 @@ async def update(track_id: int, payload: TrackUpdate) -> Track:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/{track_id}/restore", response_model=Track)
+async def restore(track_id: int) -> Track:
+    try:
+        return await restore_track(track_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 @router.delete("/{track_id}", status_code=204)
-async def remove(track_id: int) -> Response:
-    await delete_track(track_id)
+async def remove(track_id: int, purge: bool = Query(default=False)) -> Response:
+    if purge:
+        await purge_track(track_id)
+    else:
+        await delete_track(track_id)
     return Response(status_code=204)

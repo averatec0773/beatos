@@ -110,7 +110,10 @@ async def test_delete_removes_track():
 
     rows = await list_tracks()
     assert rows == []
-    assert await get_track(t.id) is None
+    # delete_track now soft-deletes; row still exists with deleted_at set
+    after = await get_track(t.id)
+    assert after is not None
+    assert after.deleted_at is not None
 
 
 @pytest.mark.asyncio

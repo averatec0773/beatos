@@ -30,6 +30,7 @@ class Track(BaseModel):
     )
     created_at: _dt.datetime
     updated_at: _dt.datetime
+    deleted_at: Optional[_dt.datetime] = None
 
     model_config = {"from_attributes": True}
 

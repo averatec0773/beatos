@@ -38,8 +38,14 @@ def test_full_crud_flow(tmp_path):
     delete_res = client.delete(f"/api/tracks/{track_id}")
     assert delete_res.status_code == 204
 
+    # soft-delete: track is hidden from list but still retrievable
     final_list = client.get("/api/tracks")
     assert final_list.json() == []
+
+    # row still exists; get returns it with deleted_at set
+    get_after = client.get(f"/api/tracks/{track_id}")
+    assert get_after.status_code == 200
+    assert get_after.json()["deleted_at"] is not None
 
 
 def test_update_rejects_description_draft(tmp_path):
@@ -369,3 +375,70 @@ def test_put_producer_list_round_trips(tmp_path):
     get_res = client.get(f"/api/tracks/{track_id}")
     assert get_res.status_code == 200
     assert get_res.json()["producer"] == ["a", "b"]
+
+
+# ---------------------------------------------------------------------------
+# Trash / restore / purge route tests
+# ---------------------------------------------------------------------------
+
+
+def test_delete_soft_deletes_track(tmp_path):
+    """DELETE /api/tracks/{id} soft-deletes: deleted_at set, row still exists."""
+    client = TestClient(create_app())
+    track_id = client.post("/api/tracks", json={"title": "SoftDel"}).json()["id"]
+
+    del_res = client.delete(f"/api/tracks/{track_id}")
+    assert del_res.status_code == 204
+
+    # track hidden from list
+    list_res = client.get("/api/tracks")
+    assert not any(t["id"] == track_id for t in list_res.json())
+
+    # row still accessible via get
+    get_res = client.get(f"/api/tracks/{track_id}")
+    assert get_res.status_code == 200
+    assert get_res.json()["deleted_at"] is not None
+
+
+def test_restore_clears_deleted_at(tmp_path):
+    """POST /api/tracks/{id}/restore clears deleted_at and returns 200 Track."""
+    client = TestClient(create_app())
+    track_id = client.post("/api/tracks", json={"title": "Restorer"}).json()["id"]
+
+    client.delete(f"/api/tracks/{track_id}")
+
+    restore_res = client.post(f"/api/tracks/{track_id}/restore")
+    assert restore_res.status_code == 200
+    assert restore_res.json()["deleted_at"] is None
+    assert restore_res.json()["id"] == track_id
+
+    # track visible in list again
+    list_res = client.get("/api/tracks")
+    assert any(t["id"] == track_id for t in list_res.json())
+
+
+def test_delete_purge_removes_row(tmp_path):
+    """DELETE /api/tracks/{id}?purge=true hard-deletes: row gone, 404 on get."""
+    client = TestClient(create_app())
+    track_id = client.post("/api/tracks", json={"title": "Purger"}).json()["id"]
+
+    del_res = client.delete(f"/api/tracks/{track_id}?purge=true")
+    assert del_res.status_code == 204
+
+    get_res = client.get(f"/api/tracks/{track_id}")
+    assert get_res.status_code == 404
+
+
+def test_get_trash_returns_only_trashed(tmp_path):
+    """GET /api/tracks/trash returns only trashed tracks."""
+    client = TestClient(create_app())
+    t1 = client.post("/api/tracks", json={"title": "Active"}).json()
+    t2 = client.post("/api/tracks", json={"title": "Trashed"}).json()
+
+    client.delete(f"/api/tracks/{t2['id']}")
+
+    trash_res = client.get("/api/tracks/trash")
+    assert trash_res.status_code == 200
+    ids = [t["id"] for t in trash_res.json()]
+    assert t2["id"] in ids
+    assert t1["id"] not in ids

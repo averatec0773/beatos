@@ -81,7 +81,7 @@ async def tracks_in_list(
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
     )
 
-    where_clause = "track_list.list_id = ?"
+    where_clause = "track_list.list_id = ? AND track.deleted_at IS NULL"
     if filter_where:
         where_clause = f"{where_clause} AND {filter_where}"
 

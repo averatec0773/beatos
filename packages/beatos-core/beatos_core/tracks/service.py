@@ -64,7 +64,7 @@ _SELECT_COLS = (
     "id, title, bpm, key_signature, genre, mood, "
     "tags, description, description_draft, license_type, price, "
     "producer, "
-    "created_at, updated_at"
+    "created_at, updated_at, deleted_at"
 )
 
 # Subquery rendered after _SELECT_COLS to populate Track.cover_asset_id.
@@ -117,9 +117,10 @@ def _deserialize(row: tuple) -> Track:
     # Row layout (0-based):
     # 0:id, 1:title, 2:bpm, 3:key_signature, 4:genre, 5:mood,
     # 6:tags, 7:description, 8:description_draft, 9:license_type, 10:price,
-    # 11:producer, 12:created_at, 13:updated_at,
-    # 14:cover_asset_id (optional), 15:has_audio (optional)
+    # 11:producer, 12:created_at, 13:updated_at, 14:deleted_at,
+    # 15:cover_asset_id (optional), 16:has_audio (optional)
     tags = json.loads(row[6]) if row[6] else None
+    deleted_at_raw = row[14] if len(row) > 14 else None
     return Track(
         id=row[0],
         title=row[1],
@@ -135,8 +136,9 @@ def _deserialize(row: tuple) -> Track:
         producer=_parse_json_list(row[11]),
         created_at=_dt.datetime.fromisoformat(row[12]),
         updated_at=_dt.datetime.fromisoformat(row[13]),
-        cover_asset_id=row[14] if len(row) > 14 else None,
-        has_audio=bool(row[15]) if len(row) > 15 else False,
+        deleted_at=_dt.datetime.fromisoformat(deleted_at_raw) if deleted_at_raw else None,
+        cover_asset_id=row[15] if len(row) > 15 else None,
+        has_audio=bool(row[16]) if len(row) > 16 else False,
     )
 
 
@@ -227,11 +229,13 @@ async def list_tracks(
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
     )
     sort_expr = _sort_expr(sort_by)
+    base_where = "track.deleted_at IS NULL"
+    full_where = f"{base_where} AND {where}" if where else base_where
     sql = (
         f"SELECT {_SELECT_COLS}, {_cover_subquery()}, {_has_audio_subquery()} "
         f"FROM track "
-        + (f"WHERE {where} " if where else "")
-        + f"ORDER BY {sort_expr} {sort_dir.upper()}, id ASC"
+        f"WHERE {full_where} "
+        f"ORDER BY {sort_expr} {sort_dir.upper()}, id ASC"
     )
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
@@ -248,10 +252,13 @@ async def list_distinct_values(field: str) -> list[str]:
         if field in MULTI_VALUE_FIELDS:
             sql = (
                 f"SELECT DISTINCT je.value FROM track, json_each(track.{field}) je "
-                f"WHERE track.{field} IS NOT NULL ORDER BY je.value"
+                f"WHERE track.{field} IS NOT NULL AND track.deleted_at IS NULL ORDER BY je.value"
             )
         else:
-            sql = f"SELECT DISTINCT {field} FROM track WHERE {field} IS NOT NULL ORDER BY {field}"
+            sql = (
+                f"SELECT DISTINCT {field} FROM track "
+                f"WHERE {field} IS NOT NULL AND deleted_at IS NULL ORDER BY {field}"
+            )
         async with conn.execute(sql) as cur:
             rows = await cur.fetchall()
     return [r[0] for r in rows]
@@ -306,8 +313,54 @@ async def update_track(track_id: int, updates: dict[str, Any]) -> Track:
     return current
 
 
-async def delete_track(track_id: int) -> None:
+async def trash_track(track_id: int) -> Track:
+    now = _now()
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute(
+            "UPDATE track SET deleted_at = ? WHERE id = ?",
+            (now, track_id),
+        )
+        await conn.commit()
+    track = await get_track(track_id)
+    if track is None:
+        raise ValueError(f"Track {track_id} not found.")
+    return track
+
+
+async def restore_track(track_id: int) -> Track:
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute(
+            "UPDATE track SET deleted_at = NULL WHERE id = ?",
+            (track_id,),
+        )
+        await conn.commit()
+    track = await get_track(track_id)
+    if track is None:
+        raise ValueError(f"Track {track_id} not found.")
+    return track
+
+
+async def purge_track(track_id: int) -> None:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute("DELETE FROM track WHERE id = ?", (track_id,))
         await conn.commit()
+
+
+async def list_trash() -> list[Track]:
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            f"SELECT {_SELECT_COLS}, {_cover_subquery()}, {_has_audio_subquery()} "
+            "FROM track "
+            "WHERE track.deleted_at IS NOT NULL "
+            "ORDER BY track.deleted_at DESC, id ASC",
+        ) as cur:
+            rows = await cur.fetchall()
+    return [_deserialize(r) for r in rows]
+
+
+async def delete_track(track_id: int) -> None:
+    await trash_track(track_id)
