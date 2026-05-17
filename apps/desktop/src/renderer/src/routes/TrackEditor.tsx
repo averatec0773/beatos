@@ -234,6 +234,7 @@ export function TrackEditor(): React.JSX.Element {
                   onChange={(v) => patch("genre", v.length ? v : null)}
                   popoverTitle="Genres"
                   placeholder="Add genre..."
+                  maxSelections={1}
                 />
               </div>
             </div>
@@ -251,6 +252,7 @@ export function TrackEditor(): React.JSX.Element {
                   onChange={(v) => patch("mood", v.length ? v : null)}
                   popoverTitle="Moods"
                   placeholder="Add mood..."
+                  maxSelections={3}
                 />
               </div>
               <div data-field="producer">

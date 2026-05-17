@@ -19,6 +19,10 @@ interface Props {
   allowCustomAdd?: boolean;
   placeholder?: string;
   popoverTitle?: string;
+  /** Maximum simultaneous selections. `1` = single-select (new picks replace).
+   *  `>1` = caps multi-select; selecting more is blocked while at cap.
+   *  Omit / undefined = unlimited. */
+  maxSelections?: number;
 }
 
 export function ChipMultiSelect({
@@ -28,6 +32,7 @@ export function ChipMultiSelect({
   allowCustomAdd = false,
   placeholder,
   popoverTitle,
+  maxSelections,
 }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string[]>(value);
@@ -63,15 +68,29 @@ export function ChipMultiSelect({
   }
 
   function toggleOption(v: string): void {
-    setDraft((cur) =>
-      cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]
-    );
+    setDraft((cur) => {
+      if (cur.includes(v)) return cur.filter((x) => x !== v);
+      // maxSelections=1 → replace (single-select semantics)
+      if (maxSelections === 1) return [v];
+      // maxSelections>1 → block when at cap (caller-side guard; checkbox is also disabled below)
+      if (maxSelections != null && cur.length >= maxSelections) return cur;
+      return [...cur, v];
+    });
   }
 
   function handleCustomAdd(): void {
     const trimmed = customInput.trim();
     if (!trimmed) return;
-    if (!draft.includes(trimmed)) {
+    if (draft.includes(trimmed)) {
+      setCustomInput("");
+      return;
+    }
+    // Respect maxSelections for custom adds too
+    if (maxSelections === 1) {
+      setDraft([trimmed]);
+    } else if (maxSelections != null && draft.length >= maxSelections) {
+      return; // at cap
+    } else {
       setDraft((cur) => [...cur, trimmed]);
     }
     if (!customOptions.some((o) => o.value === trimmed) && !options.some((o) => o.value === trimmed)) {
@@ -97,6 +116,10 @@ export function ChipMultiSelect({
     const opt = allOptions.find((o) => o.value === v);
     return opt ? opt.label : v;
   }
+
+  // Cap-reached predicate for un-selected items. max=1 uses replace semantics
+  // (always selectable), so disable only kicks in when max > 1.
+  const atCap = maxSelections != null && maxSelections > 1 && draft.length >= maxSelections;
 
   return (
     <div data-chip-multiselect className="flex flex-wrap items-center gap-1.5">
@@ -148,36 +171,46 @@ export function ChipMultiSelect({
                       )}
                       {allOptions
                         .filter((o) => (o.group ?? "") === group)
-                        .map((opt) => (
-                          <label
-                            key={opt.value}
-                            className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 text-sm hover:bg-bg-row-hover"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={draft.includes(opt.value)}
-                              onChange={() => toggleOption(opt.value)}
-                              className="h-3.5 w-3.5 accent-accent"
-                            />
-                            <span className="truncate">{opt.label}</span>
-                          </label>
-                        ))}
+                        .map((opt) => {
+                          const selected = draft.includes(opt.value);
+                          const disabled = atCap && !selected;
+                          return (
+                            <label
+                              key={opt.value}
+                              className={`flex items-center gap-2.5 px-3 py-1.5 text-sm ${disabled ? "cursor-not-allowed text-text-tertiary opacity-50" : "cursor-pointer hover:bg-bg-row-hover"}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                disabled={disabled}
+                                onChange={() => toggleOption(opt.value)}
+                                className="h-3.5 w-3.5 accent-accent"
+                              />
+                              <span className="truncate">{opt.label}</span>
+                            </label>
+                          );
+                        })}
                     </div>
                   ))
-                : allOptions.map((opt) => (
-                    <label
-                      key={opt.value}
-                      className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 text-sm hover:bg-bg-row-hover"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={draft.includes(opt.value)}
-                        onChange={() => toggleOption(opt.value)}
-                        className="h-3.5 w-3.5 accent-accent"
-                      />
-                      <span className="truncate">{opt.label}</span>
-                    </label>
-                  ))}
+                : allOptions.map((opt) => {
+                    const selected = draft.includes(opt.value);
+                    const disabled = atCap && !selected;
+                    return (
+                      <label
+                        key={opt.value}
+                        className={`flex items-center gap-2.5 px-3 py-1.5 text-sm ${disabled ? "cursor-not-allowed text-text-tertiary opacity-50" : "cursor-pointer hover:bg-bg-row-hover"}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={disabled}
+                          onChange={() => toggleOption(opt.value)}
+                          className="h-3.5 w-3.5 accent-accent"
+                        />
+                        <span className="truncate">{opt.label}</span>
+                      </label>
+                    );
+                  })}
             </div>
 
             {allowCustomAdd && (
@@ -187,20 +220,28 @@ export function ChipMultiSelect({
                     ref={inputRef}
                     type="text"
                     value={customInput}
+                    disabled={atCap}
                     onChange={(e) => setCustomInput(e.target.value)}
                     onKeyDown={handleCustomKeyDown}
-                    placeholder="Type to add…"
-                    className="min-w-0 flex-1 rounded border border-border-subtle bg-bg-elevated px-2 py-1 text-xs focus:outline-none focus:border-accent"
+                    placeholder={atCap ? "At max — remove a chip first" : "Type to add…"}
+                    className="min-w-0 flex-1 rounded border border-border-subtle bg-bg-elevated px-2 py-1 text-xs focus:outline-none focus:border-accent disabled:opacity-50"
                   />
                   <button
                     type="button"
                     aria-label="Add custom value"
+                    disabled={atCap}
                     onClick={handleCustomAdd}
-                    className="rounded border border-border-subtle px-2 py-1 text-xs hover:bg-bg-elevated focus:outline-none"
+                    className="rounded border border-border-subtle px-2 py-1 text-xs hover:bg-bg-elevated focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Add
                   </button>
                 </div>
+              </div>
+            )}
+
+            {maxSelections != null && maxSelections > 1 && (
+              <div className="border-t border-border-subtle px-3 py-1.5 text-[10px] text-text-tertiary">
+                {draft.length} / {maxSelections} selected
               </div>
             )}
 

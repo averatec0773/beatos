@@ -191,4 +191,54 @@ describe("ChipMultiSelect", () => {
     );
     expect(container.querySelector("[data-add-button]")).toBeInTheDocument();
   });
+
+  it("maxSelections=1 replaces selection on each pick", () => {
+    const onChange = vi.fn();
+    render(
+      <ChipMultiSelect
+        value={["pop"]}
+        options={OPTIONS}
+        onChange={onChange}
+        maxSelections={1}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /add/i }));
+    // Pick Trap — should replace pop
+    fireEvent.click(screen.getByLabelText("Trap Rap"));
+    fireEvent.click(screen.getByRole("button", { name: /apply/i }));
+    expect(onChange).toHaveBeenCalledWith(["trap"]);
+  });
+
+  it("maxSelections=2 blocks selecting a 3rd un-selected option", () => {
+    const onChange = vi.fn();
+    render(
+      <ChipMultiSelect
+        value={["pop", "trap"]}
+        options={OPTIONS}
+        onChange={onChange}
+        maxSelections={2}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /add/i }));
+    const jazz = screen.getByLabelText("Jazz") as HTMLInputElement;
+    expect(jazz).toBeDisabled();
+  });
+
+  it("maxSelections cap allows deselect (uncheck a selected) even when at cap", () => {
+    const onChange = vi.fn();
+    render(
+      <ChipMultiSelect
+        value={["pop", "trap"]}
+        options={OPTIONS}
+        onChange={onChange}
+        maxSelections={2}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /add/i }));
+    // Uncheck trap — should work (deselect always allowed)
+    const trap = screen.getByLabelText("Trap Rap");
+    fireEvent.click(trap);
+    fireEvent.click(screen.getByRole("button", { name: /apply/i }));
+    expect(onChange).toHaveBeenCalledWith(["pop"]);
+  });
 });
