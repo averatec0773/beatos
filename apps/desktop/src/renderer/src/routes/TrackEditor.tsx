@@ -3,14 +3,18 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { tracks } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
+import { distinct } from "@/api/distinct";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { CoverDropZone } from "@/components/CoverDropZone";
 import { FileRowsSection } from "@/components/FileRowsSection";
 import { KeyPicker } from "@/components/KeyPicker";
+import { ChipMultiSelect } from "@/components/ChipMultiSelect";
 import type { Track, TrackUpdate } from "@/api/tracks";
 import { shallowEqualEditable } from "@/lib/shallow-equal-track";
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
+import { BEATOS_GENRES, genreLabel } from "@/data/genres";
+import { BEATOS_MOODS } from "@/data/moods";
 
 const LICENSE_TYPES = ["lease_basic", "lease_premium", "exclusive"] as const;
 
@@ -27,6 +31,13 @@ export function TrackEditor(): React.JSX.Element {
   const [initialTrack, setInitialTrack] = useState<Track | null>(null);
   const [navigateAfterSave, setNavigateAfterSave] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [producerOptions, setProducerOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    distinct.values("producer").then((vals) => {
+      setProducerOptions(vals.map((p) => ({ value: p, label: p })));
+    }).catch(() => {/* non-fatal */});
+  }, []);
 
   useEffect(() => {
     if (!params.id) return;
@@ -211,52 +222,50 @@ export function TrackEditor(): React.JSX.Element {
                 </label>
                 <KeyPicker value={track.key_signature ?? null} onChange={(v) => patch("key_signature", v)} />
               </div>
-              <div>
+              <div data-field="genre">
                 <label
-                  htmlFor="track-genre"
                   className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
                 >
                   Genre
                 </label>
-                <input
-                  id="track-genre"
-                  type="text"
-                  value={(track.genre ?? []).join(", ")}
-                  onChange={(e) => patch("genre", e.target.value ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : null)}
-                  className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+                <ChipMultiSelect
+                  value={track.genre ?? []}
+                  options={BEATOS_GENRES.map((g) => ({ value: g.en, label: genreLabel(g) }))}
+                  onChange={(v) => patch("genre", v.length ? v : null)}
+                  popoverTitle="Genres"
+                  placeholder="Add genre..."
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div>
+              <div data-field="mood">
                 <label
-                  htmlFor="track-mood"
                   className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
                 >
                   Mood
                 </label>
-                <input
-                  id="track-mood"
-                  type="text"
-                  value={(track.mood ?? []).join(", ")}
-                  onChange={(e) => patch("mood", e.target.value ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : null)}
-                  className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+                <ChipMultiSelect
+                  value={track.mood ?? []}
+                  options={BEATOS_MOODS.map((m) => ({ value: m.en, label: `${m.zh} (${m.en})`, group: m.group }))}
+                  onChange={(v) => patch("mood", v.length ? v : null)}
+                  popoverTitle="Moods"
+                  placeholder="Add mood..."
                 />
               </div>
-              <div>
+              <div data-field="producer">
                 <label
-                  htmlFor="track-producer"
                   className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
                 >
                   Producer
                 </label>
-                <input
-                  id="track-producer"
-                  type="text"
-                  value={(track.producer ?? []).join(", ")}
-                  onChange={(e) => patch("producer", e.target.value ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : null)}
-                  className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+                <ChipMultiSelect
+                  value={track.producer ?? []}
+                  options={producerOptions}
+                  onChange={(v) => patch("producer", v.length ? v : null)}
+                  allowCustomAdd
+                  popoverTitle="Producers"
+                  placeholder="Add producer..."
                 />
               </div>
               <div>
