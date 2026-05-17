@@ -23,7 +23,7 @@ from beatos_core.db import resolve_db_path, run_migrations
 from beatos_core.sources.monitor import SourceStatusMonitor
 from beatos_core.sources.service import get_source, list_sources
 from beatos_core.watcher.daemon import WatcherRegistry
-from beatos_http.routes import assets, lists, sources, sweep, tracks
+from beatos_http.routes import analysis, assets, lists, sources, sweep, tracks
 
 log = logging.getLogger(__name__)
 
@@ -152,5 +152,6 @@ def create_app() -> FastAPI:
     app.include_router(lists.router)
     app.include_router(sweep.router)
     app.include_router(sources.router)
+    app.include_router(analysis.router)
 
     return app
