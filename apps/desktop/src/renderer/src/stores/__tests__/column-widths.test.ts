@@ -25,9 +25,9 @@ describe("setWidth", () => {
     expect(useColumnWidthStore.getState().widths.bpm).toBe(100);
   });
 
-  it("setWidth('bpm', 10) clamps to MIN_WIDTH['bpm'] = 56", () => {
+  it("setWidth('bpm', 10) clamps to MIN_WIDTH['bpm'] = 48", () => {
     useColumnWidthStore.getState().setWidth("bpm", 10);
-    expect(useColumnWidthStore.getState().widths.bpm).toBe(56);
+    expect(useColumnWidthStore.getState().widths.bpm).toBe(48);
   });
 
   it("setWidth('title', 200) updates title to 200", () => {
@@ -35,9 +35,9 @@ describe("setWidth", () => {
     expect(useColumnWidthStore.getState().widths.title).toBe(200);
   });
 
-  it("setWidth('title', 50) clamps to MIN_WIDTH['title'] = 160", () => {
+  it("setWidth('title', 50) clamps to MIN_WIDTH['title'] = 80", () => {
     useColumnWidthStore.getState().setWidth("title", 50);
-    expect(useColumnWidthStore.getState().widths.title).toBe(160);
+    expect(useColumnWidthStore.getState().widths.title).toBe(80);
   });
 
   it("does not mutate other columns when one is changed", () => {

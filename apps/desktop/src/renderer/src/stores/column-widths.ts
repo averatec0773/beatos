@@ -17,10 +17,10 @@ const DEFAULTS: Record<ColumnKey, number> = {
 };
 
 const MIN_WIDTH: Record<ColumnKey, number> = {
-  title: 160,
-  bpm: 56,
+  title: 80,
+  bpm: 48,
   key: 56,
-  genre: 80,
+  genre: 60,
   updated: 80,
 };
 

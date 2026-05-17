@@ -21,7 +21,7 @@ export function VirtualTrackList({ tracks, renderRow }: Props): React.JSX.Elemen
   });
 
   return (
-    <div ref={parentRef} className="flex-1 overflow-y-auto">
+    <div ref={parentRef} className="flex-1 overflow-y-auto beatos-scroll">
       <div
         style={{ height: virtualizer.getTotalSize(), width: "100%", position: "relative" }}
       >
