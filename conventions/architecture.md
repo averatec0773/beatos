@@ -198,6 +198,19 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Fire-and-forget auto-fill | `lib/auto-analyze.ts` (`maybeAutoAnalyze`) called from `stores/assets.ts` `attach` | Only writes BPM/Key when the field is empty AND confidence clears threshold. |
 | `AnalyzeResultDialog` + Wand2 button | `components/AnalyzeResultDialog.tsx` + TrackEditor toolbar | Per-field accept dialog with "Replace existing" toggle; `⚠ Low` prefix on sub-threshold results. |
 
+### v0.0.14 — Drag-and-Trash
+
+| Capability | Location | Purpose |
+|---|---|---|
+| Soft-delete | `migrations/008_track_trash.sql` adds `track.deleted_at TEXT NULL` + index | `delete_track()` repurposed to set `deleted_at`. `purge_track()` is the true hard-delete. `get_track()` does NOT filter trashed (editor can still load); `list_tracks()` and `tracks_in_list()` filter `deleted_at IS NULL`. |
+| Trash endpoints | `routes/tracks.py` | `DELETE /api/tracks/{id}` (soft) · `?purge=true` (hard) · `POST .../restore` · `GET /api/tracks/trash`. Route order matters: `/trash` registered before `/{track_id}` so the literal wins. |
+| Trash UI | `routes/TrashPanel.tsx` + `stores/trash.ts` + `SidebarPanel.tsx` TRASH section | Independent section in sidebar with live count; row-level Restore + Delete forever (confirm). list_track membership preserved across delete/restore. |
+| Bulk reorder | `service.py::reorder_sources/lists` + `routes/sources.py / lists.py` | `POST /api/sources/reorder {ids: []}` and same for lists. Atomic single-transaction position assignment 0..N-1. |
+| Sidebar drag-reorder | `routes/SidebarPanel.tsx` `SortableSourceRow` / `SortableListRow` via `@dnd-kit/sortable` | System list "All Beats" (`kind='system'`) excluded from sortable. Track→list droppable id renamed `list-drop:N` to avoid colliding with sortable id `list:N`. |
+| Whole-row drag handle | `components/TrackRow.tsx` | dnd-kit `{listeners, attributes}` moved from cover wrapper to row root. PointerSensor activation distance 5px prevents accidental drags on click/dblclick. |
+| Drop-to-create-track | `lib/create-track-from-file.ts` + `routes/TrackListPanel.tsx` drop zone | Drop `.wav`/`.mp3` anywhere on library → one track per file with smart Source path match (file under Source root). attach failure rolls back the orphan track. Always-`preventDefault` on `dragover` (lesson reinforced from v0.0.13.2). |
+| Single DndContext, multi-type routing | `App.tsx` `onDragEnd` switches on id prefix | `track:` / `source:` / `list:` prefixes route to add-to-list / source-reorder / list-reorder respectively. Avoids nested DndContexts. |
+
 ## What NOT to change without reading context first
 
 - `migrations/001_init.sql` — never modify after applied; add `002_*.sql` and forward.

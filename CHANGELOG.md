@@ -4,6 +4,60 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.14] - 2026-05-17 — Drag-and-Trash
+
+### Added
+
+- **Trash** (soft-delete): right-click → Delete now moves a track to
+  trash instead of hard-deleting. New TRASH section in the sidebar
+  with live count; new `/trash` view lists trashed tracks with
+  per-row **Restore** and **Delete forever** actions. List membership
+  (`list_track` rows) is preserved across delete/restore.
+- **Sidebar reorder**: drag Sources within SOURCES, or Lists within
+  LISTS, to reorder. Persisted via `POST /api/sources/reorder` and
+  `POST /api/lists/reorder` bulk endpoints (single transaction).
+  System list "All Beats" is excluded from sortable.
+- **Whole-row drag handle**: dragging anywhere on a track row now
+  starts the list-membership drag (was previously only the cover
+  thumbnail). Click and double-click still work via PointerSensor
+  activation distance (5 px).
+- **Drop audio files on main view** to create new tracks: drop one
+  or more `.wav` / `.mp3` files anywhere in the library section →
+  auto-creates one track per file, attaches the audio with the
+  matching role (`audio_tagged_wav` / `audio_tagged_mp3`), and
+  fires-and-forgets the existing auto-analyze hook. Smart Source
+  match: picks the Source whose `root_path` is a prefix of the
+  dropped file's absolute path, falling through to the existing
+  OutOfSourceDialog when the file is outside all Sources.
+
+### Changed
+
+- `DELETE /api/tracks/{id}` now soft-deletes (sets `deleted_at`).
+  Existing callers see no contract change. New `?purge=true` query
+  param triggers a true hard delete via `purge_track()`.
+- `get_track()` still returns trashed tracks (so the editor can route
+  to a trashed id and show a banner later); `list_tracks()` and
+  `tracks_in_list()` filter them out by default.
+- Source/List Pydantic models surface `position` as writable;
+  pre-existing single-row PUT still works.
+
+### Migration
+
+- Migration `008_track_trash.sql` adds `track.deleted_at TEXT NULL`
+  with an index. Idempotent — re-running is a no-op.
+
+### Notes
+
+- dnd-kit nested-context avoidance: a single `<DndContext>` (in
+  `App.tsx`) hosts all drag types; `onDragEnd` routes by id prefix
+  (`track:` / `source:` / `list:`). Track-to-list drop target was
+  renamed to `list-drop:N` to avoid colliding with the sortable
+  `list:N` reorder id.
+- Always-`preventDefault` lesson from v0.0.13.2 re-applied to the
+  new main-view drop zone.
+- 29 smoke assertions (+3 new), 3-run stable. 213 sidecar pytest,
+  204 vitest.
+
 ## [0.0.13.2] - 2026-05-17
 
 ### Fixed
