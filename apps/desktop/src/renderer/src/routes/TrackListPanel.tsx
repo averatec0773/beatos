@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+
+import { createTracksFromFiles } from "@/lib/create-track-from-file";
 
 import { useTrackStore } from "@/stores/tracks";
 import { useSearchStore } from "@/stores/search";
@@ -45,6 +47,34 @@ export function TrackListPanel(): React.JSX.Element {
     }
   }, [visible.length, current, select, visible]);
 
+  const [dropping, setDropping] = useState(false);
+
+  async function onSectionDrop(e: React.DragEvent<HTMLElement>): Promise<void> {
+    e.preventDefault();
+    setDropping(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+    const result = await createTracksFromFiles(files);
+    if (result.errors.length > 0) {
+      alert(`Issues:\n${result.errors.join("\n")}`);
+    }
+    if (result.created > 0 || result.skipped > 0) {
+      console.info(`[drop-create] created ${result.created}, skipped ${result.skipped}`);
+    }
+  }
+
+  function onSectionDragOver(e: React.DragEvent<HTMLElement>): void {
+    // Always preventDefault — gating on types.includes("Files") was unreliable (v0.0.13.2 lesson)
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    if (!dropping) setDropping(true);
+  }
+
+  function onSectionDragLeave(e: React.DragEvent<HTMLElement>): void {
+    // Use relatedTarget check to avoid flicker from child elements
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false);
+  }
+
   async function onAddTrack(): Promise<void> {
     // Eager creation: POST the row immediately so the editor has a real
     // track id to attach assets against. ESC/Cancel leaves an 'Untitled'
@@ -70,7 +100,25 @@ export function TrackListPanel(): React.JSX.Element {
     }
     return (
       <>
-        <section className="flex-1 flex flex-col">{emptyEl}</section>
+        <section
+          className="flex-1 flex flex-col relative"
+          onDragOver={onSectionDragOver}
+          onDragLeave={onSectionDragLeave}
+          onDrop={onSectionDrop}
+          data-library-drop-target
+        >
+          {dropping && (
+            <div
+              data-drop-overlay
+              className="absolute inset-0 z-50 bg-accent/10 border-2 border-accent border-dashed pointer-events-none flex items-center justify-center"
+            >
+              <span className="text-accent text-base font-medium">
+                Drop audio files (.wav or .mp3) to create new tracks
+              </span>
+            </div>
+          )}
+          {emptyEl}
+        </section>
         <TrackDetailPanel />
       </>
     );
@@ -78,7 +126,23 @@ export function TrackListPanel(): React.JSX.Element {
 
   return (
     <>
-      <section className="flex-1 flex flex-col overflow-hidden">
+      <section
+        className="flex-1 flex flex-col overflow-hidden relative"
+        onDragOver={onSectionDragOver}
+        onDragLeave={onSectionDragLeave}
+        onDrop={onSectionDrop}
+        data-library-drop-target
+      >
+        {dropping && (
+          <div
+            data-drop-overlay
+            className="absolute inset-0 z-50 bg-accent/10 border-2 border-accent border-dashed pointer-events-none flex items-center justify-center"
+          >
+            <span className="text-accent text-base font-medium">
+              Drop audio files (.wav or .mp3) to create new tracks
+            </span>
+          </div>
+        )}
         <header className="px-4 py-3 border-b border-border-subtle flex items-center gap-3">
           <button
             type="button"
