@@ -45,6 +45,13 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
 
   return (
     <div
+      draggable={asset != null && !asset.missing}
+      onDragStart={(e) => {
+        if (!asset || asset.missing) return;
+        e.preventDefault();
+        window.beatos.startDragFile(asset.abs_path);
+      }}
+      data-cover-drag-source
       data-cover-dropzone
       className="relative w-[200px] h-[200px] bg-bg-elevated border border-border-subtle rounded-md overflow-hidden group"
     >

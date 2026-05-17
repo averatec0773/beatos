@@ -13,6 +13,7 @@ export const IPC_CHANNELS = {
   FS_COPY_INTO_SOURCE: "fs:copy-into-source",
   FS_MOVE_INTO_SOURCE: "fs:move-into-source",
   SIDECAR_CRASHED: "sidecar-crashed",
+  DRAG_OUT_FILE: "drag-out-file",
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

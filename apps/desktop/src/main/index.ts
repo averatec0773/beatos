@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, protocol, shell } from "electron";
 import { join, dirname, basename } from "node:path";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, promises as fsPromises } from "node:fs";
 import { spawn, ChildProcess } from "node:child_process";
@@ -212,6 +212,35 @@ app.whenReady().then(async () => {
   ipcMain.handle(IPC_CHANNELS.GET_API_BASE, () => {
     if (apiPort == null) throw new Error("API not ready");
     return `http://127.0.0.1:${apiPort}`;
+  });
+
+  ipcMain.on(IPC_CHANNELS.DRAG_OUT_FILE, (event, payload: { absPath: string }) => {
+    const p = payload?.absPath;
+    if (typeof p !== "string") {
+      console.warn("[drag-out] non-string path");
+      return;
+    }
+    const isAbsolute = process.platform === "win32"
+      ? /^[a-zA-Z]:[\\\/]/.test(p)
+      : p.startsWith("/");
+    if (!isAbsolute || p.includes("..")) {
+      console.warn("[drag-out] rejected unsafe path:", p);
+      return;
+    }
+    if (!existsSync(p)) {
+      console.warn("[drag-out] file missing:", p);
+      return;
+    }
+    let icon;
+    try {
+      icon = nativeImage.createFromPath(p).resize({ width: 64 });
+      if (icon.isEmpty()) {
+        icon = nativeImage.createEmpty();
+      }
+    } catch {
+      icon = nativeImage.createEmpty();
+    }
+    event.sender.startDrag({ file: p, icon });
   });
 
   ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_FOLDER, async () => {
