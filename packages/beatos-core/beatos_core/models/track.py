@@ -12,14 +12,14 @@ class Track(BaseModel):
     title: str
     bpm: Optional[int] = None
     key_signature: Optional[str] = None
-    genre: Optional[str] = None
-    mood: Optional[str] = None
+    genre: Optional[list[str]] = None
+    mood: Optional[list[str]] = None
     tags: Optional[list[str]] = None
     description: Optional[str] = Field(default=None, description="User-authored — sacred.")
     description_draft: Optional[str] = Field(default=None, description="AI-generated draft.")
     license_type: str = "lease_basic"
     price: Optional[float] = None
-    producer: Optional[str] = None
+    producer: Optional[list[str]] = None
     cover_asset_id: Optional[int] = Field(
         default=None,
         description="Id of the cover asset (asset.role='cover'); NULL if none.",
@@ -51,10 +51,10 @@ class TrackUpdate(BaseModel):
     title: Optional[str] = None
     bpm: Optional[int] = None
     key_signature: Optional[str] = None
-    genre: Optional[str] = None
-    mood: Optional[str] = None
+    genre: Optional[list[str]] = None
+    mood: Optional[list[str]] = None
     tags: Optional[list[str]] = None
     description: Optional[str] = None
     license_type: Optional[str] = None
     price: Optional[float] = None
-    producer: Optional[str] = None
+    producer: Optional[list[str]] = None

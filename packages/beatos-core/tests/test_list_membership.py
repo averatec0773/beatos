@@ -114,8 +114,8 @@ async def test_tracks_in_list_filter_by_producer():
     t1 = await create_track("T1")
     t2 = await create_track("T2")
     t3 = await create_track("T3")
-    await update_track(t1.id, {"producer": "Alice"})
-    await update_track(t2.id, {"producer": "Bob"})
+    await update_track(t1.id, {"producer": ["Alice"]})
+    await update_track(t2.id, {"producer": ["Bob"]})
     # t3 has no producer
     await add_track_to_list(t1.id, lst.id)
     await add_track_to_list(t2.id, lst.id)

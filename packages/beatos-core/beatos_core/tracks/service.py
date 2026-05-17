@@ -37,15 +37,27 @@ SORTABLE_FIELDS = frozenset({
 SORT_DIRS = frozenset({"asc", "desc"})
 DISTINCT_FIELDS = frozenset({"producer", "genre", "mood", "key_signature"})
 
+# Fields stored as JSON arrays in the DB.
+MULTI_VALUE_FIELDS = frozenset({"producer", "genre", "mood"})
+
 
 def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
 
 
 def _serialize(value: Any, field: str) -> Any:
+    if field in MULTI_VALUE_FIELDS and isinstance(value, list):
+        return json.dumps(value)
     if field == "tags" and value is not None:
         return json.dumps(value)
     return value
+
+
+def _sort_expr(sort_by: str) -> str:
+    """Return the SQL expression used in ORDER BY for the given sort key."""
+    if sort_by in MULTI_VALUE_FIELDS:
+        return f"json_extract(track.{sort_by}, '$[0]')"
+    return sort_by
 
 
 _SELECT_COLS = (
@@ -88,6 +100,19 @@ def _has_audio_subquery(prefix: str = "track.") -> str:
     return _HAS_AUDIO_SUBQUERY_TEMPLATE.format(prefix=prefix)
 
 
+def _parse_json_list(raw: Any) -> Optional[list[str]]:
+    """Parse a JSON-array TEXT column into a list, or None when NULL."""
+    if raw is None:
+        return None
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, list):
+            return parsed
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None
+
+
 def _deserialize(row: tuple) -> Track:
     # Row layout (0-based):
     # 0:id, 1:title, 2:bpm, 3:key_signature, 4:genre, 5:mood,
@@ -100,14 +125,14 @@ def _deserialize(row: tuple) -> Track:
         title=row[1],
         bpm=row[2],
         key_signature=row[3],
-        genre=row[4],
-        mood=row[5],
+        genre=_parse_json_list(row[4]),
+        mood=_parse_json_list(row[5]),
         tags=tags,
         description=row[7],
         description_draft=row[8],
         license_type=row[9],
         price=row[10],
-        producer=row[11],
+        producer=_parse_json_list(row[11]),
         created_at=_dt.datetime.fromisoformat(row[12]),
         updated_at=_dt.datetime.fromisoformat(row[13]),
         cover_asset_id=row[14] if len(row) > 14 else None,
@@ -151,7 +176,13 @@ def _build_where(
     ]:
         if values:
             placeholders = ", ".join("?" for _ in values)
-            clauses.append(f"{field} IN ({placeholders})")
+            if field in MULTI_VALUE_FIELDS:
+                clauses.append(
+                    f"EXISTS (SELECT 1 FROM json_each(track.{field}) je "
+                    f"WHERE je.value IN ({placeholders}))"
+                )
+            else:
+                clauses.append(f"{field} IN ({placeholders})")
             params.extend(values)
     if bpm_min is not None:
         clauses.append("bpm >= ?")
@@ -195,11 +226,12 @@ async def list_tracks(
         producers=producers, genres=genres, moods=moods, keys=keys,
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
     )
+    sort_expr = _sort_expr(sort_by)
     sql = (
         f"SELECT {_SELECT_COLS}, {_cover_subquery()}, {_has_audio_subquery()} "
         f"FROM track "
         + (f"WHERE {where} " if where else "")
-        + f"ORDER BY {sort_by} {sort_dir.upper()}, id ASC"
+        + f"ORDER BY {sort_expr} {sort_dir.upper()}, id ASC"
     )
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
@@ -213,9 +245,14 @@ async def list_distinct_values(field: str) -> list[str]:
         raise ValueError(f"field must be one of {sorted(DISTINCT_FIELDS)}; got {field!r}")
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
-        async with conn.execute(
-            f"SELECT DISTINCT {field} FROM track WHERE {field} IS NOT NULL ORDER BY {field}"
-        ) as cur:
+        if field in MULTI_VALUE_FIELDS:
+            sql = (
+                f"SELECT DISTINCT je.value FROM track, json_each(track.{field}) je "
+                f"WHERE track.{field} IS NOT NULL ORDER BY je.value"
+            )
+        else:
+            sql = f"SELECT DISTINCT {field} FROM track WHERE {field} IS NOT NULL ORDER BY {field}"
+        async with conn.execute(sql) as cur:
             rows = await cur.fetchall()
     return [r[0] for r in rows]
 

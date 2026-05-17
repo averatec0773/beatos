@@ -85,9 +85,9 @@ async def test_list_tracks_filter_producers():
     a = await create_track("A")
     b = await create_track("B")
     c = await create_track("C")
-    await update_track(a.id, {"producer": "Alice"})
-    await update_track(b.id, {"producer": "Bob"})
-    await update_track(c.id, {"producer": "Charlie"})
+    await update_track(a.id, {"producer": ["Alice"]})
+    await update_track(b.id, {"producer": ["Bob"]})
+    await update_track(c.id, {"producer": ["Charlie"]})
 
     rows = await list_tracks(producers=["Alice", "Bob"])
     titles = {r.title for r in rows}
@@ -98,8 +98,8 @@ async def test_list_tracks_filter_producers():
 async def test_list_tracks_filter_producers_or_within_field():
     a = await create_track("A")
     b = await create_track("B")
-    await update_track(a.id, {"producer": "Alice"})
-    await update_track(b.id, {"producer": "Bob"})
+    await update_track(a.id, {"producer": ["Alice"]})
+    await update_track(b.id, {"producer": ["Bob"]})
 
     rows = await list_tracks(producers=["Alice", "Bob"])
     assert len(rows) == 2
@@ -112,9 +112,9 @@ async def test_list_tracks_filter_producer_and_genre():
     a = await create_track("A")
     b = await create_track("B")
     c = await create_track("C")
-    await update_track(a.id, {"producer": "Alice", "genre": "hip-hop"})
-    await update_track(b.id, {"producer": "Alice", "genre": "lo-fi"})
-    await update_track(c.id, {"producer": "Bob", "genre": "hip-hop"})
+    await update_track(a.id, {"producer": ["Alice"], "genre": ["hip-hop"]})
+    await update_track(b.id, {"producer": ["Alice"], "genre": ["lo-fi"]})
+    await update_track(c.id, {"producer": ["Bob"], "genre": ["hip-hop"]})
 
     rows = await list_tracks(producers=["Alice"], genres=["hip-hop"])
     assert len(rows) == 1
@@ -180,9 +180,9 @@ async def test_distinct_values_producer():
     t1 = await create_track("T1")
     t2 = await create_track("T2")
     t3 = await create_track("T3")
-    await update_track(t1.id, {"producer": "x"})
-    await update_track(t2.id, {"producer": "y"})
-    await update_track(t3.id, {"producer": "x"})
+    await update_track(t1.id, {"producer": ["x"]})
+    await update_track(t2.id, {"producer": ["y"]})
+    await update_track(t3.id, {"producer": ["x"]})
 
     vals = await list_distinct_values("producer")
     assert vals == ["x", "y"]
@@ -192,8 +192,8 @@ async def test_distinct_values_producer():
 async def test_distinct_values_genre():
     t1 = await create_track("T1")
     t2 = await create_track("T2")
-    await update_track(t1.id, {"genre": "hip-hop"})
-    await update_track(t2.id, {"genre": "lo-fi"})
+    await update_track(t1.id, {"genre": ["hip-hop"]})
+    await update_track(t2.id, {"genre": ["lo-fi"]})
 
     vals = await list_distinct_values("genre")
     assert vals == ["hip-hop", "lo-fi"]
@@ -203,7 +203,7 @@ async def test_distinct_values_genre():
 async def test_distinct_values_excludes_null():
     t1 = await create_track("T1")
     t2 = await create_track("T2")
-    await update_track(t1.id, {"producer": "Alice"})
+    await update_track(t1.id, {"producer": ["Alice"]})
     # t2 has no producer set
 
     vals = await list_distinct_values("producer")

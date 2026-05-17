@@ -15,7 +15,7 @@ from beatos_core.tracks.service import _SELECT_COLS as _TRACK_SELECT_COLS
 from beatos_core.tracks.service import _cover_subquery as _track_cover_subquery
 from beatos_core.tracks.service import _has_audio_subquery as _track_has_audio_subquery
 from beatos_core.tracks.service import _deserialize as _track_from_row
-from beatos_core.tracks.service import _build_where, SORTABLE_FIELDS, SORT_DIRS
+from beatos_core.tracks.service import _build_where, SORTABLE_FIELDS, SORT_DIRS, MULTI_VALUE_FIELDS
 from beatos_core.lists.service import _SELECT_COLS as _LIST_SELECT_COLS
 from beatos_core.lists.service import _row_to_list
 
@@ -89,6 +89,8 @@ async def tracks_in_list(
 
     if sort_by is None:
         order_clause = "track_list.position ASC, track.id ASC"
+    elif sort_by in MULTI_VALUE_FIELDS:
+        order_clause = f"json_extract(track.{sort_by}, '$[0]') {sort_dir.upper()}, track.id ASC"
     else:
         order_clause = f"track.{sort_by} {sort_dir.upper()}, track.id ASC"
 

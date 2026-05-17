@@ -229,9 +229,9 @@ def test_list_tracks_filter_by_producers(tmp_path):
     t1 = client.post("/api/tracks", json={"title": "T1"}).json()
     t2 = client.post("/api/tracks", json={"title": "T2"}).json()
     t3 = client.post("/api/tracks", json={"title": "T3"}).json()
-    client.put(f"/api/tracks/{t1['id']}", json={"producer": "Alice"})
-    client.put(f"/api/tracks/{t2['id']}", json={"producer": "Bob"})
-    client.put(f"/api/tracks/{t3['id']}", json={"producer": "Charlie"})
+    client.put(f"/api/tracks/{t1['id']}", json={"producer": ["Alice"]})
+    client.put(f"/api/tracks/{t2['id']}", json={"producer": ["Bob"]})
+    client.put(f"/api/tracks/{t3['id']}", json={"producer": ["Charlie"]})
 
     res = client.get("/api/tracks?producers=Alice&producers=Bob")
     assert res.status_code == 200
@@ -256,8 +256,8 @@ def test_list_tracks_in_list_with_filter(tmp_path):
     client = TestClient(create_app())
     t1 = client.post("/api/tracks", json={"title": "T1"}).json()
     t2 = client.post("/api/tracks", json={"title": "T2"}).json()
-    client.put(f"/api/tracks/{t1['id']}", json={"producer": "Alice"})
-    client.put(f"/api/tracks/{t2['id']}", json={"producer": "Bob"})
+    client.put(f"/api/tracks/{t1['id']}", json={"producer": ["Alice"]})
+    client.put(f"/api/tracks/{t2['id']}", json={"producer": ["Bob"]})
     list_id = client.post("/api/lists", json={"name": "MyList"}).json()["id"]
     client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t1["id"]})
     client.post(f"/api/lists/{list_id}/tracks", json={"track_id": t2["id"]})
@@ -272,8 +272,8 @@ def test_distinct_endpoint_producer(tmp_path):
     client = TestClient(create_app())
     t1 = client.post("/api/tracks", json={"title": "T1"}).json()
     t2 = client.post("/api/tracks", json={"title": "T2"}).json()
-    client.put(f"/api/tracks/{t1['id']}", json={"producer": "Alice"})
-    client.put(f"/api/tracks/{t2['id']}", json={"producer": "Bob"})
+    client.put(f"/api/tracks/{t1['id']}", json={"producer": ["Alice"]})
+    client.put(f"/api/tracks/{t2['id']}", json={"producer": ["Bob"]})
 
     res = client.get("/api/tracks/distinct/producer")
     assert res.status_code == 200
@@ -290,7 +290,7 @@ def test_distinct_endpoint_invalid_field_returns_400(tmp_path):
 def test_distinct_endpoint_genre(tmp_path):
     client = TestClient(create_app())
     t1 = client.post("/api/tracks", json={"title": "T1"}).json()
-    client.put(f"/api/tracks/{t1['id']}", json={"genre": "hip-hop"})
+    client.put(f"/api/tracks/{t1['id']}", json={"genre": ["hip-hop"]})
 
     res = client.get("/api/tracks/distinct/genre")
     assert res.status_code == 200
@@ -355,3 +355,17 @@ def test_list_id_explicit_sort_by_title(tmp_path):
     res = client.get(f"/api/tracks?list_id={list_id}&sort_by=title&sort_dir=asc")
     assert res.status_code == 200
     assert [t["title"] for t in res.json()] == ["Apple", "Mango", "Zebra"]
+
+
+def test_put_producer_list_round_trips(tmp_path):
+    """PUT /api/tracks/{id} with producer as list persists and returns correctly."""
+    client = TestClient(create_app())
+    track_id = client.post("/api/tracks", json={"title": "Multi"}).json()["id"]
+
+    res = client.put(f"/api/tracks/{track_id}", json={"producer": ["a", "b"]})
+    assert res.status_code == 200
+    assert res.json()["producer"] == ["a", "b"]
+
+    get_res = client.get(f"/api/tracks/{track_id}")
+    assert get_res.status_code == 200
+    assert get_res.json()["producer"] == ["a", "b"]

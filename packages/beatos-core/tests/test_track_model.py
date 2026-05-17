@@ -12,10 +12,10 @@ def test_track_model_supports_producer_and_has_audio():
         title="x",
         created_at=_dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc),
         updated_at=_dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc),
-        producer="averatec0773",
+        producer=["averatec0773"],
         has_audio=True,
     )
-    assert t.producer == "averatec0773"
+    assert t.producer == ["averatec0773"]
     assert t.has_audio is True
 
 
@@ -31,8 +31,8 @@ def test_track_model_producer_defaults_none():
 
 
 def test_track_update_accepts_producer():
-    u = TrackUpdate(producer="someone")
-    assert u.producer == "someone"
+    u = TrackUpdate(producer=["someone"])
+    assert u.producer == ["someone"]
 
 
 def test_track_update_rejects_has_audio():

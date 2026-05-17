@@ -128,8 +128,8 @@ async def test_create_track_returns_producer_none_by_default():
 @pytest.mark.asyncio
 async def test_update_track_can_set_producer():
     t = await create_track("New")
-    updated = await update_track(t.id, {"producer": "averatec0773"})
-    assert updated.producer == "averatec0773"
+    updated = await update_track(t.id, {"producer": ["averatec0773"]})
+    assert updated.producer == ["averatec0773"]
 
 
 @pytest.mark.asyncio
