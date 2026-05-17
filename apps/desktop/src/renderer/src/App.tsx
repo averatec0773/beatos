@@ -79,9 +79,9 @@ function GlobalDialogs(): React.JSX.Element | null {
 export default function App(): React.JSX.Element {
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
 
-  // Distance-based activation. Drag only fires when listeners are mounted
-  // on a dedicated drag handle (the cover thumbnail in TrackRow), so the
-  // row body's clicks / double-clicks are unaffected.
+  // Distance-based activation prevents click-to-select from triggering a drag.
+  // Listeners are mounted on the whole row root in TrackRow, so a 5px move
+  // is required before dnd-kit activates — row clicks/double-clicks are unaffected.
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },

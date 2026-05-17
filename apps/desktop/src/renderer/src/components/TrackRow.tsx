@@ -37,6 +37,9 @@ export function TrackRow({
 
   return (
     <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       role="row"
       data-track-id={track.id}
       tabIndex={0}
@@ -45,7 +48,7 @@ export function TrackRow({
       onKeyDown={(e) => {
         if (e.key === "Enter") onOpen();
       }}
-      className={`h-16 px-4 flex items-center cursor-pointer relative gap-3
+      className={`h-16 px-4 flex items-center cursor-grab active:cursor-grabbing cursor-pointer relative gap-3
         ${isDragging ? "opacity-50" : ""}
         ${highlighted ? "bg-bg-row-selected text-text-primary border-l-2 border-accent" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}
     >
@@ -53,11 +56,7 @@ export function TrackRow({
         <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-accent" />
       )}
       <div
-        ref={setNodeRef}
-        {...listeners}
-        {...attributes}
-        className="group relative w-12 h-12 flex-shrink-0 cursor-grab active:cursor-grabbing"
-        aria-label="Drag track"
+        className="group relative w-12 h-12 flex-shrink-0"
       >
         <CoverImage assetId={coverAssetId} size={48} />
         <TrackRowPlayButton trackId={track.id} hasAudio={track.has_audio ?? false} />

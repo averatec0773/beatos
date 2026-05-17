@@ -213,38 +213,26 @@ try {
       console.log("smoke: cover img render PASS");
     }
 
-    // Structural: drag handle should wrap just the cover, NOT the row body.
-    // Bug class: if `{...listeners}` slips back onto the row, row clicks
-    // (select, double-click) break. Detected by comparing widths: handle
-    // should be ~40px (cover thumbnail), row should be much wider.
-    const row1Handle = row1.locator('[aria-label="Drag track"]');
-    if ((await row1Handle.count()) === 0) {
+    // Structural (Phase 4): whole row is the dnd-kit drag handle. Verify the row
+    // root exists and is visible — drag starts anywhere on the row.
+    if ((await row1.count()) === 0) {
       failures.push("UI: drag handle for 'Smoke1' not found after seeding");
     } else {
-      const handleBox = await row1Handle.boundingBox();
-      const rowBox = await row1.boundingBox();
-      if (handleBox && rowBox && handleBox.width > rowBox.width * 0.5) {
-        failures.push(
-          `UI: drag handle width (${handleBox.width}) >50% of row (${rowBox.width}) — ` +
-          `listeners may have slipped onto row body, breaking row clicks`
-        );
-      } else {
-        console.log("smoke: drag handle scoping PASS");
-      }
+      console.log("smoke: drag handle scoping PASS");
     }
 
-    // UI drag: one track → SmokeList via dnd-kit.
+    // UI drag: one track → SmokeList via dnd-kit. Start from row centre (whole row is handle).
     const listTarget = window.locator("text=SmokeList").first();
-    if ((await row1Handle.count()) === 0) {
+    if ((await row1.count()) === 0) {
       // already reported above
-    } else if (!(await row1Handle.isVisible())) {
+    } else if (!(await row1.isVisible())) {
       failures.push("UI: drag handle exists in DOM but not visible (hidden/zero-size)");
     } else if ((await listTarget.count()) === 0) {
       failures.push("UI: sidebar 'SmokeList' not found after seeding");
     } else {
       // Manual mouse drive — dragTo skips intermediate positions and dnd-kit's
       // distance constraint never trips. We move in explicit steps.
-      const sourceBox = await row1Handle.boundingBox();
+      const sourceBox = await row1.boundingBox();
       const targetBox = await listTarget.boundingBox();
       if (!sourceBox || !targetBox) {
         failures.push("UI: could not compute bounding boxes for drag");
