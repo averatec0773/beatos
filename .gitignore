@@ -2,9 +2,8 @@
 TODO.md
 
 # AI harness, project memory, and planning/thinking documents.
-# .claude/ and .agents/ are tracked (shared harness — agents/skills is a
-# symlink to claude/skills, single source of truth). Personal Claude
-# overrides stay local via settings.local.json.
+# .claude/ is tracked (shared harness). Personal Claude overrides stay
+# local via settings.local.json.
 .claude/settings.local.json
 /.codex/
 /memory/
