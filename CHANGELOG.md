@@ -4,6 +4,31 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.20] - 2026-05-18 — Stable MCP Framework
+
+### Architecture
+- SQLite WAL mode enabled in `run_migrations` so BeatOS HTTP sidecar and `beatos-mcp` can share the DB without lock contention.
+- 2PC token skeleton landed: `migrations/009_tokens.sql` + `beatos_mcp.two_phase` (create/verify/consume). Unblocks v0.0.21+ write tools.
+- `beatos-mcp` connections open with `PRAGMA query_only=1` as defense-in-depth.
+
+### Added
+- 6 MCP read tools: `ping`, `list_tracks(filter?)`, `get_track`, `list_sources`, `list_lists`, `list_distinct_values`. Filters mirror the HTTP `/api/tracks` query params; `list_tracks` paginates with `{items,total,returned,limit,offset,hint?}` (default 50, max 500).
+- `BEATOS_DB_PATH` env-var discovery for the MCP server, with actionable errors if unset or pointing at a missing file.
+- Settings → "AI Integration" panel (collapsed by default): status + DB path + auto-filled Claude Desktop config JSON + Copy buttons + Test connection button that spawns the MCP server and reports tool count.
+- `packages/beatos-mcp/README.md` — usage + Claude Desktop config example.
+
+### Changed
+- `beatos-mcp` `__version__` bumped from `0.0.1` → `0.0.20`. `ping` now returns the actual package version; `test_ping.py` reads it dynamically.
+- MCP logs land at `~/Library/Logs/beatos/mcp.jsonl` (mac) / `%APPDATA%\beatos\logs\mcp.jsonl` (win) via structlog. stdout is reserved for JSON-RPC protocol.
+- Root `pyproject.toml` gains `addopts = "--import-mode=importlib"` to fix `uv run pytest` collection failure caused by two `test_db.py` files in different packages.
+
+### Migration
+- `009_tokens.sql` adds a new table; existing DBs auto-apply on next BeatOS launch. No user-visible change.
+
+### Notes
+- Read-only tools only in this version. Write tools (e.g. `import_track`) follow in v0.0.21 on the 2PC skeleton.
+- `search_tracks` is intentionally deferred to v0.0.23 (RAG) — `list_tracks` covers ~80% of read intents via structured filters.
+
 ## [0.0.19.1] - 2026-05-18 — post-refactor audit + cleanup
 
 Two parallel sub-agents reviewed the v0.0.17–v0.0.19 refactor pass. One real bug + three loose ends found and fixed.
