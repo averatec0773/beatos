@@ -10,15 +10,24 @@ Pending and future work. Past versions: see [CHANGELOG.md](CHANGELOG.md). Code c
 
 See [CHANGELOG.md](CHANGELOG.md#0015---2026-05-17--auto-save-smoke-housekeeping-producer-management).
 
-### v0.0.16+ — Refactor pass (deferred)
+### v0.0.16 — SHIPPED 2026-05-18
+
+Tone.js audio engine migration + layout fixes. See [CHANGELOG.md](CHANGELOG.md#0016---2026-05-18--tonejs-audio-engine--layout-fixes).
+
+### v0.0.17+ — Refactor pass (deferred)
 
 Each is its own version to limit blast radius. No bundling with feature work.
 
 - **TrackEditor split** — `routes/TrackEditor.tsx` (~470 lines after auto-save lands) → `useTrackEditorState` hook + `<TrackEditorForm>` component + thin route container.
 - **SidebarPanel split + rename** — `routes/SidebarPanel.tsx` (~381 lines) → `components/Sidebar/{SourcesSection,ListsSection,TrashSection}.tsx`. Move out of `routes/` (it's a layout component, not a route).
-- **smoke.mjs split** — `apps/desktop/scripts/smoke.mjs` (~1170 lines) → `scripts/smoke/{runner,library,player,editor,trash,sidebar}.mjs`. Preserve assertion order; runner orchestrates.
+- **smoke.mjs split** — `apps/desktop/scripts/smoke.mjs` (~1500 lines) → `scripts/smoke/{runner,library,player,editor,trash,sidebar}.mjs`. Preserve assertion order; runner orchestrates.
 
-### v0.0.17+ — Search upgrade (candidate)
+### Audio engine follow-ups (deferred from v0.0.16)
+
+- **`navigator.mediaDevices.ondevicechange`** handler for headphone plug/unplug — the RAF tick already catches outright AudioContext suspends, but a silent route change without state transition is invisible. Wire up `Tone.getContext().rawContext.addEventListener("statechange", ...)` for redundancy.
+- **`window.__beatos.engine()`** gating: currently always-on in production. Either gate behind `import.meta.env.DEV` (and update smoke to drive playback through the store instead) or document it as a stable debug surface.
+
+### v0.0.18+ — Search upgrade (candidate)
 
 - Smart query syntax: `bpm:>140 genre:trap producer:smoke`
 - `/api/tracks` already has filter primitives; need parser + chip↔query round-trip.

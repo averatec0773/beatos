@@ -4,6 +4,50 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.16] - 2026-05-18 — Tone.js audio engine + layout fixes
+
+### Architecture
+
+- **Audio playback migrated from HTML5 `<audio>` to Tone.js / Web Audio API.** New `apps/desktop/src/renderer/src/lib/audio-engine.ts` is a singleton wrapper around `Tone.Player` + `Tone.ToneAudioBuffer` with a byte-budgeted LRU buffer cache (256 MB), RAF-driven `timeupdate` + `ended` detection, and an event-emitter surface (`statuschange` / `timeupdate` / `durationchange` / `ended` / `error`). `usePlayerStore` delegates all transport control to the engine; module-level engine→store subscriptions replace the five-`useEffect` sync chain that previously lived in `BottomPlayerBar`.
+- **Why Tone.js, not raw Web Audio.** `Tone.Transport.bpm` becomes the canonical BPM knob (future MCP `playback.set_bpm`); `Player.playbackRate` / `loopStart` / `loopEnd` / effects chains all become one-liners. The HTML5 `<audio>` element's WAV decoder was rejecting DAW-default FLOAT-32 bounces and silently stalling on window-focus loss — Web Audio's `decodeAudioData` handles FLOAT-32 / 24-bit / WAVE_FORMAT_EXTENSIBLE natively, and `AudioContext` is the right abstraction for a beat-producer's needs going forward.
+
+### Added
+
+- **`audio-engine.ts`** — singleton Tone wrapper with byte-budgeted LRU cache (`BUFFER_CACHE_BUDGET_BYTES = 256 MB`, `bufferSizeBytes()` accounts for `numberOfChannels × length × 4`), AudioContext suspend detection inside the RAF tick (laptop sleep, output-device change → clean pause with captured position, never phantom drift), and a `clearListeners()` escape hatch for isolated unit tests. Public surface: `load(assetId)` / `play()` / `pause()` / `stop()` / `seek(s)` / `setVolume(v)` / `setMuted(b)` / `setForceMuted(b)` / `setBpm(b)` / `getCurrentPosition()` / `on(event, cb)`.
+- **`window.__beatos.engine()`** — snapshot of engine state (`status`, `duration`, `position`, `currentAssetId`, `bpm`) for smoke / DevTools introspection.
+- Smoke renderer-console capture: failures now print the last 20 `error` / `warning` lines from the renderer console.
+- Vitest suite `audio-engine.test.ts` covers default state, listener lifecycle, statuschange / durationchange emission, BPM round-trip, dispose-and-rebuild.
+
+### Changed
+
+- **`apps/desktop/src/main/index.ts`** — `BrowserWindow.webPreferences` gains `backgroundThrottling: false`. Chromium's default throttles renderer timers + audio decoding when the window loses focus; on macOS this surfaced as playback stalling whenever the user switched to a VS Code window on another monitor. BeatOS is an audio app, so always-on priority is correct.
+- **`apps/desktop/src/main/index.ts`** — `protocol.registerSchemesAsPrivileged` for `beatos-asset` gains `corsEnabled: true`. The renderer's origin is `file://`, which Chromium otherwise treats as cross-origin to custom schemes; without this, Tone.js / `decodeAudioData` `fetch()` calls fail with `net::ERR_FAILED` on a CORS preflight that never runs.
+- **`apps/desktop/src/renderer/index.html`** — CSP gains `worker-src 'self' blob:` (Tone v15 instantiates AudioWorklet processors from `URL.createObjectURL(new Blob(...))`; without the directive, `script-src 'self'` falls back to block them) and `connect-src beatos-asset:` (allows `fetch` to the custom protocol).
+- **`apps/desktop/src/main/asset-protocol.ts`** — `repairWavIfNeeded` simplified: dropped the FLOAT-32 → PCM-16 transcode path (~80 lines). Web Audio's `decodeAudioData` handles `fmt.format=3` natively, so we no longer rewrite samples. RIFF junk-chunk stripping (JUNK / cue / LIST / smpl / bext) and EXTENSIBLE → plain-format-code unwrap are still kept — Chromium's decoder remains picky about unusual chunk structure even via Web Audio.
+- **`apps/desktop/src/renderer/src/stores/player.ts`** — heavy rewrite. `loadEpoch` counter deleted (the engine's state machine subsumes the "force reload" trick from v0.0.15). `togglePlay` / `seek` / `next` / `prev` / `setPreferredRole` delegate to `audioEngine.{play,pause,seek,load}`. Module-level subscription (`audioEngine.on(...)`) wires `statuschange` / `timeupdate` / `durationchange` / `ended` → store, so tests can mock the engine without mounting `BottomPlayerBar`.
+- **`apps/desktop/src/renderer/src/components/BottomPlayerBar.tsx`** — removed the `<audio>` element and its five `useEffect` sync hooks (audio.src, play/pause, seek, volume, onError). A single `useEffect` now initializes forceMuted / volume / muted on the engine and subscribes to `error` for the decode-failure toast. Slider drag → `usePlayerStore.seek(v)` → `audioEngine.seek(v)`. Net: 148 lines deleted, 16 lines added.
+- **`apps/desktop/src/renderer/src/main.tsx`** — exposes `audioEngine` snapshot through `window.__beatos.engine()` alongside the existing store debuggers.
+
+### Fixed
+
+- **Spurious horizontal scrollbar + column drift in the library table** — v0.0.15's `min-width: max-content` on TableHeader / TrackRow / VirtualTrackList forced the table to its natural content width even when columns would have fit the viewport via `flex-1` shrink. Result: a perpetual horizontal scrollbar at the bottom of the section, with rows scrolled off-screen left. Changed all three to `min-width: min-content` — content shrinks to column minima by default (no scroll), and only overflows + scrolls when the user actually pins a column past the viewport.
+- **Playback stalls when the window loses focus** (cross-monitor switch to VS Code, command-tab, etc.) — caused by Chromium's `backgroundThrottling`, fixed via webPreferences as above.
+- **Track-switch cycle "A → empty track → A" left A unable to play** — v0.0.15 fixed this by bumping `loadEpoch` on recovery; v0.0.16 removes the workaround entirely. Engine reset on every `load()` is the new state-machine baseline; the audio-element wedged-state class is gone because there's no audio element.
+- **Smoke probe updated** — `document.querySelector("audio")` doesn't exist anymore. Smoke now reads `window.__beatos.engine()` for playback assertions; DAW-WAV regression and `BEATOS_REAL_AUDIO=<path>` both PASS against a real 208 s FLOAT-32 user export.
+
+### Removed
+
+- `loadEpoch` counter from `usePlayerStore` and the corresponding `BottomPlayerBar` audio-src `useEffect` dependency tuple — superseded by Tone-engine state machine.
+- FLOAT-32 → PCM-16 transcode in `asset-protocol.ts::repairWavIfNeeded` (`needsFloatTranscode` branch + sample loop, ~80 LOC). `decodeAudioData` handles it.
+- Two FLOAT-32-transcode unit tests in `asset-protocol.test.ts` (`transcodes IEEE FLOAT-32...` and `FLOAT-32 with JUNK + trailing chunks still transcodes correctly`) replaced by `passes a clean FLOAT-32 WAV through unchanged` + `FLOAT-32 with JUNK still preserves FLOAT formatCode in rebuild`.
+
+### Notes
+
+- **Bundle:** renderer JS grew from 1348 KB → 1976 KB raw (+628 KB; estimated ≤ 90 KB gzipped). Tone v15.1.22 is the cost. Acceptable for a local-first desktop app.
+- **Tests:** 233 vitest (227 + 6 new audio-engine) / smoke PASS including DAW-WAV and `BEATOS_REAL_AUDIO=<user-wav>`.
+- **Memory bound:** A worst-case 208 s × 44.1 kHz × 2 ch × FLOAT-32 buffer is ~73 MB. The 256 MB cache budget holds ~3 such buffers; smaller (typical 8-bar loops are < 5 MB) fits 50+.
+- **Known gap:** `navigator.mediaDevices.ondevicechange` (headphones plug / unplug) isn't yet handled explicitly. The RAF tick's `ctxState !== "running"` check catches outright suspends, but a silent route-change without state transition isn't surfaced. Deferred to a follow-up.
+
 ## [0.0.15] - 2026-05-18 — Auto-save, smoke housekeeping, producer management
 
 ### Added

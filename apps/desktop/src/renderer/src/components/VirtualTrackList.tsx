@@ -22,14 +22,18 @@ export function VirtualTrackList({ tracks, renderRow }: Props): React.JSX.Elemen
 
   return (
     <div ref={parentRef} className="flex-1 overflow-y-auto beatos-scroll">
-      {/* Inner uses min-width: max-content so rows can grow horizontally past
-          the container — selection highlight then extends to the full row
-          width instead of truncating at the viewport edge. Horizontal scroll
-          is owned by the SHARED wrapper around <TableHeader> + this list. */}
+      {/* Inner uses min-width: min-content (NOT max-content) — min-content
+          equals the smallest width where columns don't break (fixed widths +
+          flex-1 min-w). Header/row pin to this same value via flex-col
+          stretch, so they stay aligned. max-content forced natural content
+          width always-on, which surfaced a spurious horizontal scrollbar in
+          the default layout — min-content only scrolls when the user actually
+          widens columns past the viewport. Shared overflow-x-auto wrapper
+          (in TrackListPanel) syncs header + body scroll. */}
       <div
         style={{
           height: virtualizer.getTotalSize(),
-          minWidth: "max-content",
+          minWidth: "min-content",
           position: "relative",
         }}
       >

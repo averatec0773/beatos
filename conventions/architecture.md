@@ -91,7 +91,8 @@ packages/beatos-platforms/   ← v0.0.12 per-platform vocab maps
 | Handshake reader | `apps/desktop/electron/main.ts` | Polls handshake file (5s timeout), then creates `BrowserWindow`. |
 | Adapter registry | `packages/beatos-core/beatos_core/adapters/registry.py` | Maps platform name → adapter class. |
 | Audio analysis cache | `packages/beatos-core/beatos_core/audio_analysis/service.py` + migration `007` | librosa BPM+Key; keyed `(asset_id, sha256)` — once per content hash. |
-| Player store | `apps/desktop/src/renderer/src/stores/player.ts` | Zustand singleton managing the lone `<audio>`; transport + queue + role. |
+| Audio engine | `apps/desktop/src/renderer/src/lib/audio-engine.ts` | Tone.js singleton; `Tone.Player` + `ToneAudioBuffer` + byte-budgeted LRU cache (256 MB). RAF tick detects natural end + AudioContext suspend (sleep/wake) — no setTimeout-based scheduling. (v0.0.16) |
+| Player store | `apps/desktop/src/renderer/src/stores/player.ts` | Zustand singleton; delegates transport to `audioEngine`. Module-level `audioEngine.on(...)` subscriptions bridge engine events → store. No HTMLAudioElement. (v0.0.16) |
 | Role-priority resolver | `apps/desktop/src/renderer/src/lib/audio-resolve.ts` | Picks asset via `tagged_wav > untagged_wav > tagged_mp3 > untagged_mp3`. |
 | Filter chip bar | `apps/desktop/src/renderer/src/components/FilterChipBar.tsx` + `stores/track-query.ts` | Drives `/api/tracks` sort/filter; AND across fields, OR within. |
 
@@ -158,12 +159,14 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Capability | Location | Purpose |
 |---|---|---|
 | Role-priority resolver | `lib/audio-resolve.ts` | `tagged_wav > untagged_wav > tagged_mp3 > untagged_mp3`. |
-| `usePlayerStore` singleton | `stores/player.ts` | One `<audio>`; transport + queue + shuffle + repeat + role. |
-| Bottom player UI | `components/BottomPlayerBar.tsx` + `RoleSwitcher.tsx` + `TrackRowPlayButton` (in `TrackRow`) | Spotify-style bar; per-row button driven off `has_audio`. |
+| Audio engine | `lib/audio-engine.ts` (v0.0.16) | Tone.js singleton. Owns AudioContext, decode cache, RAF tick. `setBpm()` already in place for future MCP. |
+| `usePlayerStore` singleton | `stores/player.ts` | Zustand state mirror of the engine; transport + queue + shuffle + repeat + role. Engine events → store via module-level subscription. (v0.0.16: HTMLAudioElement removed.) |
+| Bottom player UI | `components/BottomPlayerBar.tsx` + `RoleSwitcher.tsx` + `TrackRowPlayButton` (in `TrackRow`) | Spotify-style bar; per-row button driven off `has_audio`. Only side-effect outside the engine: forceMuted / volume init + decode-error toast. |
 | Audio HTTP route | `packages/beatos-http/beatos_http/routes/assets.py` (`GET /api/assets/audio/{id}`) | `FileResponse` for native HTTP Range. |
-| `beatos-asset://audio/{id}` | `apps/desktop/src/main/asset-protocol.ts` | Mirrors `cover/{id}`; forwards Range header. |
+| `beatos-asset://audio/{id}` | `apps/desktop/src/main/asset-protocol.ts` | Cover + audio bytes. Registered with `corsEnabled: true` + `supportFetchAPI: true` so Tone's `fetch` → `decodeAudioData` succeeds across the file:// origin. WAV junk-chunk sanitize stays; FLOAT-32 transcode removed (decodeAudioData handles it). |
 | `Track.has_audio` derived | `tracks/service.py` `_has_audio_subquery` | Wired into `service.py`, `lists/membership.py`, source-filter route. |
-| CSP `media-src beatos-asset:` | `apps/desktop/src/renderer/index.html` | Required in prod CSP — dev CSP loosened, silently masked the gap. |
+| CSP — audio | `apps/desktop/src/renderer/index.html` | `media-src beatos-asset:` (legacy `<audio>` paths if any) + `connect-src beatos-asset:` (Tone fetch) + `worker-src 'self' blob:` (Tone AudioWorklet). Lost any of these → silent decode failure. |
+| BrowserWindow `backgroundThrottling: false` | `apps/desktop/src/main/index.ts` | Audio app — Chromium's default throttle on focus loss stalled playback when user tabbed to another window. (v0.0.16) |
 | Migration 005 `track.producer` | `migrations/005_track_producer.sql` | Per-track producer; player-bar subtitle `producer · BPM · Key`. |
 
 ### v0.0.10 — TrackEditor Refactor
@@ -243,8 +246,8 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | ChipMultiSelect `⋯` per option | `components/ChipMultiSelect.tsx` (`onRenameOption` / `onDeleteOption` props) | Hover-revealed manage button swaps the row for an inline rename input + Check / Trash / Cancel. Calls back to the parent — picker itself doesn't import API. Wired only for Producer in TrackEditor. |
 | Smoke 3-day artifact purge | `scripts/smoke.mjs` startup block | Regex-gated `^smoke-\d+\.(png\|jsonl)$`; mtime older than 3 days unlinked. Leaves `main.log` / `sidecar.jsonl` / other shapes alone. Best-effort (race-tolerant). |
 | Closable + resizable preview panel | `routes/TrackDetailPanel.tsx` + `stores/preview-panel.ts` + `components/TopBar.tsx` toggle | Left-edge hover resizer (`280..600px` clamp) + corner X close button + TopBar `PanelRightOpen/Close` toggle. Open/width persisted in sessionStorage. |
-| `loadEpoch` audio reset | `stores/player.ts` + `BottomPlayerBar.tsx` | Monotonic counter incremented on every `loadAndPlay()`. Audio-src `useEffect` depends on `[currentAssetId, loadEpoch]` so retrying the same asset after an `onError` actually re-runs `audio.src = …; audio.load()`. Without it the element stays wedged at 0:00 until the user switches format. |
-| Headless + muted test mode | `main/splash.ts::closeSplashAndShowMain` + `preload/index.ts::isAudioForceMuted` + `BottomPlayerBar.tsx` | `BEATOS_HEADLESS=1` skips `mainWin.show()`; `BEATOS_AUDIO_MUTED=1` exposes a preload flag the player reads to force `audio.muted = true`. Smoke / diagnose harnesses opt in by default; pass `SMOKE_SHOW=1` / `SMOKE_UNMUTED=1` to override. |
+| Tone.js engine reset on load | `lib/audio-engine.ts::load()` | Every `load(assetId)` disposes the previous `Tone.Player`, stops RAF, and runs through `loading → paused`. No `loadEpoch` workaround needed — the state machine self-recovers from any prior `error` (the v0.0.15 trick is gone). |
+| Headless + muted test mode | `main/splash.ts::closeSplashAndShowMain` + `preload/index.ts::isAudioForceMuted` + `BottomPlayerBar.tsx` | `BEATOS_HEADLESS=1` skips `mainWin.show()`; `BEATOS_AUDIO_MUTED=1` exposes a preload flag `BottomPlayerBar` passes to `audioEngine.setForceMuted(true)` on mount. Smoke / diagnose harnesses opt in by default; pass `SMOKE_SHOW=1` / `SMOKE_UNMUTED=1` to override. |
 | Sort-preserved switching | `stores/player.ts::loadAndPlay(targetStatus)` | `next()`/`prev()`/`setPreferredRole` pass `"preserve"` so a paused user stays paused after a track or WAV↔MP3 switch. `playFromQueue` keeps default `"playing"` (explicit play intent). |
 
 ## MCP surface (aspirational)

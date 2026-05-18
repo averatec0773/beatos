@@ -162,6 +162,15 @@ try {
   window.on("pageerror", (err) => {
     failures.push(`renderer pageerror: ${err.message}`);
   });
+  // Surface renderer console.error/warn lines so audio-engine failures show up
+  // in the smoke output without manual DevTools spelunking.
+  const rendererConsole = [];
+  window.on("console", (msg) => {
+    const type = msg.type();
+    if (type === "error" || type === "warning") {
+      rendererConsole.push(`[${type}] ${msg.text()}`);
+    }
+  });
   await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
   // Wait until React has mounted something meaningful into #root.
   await window.waitForSelector("#root > *", { timeout: 5000 });
@@ -1221,27 +1230,18 @@ try {
         failures.push(`daw-wav: SmokeDaw row not visible. Visible rows: ${JSON.stringify(titles)}`);
       } else {
         await dawRow.locator("[data-row-play-button]").click();
-        await new Promise((r) => setTimeout(r, 1500));
-        const s = await window.evaluate(() => {
-          const a = document.querySelector("audio");
-          if (!a) return null;
-          return {
-            readyState: a.readyState,
-            duration: a.duration,
-            currentTime: a.currentTime,
-            error: a.error ? { code: a.error.code, message: a.error.message } : null,
-          };
-        });
-        if (!s) failures.push("daw-wav: no audio element");
-        else if (s.error)
-          failures.push(`daw-wav: error code=${s.error.code} message=${s.error.message}`);
+        await new Promise((r) => setTimeout(r, 2000));
+        const s = await window.evaluate(() => window.__beatos?.engine?.());
+        if (!s) failures.push("daw-wav: __beatos.engine() not available");
+        else if (s.status === "error")
+          failures.push(`daw-wav: engine status=error`);
         else if (!(s.duration > 0))
-          failures.push(`daw-wav: duration not > 0 (${s.duration}), readyState=${s.readyState}`);
-        else if (!(s.currentTime > 0))
-          failures.push(`daw-wav: currentTime did not advance (${s.currentTime})`);
+          failures.push(`daw-wav: duration not > 0 (${s.duration}), status=${s.status}`);
+        else if (!(s.position > 0))
+          failures.push(`daw-wav: position did not advance (${s.position}), status=${s.status}`);
         else
           console.log(
-            `smoke: DAW-style WAV (JUNK + trailing) plays PASS (duration=${s.duration.toFixed(2)}s, t=${s.currentTime.toFixed(2)}s)`
+            `smoke: DAW-style WAV (JUNK + trailing) plays PASS (duration=${s.duration.toFixed(2)}s, t=${s.position.toFixed(2)}s)`
           );
       }
     } catch (e) {
@@ -1445,29 +1445,18 @@ try {
         const rowReal = window.locator("[data-track-id]").filter({ hasText: "real-audio-smoke" }).first();
         await rowReal.waitFor({ timeout: 5000 });
         await rowReal.locator("[data-row-play-button]").click();
-        await new Promise((r) => setTimeout(r, 2500));
-        const s = await window.evaluate(() => {
-          const a = document.querySelector("audio");
-          if (!a) return null;
-          return {
-            duration: a.duration,
-            currentTime: a.currentTime,
-            muted: a.muted,
-            error: a.error ? { code: a.error.code } : null,
-          };
-        });
-        if (!s) failures.push("real-audio: no audio element");
-        else if (s.error)
-          failures.push(`real-audio: error code=${s.error.code}`);
-        else if (!s.muted)
-          failures.push("real-audio: expected muted=true under BEATOS_AUDIO_MUTED");
+        await new Promise((r) => setTimeout(r, 3000));
+        const s = await window.evaluate(() => window.__beatos?.engine?.());
+        if (!s) failures.push("real-audio: __beatos.engine() not available");
+        else if (s.status === "error")
+          failures.push(`real-audio: engine status=error`);
         else if (!(s.duration > 0))
           failures.push(`real-audio: duration not > 0 (${s.duration})`);
-        else if (!(s.currentTime > 0))
-          failures.push(`real-audio: currentTime did not advance (${s.currentTime})`);
+        else if (!(s.position > 0))
+          failures.push(`real-audio: position did not advance (${s.position})`);
         else
           console.log(
-            `smoke: real audio (${realAudio.split("/").pop()}) plays PASS (muted, duration=${s.duration.toFixed(2)}s, t=${s.currentTime.toFixed(2)}s)`,
+            `smoke: real audio (${realAudio.split("/").pop()}) plays PASS (duration=${s.duration.toFixed(2)}s, t=${s.position.toFixed(2)}s)`,
           );
       } catch (e) {
         failures.push(`real-audio assertion error: ${e.message}`);
@@ -1486,6 +1475,10 @@ try {
     exitCode = 1;
     console.error("smoke: FAIL");
     for (const f of failures) console.error(`  - ${f}`);
+    if (rendererConsole.length > 0) {
+      console.error("smoke: renderer console (last 20 lines):");
+      for (const line of rendererConsole.slice(-20)) console.error(`  ${line}`);
+    }
   }
 } catch (err) {
   exitCode = 1;

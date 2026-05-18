@@ -23,15 +23,17 @@ let splashWin: BrowserWindow | null = null;
 let splashShownAt = 0;
 
 // Register the beatos-asset:// scheme as privileged so the renderer can
-// load cover images via <img src="beatos-asset://cover/123">. file:// is
-// CSP-blocked from the renderer for security; a custom scheme is the
-// supported workaround.
+// load cover images via <img src="beatos-asset://cover/123"> AND audio
+// buffers via Web Audio's fetch + decodeAudioData (Tone.js). corsEnabled is
+// required because the renderer's origin is file:// — without it, fetch()
+// from file:// to a custom scheme is rejected as a cross-origin request.
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "beatos-asset",
     privileges: {
       secure: true,
       supportFetchAPI: true,
+      corsEnabled: true,
       bypassCSP: false,
       stream: true,
     },
@@ -165,6 +167,11 @@ function createWindow(): void {
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false,
+      // BeatOS is an audio app — Chromium's default `backgroundThrottling`
+      // suspends timers / audio decoding when the window loses focus (e.g.
+      // user switches to VS Code on another monitor). That causes playback
+      // to stall mid-track. Keep the renderer at full priority always.
+      backgroundThrottling: false,
     },
   });
 
@@ -231,14 +238,12 @@ app.whenReady().then(async () => {
       console.warn("[drag-out] file missing:", p);
       return;
     }
-    let icon;
+    let icon = nativeImage.createEmpty();
     try {
-      icon = nativeImage.createFromPath(p).resize({ width: 64 });
-      if (icon.isEmpty()) {
-        icon = nativeImage.createEmpty();
-      }
+      const created = nativeImage.createFromPath(p).resize({ width: 64 });
+      if (!created.isEmpty()) icon = created;
     } catch {
-      icon = nativeImage.createEmpty();
+      // keep empty icon
     }
     event.sender.startDrag({ file: p, icon });
   });

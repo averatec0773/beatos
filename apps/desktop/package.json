@@ -46,6 +46,7 @@
     "lucide-react": "^1.16.0",
     "react-router-dom": "^6.30.3",
     "tailwind-merge": "^3.6.0",
+    "tone": "^15.1.22",
     "zustand": "^5.0.13"
   },
   "devDependencies": {

@@ -161,7 +161,8 @@ export function TrackListPanel(): React.JSX.Element {
         {/* Shared horizontal scroll wrapper so TableHeader and the virtualized
             rows scroll together when columns are widened beyond the section.
             `min-w-0` lets it shrink inside the flex parent; the inner pieces
-            set `min-w: max-content` to grow with the cells. */}
+            set `min-w: min-content` so they grow only when the user actually
+            pins a column wider than the viewport. */}
         <div className="flex-1 flex flex-col overflow-x-auto min-w-0">
           <TableHeader />
           <VirtualTrackList

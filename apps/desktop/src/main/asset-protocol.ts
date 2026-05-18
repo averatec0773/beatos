@@ -9,17 +9,23 @@ const COVER_DEFAULT_MIME = "image/jpeg";
 const AUDIO_DEFAULT_MIME = "audio/mpeg";
 
 /**
- * Rebuild a WAV file to keep only RIFF header + fmt chunk + data chunk.
+ * Sanitize a WAV file by keeping only RIFF header + fmt chunk + data chunk.
  *
- * Some DAW-produced WAVs include a JUNK chunk before fmt (4KB sector-align
- * padding from Pro Tools/FL Studio) and cue/LIST/smpl chunks after data
- * (markers, metadata). Chromium's WAV decoder in Electron 39 silently
- * rejects these with an empty-message MEDIA_ERR_SRC_NOT_SUPPORTED.
- * Rebuilding a minimal RIFF preserves audio bytes verbatim while dropping
- * the chunks Chromium cannot parse.
+ * Why this exists even with Web Audio's `decodeAudioData` doing the heavy
+ * lifting: some DAWs emit WAVs with a JUNK chunk before fmt (Pro Tools'
+ * 4 KB sector-align padding) and/or cue/LIST/smpl chunks after data
+ * (markers, loop points). Chromium's WAV decoder — shared between the
+ * `<audio>` media stack and `decodeAudioData` — has historically been
+ * picky about extra RIFF chunks. We preserve the audio bytes verbatim
+ * and drop the metadata Chromium might not parse.
  *
- * Returns the input buffer unchanged if no repair is needed (common path
- * stays zero-copy) or if the file is too malformed to repair safely.
+ * What we DO NOT do anymore (v0.0.16):
+ *   - FLOAT-32 → PCM-16 transcoding. `decodeAudioData` handles IEEE-float
+ *     32-bit and 24-bit PCM natively. The fmt block is preserved as-is,
+ *     so the decoder still sees `formatCode=3` and decodes correctly.
+ *
+ * Returns the input unchanged when it's already a canonical `{ fmt, data }`
+ * RIFF, keeping the common path zero-copy.
  */
 export function repairWavIfNeeded(buffer: ArrayBuffer): ArrayBuffer {
   if (buffer.byteLength < 12) return buffer;
@@ -30,13 +36,7 @@ export function repairWavIfNeeded(buffer: ArrayBuffer): ArrayBuffer {
   if (riff !== "RIFF" || wave !== "WAVE") return buffer;
 
   // Walk the chunks. RIFF chunk header is 8 bytes: 4-byte id + 4-byte LE size.
-  // We accept ONLY the canonical { fmt, data } structure as clean. Anything
-  // else triggers repair — covers JUNK / cue / LIST / smpl (post-data), and
-  // bext / ID3 / INFO / iXML / _PMX / Adtl / etc. (pre-fmt or between). All of
-  // these are valid RIFF chunks the spec allows, but Chromium's Electron-39
-  // WAV decoder rejects WAVs containing any of them with empty-message
-  // MEDIA_ERR_SRC_NOT_SUPPORTED. We preserve the audio bytes verbatim and
-  // throw away the metadata chunks Chromium can't parse.
+  // We accept ONLY the canonical { fmt, data } structure as clean.
   let pos = 12;
   let fmtStart = -1, fmtLen = -1;
   let dataStart = -1, dataLen = -1;
@@ -46,7 +46,6 @@ export function repairWavIfNeeded(buffer: ArrayBuffer): ArrayBuffer {
     const id = String.fromCharCode(u8[pos], u8[pos + 1], u8[pos + 2], u8[pos + 3]);
     const size = view.getUint32(pos + 4, true);
     const bodyStart = pos + 8;
-    // Bound chunk body to the file (guards against malformed size fields).
     const safeSize = Math.min(size, buffer.byteLength - bodyStart);
     if (safeSize < 0) break;
     seenIds.push(id);
@@ -63,101 +62,34 @@ export function repairWavIfNeeded(buffer: ArrayBuffer): ArrayBuffer {
     pos = bodyStart + safeSize + (safeSize & 1);
   }
 
-  // Can't repair without fmt or data chunks → leave alone, Chromium will
-  // reject and onError handles it user-side.
   if (fmtStart < 0 || dataStart < 0 || fmtLen <= 0 || dataLen <= 0) return buffer;
 
-  // Read the format header. The fmt chunk for PCM is 16 bytes:
-  //   uint16 formatCode      (1=PCM, 3=IEEE float, 0xFFFE=EXTENSIBLE)
-  //   uint16 channels
-  //   uint32 sampleRate
-  //   uint32 byteRate
-  //   uint16 blockAlign
-  //   uint16 bitsPerSample
-  // EXTENSIBLE adds 24 bytes more, with the actual format GUID at +24..+40.
-  let formatCode = fmtLen >= 2 ? view.getUint16(fmtStart, true) : 1;
-  const channels = fmtLen >= 4 ? view.getUint16(fmtStart + 2, true) : 1;
-  const sampleRate = fmtLen >= 8 ? view.getUint32(fmtStart + 4, true) : 44100;
-  const bitsPerSample = fmtLen >= 16 ? view.getUint16(fmtStart + 14, true) : 16;
-
-  // WAVE_FORMAT_EXTENSIBLE wraps a sub-format GUID. The first 2 bytes of the
-  // 16-byte SubFormat GUID at offset 24 of fmt match a 16-bit format code:
-  //   {00000001-0000-0010-8000-00AA00389B71}  = PCM
-  //   {00000003-0000-0010-8000-00AA00389B71}  = IEEE float
-  // Chromium often rejects EXTENSIBLE outright, so always unwrap to a plain
-  // PCM / FLOAT fmt code and let the FLOAT branch transcode if needed.
-  const isExtensible = formatCode === 0xfffe;
-  if (isExtensible && fmtLen >= 40) {
-    const subFormat = view.getUint16(fmtStart + 24, true);
-    if (subFormat === 1 || subFormat === 3) formatCode = subFormat;
+  // Read enough of fmt to detect EXTENSIBLE wrapping (fmt[0..2] = formatCode).
+  //   1 = PCM, 3 = IEEE FLOAT, 0xFFFE = EXTENSIBLE
+  // EXTENSIBLE wraps a 16-byte SubFormat GUID starting at fmt+24; its first
+  // 2 bytes carry the real format code we want to expose.
+  const rawFormatCode = fmtLen >= 2 ? view.getUint16(fmtStart, true) : 1;
+  const isExtensible = rawFormatCode === 0xfffe;
+  let unwrappedFormatCode = rawFormatCode;
+  if (isExtensible && fmtLen >= 26) {
+    const sub = view.getUint16(fmtStart + 24, true);
+    if (sub === 1 || sub === 3) unwrappedFormatCode = sub;
   }
 
-  // Fast path: clean RIFF (only fmt+data) AND format Chromium accepts (plain
-  // PCM, not EXTENSIBLE, not FLOAT). Anything else needs the repair output
-  // below. PCM bit depths 8/16/24 are all OK for Chromium; 32-bit integer
-  // PCM is rare and may need conversion but we don't have a test fixture for
-  // it yet — for now treat 32-bit PCM as fast-path and rely on user report
-  // if it fails.
+  // Fast path: clean RIFF (only fmt+data) and not EXTENSIBLE. PCM and
+  // FLOAT-32 both decode natively under decodeAudioData, so neither needs
+  // a rewrite.
   if (
     extraChunkCount === 0 &&
     seenIds.length === 2 &&
     seenIds[0] === "fmt " &&
     seenIds[1] === "data" &&
-    !isExtensible &&
-    formatCode === 1
+    !isExtensible
   ) {
     return buffer;
   }
 
-  // FLOAT-32 transcode path: Chromium's WAV decoder rejects format=3 with
-  // empty-message MEDIA_ERR_SRC_NOT_SUPPORTED. Convert each IEEE 754 float
-  // sample → signed 16-bit PCM and rewrite the fmt block accordingly. This
-  // is the format every modern DAW emits by default (FL/Logic/Ableton/PT).
-  const needsFloatTranscode = formatCode === 3 && bitsPerSample === 32;
-  if (needsFloatTranscode) {
-    const sampleBytes = bitsPerSample / 8;
-    const sampleCount = Math.floor(dataLen / sampleBytes);
-    const outDataLen = sampleCount * 2; // 16-bit PCM = 2 bytes/sample
-    const fmtOutLen = 16; // PCM fmt block is exactly 16 bytes
-    const outSize = 12 + 8 + fmtOutLen + 8 + outDataLen;
-    const out = new ArrayBuffer(outSize);
-    const outU8 = new Uint8Array(out);
-    const outView = new DataView(out);
-    outU8.set([0x52, 0x49, 0x46, 0x46], 0); // "RIFF"
-    outView.setUint32(4, outSize - 8, true);
-    outU8.set([0x57, 0x41, 0x56, 0x45], 8); // "WAVE"
-    outU8.set([0x66, 0x6d, 0x74, 0x20], 12); // "fmt "
-    outView.setUint32(16, fmtOutLen, true);
-    const blockAlignOut = channels * 2;
-    const byteRateOut = sampleRate * blockAlignOut;
-    outView.setUint16(20, 1, true); // formatCode = PCM
-    outView.setUint16(22, channels, true);
-    outView.setUint32(24, sampleRate, true);
-    outView.setUint32(28, byteRateOut, true);
-    outView.setUint16(32, blockAlignOut, true);
-    outView.setUint16(34, 16, true); // bitsPerSample
-    outU8.set([0x64, 0x61, 0x74, 0x61], 36); // "data"
-    outView.setUint32(40, outDataLen, true);
-    // Transcode samples. Source = little-endian float32 in u8 starting at
-    // dataStart. Dest = little-endian int16 starting at offset 44.
-    let srcPos = dataStart;
-    let dstPos = 44;
-    for (let i = 0; i < sampleCount; i++) {
-      const f = view.getFloat32(srcPos, true);
-      // Clamp to [-1, 1] then scale to int16 range. Negative scales by 32768
-      // to reach -32768 exactly; positive by 32767 to stay in range.
-      let s: number;
-      if (f >= 1) s = 32767;
-      else if (f <= -1) s = -32768;
-      else s = Math.round(f >= 0 ? f * 32767 : f * 32768);
-      outView.setInt16(dstPos, s, true);
-      srcPos += 4;
-      dstPos += 2;
-    }
-    return out;
-  }
-
-  // Default path: preserve fmt + data verbatim, drop everything else.
+  // Rebuild path: preserve fmt + data verbatim, drop everything else.
   const fmtPad = fmtLen & 1;
   const outSize = 12 + 8 + fmtLen + fmtPad + 8 + dataLen;
   const out = new ArrayBuffer(outSize);
@@ -169,9 +101,10 @@ export function repairWavIfNeeded(buffer: ArrayBuffer): ArrayBuffer {
   outU8.set([0x66, 0x6d, 0x74, 0x20], 12); // "fmt "
   outView.setUint32(16, fmtLen, true);
   outU8.set(u8.subarray(fmtStart, fmtStart + fmtLen), 20);
-  // EXTENSIBLE → unwrap formatCode in the output so Chromium sees plain PCM.
-  if (formatCode === 1 && view.getUint16(fmtStart, true) === 0xfffe) {
-    outView.setUint16(20, 1, true);
+  // Unwrap EXTENSIBLE → expose PCM (1) or FLOAT (3) directly so decoders that
+  // dislike 0xFFFE see a plain format code.
+  if (isExtensible && unwrappedFormatCode !== rawFormatCode) {
+    outView.setUint16(20, unwrappedFormatCode, true);
   }
   if (fmtPad) outU8[20 + fmtLen] = 0;
   const dataChunkStart = 20 + fmtLen + fmtPad;

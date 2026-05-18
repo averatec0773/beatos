@@ -96,58 +96,36 @@ describe("repairWavIfNeeded", () => {
     expect(repairWavIfNeeded(broken)).toBe(broken);
   });
 
-  it("transcodes IEEE FLOAT-32 (format=3) → PCM-16 (format=1)", () => {
-    // Build a tiny FLOAT-32 WAV: stereo, 44100 Hz, 4 samples.
-    // Known floats: [0.0, 1.0, -1.0, 0.5, 0.25, -0.5, 0.999, -0.999]
-    const samples = new Float32Array([0.0, 1.0, -1.0, 0.5, 0.25, -0.5, 0.999, -0.999]);
-    const dataLen = samples.byteLength;
+  it("passes a clean FLOAT-32 WAV through unchanged (decodeAudioData handles it)", () => {
+    // Web Audio's decodeAudioData supports IEEE-float natively (v0.0.16) —
+    // no transcode needed, fast path stays zero-copy.
+    const samples = new Float32Array([0.0, 1.0, -1.0, 0.5]);
     const fmtLen = 16;
-    const buf = new ArrayBuffer(12 + 8 + fmtLen + 8 + dataLen);
+    const buf = new ArrayBuffer(12 + 8 + fmtLen + 8 + samples.byteLength);
     const u8 = new Uint8Array(buf);
     const v = new DataView(buf);
-    u8.set([0x52, 0x49, 0x46, 0x46], 0); // "RIFF"
+    u8.set([0x52, 0x49, 0x46, 0x46], 0);
     v.setUint32(4, buf.byteLength - 8, true);
-    u8.set([0x57, 0x41, 0x56, 0x45], 8); // "WAVE"
-    u8.set([0x66, 0x6d, 0x74, 0x20], 12); // "fmt "
+    u8.set([0x57, 0x41, 0x56, 0x45], 8);
+    u8.set([0x66, 0x6d, 0x74, 0x20], 12);
     v.setUint32(16, fmtLen, true);
-    v.setUint16(20, 3, true); // format = IEEE FLOAT
-    v.setUint16(22, 2, true); // 2 channels
+    v.setUint16(20, 3, true); // FLOAT
+    v.setUint16(22, 1, true);
     v.setUint32(24, 44100, true);
-    v.setUint32(28, 44100 * 8, true); // byteRate
-    v.setUint16(32, 8, true); // blockAlign = 2 ch * 4 bytes
-    v.setUint16(34, 32, true); // bits = 32
+    v.setUint32(28, 44100 * 4, true);
+    v.setUint16(32, 4, true);
+    v.setUint16(34, 32, true);
     u8.set([0x64, 0x61, 0x74, 0x61], 36);
-    v.setUint32(40, dataLen, true);
-    // Write float samples
-    for (let i = 0; i < samples.length; i++) {
-      v.setFloat32(44 + i * 4, samples[i], true);
-    }
+    v.setUint32(40, samples.byteLength, true);
+    for (let i = 0; i < samples.length; i++) v.setFloat32(44 + i * 4, samples[i], true);
 
     const out = repairWavIfNeeded(buf);
-    expect(out).not.toBe(buf);
-    const ou8 = new Uint8Array(out);
-    const ov = new DataView(out);
-    // Output fmt should be PCM-16
-    expect(ov.getUint16(20, true)).toBe(1); // format = PCM
-    expect(ov.getUint16(22, true)).toBe(2); // channels preserved
-    expect(ov.getUint32(24, true)).toBe(44100); // sampleRate preserved
-    expect(ov.getUint16(34, true)).toBe(16); // bitsPerSample = 16
-    expect(ov.getUint16(32, true)).toBe(4); // blockAlign = 2 ch * 2 bytes
-    // Data chunk
-    expect(String.fromCharCode(ou8[36], ou8[37], ou8[38], ou8[39])).toBe("data");
-    expect(ov.getUint32(40, true)).toBe(samples.length * 2);
-    // Verify scaled samples
-    expect(ov.getInt16(44, true)).toBe(0); // 0.0 → 0
-    expect(ov.getInt16(46, true)).toBe(32767); // 1.0 → 32767 (clamped)
-    expect(ov.getInt16(48, true)).toBe(-32768); // -1.0 → -32768 (clamped)
-    expect(ov.getInt16(50, true)).toBe(Math.round(0.5 * 32767)); // 16384
-    expect(ov.getInt16(52, true)).toBe(Math.round(0.25 * 32767)); // 8192
-    expect(ov.getInt16(54, true)).toBe(Math.round(-0.5 * 32768)); // -16384
+    expect(out).toBe(buf); // zero-copy
   });
 
-  it("FLOAT-32 with JUNK + trailing chunks still transcodes correctly", () => {
-    // Realistic user case from the field: DAW WAV with JUNK before fmt,
-    // format=3, and smpl/cue/LIST chunks after data.
+  it("FLOAT-32 with JUNK still preserves FLOAT formatCode in rebuild", () => {
+    // DAW WAV: JUNK + fmt(format=3) + data + smpl trailer. Junk-strip path
+    // runs, but the fmt block (including formatCode=3) is preserved verbatim.
     const samples = new Float32Array([0.5, -0.5]);
     const dataLen = samples.byteLength;
     const junkLen = 28;
@@ -165,7 +143,7 @@ describe("repairWavIfNeeded", () => {
     p += junkLen;
     u8.set([0x66, 0x6d, 0x74, 0x20], p); p += 4; v.setUint32(p, fmtLen, true); p += 4;
     v.setUint16(p, 3, true); p += 2; // FLOAT
-    v.setUint16(p, 1, true); p += 2; // mono
+    v.setUint16(p, 1, true); p += 2;
     v.setUint32(p, 44100, true); p += 4;
     v.setUint32(p, 44100 * 4, true); p += 4;
     v.setUint16(p, 4, true); p += 2;
@@ -175,13 +153,16 @@ describe("repairWavIfNeeded", () => {
     u8.set([0x73, 0x6d, 0x70, 0x6c], p); p += 4; v.setUint32(p, trailerLen, true); p += 4;
 
     const out = repairWavIfNeeded(buf);
+    expect(out).not.toBe(buf);
     const ov = new DataView(out);
-    expect(ov.getUint16(20, true)).toBe(1); // transcoded to PCM
-    expect(ov.getUint16(34, true)).toBe(16); // bits=16
-    // Output should have exactly 44 byte header + 2 samples * 2 bytes = 48 bytes
-    expect(out.byteLength).toBe(48);
-    expect(ov.getInt16(44, true)).toBe(Math.round(0.5 * 32767));
-    expect(ov.getInt16(46, true)).toBe(Math.round(-0.5 * 32768));
+    // formatCode in output should still be FLOAT (3) — not transcoded.
+    expect(ov.getUint16(20, true)).toBe(3);
+    expect(ov.getUint16(34, true)).toBe(32); // bits=32 preserved
+    // Output = 12 (RIFF/WAVE) + 8 (fmt hdr) + 16 (fmt body) + 8 (data hdr) + 8 (data)
+    expect(out.byteLength).toBe(52);
+    // Data samples passed through unchanged.
+    expect(ov.getFloat32(44, true)).toBeCloseTo(0.5, 5);
+    expect(ov.getFloat32(48, true)).toBeCloseTo(-0.5, 5);
   });
 
   it("unwraps WAVE_FORMAT_EXTENSIBLE (0xFFFE) wrapping PCM", () => {

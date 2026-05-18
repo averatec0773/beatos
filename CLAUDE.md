@@ -24,6 +24,7 @@
 6. **Always `preventDefault` in `dragover`** — including when `dataTransfer.types.includes("Files")` is false. Otherwise `drop` never fires (lesson re-applied across v0.0.13.2 / v0.0.14).
 7. **SPA route reuse** — when a route stays mounted across param changes (`/track/1` → `/track/2` keeps `<TrackEditor>` mounted with new `params`), `useEffect([])` does NOT re-run. Per-track effects must depend on `params.id` (caught at v0.0.14.1: producer distinct went stale across tracks).
 8. **Upstream-store → local-form sync** must update both the form state AND the dirty baseline (e.g. `initialTrack`), otherwise the upstream patch (auto-analyze writing bpm/key) registers as a user edit and re-fires auto-save in a loop.
+9. **Audio goes through `audio-engine.ts`, not `<audio>`.** v0.0.16 migrated to Tone.js / Web Audio. Don't reintroduce HTMLAudioElement. New CSP directives (`worker-src 'self' blob:`, `connect-src beatos-asset:`) and protocol privilege (`corsEnabled: true`) are load-bearing — if Tone fetch fails silently, check them first.
 
 For per-file context (which columns, which patterns) read [conventions/architecture.md](conventions/architecture.md) §"What NOT to change without reading context first".
 
@@ -37,7 +38,7 @@ npm run dev:fresh              # kill orphan uvicorn + start dev (Vite + sidecar
 npm run build                  # typecheck + electron-vite build
 npm run smoke                  # built-app smoke harness (run build first)
 npm run logs:tail              # tail Electron main.log + sidecar.jsonl
-npx vitest run                 # renderer + main tests (214 as of v0.0.15-pre)
+npx vitest run                 # renderer + main tests (233 as of v0.0.16)
 npx vitest run path/to/x.test.ts   # single file
 node scripts/diagnose-playback.mjs --tiny  # audio playback diagnostic
 

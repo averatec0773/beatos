@@ -5,12 +5,14 @@
     <title>BeatOS</title>
     <!--
       CSP for BeatOS renderer.
-      connect-src allows the Python sidecar on 127.0.0.1 (any port — it's ephemeral).
+      connect-src allows the Python sidecar on 127.0.0.1 (any port — it's ephemeral)
+      AND the beatos-asset: custom protocol so Tone.js / decodeAudioData can fetch
+      audio buffers (added v0.0.16 — switching from <audio> to Web Audio API).
       font-src includes data: because @fontsource ships some woff2 as data URLs.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: beatos-asset:; media-src beatos-asset:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:*"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: beatos-asset:; media-src beatos-asset:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* beatos-asset:; worker-src 'self' blob:"
     />
   </head>
 

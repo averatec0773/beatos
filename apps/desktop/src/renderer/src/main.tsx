@@ -13,11 +13,19 @@ if (typeof window !== "undefined") {
     const { useTrackStore } = await import("@/stores/tracks");
     const { useColumnWidthStore } = await import("@/stores/column-widths");
     const { usePreviewPanelStore } = await import("@/stores/preview-panel");
+    const { audioEngine } = await import("@/lib/audio-engine");
     (window as unknown as { __beatos: Record<string, () => unknown> }).__beatos = {
       player: () => usePlayerStore.getState(),
       tracks: () => useTrackStore.getState(),
       widths: () => useColumnWidthStore.getState(),
       preview: () => usePreviewPanelStore.getState(),
+      engine: () => ({
+        status: audioEngine.getStatus(),
+        duration: audioEngine.getDuration(),
+        position: audioEngine.getCurrentPosition(),
+        currentAssetId: audioEngine.getCurrentAssetId(),
+        bpm: audioEngine.getBpm(),
+      }),
     };
   })();
 }

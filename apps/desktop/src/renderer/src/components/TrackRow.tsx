@@ -48,7 +48,7 @@ export function TrackRow({
       onKeyDown={(e) => {
         if (e.key === "Enter") onOpen();
       }}
-      style={{ minWidth: "max-content" }}
+      style={{ minWidth: "min-content" }}
       className={`h-16 px-4 flex items-center cursor-grab active:cursor-grabbing cursor-pointer relative gap-3
         ${isDragging ? "opacity-50" : ""}
         ${highlighted ? "bg-bg-row-selected text-text-primary border-l-2 border-accent" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}

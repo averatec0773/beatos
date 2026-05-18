@@ -4,6 +4,54 @@ vi.mock("@/api/assets", () => ({
   assets: { listForTrack: vi.fn() },
 }));
 
+// Mock audio-engine: emit statuschange/timeupdate/durationchange via the
+// subscribed callbacks so the store can react like in production. play() /
+// load() / pause() / stop() trigger the same statuschange transitions the
+// real Tone-backed engine would.
+vi.mock("@/lib/audio-engine", () => {
+  const listeners: Record<string, Array<(arg: unknown) => void>> = {};
+  function emit(event: string, arg: unknown): void {
+    (listeners[event] ?? []).forEach((cb) => cb(arg));
+  }
+  return {
+    audioEngine: {
+      on: (event: string, cb: (arg: unknown) => void) => {
+        (listeners[event] ??= []).push(cb);
+        return () => {
+          listeners[event] = (listeners[event] ?? []).filter((c) => c !== cb);
+        };
+      },
+      load: vi.fn(async () => {
+        emit("statuschange", "loading");
+        emit("statuschange", "paused");
+      }),
+      play: vi.fn(async () => {
+        emit("statuschange", "playing");
+      }),
+      pause: vi.fn(() => {
+        emit("statuschange", "paused");
+      }),
+      stop: vi.fn(() => {
+        emit("statuschange", "idle");
+        emit("timeupdate", 0);
+      }),
+      seek: vi.fn((p: number) => {
+        emit("timeupdate", p);
+      }),
+      setVolume: vi.fn(),
+      setMuted: vi.fn(),
+      setForceMuted: vi.fn(),
+      setBpm: vi.fn(),
+      getBpm: vi.fn(() => 120),
+      getStatus: vi.fn(() => "idle"),
+      getDuration: vi.fn(() => 0),
+      getCurrentPosition: vi.fn(() => 0),
+      getCurrentAssetId: vi.fn(() => null),
+      dispose: vi.fn(),
+    },
+  };
+});
+
 import { usePlayerStore } from "../player";
 import { assets as assetsApi } from "@/api/assets";
 
