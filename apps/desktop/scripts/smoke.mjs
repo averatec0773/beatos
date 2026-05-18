@@ -427,6 +427,30 @@ try {
       }
     }
 
+    // Assertion 10b: row body click → bottom player bar reflects the selection
+    // (track title in bar, play button enabled) BEFORE any actual playback has
+    // been triggered. Guards the BottomPlayerBar.selectedTrack fallback.
+    try {
+      const row = window.locator("[data-track-id]").filter({ hasText: "Smoke1" }).first();
+      await row.click({ force: true });
+      await new Promise((r) => setTimeout(r, 200));
+      const bar = await window.evaluate(() => {
+        const footer = document.querySelector("[data-bottom-player]");
+        if (!footer) return { error: "no bottom bar" };
+        const title = footer.querySelector(".text-zinc-100")?.textContent ?? "";
+        const playBtn = footer.querySelector("[data-play-button]");
+        return { title, disabled: playBtn?.hasAttribute("disabled") ?? true };
+      });
+      if (bar.error) failures.push(`row-click-bar: ${bar.error}`);
+      else if (bar.title !== "Smoke1")
+        failures.push(`row-click-bar: title expected "Smoke1", got "${bar.title}"`);
+      else if (bar.disabled)
+        failures.push("row-click-bar: play button still disabled after row click");
+      else console.log("smoke: row click → bottom bar populated + play enabled PASS");
+    } catch (e) {
+      failures.push(`row-click-bar assertion error: ${e.message}`);
+    }
+
     // Assertion 11: click play on audio row → bottom bar shows data-playing="true".
     let playbackStartedForAssertion12 = false;
     {
@@ -1224,6 +1248,68 @@ try {
       failures.push(`daw-wav assertion error: ${e.message}`);
     }
     // === end v0.0.14.1 ===
+
+    // === v0.0.15: TableHeader / TrackRow column alignment ===
+    // Each header column must share its left + right edges with the same-position
+    // body cell. Regression guard against ColumnResizer (w-3 -mx-1) vs row spacer
+    // (w-1) effective-width mismatches that would shift columns relative to data.
+    try {
+      const align = await window.evaluate(() => {
+        const COLS = ["title", "bpm", "key_signature", "genre", "updated_at"];
+        function geom(el) {
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { left: Math.round(r.left), right: Math.round(r.right) };
+        }
+        const header = document.querySelector('[role="row"]');
+        // Avoid the highlighted row — its `border-l-2 border-accent` shifts
+        // children 2px right relative to the header.
+        const rows = [...document.querySelectorAll("[data-track-id]")];
+        const row = rows.find((r) => !r.className.includes("border-accent")) ?? rows[0];
+        if (!header || !row) return { error: "header or row not found" };
+        // Header children: cover button, [col button, divider]+
+        const headerCols = [...header.querySelectorAll("[data-column]")];
+        // Row children: an accent span + cover wrapper + (cell, divider)+. The
+        // cells we want are the 5 non-spacer flex children after the cover.
+        const rowChildren = [...row.children].filter(
+          (c) => c.tagName !== "SPAN" && !(c.classList.contains("w-1") && c.classList.contains("flex-shrink-0")),
+        );
+        // rowChildren[0] is cover, rowChildren[1..5] are the 5 columns
+        const rowCells = rowChildren.slice(1, 6);
+        const diffs = [];
+        for (let i = 0; i < COLS.length; i++) {
+          const h = geom(headerCols[i]);
+          const c = geom(rowCells[i]);
+          if (!h || !c) {
+            diffs.push({ col: COLS[i], error: "missing" });
+            continue;
+          }
+          diffs.push({
+            col: COLS[i],
+            leftDelta: c.left - h.left,
+            rightDelta: c.right - h.right,
+          });
+        }
+        return { diffs };
+      });
+      if (align.error) {
+        failures.push(`table-align: ${align.error}`);
+      } else {
+        const desynced = align.diffs.filter(
+          (d) => d.error || Math.abs(d.leftDelta) > 1 || Math.abs(d.rightDelta) > 1,
+        );
+        if (desynced.length > 0) {
+          failures.push(
+            `table-align: column desync — ${JSON.stringify(desynced)}`,
+          );
+        } else {
+          console.log("smoke: TableHeader/TrackRow column alignment PASS (5 cols, ≤1px slack)");
+        }
+      }
+    } catch (e) {
+      failures.push(`table-align assertion error: ${e.message}`);
+    }
+    // === end alignment ===
 
     // === v0.0.15: producer rewrite (merge) ===
     // Goal: two tracks with case-different producer names → merge to one canonical value.

@@ -16,9 +16,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **Headless + muted test mode** — `BEATOS_HEADLESS=1` keeps the main window invisible; `BEATOS_AUDIO_MUTED=1` force-mutes every `<audio>` element via a preload-exposed flag. Smoke and `diagnose-playback.mjs` default to both on; pass `SMOKE_SHOW=1`/`SMOKE_UNMUTED=1` (or `DIAG_*`) to opt back in.
 - Smoke regression #33: two tracks with case-different producer names → `POST /api/producers/rewrite` collapses them to one; distinct API no longer returns the merged-away spelling. Placed at the end of the block (state-mutating).
 - Smoke regression #34 (`BEATOS_REAL_AUDIO=<path>`): end-to-end playback against a real studio WAV — verifies muted, duration > 0, currentTime advances.
+- Smoke regression — row body click immediately populates the bottom player bar (title visible, play button enabled).
+- Smoke regression — TableHeader / TrackRow column alignment: 5 columns must share left + right edges within 1 px. Guards against ColumnResizer / row-spacer geometry drift.
+- `scripts/inspect-table-widths.mjs`: standalone diagnostic that prints the exact rendered geometry of every header column vs the first row cell. Reach for it when alignment regresses.
 
 ### Fixed
 
+- **Bottom player bar reflects row selection** — `BottomPlayerBar` falls back to `useTrackStore.current` when the player has no loaded track. Clicking a row now immediately populates the bar (cover + title + producer subtitle) and enables the play button, instead of leaving the bar empty until the user hovered the row's play overlay. Pressing the bottom play button while in fallback mode triggers `playFromQueue` against the visible track list, so prev / next keep working after the first play.
 - **Stuck playback recovery** — `usePlayerStore` gains a `loadEpoch` counter that increments on every `loadAndPlay()`. The `BottomPlayerBar` audio-src effect now depends on `[currentAssetId, loadEpoch]`, so retrying the same asset (after an `onError`) actually re-runs `audio.src = …; audio.load()`. Previously the effect was a no-op when the assetId didn't change — the audio element stayed wedged and the timer froze at 0:00 until the user switched format (WAV ↔ MP3) to force an assetId delta.
 - **Library Updated column** changed from a fixed `widths.updated` to `flex-1 min-w-[80px]` in both `TableHeader` and `TrackRow`, so the column absorbs remaining horizontal space and the cell text is no longer clipped when the preview panel is open on smaller windows.
 

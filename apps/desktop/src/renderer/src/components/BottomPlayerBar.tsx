@@ -34,12 +34,19 @@ export function BottomPlayerBar() {
   const shuffle = usePlayerStore((s) => s.shuffle);
   const repeat = usePlayerStore((s) => s.repeat);
 
-  // Stable selector: select the whole list, derive current track with useMemo
+  // Stable selector: select the whole list, derive current track with useMemo.
+  // Falls back to `useTrackStore.current` (the right-panel selection) when the
+  // player hasn't loaded anything yet. This way clicking a row in the library
+  // immediately populates the bottom bar (cover + title + producer subtitle)
+  // and enables the play button — without forcing playback to start. Once the
+  // user actually presses play, `playFromQueue` sets `currentTrackId` and the
+  // player takes over from the selection fallback.
   const trackList = useTrackStore((s) => s.list);
-  const track = useMemo(
-    () => (currentTrackId == null ? null : trackList.find((t) => t.id === currentTrackId) ?? null),
-    [currentTrackId, trackList]
-  );
+  const selectedTrack = useTrackStore((s) => s.current);
+  const track = useMemo(() => {
+    if (currentTrackId == null) return selectedTrack;
+    return trackList.find((t) => t.id === currentTrackId) ?? null;
+  }, [currentTrackId, trackList, selectedTrack]);
 
   // Sync audio.src.
   // Depends on BOTH currentAssetId AND loadEpoch so an explicit retry on the
@@ -109,9 +116,26 @@ export function BottomPlayerBar() {
 
   // Keep the button clickable while in "error" — togglePlay's recovery branch
   // re-runs loadAndPlay so a user-tap can recover from a stuck load.
-  const enabled = currentTrackId != null;
+  // `enabled` also picks up the selection fallback so users can press play on
+  // a row they just clicked without first hovering the row's play overlay.
+  const enabled = track != null;
   const playing = status === "playing";
   const errored = status === "error";
+
+  function handleTogglePlay(): void {
+    const s = usePlayerStore.getState();
+    if (s.currentTrackId == null && selectedTrack != null) {
+      // First-play from a row selection: queue the visible track list so prev/
+      // next still work afterwards.
+      const list = useTrackStore.getState().list;
+      const ids = list.map((t) => t.id);
+      const startIndex = ids.indexOf(selectedTrack.id);
+      if (startIndex < 0) return;
+      void s.playFromQueue({ trackIds: ids, startIndex, source: { kind: "all" } });
+      return;
+    }
+    s.togglePlay();
+  }
 
   return (
     <footer
@@ -193,7 +217,7 @@ export function BottomPlayerBar() {
             size="icon"
             variant="default"
             disabled={!enabled}
-            onClick={() => usePlayerStore.getState().togglePlay()}
+            onClick={handleTogglePlay}
             data-play-button
             data-status={status}
             aria-label={errored ? "Retry" : playing ? "Pause" : "Play"}
