@@ -4,6 +4,30 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.17] - 2026-05-18 — SidebarPanel refactor + top-bar polish
+
+First entry of the v0.0.17+ refactor pass: structural-only, no feature changes. Plus a small visual fix to the top bar so it aligns better with the macOS traffic-light buttons, and a developer credit pinned to the sidebar footer.
+
+### Changed
+
+- **`apps/desktop/src/renderer/src/routes/SidebarPanel.tsx` (445 lines)** split into `components/Sidebar/`:
+  - `SidebarPanel.tsx` — thin orchestrator (~85 lines): owns the `<aside>` shell, sidebar-width resizer, and the per-mount `refresh()` effect for the three stores it drives.
+  - `SourcesSection.tsx` — Sources header + AllBeats row + sortable source list. Co-locates `SortableSourceRow`. Pulls its own state from `useSourceStore` / `useListStore`.
+  - `ListsSection.tsx` — Lists header + add-list inline input + sortable user-list rows. Co-locates `SortableListRow` and `SidebarListRow` (rename / delete / drop-target logic).
+  - `TrashSection.tsx` — Trash header + Trash route button + count badge.
+  - `SidebarFooter.tsx` — `@averatec0773` developer credit link, `mt-auto` to pin to the bottom of the sidebar.
+- **`apps/desktop/src/renderer/src/components/TopBar.tsx`** — height `h-12 → h-14`, `paddingLeft 84 → 88px`, title font `text-sm → text-[15px]`, divider `h-4 → h-5`. Fixes the visual misalignment between the title row and the macOS traffic-light buttons (the buttons sit ~13 px from window top; the previous 48 px header centered text below them).
+- **`apps/desktop/src/renderer/src/components/TopBarRouteTitle.tsx`** — route title font `text-sm → text-[15px]` to match.
+- Import sites updated: `routes/AppShell.tsx` and `__tests__/SidebarPanel.test.tsx` now import `SidebarPanel` from `@/components/Sidebar/SidebarPanel`. Old `routes/SidebarPanel.tsx` deleted.
+
+### Roadmap
+
+- **MCP path to v0.1.0 locked in.** `ROADMAP.md` gains explicit v0.0.20 / v0.0.21 / v0.0.22 entries: read-only tools → two-phase commit infrastructure → `draft_description` placeholder. Built on the existing `packages/beatos-mcp/` shell, which currently only exposes `ping`. Search upgrade slides from v0.0.18 → v0.0.23.
+
+### Verification
+
+233 vitest tests pass, 33 smoke assertions pass.
+
 ## [0.0.16] - 2026-05-18 — Tone.js audio engine + layout fixes
 
 ### Architecture

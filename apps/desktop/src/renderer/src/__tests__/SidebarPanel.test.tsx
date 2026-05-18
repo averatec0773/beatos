@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { DndContext } from "@dnd-kit/core";
-import { SidebarPanel } from "@/routes/SidebarPanel";
+import { SidebarPanel } from "@/components/Sidebar/SidebarPanel";
 import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
 

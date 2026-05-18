@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { TopBar } from "@/components/TopBar";
-import { SidebarPanel } from "@/routes/SidebarPanel";
+import { SidebarPanel } from "@/components/Sidebar/SidebarPanel";
 import { ApiErrorState } from "@/components/ApiErrorState";
 import { BottomPlayerBar } from "@/components/BottomPlayerBar";
 import { Toast } from "@/components/Toast";
