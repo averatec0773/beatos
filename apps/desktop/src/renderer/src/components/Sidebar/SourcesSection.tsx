@@ -9,6 +9,8 @@ import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
 import { SourceRow } from "@/components/SourceRow";
 
+
+
 function SortableSourceRow({
   source,
   active,
@@ -41,8 +43,7 @@ export function SourcesSection({ onListRoute }: { onListRoute: boolean }): React
   const activeFilter = useSourceStore((s) => s.activeFilter);
   const setFilter = useSourceStore((s) => s.setFilter);
 
-  const allLists = useListStore((s) => s.all);
-  const allBeats = useMemo(() => allLists.find((l) => l.kind === "system"), [allLists]);
+  const hasSystemList = useListStore((s) => s.all.some((l) => l.kind === "system"));
   const totalTracks = useMemo(() => sources.reduce((a, s) => a + s.track_count, 0), [sources]);
 
   return (
@@ -60,7 +61,7 @@ export function SourcesSection({ onListRoute }: { onListRoute: boolean }): React
           <Plus size={12} />
         </button>
       </header>
-      {allBeats && (
+      {hasSystemList && (
         <SourceRow
           source={{
             id: -1,

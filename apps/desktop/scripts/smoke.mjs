@@ -26,7 +26,7 @@ import {
 } from "./smoke/setup.mjs";
 import { runAssertions } from "./smoke/runner.mjs";
 
-const { mainEntry, userData, logsDir, ts, logPath, dbPath, screenshotPath } =
+const { mainEntry, userData, logPath, dbPath, screenshotPath } =
   bootstrapPaths(import.meta.dirname);
 
 let exitCode = 0;
@@ -82,8 +82,6 @@ try {
       window,
       userData,
       baseUrl,
-      logsDir,
-      ts,
       TINY_PNG,
       makeTinyWav,
       makeDawStyleWav,

@@ -8,7 +8,7 @@ import { join } from "node:path";
 // drag handle scoping, dnd-kit drag-add, multi-add API.
 // Mutates: ctx.fixtures.{ t1, t2, list, coverAsset } populated for downstream sections.
 export async function assertSeedAndDragDrop(ctx) {
-  const { app, window, userData, baseUrl, postJson, failures, TINY_PNG } = ctx;
+  const { window, userData, baseUrl, postJson, failures, TINY_PNG } = ctx;
 
   // Seed: Source rooted at userData (writable, real dir), 2 tracks, 1 cover image, 1 List.
   await postJson("/api/sources", { root_path: userData });
@@ -125,7 +125,6 @@ export async function assertSeedAndDragDrop(ctx) {
   ctx.fixtures.t2 = t2;
   ctx.fixtures.list = list;
   ctx.fixtures.coverAsset = coverAsset;
-  void app; // not needed past this point but kept for future use
 }
 
 export async function assertEmptyListCopy(ctx) {

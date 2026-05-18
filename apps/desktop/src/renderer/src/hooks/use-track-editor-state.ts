@@ -98,7 +98,7 @@ export function useTrackEditorState(): TrackEditorState {
   useEffect(() => {
     const el = document.getElementById("track-title");
     if (el) (el as HTMLInputElement).focus();
-  }, []);
+  }, [params.id]);
 
   // Initial baseline (only on first load of a given track id)
   useEffect(() => {

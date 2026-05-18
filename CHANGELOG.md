@@ -4,6 +4,28 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.19.1] - 2026-05-18 — post-refactor audit + cleanup
+
+Two parallel sub-agents reviewed the v0.0.17–v0.0.19 refactor pass. One real bug + three loose ends found and fixed.
+
+### Fixed
+
+- **`apps/desktop/src/renderer/src/hooks/use-track-editor-state.ts`** — title-input auto-focus effect had `[]` dependency, violating CLAUDE.md rule 7 (SPA route reuse). Navigating `/tracks/1/edit → /tracks/2/edit` reuses the same `TrackEditor` instance, so `useEffect([])` does not re-run — the title field never re-focused for the second track. Changed to `[params.id]`. Pre-existing bug; the v0.0.18 split surfaced it but didn't introduce it.
+
+### Removed
+
+- **`apps/desktop/src/renderer/src/components/ListSidebarSection.tsx`** — dead file. Superseded by `components/Sidebar/ListsSection.tsx` in v0.0.17; zero importers since then.
+
+### Changed
+
+- **`apps/desktop/scripts/smoke.mjs`** — dropped `logsDir` and `ts` from the `ctx` payload. They were forwarded into `runAssertions` but no section ever read them.
+- **`apps/desktop/scripts/smoke/library.mjs`** — `assertSeedAndDragDrop` was destructuring `app` from `ctx` and ending with a `void app; // kept for future use` suppressor. Both removed.
+- **`apps/desktop/src/renderer/src/components/Sidebar/SourcesSection.tsx`** — replaced `useListStore((s) => s.all)` + `useMemo find` with a stable-boolean selector `useListStore((s) => s.all.some((l) => l.kind === "system"))`. The component never read the system-list object's fields, only its existence. The full-array selector forced re-renders on any list mutation (rename/add/delete); the boolean selector only re-renders when the system list itself appears or disappears.
+
+### Verification
+
+233 vitest tests pass, 33 smoke assertions pass, smoke output byte-identical to v0.0.19 baseline.
+
 ## [0.0.19] - 2026-05-18 — smoke.mjs split
 
 Third entry of the refactor pass. The 1500-line smoke harness was a single try-block sharing scope across all 33 assertions; we kept it that way as long as we did because CLAUDE.md §"Smoke assertion order is load-bearing" warned against reorganization. This version preserves that order exactly while splitting into a runner + per-domain section files.
