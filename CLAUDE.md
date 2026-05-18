@@ -56,7 +56,7 @@ Logs (dev): `apps/desktop/logs/main.log` (Electron + `[sidecar]`-tagged stderr) 
 
 ## Ship gate
 
-Before `git tag -a vX.Y.Z … && git push origin vX.Y.Z`, confirm `CHANGELOG.md` has an entry for that exact version. If missing → invoke the [changelog](.claude/skills/changelog/SKILL.md) skill first. **No silent ships.**
+Before `git tag -a vX.Y.Z … && git push origin vX.Y.Z`, invoke the [harness](.claude/skills/harness/SKILL.md) skill. It verifies `CHANGELOG.md` has an entry, prunes the matching item from `ROADMAP.md`, and checks whether `conventions/` needs updating. **No silent ships.**
 
 ## AI dev loop (v0.0.5+)
 
@@ -83,7 +83,7 @@ MCP servers (template in `.claude/settings.local.json.example`):
 - [ROADMAP](ROADMAP.md) — pending v0.0.X + v0.1.0 + future v0.2+
 
 ### Skills (`.claude/skills/`)
-- [setup](.claude/skills/setup/SKILL.md) · [memory](.claude/skills/memory/SKILL.md) · [changelog](.claude/skills/changelog/SKILL.md) · [skill-creator](.claude/skills/skill-creator/SKILL.md)
+- [setup](.claude/skills/setup/SKILL.md) · [memory](.claude/skills/memory/SKILL.md) · [harness](.claude/skills/harness/SKILL.md) · [skill-creator](.claude/skills/skill-creator/SKILL.md)
 
 ### Memory
 - [rules](memory/rules.md) · [notes](memory/notes.md)

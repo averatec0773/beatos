@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [],
+    "deny": [
+      "Read(./.env*)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && [ ! -f .claude/settings.local.json ] && cp .claude/settings.local.json.example .claude/settings.local.json && echo '[harness] settings.local.json created from template — review and add personal overrides.' ; true"
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && echo \"[harness] branch: $(git branch --show-current 2>/dev/null || echo 'n/a') | uncommitted: $(git status --porcelain 2>/dev/null | wc -l | tr -d ' ') file(s)\""
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "mcp-server-dev@claude-plugins-official": true
+  }
+}

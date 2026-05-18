@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [],
+    "deny": [
+      "Read(./.env*)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)"
+    ]
+  },
+  "mcpServers": {
+    "playwright-electron": {
+      "command": "npx",
+      "args": ["-y", "@robertn702/playwright-mcp-electron@latest"],
+      "env": {
+        "ELECTRON_APP_PATH": "${workspaceFolder}/apps/desktop/out/main/index.js"
+      }
+    }
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && echo \"[harness] branch: $(git branch --show-current 2>/dev/null || echo 'n/a') | uncommitted: $(git status --porcelain 2>/dev/null | wc -l | tr -d ' ') file(s)\""
+          }
+        ]
+      }
+    ]
+  }
+}
