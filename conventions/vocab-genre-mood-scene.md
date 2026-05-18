@@ -1,11 +1,10 @@
 # Controlled Vocabulary — Genre / Mood / Scene
 
-> Source: NetEase Cloud Music Beat-upload form, captured 2026-05-16. Treated as the seed vocabulary for BeatOS's enumerated fields. Bilingual labels (中/English) so users can search in either, and so cross-platform mapping is straightforward when an export adapter is added.
+> Source: NetEase Cloud Music Beat-upload form, captured 2026-05-16. Seed vocabulary for BeatOS's enumerated fields; bilingual labels (中/English) enable either-language search and cross-platform mapping.
 >
-> **Selection model in BeatOS** — diverges from NetEase by design (user decision 2026-05-16):
-> - Genre: **multi-select chip picker, no manual add** (curated list below). NetEase is single-select; we prefer multi because beats often span subgenres.
-> - Mood: **multi-select chip picker, no manual add**. NetEase caps at 3; we leave uncapped for now and revisit if UI gets crowded.
-> - Scene: future field. Reserved here as a forward-looking reference; do NOT implement until explicitly scheduled.
+> **Selection model in BeatOS** diverges from NetEase (user decision 2026-05-16):
+> - Genre & Mood: **multi-select chip picker, no manual add** (NetEase is single-select for genre, caps mood at 3; we go multi/uncapped).
+> - Scene: future field — reserved as forward-looking reference; do NOT implement until explicitly scheduled.
 
 ---
 
@@ -89,8 +88,7 @@
 | 74 | 福音音乐 | Gospel Music |
 
 **Notes:**
-- ~40 of 74 entries are hip-hop/rap subgenres — the list reflects the Chinese beatmaker market. Acceptable for v0.0.12 because BeatOS's primary user is also a Chinese beat producer.
-- 10 entries have no Chinese name (Boom Bap, Sexy Drill, Regalia, Rage, Plugg, Jersey Club, Jerk, Hyperpop, 2-Step Garage, Afrobeats) — keep them with English only.
+- ~40 of 74 entries are hip-hop/rap subgenres (reflects the Chinese beatmaker market, acceptable for v0.0.12 since BeatOS's primary user is a Chinese beat producer); 10 entries are English-only (Boom Bap, Sexy Drill, Regalia, Rage, Plugg, Jersey Club, Jerk, Hyperpop, 2-Step Garage, Afrobeats).
 - BeatOS picker should display whichever language has a value; if both, show `中文 (English)` in chips.
 - The list is non-grouped on NetEase. For BeatOS we may add a subtle hip-hop / non-hip-hop visual divider since the Chinese list is heavily skewed.
 

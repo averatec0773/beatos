@@ -1,36 +1,26 @@
 # Design Direction
 
 > **Audience**: AI agents (and humans) generating BeatOS UI code.
-> **Read this** before producing any frontend component, page, or styling
-> token. If a generated UI does not match this direction, it is wrong even
-> if the code is correct.
+> **Read this** before producing any frontend component, page, or styling token. If a generated UI does not match this direction, it is wrong even if the code is correct.
 
-This is **direction**, not pixel-perfect spec. It tells you the shape of the
-right answer; it does not pre-decide every screen.
+This is **direction**, not pixel-perfect spec. It tells you the shape of the right answer; it does not pre-decide every screen.
 
 ---
 
 ## 1. North star
 
-**Visual reference**: **Spotify desktop app, dark theme.**
-When in doubt, ask "what would Spotify do here?" then adapt for BeatOS's
-producer use case.
+**Visual reference**: **Spotify desktop app, dark theme.** When in doubt, ask "what would Spotify do here?" then adapt for BeatOS's producer use case.
 
 **Mood keywords**: *darkroom · focused · dense-but-breathing · tactile · pro-tool*.
 
 **Anti-patterns** (what BeatOS must NOT look like):
-- Generic shadcn beige / "AI-default" landing page
-- Bootstrap-style cards with thick borders and drop shadows
-- Material Design ripples and elevation overlays
-- Glassmorphism / heavy translucency
-- Pastel marketing palettes
+- Avoid: shadcn beige, Bootstrap drop-shadows, Material ripples, glassmorphism, pastel marketing palettes
 
 ---
 
 ## 2. Primary screen layout — 3-column
 
-The main window is permanently divided into three vertical columns. The
-proportions are not absolute; the table below is the default.
+The main window is permanently divided into three vertical columns. The proportions are not absolute; the table below is the default.
 
 ```
 ┌──────────────────┬───────────────────────────────────┬─────────────────────┐
@@ -67,36 +57,23 @@ proportions are not absolute; the table below is the default.
 ### Layout rules
 
 - Columns are **always visible** at app width ≥ 1100px.
-- Below 1100px (rare for a desktop pro tool, but supported): right column
-  collapses to a peek-bar; below 800px left column collapses to icon rail.
-  Mobile is **out of scope**.
-- Column dividers are **1px subtle lines** (`var(--border-subtle)`), not gaps
-  or shadows.
+- Below 1100px (rare for a desktop pro tool, but supported): right column collapses to a peek-bar; below 800px left column collapses to icon rail. Mobile is **out of scope**.
+- Column dividers are **1px subtle lines** (`var(--border-subtle)`), not gaps or shadows.
 - Each column scrolls independently.
 
 ### What "Source" means here
 
-A Source is a registered folder on disk that contains audio files. The
-catalog (tracks, lists, search) is **unified across all sources** — switching
-between sources never hides tracks from other sources, it just filters the
-visible set. Storage location is orthogonal to organizational identity.
-Lists especially are pure organization — never tied to which physical folder
-a track lives in.
+A Source is a registered folder on disk that contains audio files. The catalog (tracks, lists, search) is **unified across all sources** — switching between sources never hides tracks from other sources, it just filters the visible set. Lists especially are pure organization, never tied to which physical folder a track lives in.
 
 ### What "Beattape" means here
 
-A Beattape is just a user-created list whose membership the user curates
-manually (drag-drop tracks in). It maps to the same table as a genre list —
-the only difference is intent (genre = browse filter; beattape = packaged
-release). UI may show beattape lists with a different icon (📦) and a
-"Export tape" action; the data model is identical.
+A Beattape is just a user-created list whose membership the user curates manually (drag-drop tracks in). It maps to the same table as a genre list — the only difference is intent (genre = browse filter; beattape = packaged release); UI may show beattape lists with a different icon (📦) and a "Export tape" action.
 
 ---
 
 ## 3. Color tokens
 
-Start from Spotify's dark palette, then nudge toward BeatOS personality.
-**These are defaults. Tune the accent later; do not tune the dark grays.**
+Start from Spotify's dark palette, then nudge toward BeatOS personality. **These are defaults. Tune the accent later; do not tune the dark grays.**
 
 | Token | Value | Used for |
 |---|---|---|
@@ -115,8 +92,7 @@ Start from Spotify's dark palette, then nudge toward BeatOS personality.
 | `--danger` | `#f15e6c` | Destructive actions, missing-asset warning |
 | `--success` | `#3ecf8e` | "Inject succeeded", confirmed states |
 
-**Rule**: every color used in code must come from a token. Inline hex in JSX
-is a smell. The token names above are the canonical CSS variable names.
+**Rule**: every color used in code must come from a token. Inline hex in JSX is a smell. The token names above are the canonical CSS variable names.
 
 ---
 
@@ -132,11 +108,8 @@ is a smell. The token names above are the canonical CSS variable names.
 | Label / caption | Inter | 11px uppercase, 0.05em letter-spacing | 600 | 1.2 |
 | Numeric (BPM, duration) | JetBrains Mono | 13px | 500 | 1.4 |
 
-- **Default font**: Inter (free, broad weight range, ships well in Electron).
-- **Numeric font**: JetBrains Mono — tabular figures matter for BPM/duration
-  columns aligning vertically.
-- **Never** use the OS default font (looks generic).
-- **Never** use serif faces.
+- **Default font** Inter (free, broad weight range, ships well in Electron); **numeric font** JetBrains Mono for tabular figures in BPM/duration columns.
+- **Never** use the OS default font or serif faces.
 
 ---
 
@@ -145,37 +118,23 @@ is a smell. The token names above are the canonical CSS variable names.
 ### Track row (middle column)
 
 - Height: **64px** — two-line layout: title on top, `Producer` subtitle underneath.
-- Cover thumb: **48×48** at row left, 4px radius. Cover doubles as the play
-  surface: hover or current-track state reveals a dark scrim + play button
-  centered on the thumbnail; no standalone play column.
-- Columns: Cover · Title/Producer · BPM · Key · Genre · Updated. All
-  **left-aligned**.
-- `Updated` column renders absolute `YYYY-MM-DD` — relative dates were
-  rejected as too noisy at this density.
-- Column widths are **user-resizable** via drag handles between adjacent
-  columns. Session-scoped; not persisted across launches (see §10).
+- Cover thumb: **48×48** at row left, 4px radius. Cover doubles as the play surface: hover or current-track state reveals a dark scrim + play button centered on the thumbnail; no standalone play column.
+- Columns: Cover · Title/Producer · BPM · Key · Genre · Updated. All **left-aligned**.
+- `Updated` column renders absolute `YYYY-MM-DD` — relative dates were rejected as too noisy at this density.
+- Column widths are **user-resizable** via drag handles between adjacent columns. Session-scoped; not persisted across launches (see §10).
 - Hover: background → `--bg-row-hover`, no border.
 - Selected: background → `--bg-row-selected`, **left 3px accent bar inside the row** (not a full border).
 - Double-click opens the editor.
 - Right-click opens a context menu (edit, add to list, remove from list, delete from catalog, reveal in Finder/Explorer).
-- Drag handle visible only on hover, lives on the cover (not the row body —
-  prevents accidental drag-start when clicking row interior).
+- Drag handle visible only on hover, lives on the cover (not the row body — prevents accidental drag-start when clicking row interior).
 
 ### Editor (when double-click a row)
 
 - **Default**: full-route navigation (replaces Middle + Right with an editor view). This avoids modal layering complexity.
-- Layout: 2-column grid — 200×200 `CoverDropZone` on the left, form fields
-  on the right (Title, BPM/Key/Genre, Mood/Producer/License, Tags,
-  Description), full-width audio file rows below.
-- Audio files render as a single full-width section with **5 rows** (4 audio
-  role variants + Stems). Each row: role label · filename · filesize ·
-  hover-actions. Empty audio rows always render with "+ Add file" for
-  discoverability.
-- Cover drag-out: the 200×200 cover is a native OS drag source — drag it
-  into Finder / another app and the underlying file is dragged. Library row
-  thumbs are NOT drag sources (would conflict with dnd-kit drop targets).
-- Unsaved-changes dialog (Save / Discard / Cancel) guards every navigation
-  exit (Cancel, ESC, route change).
+- Layout: 2-column grid — 200×200 `CoverDropZone` on the left, form fields on the right (Title, BPM/Key/Genre, Mood/Producer/License, Tags, Description), full-width audio file rows below.
+- Audio files render as a single full-width section with **5 rows** (4 audio role variants + Stems). Each row: role label · filename · filesize · hover-actions. Empty audio rows always render with "+ Add file" for discoverability.
+- Cover drag-out: the 200×200 cover is a native OS drag source — drag it into Finder / another app and the underlying file is dragged. Library row thumbs are NOT drag sources (would conflict with dnd-kit drop targets).
+- Unsaved-changes dialog (Save / Discard / Cancel) guards every navigation exit (Cancel, ESC, route change).
 - ESC closes / returns to list.
 
 ### Buttons
@@ -193,12 +152,9 @@ is a smell. The token names above are the canonical CSS variable names.
 ### Cover art
 
 - Right column cover: max **320×320**, 8px radius, subtle `0 8px 24px rgba(0,0,0,0.4)` drop-shadow.
-- Editor cover (`CoverDropZone`): **200×200**, 8px radius. Doubles as a
-  native OS drag source for the underlying file.
-- Row thumbnail: **48×48**, 4px radius, no shadow. Overlay scrim + play
-  button on hover or when this row is the current player track.
-- When no cover: a flat `--bg-elevated` square with a centered music-note
-  glyph in `--text-tertiary`.
+- Editor cover (`CoverDropZone`): **200×200**, 8px radius. Doubles as a native OS drag source for the underlying file.
+- Row thumbnail: **48×48**, 4px radius, no shadow. Overlay scrim + play button on hover or when this row is the current player track.
+- When no cover: a flat `--bg-elevated` square with a centered music-note glyph in `--text-tertiary`.
 
 ### Empty states
 
@@ -214,99 +170,62 @@ is a smell. The token names above are the canonical CSS variable names.
 
 ### Filter chip bar
 
-A horizontal chip bar lives at the top of the middle column. It begins
-with `+ Add filter`; clicking opens a Radix Popover with two views:
-**field list** → **field-specific picker**. The two views share one
-Popover (Radix does not nest popovers — flatten into one with internal
-view state).
+A horizontal chip bar at the top of the middle column. Begins with `+ Add filter`; clicking opens a Radix Popover with two views: **field list** → **field-specific picker**. The two views share one Popover (Radix does not nest popovers — flatten into one with internal view state).
 
 - **AND across fields**: `Producer=X AND Genre=Y`.
 - **OR within a multi-value field**: `Genre IN (Trap, Lo-fi)`.
-- The sidebar Source/List selection is the **primary** filter; chips
-  narrow further within it. Removing all chips returns to the
-  source/list base set.
+- The sidebar Source/List selection is the **primary** filter; chips narrow further within it. Removing all chips returns to the source/list base set.
 - Active filter state is **session-scoped** (see §10).
 
 ### Sortable column headers
 
-The `TableHeader` row at the top of the middle column has clickable
-column titles. Click toggles asc → desc → (next column resets).
+The `TableHeader` row at the top of the middle column has clickable column titles. Click toggles asc → desc → (next column resets).
 
-- **Only one active sort column at a time.** The active column shows a
-  direction indicator (`↑` / `↓`).
-- Default sort: `updated_at DESC` for source / All Beats views;
-  list-position ASC for user list views (sentinel preserves manual
-  curation order).
+- **Only one active sort column at a time.** The active column shows a direction indicator (`↑` / `↓`).
+- Default sort: `updated_at DESC` for source / All Beats views; list-position ASC for user list views (sentinel preserves manual curation order).
 - Sort state is session-scoped.
 
 ### `ChipMultiSelect` picker
 
-Used for vocabulary-based fields (Genre, Mood) and free-add fields
-(Producer). Renders selected values as removable chips; a `+` trigger
-opens a Radix Popover with the option list.
+Used for vocabulary-based fields (Genre, Mood) and free-add fields (Producer). Renders selected values as removable chips; a `+` trigger opens a Radix Popover with the option list.
 
-- Producer is **free-add** — type a new value in the popover, it joins
-  the local picker state and persists on Save.
-- Genre and Mood are **vocab-only** — pulled from `genres.ts` / `moods.ts`.
-  English `en` is the canonical stored key; any Chinese `zh` label is
-  display-only.
-- `maxSelections={1}` collapses the component into a single-select
-  dropdown trigger (shows current value, no chip bar) — use this for
-  fields that are conceptually single-value but should share the picker
-  UX.
+- Producer is **free-add** — type a new value in the popover, it joins the local picker state and persists on Save.
+- Genre and Mood are **vocab-only** — pulled from `genres.ts` / `moods.ts`. English `en` is the canonical stored key; any Chinese `zh` label is display-only.
+- `maxSelections={1}` collapses the component into a single-select dropdown trigger (shows current value, no chip bar) — use this for fields that are conceptually single-value but should share the picker UX.
 
 ### `KeyPickerPopover` (Splice-style)
 
-Replaces a plain text input for `key_signature`. Radix Popover anchored
-to a trigger button that reads "Add key" when empty or the formatted
-value when set.
+Replaces a plain text input for `key_signature`. Radix Popover anchored to a trigger button that reads "Add key" when empty or the formatted value when set.
 
 - **Flat / Sharp tabs** at the top.
-- Note grid: alteration row (sharps or flats) above the naturals row,
-  with the E–F and B–C gaps preserved.
+- Note grid: alteration row (sharps or flats) above the naturals row, with the E–F and B–C gaps preserved.
 - **Major / Minor parallel buttons** at the bottom.
 - Clear + Close actions.
-- **No default mode.** Major or Minor must be picked explicitly — partial
-  selections (note without mode) are discarded on Close. No half-state
-  ever reaches the DB.
-- Display convention: major keys render with sharps, minor keys with
-  flats. Normalized storage format: `"F# minor"` / `"Eb major"`. Legacy
-  values are preserved until the user commits a fresh pick.
+- **No default mode.** Major or Minor must be picked explicitly — partial selections (note without mode) are discarded on Close. No half-state ever reaches the DB.
+- Display convention: major keys render with sharps, minor keys with flats. Normalized storage format: `"F# minor"` / `"Eb major"`. Legacy values are preserved until the user commits a fresh pick.
 
 ---
 
 ## 7. Bottom player bar
 
-A Spotify-pattern player bar pinned to the bottom of `AppShell` as a
-`flex-shrink-0` footer. A single `<audio>` element is owned by the
-player store; no component creates its own audio element.
+A Spotify-pattern player bar pinned to the bottom of `AppShell` as a `flex-shrink-0` footer. A single `<audio>` element is owned by the player store; no component creates its own audio element.
 
 ### Surfaces
 
-- **Transport**: Play / Pause / Prev / Next, Seek scrubber, Volume +
-  Mute, Shuffle, Repeat.
-- **Role switcher**: dropdown that picks between the 4 audio role
-  variants (`tagged_wav` / `untagged_wav` / `tagged_mp3` / `untagged_mp3`).
-  Default priority: `tagged_wav > untagged_wav > tagged_mp3 > untagged_mp3`.
-  Switching role replays from start.
-- **Subtitle**: `producer · BPM · Key` (em-dash placeholder for nulls).
-  Producer is per-track.
+- **Transport**: Play / Pause / Prev / Next, Seek scrubber, Volume + Mute, Shuffle, Repeat.
+- **Role switcher**: dropdown that picks between the 4 audio role variants (`tagged_wav` / `untagged_wav` / `tagged_mp3` / `untagged_mp3`). Default priority: `tagged_wav > untagged_wav > tagged_mp3 > untagged_mp3`. Switching role replays from start.
+- **Subtitle**: `producer · BPM · Key` (em-dash placeholder for nulls). Producer is per-track.
 
 ### Queue rules
 
-- The queue is a **snapshot of the visible view at play-start** —
-  All Beats / Source / List / Search results, in their current sort
-  order at that instant.
-- Queue does **NOT** auto-update when the user navigates to a different
-  view mid-playback. "Add to queue" is out of scope.
+- The queue is a **snapshot of the visible view at play-start** — All Beats / Source / List / Search results, in their current sort order at that instant.
+- Queue does **NOT** auto-update when the user navigates to a different view mid-playback. "Add to queue" is out of scope.
 
 ### Hard rules
 
 - **No global Space shortcut** — out of scope.
-- **No persistence across restarts** — player state resets on launch
-  (see §10).
-- Library row thumbs control playback via the cover overlay (§5 Track
-  row), not a separate play column.
+- **No persistence across restarts** — player state resets on launch (see §10).
+- Library row thumbs control playback via the cover overlay (§5 Track row), not a separate play column.
 
 ---
 
@@ -324,7 +243,7 @@ player store; no component creates its own audio element.
 | Inject | Editor → Inject button | Inject flow per charter §8 Flow 3 |
 
 - **Keyboard**: Up/Down moves focus in middle column; Enter opens editor; ESC returns to list. Cmd/Ctrl-F focuses search.
-- **Drag-and-drop** is a first-class interaction (curating beattapes is the use case). Use `@dnd-kit/core` for in-app drag (Playwright `_electron` cannot drive native HTML5 drag, which would break the smoke harness). Native OS drag is reserved for cover drag-out only.
+- **Drag-and-drop** is first-class (curating beattapes). Use `@dnd-kit/core` for in-app drag (Playwright `_electron` cannot drive native HTML5 drag); native OS drag is reserved for cover drag-out only.
 - **No hover-tooltips** for things obvious from labels. Tooltip is only for icon-only buttons.
 
 ---
@@ -341,10 +260,7 @@ player store; no component creates its own audio element.
 
 ## 10. No-persistence pattern
 
-Several pieces of UI state are deliberately **session-scoped** — they
-reset on every app launch. This is intentional simplicity, not an
-oversight. Do not add persistence to any of these without an explicit
-user request.
+Several pieces of UI state are deliberately **session-scoped** — they reset on every app launch. This is intentional simplicity; do not add persistence without an explicit user request.
 
 - Column widths in the Library table
 - Sort column + direction
@@ -352,9 +268,7 @@ user request.
 - Player state (current track, queue, volume, shuffle, repeat)
 - Multi-select state in the track list
 
-The catalog itself (tracks, assets, lists, sources, settings) is
-persisted — those live in SQLite. The line is: **organizational data is
-persisted; transient view state is not.**
+The catalog itself (tracks, assets, lists, sources, settings) is persisted in SQLite. The line is: **organizational data is persisted; transient view state is not.**
 
 ---
 
@@ -371,20 +285,12 @@ These belong to v0.1.0 polish or per-screen design sessions:
 - Custom icon set (use `lucide-react` until v0.1.0)
 - Persistence of session view state (see §10)
 
-If you find yourself designing one of these, stop and check whether it
-should wait.
+If you find yourself designing one of these, stop and check whether it should wait.
 
 ---
 
 ## 12. When to update this file
 
-Update when:
-- A real screen ships and reveals a token gap (e.g., we needed `--bg-row-dragover` and didn't have it)
-- A pattern repeats across 3+ screens and deserves codifying
-- The user reverses a direction (e.g., decides to add light theme, or asks for persistence on something currently session-scoped)
+Update when: a real screen ships and reveals a token gap (e.g., needed `--bg-row-dragover`); a pattern repeats across 3+ screens and deserves codifying; the user reverses a direction (e.g., adds light theme, or asks for persistence on something currently session-scoped).
 
-Do **not** update for:
-- One-off page-specific styling
-- Experiments that didn't ship
-- Hypothetical future patterns
-- Per-version changelog entries — that's what `CHANGELOG.md` is for
+Do **not** update for: one-off page-specific styling; experiments that didn't ship; hypothetical future patterns; per-version changelog entries (that's `CHANGELOG.md`).

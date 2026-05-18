@@ -15,7 +15,7 @@
  * Exit codes: 0 PASS, 1 FAIL, 2 prereq missing
  */
 import { _electron as electron } from "playwright";
-import { existsSync, readFileSync, writeFileSync, mkdtempSync, mkdirSync, promises as fsPromises } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdtempSync, mkdirSync, readdirSync, statSync, unlinkSync, promises as fsPromises } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -103,6 +103,28 @@ if (!existsSync(mainEntry)) {
 const userData = mkdtempSync(join(tmpdir(), "beatos-smoke-"));
 const logsDir = join(repoRoot, "logs");
 mkdirSync(logsDir, { recursive: true });
+
+// Purge smoke artifacts older than 3 days so the logs dir doesn't grow unbounded.
+// Only matches `smoke-<digits>.{png,jsonl}` — leaves main.log / sidecar.jsonl alone.
+{
+  const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
+  const artifact = /^smoke-\d+\.(png|jsonl)$/;
+  let purged = 0;
+  for (const name of readdirSync(logsDir)) {
+    if (!artifact.test(name)) continue;
+    const full = join(logsDir, name);
+    try {
+      if (statSync(full).mtimeMs < cutoff) {
+        unlinkSync(full);
+        purged++;
+      }
+    } catch {
+      // Best-effort cleanup; ignore races (file vanished between readdir+stat).
+    }
+  }
+  if (purged > 0) console.log(`smoke: purged ${purged} stale artifact(s) >3d old`);
+}
+
 const ts = Date.now();
 const logPath = join(logsDir, `smoke-${ts}.jsonl`);
 const dbPath = join(userData, "smoke.db");
