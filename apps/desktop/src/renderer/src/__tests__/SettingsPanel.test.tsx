@@ -48,99 +48,42 @@ describe("SettingsPanel", () => {
   });
 
   describe("Producers section", () => {
-    it("renders distinct producer list and gates buttons by selection count", async () => {
+    it("lists each distinct producer with a per-row Remove button", async () => {
       vi.spyOn(distinct, "values").mockResolvedValue(["Alice", "alice", "Bob"]);
       render(<MemoryRouter><SettingsPanel /></MemoryRouter>);
 
       await waitFor(() => expect(screen.getByText("Alice")).toBeInTheDocument());
       expect(screen.getByText("alice")).toBeInTheDocument();
       expect(screen.getByText("Bob")).toBeInTheDocument();
-
-      // No selection → no action buttons visible
-      expect(screen.queryByTestId("producer-rename-btn")).not.toBeInTheDocument();
-
-      // Select one → rename + delete enabled, merge disabled
-      await userEvent.click(screen.getAllByRole("checkbox")[0]);
-      expect(screen.getByTestId("producer-rename-btn")).not.toBeDisabled();
-      expect(screen.getByTestId("producer-merge-btn")).toBeDisabled();
-      expect(screen.getByTestId("producer-delete-btn")).not.toBeDisabled();
-
-      // Select another → merge becomes enabled, rename disabled
-      await userEvent.click(screen.getAllByRole("checkbox")[1]);
-      expect(screen.getByTestId("producer-rename-btn")).toBeDisabled();
-      expect(screen.getByTestId("producer-merge-btn")).not.toBeDisabled();
+      expect(screen.getByTestId("producer-remove-Alice")).toBeInTheDocument();
+      expect(screen.getByTestId("producer-remove-alice")).toBeInTheDocument();
+      expect(screen.getByTestId("producer-remove-Bob")).toBeInTheDocument();
     });
 
-    it("rename flow: preview → confirm → rewrite → refresh", async () => {
-      vi.spyOn(distinct, "values")
-        .mockResolvedValueOnce(["Alice", "alicia"])
-        .mockResolvedValueOnce(["Alice"]); // after rename
-      vi.spyOn(producersApi, "preview").mockResolvedValue({ affected: 3 });
-      const rewrite = vi.spyOn(producersApi, "rewrite").mockResolvedValue({ affected: 3 });
-
+    it("shows empty-state copy when there are no producers yet", async () => {
+      vi.spyOn(distinct, "values").mockResolvedValue([]);
       render(<MemoryRouter><SettingsPanel /></MemoryRouter>);
-      await waitFor(() => expect(screen.getByText("alicia")).toBeInTheDocument());
-
-      // Select "alicia" (index 1 alphabetically: Alice, alicia)
-      await userEvent.click(screen.getAllByRole("checkbox")[1]);
-      await userEvent.click(screen.getByTestId("producer-rename-btn"));
-
-      const input = await screen.findByTestId("producer-rename-input");
-      await userEvent.clear(input);
-      await userEvent.type(input, "Alice");
-      await userEvent.click(screen.getByTestId("producer-rename-submit"));
-
-      // Confirm dialog appears with affected count
-      const body = await screen.findByTestId("producer-confirm-body");
-      expect(body.textContent).toMatch(/3/);
-      await userEvent.click(screen.getByTestId("producer-confirm-commit"));
-
-      await waitFor(() => expect(rewrite).toHaveBeenCalledWith(["alicia"], "Alice"));
+      await waitFor(() => expect(screen.getByText(/no producers yet/i)).toBeInTheDocument());
     });
 
-    it("delete flow: skips name dialog, goes straight to confirmation", async () => {
-      vi.spyOn(distinct, "values")
-        .mockResolvedValueOnce(["Bob"])
-        .mockResolvedValueOnce([]);
-      vi.spyOn(producersApi, "preview").mockResolvedValue({ affected: 2 });
-      const rewrite = vi.spyOn(producersApi, "rewrite").mockResolvedValue({ affected: 2 });
+    it("Remove calls rewrite with to=null and refreshes the list", async () => {
+      const refreshSpy = vi.spyOn(distinct, "values")
+        .mockResolvedValueOnce(["Alice", "Bob"])
+        .mockResolvedValueOnce(["Bob"]);
+      const rewrite = vi.spyOn(producersApi, "rewrite").mockResolvedValue({ affected: 4 });
+      const trackRefresh = vi.fn().mockResolvedValue(undefined);
+      useTrackStore.setState({ refresh: trackRefresh });
 
       render(<MemoryRouter><SettingsPanel /></MemoryRouter>);
-      await waitFor(() => expect(screen.getByText("Bob")).toBeInTheDocument());
-      await userEvent.click(screen.getAllByRole("checkbox")[0]);
-      await userEvent.click(screen.getByTestId("producer-delete-btn"));
+      await waitFor(() => expect(screen.getByTestId("producer-remove-Alice")).toBeInTheDocument());
 
-      await screen.findByTestId("producer-confirm-commit");
-      await userEvent.click(screen.getByTestId("producer-confirm-commit"));
+      await userEvent.click(screen.getByTestId("producer-remove-Alice"));
 
-      await waitFor(() => expect(rewrite).toHaveBeenCalledWith(["Bob"], null));
-    });
-
-    it("merge flow: requires 2+ selected, default target is first", async () => {
-      vi.spyOn(distinct, "values")
-        .mockResolvedValueOnce(["Alice", "alice"])
-        .mockResolvedValueOnce(["Alice"]);
-      vi.spyOn(producersApi, "preview").mockResolvedValue({ affected: 2 });
-      const rewrite = vi.spyOn(producersApi, "rewrite").mockResolvedValue({ affected: 2 });
-
-      render(<MemoryRouter><SettingsPanel /></MemoryRouter>);
-      await waitFor(() => expect(screen.getByText("alice")).toBeInTheDocument());
-
-      // Select both
-      const boxes = screen.getAllByRole("checkbox");
-      await userEvent.click(boxes[0]);
-      await userEvent.click(boxes[1]);
-      await userEvent.click(screen.getByTestId("producer-merge-btn"));
-
-      // Default merge target = first selected (Alice)
-      const mergeInput = await screen.findByTestId("producer-merge-input");
-      expect(mergeInput).toHaveValue("Alice");
-      await userEvent.click(screen.getByTestId("producer-merge-submit"));
-
-      await userEvent.click(await screen.findByTestId("producer-confirm-commit"));
-      await waitFor(() =>
-        expect(rewrite).toHaveBeenCalledWith(expect.arrayContaining(["Alice", "alice"]), "Alice"),
-      );
+      await waitFor(() => expect(rewrite).toHaveBeenCalledWith(["Alice"], null));
+      // Distinct list re-fetched after the rewrite
+      await waitFor(() => expect(refreshSpy).toHaveBeenCalledTimes(2));
+      // Track store refreshed so any open list view picks up the change
+      expect(trackRefresh).toHaveBeenCalled();
     });
   });
 });
