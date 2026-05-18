@@ -83,7 +83,7 @@ wheels = [
 
 [[package]]
 name = "beatos-core"
-version = "0.0.17"
+version = "0.0.18"
 source = { editable = "packages/beatos-core" }
 dependencies = [
     { name = "aiosqlite" },
@@ -104,7 +104,7 @@ requires-dist = [
 
 [[package]]
 name = "beatos-http"
-version = "0.0.17"
+version = "0.0.18"
 source = { editable = "packages/beatos-http" }
 dependencies = [
     { name = "asgi-correlation-id" },
@@ -125,7 +125,7 @@ requires-dist = [
 
 [[package]]
 name = "beatos-mcp"
-version = "0.0.17"
+version = "0.0.18"
 source = { editable = "packages/beatos-mcp" }
 dependencies = [
     { name = "beatos-core" },

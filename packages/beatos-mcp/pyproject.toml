@@ -1,6 +1,6 @@
 [project]
 name = "beatos-mcp"
-version = "0.0.17"
+version = "0.0.18"
 description = "BeatOS MCP facade — stdio MCP server exposing BeatOS to AI agents."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"

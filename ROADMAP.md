@@ -18,11 +18,12 @@ Tone.js audio engine migration + layout fixes. See [CHANGELOG.md](CHANGELOG.md#0
 
 SidebarPanel refactor + top-bar polish. See [CHANGELOG.md](CHANGELOG.md#0017---2026-05-18--sidebarpanel-refactor--top-bar-polish).
 
-### v0.0.18+ — Refactor pass (continued)
+### v0.0.18 — SHIPPED 2026-05-18
 
-Each is its own version to limit blast radius. No bundling with feature work.
+TrackEditor refactor. See [CHANGELOG.md](CHANGELOG.md#0018---2026-05-18--trackeditor-refactor).
 
-- **TrackEditor split** — `routes/TrackEditor.tsx` (~470 lines after auto-save lands) → `useTrackEditorState` hook + `<TrackEditorForm>` component + thin route container.
+### v0.0.19+ — Refactor pass (continued)
+
 - **smoke.mjs split** — `apps/desktop/scripts/smoke.mjs` (~1500 lines) → `scripts/smoke/{runner,library,player,editor,trash,sidebar}.mjs`. Preserve assertion order; runner orchestrates.
 
 ### Audio engine follow-ups (deferred from v0.0.16)

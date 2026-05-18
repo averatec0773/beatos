@@ -1,0 +1,246 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+
+import { tracks } from "@/api/tracks";
+import type { Track } from "@/api/tracks";
+import { assets as assetsApi } from "@/api/assets";
+import { distinct } from "@/api/distinct";
+import { analysis } from "@/api/analysis";
+import type { AudioAnalysisResult } from "@/api/analysis";
+import { useTrackStore } from "@/stores/tracks";
+import { useAssetStore } from "@/stores/assets";
+import { shallowEqualEditable } from "@/lib/shallow-equal-track";
+import {
+  AUTOSAVE_DEBOUNCE_MS,
+  buildPayload,
+  type SaveState,
+} from "@/lib/track-editor-helpers";
+
+export type ProducerOption = { value: string; label: string };
+
+export interface TrackEditorState {
+  track: Track | null;
+  loadError: string | null;
+  isDirty: boolean;
+  titleEmpty: boolean;
+  saveState: SaveState;
+  lastSavedAt: number | null;
+  saveErrorMsg: string | null;
+  patch: <K extends keyof Track>(field: K, value: Track[K]) => void;
+  performSave: (snapshot: Track) => Promise<void>;
+  flushAndClose: () => void;
+  onDelete: () => Promise<void>;
+  producerOptions: ProducerOption[];
+  refreshProducerOptions: () => Promise<void>;
+  analyzing: boolean;
+  analyzeResult: AudioAnalysisResult | null;
+  analyzeDialogOpen: boolean;
+  runAnalyze: () => Promise<void>;
+  setAnalyzeDialogOpen: (open: boolean) => void;
+}
+
+export function useTrackEditorState(): TrackEditorState {
+  const params = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const updateInStore = useTrackStore((s) => s.update);
+  const removeInStore = useTrackStore((s) => s.remove);
+  const setAssetsForTrack = useAssetStore((s) => s.setForTrack);
+  const trackList = useTrackStore((s) => s.list);
+
+  const [track, setTrack] = useState<Track | null>(null);
+  const [initialTrack, setInitialTrack] = useState<Track | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [producerOptions, setProducerOptions] = useState<ProducerOption[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeResult, setAnalyzeResult] = useState<AudioAnalysisResult | null>(null);
+  const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
+  const [, setNowTick] = useState(0);
+
+  const refreshProducerOptions = useCallback(async () => {
+    try {
+      const vals = await distinct.values("producer");
+      setProducerOptions(vals.map((p) => ({ value: p, label: p })));
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
+
+  // Re-fetch producers per track id (vocab is global; useEffect([]) is stale
+  // across SPA route changes that reuse the same TrackEditor instance).
+  useEffect(() => {
+    void refreshProducerOptions();
+  }, [params.id, refreshProducerOptions]);
+
+  useEffect(() => {
+    if (!params.id) return;
+    let cancelled = false;
+    Promise.all([
+      tracks.get(Number(params.id)),
+      assetsApi.listForTrack(Number(params.id)),
+    ])
+      .then(([t, assetList]) => {
+        if (!cancelled) {
+          setTrack(t);
+          setAssetsForTrack(t.id, assetList);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) setLoadError(String(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id, setAssetsForTrack]);
+
+  useEffect(() => {
+    const el = document.getElementById("track-title");
+    if (el) (el as HTMLInputElement).focus();
+  }, []);
+
+  // Initial baseline (only on first load of a given track id)
+  useEffect(() => {
+    if (!track) return;
+    if (!initialTrack || initialTrack.id !== track.id) {
+      setInitialTrack(track);
+    }
+  }, [track, initialTrack]);
+
+  // Absorb upstream auto-analyze patches into form fields that are still
+  // empty. Writes to both `track` and `initialTrack` so the patch does not
+  // register as a user-dirty edit (which would re-fire auto-save).
+  const liveTrack = useMemo(() => {
+    if (!params.id) return null;
+    const id = Number(params.id);
+    return trackList.find((t) => t.id === id) ?? null;
+  }, [trackList, params.id]);
+
+  useEffect(() => {
+    if (!liveTrack || !track || liveTrack.id !== track.id) return;
+    const patches: Partial<Track> = {};
+    if (track.bpm == null && liveTrack.bpm != null) patches.bpm = liveTrack.bpm;
+    if (track.key_signature == null && liveTrack.key_signature != null) {
+      patches.key_signature = liveTrack.key_signature;
+    }
+    if (Object.keys(patches).length === 0) return;
+    setTrack((cur) => (cur ? { ...cur, ...patches } : cur));
+    setInitialTrack((cur) => (cur ? { ...cur, ...patches } : cur));
+  }, [liveTrack?.bpm, liveTrack?.key_signature, track?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isDirty = useMemo(() => {
+    if (!track || !initialTrack) return false;
+    return !shallowEqualEditable(track, initialTrack);
+  }, [track, initialTrack]);
+
+  const titleEmpty = track != null && !track.title.trim();
+
+  // The single save action. Always sends the snapshot it was called with —
+  // if newer edits exist post-save, isDirty stays true and the effect below
+  // schedules another save against the latest snapshot.
+  const performSave = useCallback(
+    async (snapshot: Track) => {
+      setSaveState("saving");
+      setSaveErrorMsg(null);
+      try {
+        const saved = await updateInStore(snapshot.id, buildPayload(snapshot));
+        // Baseline = what we sent. Newer local edits remain dirty.
+        setInitialTrack(saved);
+        setSaveState("saved");
+        setLastSavedAt(Date.now());
+      } catch (err) {
+        setSaveState("error");
+        setSaveErrorMsg(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [updateInStore],
+  );
+
+  // Debounced auto-save. Gated on dirty + valid title + no in-flight save +
+  // no prior error (user must click Retry to clear an error — prevents
+  // tight retry loops against a persistent failure like an offline sidecar).
+  useEffect(() => {
+    if (!track || !initialTrack) return;
+    if (!isDirty) return;
+    if (saveState === "saving" || saveState === "error") return;
+    if (!track.title.trim()) return;
+    const id = window.setTimeout(() => {
+      void performSave(track);
+    }, AUTOSAVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
+  }, [track, initialTrack, isDirty, saveState, performSave]);
+
+  // Tick "Xs ago" once per second so the label stays current.
+  useEffect(() => {
+    if (saveState !== "saved") return;
+    const id = window.setInterval(() => setNowTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [saveState]);
+
+  // Flush a pending save before navigating away. Fire-and-forget — by the
+  // time the promise resolves the editor has unmounted, but the API call
+  // still lands in the store. Skips if save is in-flight (it'll complete
+  // on its own) or if title is empty (would error out).
+  const flushAndClose = useCallback(() => {
+    if (track && isDirty && saveState === "idle" && track.title.trim()) {
+      void performSave(track);
+    }
+    navigate("/");
+  }, [track, isDirty, saveState, performSave, navigate]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === "Escape") flushAndClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [flushAndClose]);
+
+  const onDelete = useCallback(async () => {
+    if (!track) return;
+    if (!confirm(`Delete "${track.title}"? This cannot be undone.`)) return;
+    await removeInStore(track.id);
+    navigate("/");
+  }, [track, removeInStore, navigate]);
+
+  const patch = useCallback(<K extends keyof Track>(field: K, value: Track[K]): void => {
+    setTrack((cur) => (cur ? { ...cur, [field]: value } : cur));
+  }, []);
+
+  const runAnalyze = useCallback(async () => {
+    if (!track) return;
+    setAnalyzing(true);
+    try {
+      const result = await analysis.analyze(track.id);
+      setAnalyzeResult(result);
+      setAnalyzeDialogOpen(true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert(`Analysis failed: ${msg}`);
+    } finally {
+      setAnalyzing(false);
+    }
+  }, [track]);
+
+  return {
+    track,
+    loadError,
+    isDirty,
+    titleEmpty,
+    saveState,
+    lastSavedAt,
+    saveErrorMsg,
+    patch,
+    performSave,
+    flushAndClose,
+    onDelete,
+    producerOptions,
+    refreshProducerOptions,
+    analyzing,
+    analyzeResult,
+    analyzeDialogOpen,
+    runAnalyze,
+    setAnalyzeDialogOpen,
+  };
+}

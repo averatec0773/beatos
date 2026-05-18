@@ -4,6 +4,22 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.18] - 2026-05-18 — TrackEditor refactor
+
+Second entry of the v0.0.17+ refactor pass. Structural-only — no behavior change. `routes/TrackEditor.tsx` was 501 lines; now the route is 35 lines and the responsibilities are split into a state hook, a form component, a save-indicator component, and a pure-helpers module.
+
+### Changed
+
+- **`apps/desktop/src/renderer/src/routes/TrackEditor.tsx` (501 → 35 lines)** — thin container. Reads `loadError` / `track` for the loading + error early-returns, renders `<AnalyzeResultDialog>` + `<TrackEditorForm>`. All state and effects moved out.
+- **`apps/desktop/src/renderer/src/hooks/use-track-editor-state.ts`** (NEW, ~220 lines) — `useTrackEditorState()` owns the form lifecycle: track / initialTrack load, dirty tracking, debounced auto-save (`AUTOSAVE_DEBOUNCE_MS`), upstream auto-analyze patch absorption (writes both `track` AND `initialTrack` so the upstream write doesn't re-fire auto-save — preserves the v0.0.15 invariant), per-track-id producer-distinct refresh (caught at v0.0.14.1: `useEffect([])` went stale across SPA route reuse), ESC keybinding, analyze runner + dialog open state, delete confirm, `patch<K>()` setter. Returns one object consumed by route + form.
+- **`apps/desktop/src/renderer/src/components/TrackEditor/TrackEditorForm.tsx`** (NEW, ~210 lines) — receives `{ track, state }` and renders the form body (cover slot, analyze button, title + BPM + Key + Genre + Mood + Producer + License + Tags + Description + FileRowsSection + Close/Delete row). Producer rename/delete callbacks call `producersApi.rewrite` + `state.refreshProducerOptions` + local `patch` — same logic, now in one place.
+- **`apps/desktop/src/renderer/src/components/TrackEditor/SaveIndicator.tsx`** (NEW, ~55 lines) — extracts the four-state save-status pill (title-required → saving → error+retry → saved · Xs ago). `data-save-status` attribute preserved for smoke + test hooks.
+- **`apps/desktop/src/renderer/src/lib/track-editor-helpers.ts`** (NEW) — pure helpers: `buildPayload(t)`, `formatSavedAgo(ms)`, `LICENSE_TYPES`, `AUTOSAVE_DEBOUNCE_MS`, `SaveState` type. Easy to test in isolation; importable by route, form, hook, and indicator without circularity.
+
+### Verification
+
+233 vitest tests pass (including the 4 TrackEditor auto-save tests, which import via the same `@/routes/TrackEditor` path), 33 smoke assertions pass.
+
 ## [0.0.17] - 2026-05-18 — SidebarPanel refactor + top-bar polish
 
 First entry of the v0.0.17+ refactor pass: structural-only, no feature changes. Plus a small visual fix to the top bar so it aligns better with the macOS traffic-light buttons, and a developer credit pinned to the sidebar footer.
