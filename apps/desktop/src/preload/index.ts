@@ -22,6 +22,10 @@ const beatos = {
     ipcRenderer.invoke(IPC_CHANNELS.FS_COPY_INTO_SOURCE, src, root, sub),
   moveIntoSource: (src: string, root: string, sub: string | null): Promise<string> =>
     ipcRenderer.invoke(IPC_CHANNELS.FS_MOVE_INTO_SOURCE, src, root, sub),
+  testMcpConnection: (): Promise<
+    | { ok: true; toolsCount: number; version: string }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke(IPC_CHANNELS.MCP_TEST_CONNECTION),
   onSidecarCrashed: (cb: (info: { code: number | null; signal: string | null }) => void): (() => void) => {
     const handler = (_e: Electron.IpcRendererEvent, info: { code: number | null; signal: string | null }) => cb(info);
     ipcRenderer.on(IPC_CHANNELS.SIDECAR_CRASHED, handler);

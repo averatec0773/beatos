@@ -14,6 +14,7 @@ export const IPC_CHANNELS = {
   FS_MOVE_INTO_SOURCE: "fs:move-into-source",
   SIDECAR_CRASHED: "sidecar-crashed",
   DRAG_OUT_FILE: "drag-out-file",
+  MCP_TEST_CONNECTION: "mcp:test-connection",
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

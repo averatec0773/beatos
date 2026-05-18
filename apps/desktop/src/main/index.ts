@@ -12,6 +12,7 @@ import { parseUvicornLevel } from "./log-parse";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
 import { assertSidecarLayout } from "./sidecar-helpers";
 import { createSplashWindow, closeSplashAndShowMain } from "./splash";
+import { testMcpConnection } from "./mcp/test-connection";
 
 const HANDSHAKE_TIMEOUT_MS = 5000;
 const HANDSHAKE_POLL_MS = 50;
@@ -266,6 +267,10 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle(IPC_CHANNELS.STORAGE_GET_DB_PATH, () => resolveDbPath());
+
+  ipcMain.handle(IPC_CHANNELS.MCP_TEST_CONNECTION, () =>
+    testMcpConnection({ repoRoot: repoRoot(), dbPath: resolveDbPath() })
+  );
 
   ipcMain.handle(IPC_CHANNELS.STORAGE_SET_DB_PATH, (_e, newPath: string) => {
     mkdirSync(dirname(newPath), { recursive: true });
