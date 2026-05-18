@@ -130,12 +130,14 @@ source = { editable = "packages/beatos-mcp" }
 dependencies = [
     { name = "beatos-core" },
     { name = "mcp" },
+    { name = "structlog" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "beatos-core", editable = "packages/beatos-core" },
     { name = "mcp", specifier = ">=1.0" },
+    { name = "structlog", specifier = ">=25.5.0" },
 ]
 
 [[package]]

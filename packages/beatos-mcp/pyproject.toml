@@ -8,6 +8,7 @@ license = { text = "MIT" }
 dependencies = [
     "beatos-core",
     "mcp>=1.0",
+    "structlog>=25.5.0",
 ]
 
 [build-system]
