@@ -4,7 +4,11 @@ export function formatPlayerSubtitle(opts: {
   key: string | null;
 }): string {
   const raw = opts.producer;
-  const p = Array.isArray(raw) ? (raw.length > 0 ? raw.join(", ") : "—") : raw || "—";
+  const p = Array.isArray(raw)
+    ? raw.length > 0
+      ? [...raw].sort((a, b) => a.localeCompare(b)).join(", ")
+      : "—"
+    : raw || "—";
   const b = opts.bpm != null ? `${opts.bpm} BPM` : "— BPM";
   const k = opts.key || "—";
   return `${p} · ${b} · ${k}`;

@@ -93,13 +93,14 @@ export function TableHeader(): React.JSX.Element {
 
       <ColumnResizer columnKey="genre" currentWidth={widths.genre} />
 
-      {/* Updated — no resizer, last column */}
+      {/* Updated — last column; absorbs remaining horizontal space so the
+          table fills the container width without clipping. min-width keeps
+          the header label readable on tight layouts. */}
       <button
         type="button"
         data-column="updated_at"
         onClick={() => toggleSort("updated_at")}
-        style={{ width: widths.updated, flexShrink: 0 }}
-        className="truncate flex items-center gap-1 hover:text-text-secondary cursor-pointer"
+        className="flex-1 min-w-[80px] truncate flex items-center gap-1 hover:text-text-secondary cursor-pointer text-left"
       >
         <span>Updated</span>
         {sortBy === "updated_at" && (sortDir === "asc" ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}

@@ -14,6 +14,11 @@ describe("formatPlayerSubtitle", () => {
     expect(formatPlayerSubtitle({ producer: null, bpm: null, key: null }))
       .toBe("— · — BPM · —");
   });
+  it("sorts producer array alphabetically", () => {
+    expect(
+      formatPlayerSubtitle({ producer: ["yusician", "averatec"], bpm: 136, key: "Gbm" }),
+    ).toBe("averatec, yusician · 136 BPM · Gbm");
+  });
 });
 
 describe("formatTime", () => {

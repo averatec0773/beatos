@@ -67,7 +67,7 @@ export function TrackRow({
       >
         <span data-track-title className="text-sm font-medium text-text-primary truncate">{track.title}</span>
         <span className="text-xs text-text-tertiary truncate">
-          {(track.producer ?? []).join(", ")}
+          {[...(track.producer ?? [])].sort((a, b) => a.localeCompare(b)).join(", ")}
         </span>
       </div>
       {/* 1px resizer spacer — matches ColumnResizer width so columns stay aligned */}
@@ -80,7 +80,7 @@ export function TrackRow({
         {track.genre && track.genre.length > 0 ? `${track.genre[0]}${track.genre.length > 1 ? ` +${track.genre.length - 1}` : ""}` : "—"}
       </div>
       <div className="w-1 flex-shrink-0" />
-      <div className="truncate font-mono text-xs text-text-tertiary" style={{ width: widths.updated, flexShrink: 0 }}>
+      <div className="flex-1 min-w-[80px] truncate font-mono text-xs text-text-tertiary">
         {formatRowDate(track.updated_at)}
       </div>
     </div>
