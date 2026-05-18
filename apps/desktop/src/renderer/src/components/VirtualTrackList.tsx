@@ -21,15 +21,19 @@ export function VirtualTrackList({ tracks, renderRow }: Props): React.JSX.Elemen
   });
 
   return (
-    <div ref={parentRef} className="flex-1 overflow-y-auto beatos-scroll">
-      {/* Inner uses min-width: min-content (NOT max-content) — min-content
-          equals the smallest width where columns don't break (fixed widths +
-          flex-1 min-w). Header/row pin to this same value via flex-col
-          stretch, so they stay aligned. max-content forced natural content
-          width always-on, which surfaced a spurious horizontal scrollbar in
-          the default layout — min-content only scrolls when the user actually
-          widens columns past the viewport. Shared overflow-x-auto wrapper
-          (in TrackListPanel) syncs header + body scroll. */}
+    // `min-width: min-content` on the parentRef AND the inner virtual container
+    // both. Without it on the parent, flex-col cross-axis stretch would size
+    // parent to the shared wrapper's CLIENT width, and `overflow-y: auto`
+    // would then promote `overflow-x` to `auto` (CSS rule), creating a second
+    // X scrollbar that the body uses independently of the header. With it,
+    // parent stretches to the shared wrapper's CONTENT width — same as
+    // TableHeader — so the only X scrollbar is the shared wrapper's, and
+    // dragging body↔header stays in sync.
+    <div
+      ref={parentRef}
+      className="flex-1 overflow-y-auto beatos-scroll"
+      style={{ minWidth: "min-content" }}
+    >
       <div
         style={{
           height: virtualizer.getTotalSize(),

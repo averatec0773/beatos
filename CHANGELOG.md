@@ -37,16 +37,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Removed
 
-- `loadEpoch` counter from `usePlayerStore` and the corresponding `BottomPlayerBar` audio-src `useEffect` dependency tuple — superseded by Tone-engine state machine.
-- FLOAT-32 → PCM-16 transcode in `asset-protocol.ts::repairWavIfNeeded` (`needsFloatTranscode` branch + sample loop, ~80 LOC). `decodeAudioData` handles it.
-- Two FLOAT-32-transcode unit tests in `asset-protocol.test.ts` (`transcodes IEEE FLOAT-32...` and `FLOAT-32 with JUNK + trailing chunks still transcodes correctly`) replaced by `passes a clean FLOAT-32 WAV through unchanged` + `FLOAT-32 with JUNK still preserves FLOAT formatCode in rebuild`.
+- HTMLAudioElement playback path and its supporting machinery (`loadEpoch` reload counter, five `useEffect` sync hooks in `BottomPlayerBar`, FLOAT-32 → PCM-16 transcode in `repairWavIfNeeded`). All superseded by the Tone engine.
 
 ### Notes
 
-- **Bundle:** renderer JS grew from 1348 KB → 1976 KB raw (+628 KB; estimated ≤ 90 KB gzipped). Tone v15.1.22 is the cost. Acceptable for a local-first desktop app.
+- **Bundle:** renderer JS grew from 1348 KB → 1976 KB raw (+628 KB; estimated ≤ 90 KB gzipped). Tone v15.1.22 is the cost.
 - **Tests:** 233 vitest (227 + 6 new audio-engine) / smoke PASS including DAW-WAV and `BEATOS_REAL_AUDIO=<user-wav>`.
-- **Memory bound:** A worst-case 208 s × 44.1 kHz × 2 ch × FLOAT-32 buffer is ~73 MB. The 256 MB cache budget holds ~3 such buffers; smaller (typical 8-bar loops are < 5 MB) fits 50+.
-- **Known gap:** `navigator.mediaDevices.ondevicechange` (headphones plug / unplug) isn't yet handled explicitly. The RAF tick's `ctxState !== "running"` check catches outright suspends, but a silent route-change without state transition isn't surfaced. Deferred to a follow-up.
+- **Cache budget:** 256 MB byte-budgeted LRU. Holds ~3 of the worst-case 208 s × 44.1 kHz × 2 ch × FLOAT-32 buffers (~73 MB each), or 50+ typical 8-bar loops.
+- **Known gap:** `navigator.mediaDevices.ondevicechange` (headphones plug / unplug) isn't yet handled explicitly. The RAF tick's `ctxState !== "running"` check catches outright suspends, but a silent route-change without state transition isn't surfaced. Deferred.
 
 ## [0.0.15] - 2026-05-18 — Auto-save, smoke housekeeping, producer management
 

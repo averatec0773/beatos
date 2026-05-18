@@ -2,8 +2,12 @@
 /**
  * Diagnostic harness for audio playback issues. Boots the built app
  * against a clean temp userData, attaches a WAV file, clicks play, and
- * captures every HTMLMediaElement event with timestamps so we can see
- * exactly where loading fails.
+ * polls the Tone.js engine state (status / duration / position / current
+ * asset) every second for 7 seconds. Surfaces decode errors via the
+ * renderer console capture.
+ *
+ * Post v0.0.16 this drives the engine API (`window.__beatos.engine()`),
+ * not an HTMLMediaElement — Web Audio doesn't have a DOM-attached element.
  *
  * Usage:
  *   BEATOS_TEST_AUDIO=/path/to/file.wav node scripts/diagnose-playback.mjs
@@ -124,55 +128,38 @@ const setupResult = await window.evaluate(async ({ apiPort, audioPath, sourceDir
   return { src, trk, att };
 }, { apiPort, audioPath, sourceDir });
 
-const assetId = setupResult.att.id;
 console.log("[diag] setup =", JSON.stringify(setupResult.att));
 
-console.log("[diag] reloading + instrumenting audio element…");
+console.log("[diag] reloading…");
 await window.reload();
 await window.waitForLoadState("domcontentloaded");
 await new Promise((r) => setTimeout(r, 1500));
 
-await window.evaluate(() => {
-  const a = document.querySelector("audio");
-  if (!a) { console.warn("[diag] no audio element after reload"); return; }
-  const events = [
-    "loadstart", "durationchange", "loadedmetadata", "loadeddata",
-    "progress", "canplay", "canplaythrough", "play", "playing",
-    "pause", "stalled", "suspend", "waiting", "error", "abort",
-  ];
-  const start = performance.now();
-  const fmt = () => `+${(performance.now() - start).toFixed(0)}ms`;
-  for (const ev of events) {
-    a.addEventListener(ev, () => {
-      const err = a.error;
-      console.info(
-        `[audio-event ${fmt()}] ${ev}`,
-        "readyState=", a.readyState,
-        "networkState=", a.networkState,
-        "duration=", a.duration,
-        err ? `error=${err.code}/${err.message ?? ""}` : ""
-      );
-    });
+// Forward renderer console.error/warning so decode failures surface.
+window.on("console", (msg) => {
+  const type = msg.type();
+  if (type === "error" || type === "warning") {
+    console.log(`[renderer:${type}] ${msg.text()}`);
   }
 });
 
 console.log("[diag] clicking play row button…");
 await window.locator("[data-has-audio='true'][data-row-play-button]").first().click();
 
-console.log("[diag] watching playback for 7s…");
+console.log("[diag] polling engine state for 7s…");
 for (let i = 0; i < 7; i++) {
   await new Promise((r) => setTimeout(r, 1000));
   const snap = await window.evaluate(() => {
-    const a = document.querySelector("audio");
-    if (!a) return null;
+    const engine = window.__beatos?.engine?.();
+    const player = window.__beatos?.player?.();
+    if (!engine) return null;
     return {
-      readyState: a.readyState,
-      networkState: a.networkState,
-      duration: a.duration,
-      currentTime: a.currentTime,
-      paused: a.paused,
-      ended: a.ended,
-      error: a.error ? { code: a.error.code, msg: a.error.message } : null,
+      engineStatus: engine.status,
+      duration: engine.duration,
+      position: engine.position,
+      currentAssetId: engine.currentAssetId,
+      bpm: engine.bpm,
+      storeStatus: player?.status ?? null,
     };
   });
   console.log(`[diag t+${i + 1}s]`, JSON.stringify(snap));

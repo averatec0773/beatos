@@ -65,15 +65,36 @@ export function BottomPlayerBar() {
 
   function handleTogglePlay(): void {
     const s = usePlayerStore.getState();
-    if (s.currentTrackId == null && selectedTrack != null) {
-      // First-play from a row selection: queue the visible list so prev/next
-      // work afterwards.
-      const list = useTrackStore.getState().list;
-      const ids = list.map((t) => t.id);
-      const startIndex = ids.indexOf(selectedTrack.id);
-      if (startIndex < 0) return;
-      void s.playFromQueue({ trackIds: ids, startIndex, source: { kind: "all" } });
-      return;
+    // Prefer the user's current row selection in any case where the player
+    // is not actively running on a known-good track. Covers:
+    //   1. First play (currentTrackId == null)
+    //   2. Player wedged on a previously-failed track (status === "error")
+    //      and the user has since picked a different row — without this
+    //      fallback, clicking play would re-try the failed track forever.
+    //   3. Status idle (no track loaded yet) — same logic.
+    const needsSelectedTrack =
+      selectedTrack != null &&
+      (s.currentTrackId == null ||
+        s.status === "error" ||
+        s.status === "idle" ||
+        selectedTrack.id !== s.currentTrackId);
+    if (needsSelectedTrack && selectedTrack) {
+      // Only auto-switch on the error/idle/null paths. If the player is
+      // playing or paused on a healthy track, the bottom-bar button should
+      // just toggle that track — clicking a different row + the bar's play
+      // button shouldn't yank playback away (Spotify semantics).
+      if (
+        s.status === "error" ||
+        s.status === "idle" ||
+        s.currentTrackId == null
+      ) {
+        const list = useTrackStore.getState().list;
+        const ids = list.map((t) => t.id);
+        const startIndex = ids.indexOf(selectedTrack.id);
+        if (startIndex < 0) return;
+        void s.playFromQueue({ trackIds: ids, startIndex, source: { kind: "all" } });
+        return;
+      }
     }
     s.togglePlay();
   }

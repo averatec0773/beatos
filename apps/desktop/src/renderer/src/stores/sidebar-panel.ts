@@ -1,0 +1,58 @@
+/**
+ * Sidebar width persistence (mirrors `preview-panel.ts`).
+ *
+ * The sidebar is always visible (no close toggle — it's primary nav) but the
+ * user can drag its right edge to widen it. Width persists in sessionStorage
+ * so a remount inside one app session keeps the user's choice; explicit
+ * sessionStorage (not localStorage) matches preview-panel — across-app-restart
+ * persistence is a separate v0.0.X candidate if anyone asks.
+ */
+
+import { create } from "zustand";
+
+const STORAGE_KEY = "beatos.sidebarPanel.v1";
+
+export const SIDEBAR_DEFAULT_WIDTH = 220;
+export const SIDEBAR_MIN_WIDTH = 180;
+export const SIDEBAR_MAX_WIDTH = 360;
+
+interface Persisted {
+  width: number;
+}
+
+function loadPersisted(): Persisted {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return { width: SIDEBAR_DEFAULT_WIDTH };
+    const parsed = JSON.parse(raw) as Partial<Persisted>;
+    return {
+      width:
+        typeof parsed.width === "number" && Number.isFinite(parsed.width)
+          ? Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, parsed.width))
+          : SIDEBAR_DEFAULT_WIDTH,
+    };
+  } catch {
+    return { width: SIDEBAR_DEFAULT_WIDTH };
+  }
+}
+
+function persist(state: Persisted): void {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* sessionStorage unavailable (tests / SSR) — fine */
+  }
+}
+
+interface SidebarPanelState extends Persisted {
+  setWidth(width: number): void;
+}
+
+export const useSidebarPanelStore = create<SidebarPanelState>((set) => ({
+  ...loadPersisted(),
+  setWidth(width) {
+    const clamped = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width));
+    persist({ width: clamped });
+    set({ width: clamped });
+  },
+}));

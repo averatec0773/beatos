@@ -75,7 +75,19 @@ class AudioEngine {
 
   /** Load + decode an asset. Reuses cached buffers (byte-budgeted LRU). */
   async load(assetId: number): Promise<void> {
-    if (this.currentAssetId === assetId && this.player) return;
+    if (this.currentAssetId === assetId && this.player) {
+      // Same asset already loaded. The engine may have been left in `idle`
+      // (e.g. a previous `stop()` after the user transitioned through a
+      // no-audio track), in which case a plain early-return would leave the
+      // store stuck at `loading` with progress 0-0. Re-arm the post-load
+      // state machine so callers see a consistent `paused` + duration.
+      this.stopRaf();
+      this.offsetAtStart = 0;
+      this.setStatus("paused");
+      this.emit("durationchange", this.cachedDuration);
+      this.emit("timeupdate", 0);
+      return;
+    }
 
     this.stopRaf();
     if (this.player) {

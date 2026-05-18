@@ -8,11 +8,58 @@ import { CSS } from "@dnd-kit/utilities";
 import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
 import { useTrashStore } from "@/stores/trash";
+import {
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
+  useSidebarPanelStore,
+} from "@/stores/sidebar-panel";
 import { type List } from "@/api/lists";
 import { type Source } from "@/api/sources";
 import { SourceRow } from "@/components/SourceRow";
 import { SidebarItemContextMenu } from "@/components/SidebarItemContextMenu";
 import { DeleteSidebarItemDialog } from "@/components/DeleteSidebarItemDialog";
+
+function SidebarResizer(): React.JSX.Element {
+  const setWidth = useSidebarPanelStore((s) => s.setWidth);
+  const startRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>): void {
+    e.preventDefault();
+    startRef.current = {
+      startX: e.clientX,
+      startWidth: useSidebarPanelStore.getState().width,
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>): void {
+    const s = startRef.current;
+    if (!s) return;
+    // Drag RIGHT = wider (panel grows from its right edge), so add delta.
+    const next = s.startWidth + (e.clientX - s.startX);
+    setWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, next)));
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>): void {
+    if (!startRef.current) return;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    startRef.current = null;
+  }
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      className="absolute top-0 bottom-0 right-0 w-1 cursor-col-resize hover:bg-accent/40 z-10"
+      data-sidebar-resizer
+    />
+  );
+}
 
 function SortableSourceRow({
   source,
@@ -244,8 +291,14 @@ export function SidebarPanel(): React.JSX.Element {
     setNewListName("");
   }
 
+  const sidebarWidth = useSidebarPanelStore((s) => s.width);
+
   return (
-    <aside className="w-60 flex-shrink-0 border-r border-border-subtle overflow-y-auto py-3 flex flex-col gap-4">
+    <aside
+      className="flex-shrink-0 border-r border-border-subtle overflow-y-auto py-3 flex flex-col gap-4 relative"
+      style={{ width: sidebarWidth }}
+    >
+      <SidebarResizer />
       <div>
         <header className="px-3 mb-1 flex items-center justify-between">
           <span className="text-[10px] uppercase tracking-wider font-semibold text-text-tertiary">

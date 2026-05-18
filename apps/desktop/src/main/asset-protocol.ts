@@ -11,13 +11,12 @@ const AUDIO_DEFAULT_MIME = "audio/mpeg";
 /**
  * Sanitize a WAV file by keeping only RIFF header + fmt chunk + data chunk.
  *
- * Why this exists even with Web Audio's `decodeAudioData` doing the heavy
+ * Why this exists with Web Audio's `decodeAudioData` doing the heavy
  * lifting: some DAWs emit WAVs with a JUNK chunk before fmt (Pro Tools'
  * 4 KB sector-align padding) and/or cue/LIST/smpl chunks after data
- * (markers, loop points). Chromium's WAV decoder — shared between the
- * `<audio>` media stack and `decodeAudioData` — has historically been
- * picky about extra RIFF chunks. We preserve the audio bytes verbatim
- * and drop the metadata Chromium might not parse.
+ * (markers, loop points). Chromium's WAV decoder has historically been
+ * picky about extra RIFF chunks even via `decodeAudioData`. We preserve
+ * the audio bytes verbatim and drop the metadata Chromium might trip on.
  *
  * What we DO NOT do anymore (v0.0.16):
  *   - FLOAT-32 → PCM-16 transcoding. `decodeAudioData` handles IEEE-float
