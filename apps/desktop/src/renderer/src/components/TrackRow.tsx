@@ -6,6 +6,7 @@ import { TrackRowPlayButton } from "@/components/TrackRowPlayButton";
 import type { Track } from "@/api/tracks";
 import { formatRowDate } from "@/lib/format-row-date";
 import { useColumnWidthStore } from "@/stores/column-widths";
+import { getGridTemplateColumns, TABLE_COL_GAP } from "@/lib/table-layout";
 
 interface Props {
   track: Track;
@@ -27,6 +28,7 @@ export function TrackRow({
   onOpen,
 }: Props): React.JSX.Element {
   const widths = useColumnWidthStore((s) => s.widths);
+  const gridCols = getGridTemplateColumns(widths);
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `track:${track.id}`,
@@ -36,6 +38,12 @@ export function TrackRow({
   const highlighted = isMultiSelected || selected;
 
   return (
+    // CSS Grid row — uses the EXACT same `gridTemplateColumns` as TableHeader
+    // so every cell aligns vertically across rows regardless of inner content
+    // (single-line title vs title+producer subtitle, etc.). `min-width:
+    // min-content` lets the row grow past the viewport when the user pins a
+    // column wider than the section, which the shared scroll wrapper then
+    // exposes via horizontal scroll synced with the header.
     <div
       ref={setNodeRef}
       {...listeners}
@@ -48,42 +56,44 @@ export function TrackRow({
       onKeyDown={(e) => {
         if (e.key === "Enter") onOpen();
       }}
-      style={{ minWidth: "min-content" }}
-      className={`h-16 px-4 flex items-center cursor-grab active:cursor-grabbing cursor-pointer relative gap-3
+      style={{ gridTemplateColumns: gridCols, columnGap: TABLE_COL_GAP, minWidth: "min-content" }}
+      className={`h-16 px-4 grid items-center cursor-grab active:cursor-grabbing cursor-pointer relative
         ${isDragging ? "opacity-50" : ""}
         ${highlighted ? "bg-bg-row-selected text-text-primary border-l-2 border-accent" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}
     >
       {highlighted && !isDragging && (
         <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-accent" />
       )}
-      <div
-        className="group relative w-12 h-12 flex-shrink-0"
-      >
+
+      {/* Cover + per-row play overlay. Fixed 48 × 48 — matches the cover grid
+          track width exactly. */}
+      <div className="group relative w-12 h-12" data-column-cell="cover">
         <CoverImage assetId={coverAssetId} size={48} />
         <TrackRowPlayButton trackId={track.id} hasAudio={track.has_audio ?? false} />
       </div>
-      <div
-        className={widths.title === 0 ? "flex-1 min-w-0 flex flex-col justify-center" : "flex flex-col justify-center"}
-        style={widths.title === 0 ? undefined : { width: widths.title, flexShrink: 0, minWidth: 0 }}
-      >
+
+      <div className="min-w-0 flex flex-col justify-center" data-column-cell="title">
         <span data-track-title className="text-sm font-medium text-text-primary truncate">{track.title}</span>
         <span className="text-xs text-text-tertiary truncate">
           {[...(track.producer ?? [])].sort((a, b) => a.localeCompare(b)).join(", ")}
         </span>
       </div>
-      {/* Spacer geometry MUST match TableHeader's <ColumnResizer/> exactly
-          (w-3 -mx-1) — otherwise the row drifts right of the header by ~8 px
-          per spacer once a column is pinned to a fixed pixel width. */}
-      <div className="w-3 -mx-1 flex-shrink-0" />
-      <div className="text-left font-mono text-xs" style={{ width: widths.bpm, flexShrink: 0 }}>{track.bpm ?? "—"}</div>
-      <div className="w-1 flex-shrink-0" />
-      <div className="truncate text-xs" style={{ width: widths.key, flexShrink: 0 }}>{track.key_signature ?? "—"}</div>
-      <div className="w-1 flex-shrink-0" />
-      <div className="truncate text-xs" style={{ width: widths.genre, flexShrink: 0 }}>
-        {track.genre && track.genre.length > 0 ? `${track.genre[0]}${track.genre.length > 1 ? ` +${track.genre.length - 1}` : ""}` : "—"}
+
+      <div className="text-left font-mono text-xs min-w-0 truncate" data-column-cell="bpm">
+        {track.bpm ?? "—"}
       </div>
-      <div className="w-1 flex-shrink-0" />
-      <div className="flex-1 min-w-[80px] truncate font-mono text-xs text-text-tertiary">
+
+      <div className="truncate text-xs min-w-0" data-column-cell="key_signature">
+        {track.key_signature ?? "—"}
+      </div>
+
+      <div className="truncate text-xs min-w-0" data-column-cell="genre">
+        {track.genre && track.genre.length > 0
+          ? `${track.genre[0]}${track.genre.length > 1 ? ` +${track.genre.length - 1}` : ""}`
+          : "—"}
+      </div>
+
+      <div className="truncate font-mono text-xs text-text-tertiary min-w-0" data-column-cell="updated_at">
         {formatRowDate(track.updated_at)}
       </div>
     </div>

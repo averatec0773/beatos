@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import type { Track } from "@/api/tracks";
@@ -6,12 +6,37 @@ import type { Track } from "@/api/tracks";
 interface Props {
   tracks: Track[];
   renderRow: (track: Track, index: number) => React.ReactNode;
+  /**
+   * Called whenever the body's horizontal scroll position changes. The parent
+   * uses this to keep the (separate) header element's scrollLeft in sync,
+   * giving us a single X-scroll source of truth: the body. Without this, the
+   * old layout had TWO independent X-scroll containers — shared wrapper and
+   * this list — and they desynchronized whenever the user dragged in the
+   * body area (only the body scrolled; header stayed put).
+   */
+  onScrollLeftChange?: (scrollLeft: number) => void;
+  /** Body scroll element exposed so the parent can drive it from the header. */
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 const ROW_HEIGHT = 64; // h-16
 
-export function VirtualTrackList({ tracks, renderRow }: Props): React.JSX.Element {
+export function VirtualTrackList({
+  tracks,
+  renderRow,
+  onScrollLeftChange,
+  scrollRef,
+}: Props): React.JSX.Element {
   const parentRef = useRef<HTMLDivElement | null>(null);
+
+  // Mirror our ref into the parent's ref so the parent can drive scrollLeft
+  // from header events.
+  useEffect(() => {
+    if (scrollRef) scrollRef.current = parentRef.current;
+    return () => {
+      if (scrollRef) scrollRef.current = null;
+    };
+  }, [scrollRef]);
 
   const virtualizer = useVirtualizer({
     count: tracks.length,
@@ -20,20 +45,23 @@ export function VirtualTrackList({ tracks, renderRow }: Props): React.JSX.Elemen
     overscan: 6,
   });
 
+  // Pipe X-scroll up to the parent so it can sync the table header.
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el || !onScrollLeftChange) return;
+    const onScroll = (): void => onScrollLeftChange(el.scrollLeft);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [onScrollLeftChange]);
+
   return (
-    // `min-width: min-content` on the parentRef AND the inner virtual container
-    // both. Without it on the parent, flex-col cross-axis stretch would size
-    // parent to the shared wrapper's CLIENT width, and `overflow-y: auto`
-    // would then promote `overflow-x` to `auto` (CSS rule), creating a second
-    // X scrollbar that the body uses independently of the header. With it,
-    // parent stretches to the shared wrapper's CONTENT width — same as
-    // TableHeader — so the only X scrollbar is the shared wrapper's, and
-    // dragging body↔header stays in sync.
-    <div
-      ref={parentRef}
-      className="flex-1 overflow-y-auto beatos-scroll"
-      style={{ minWidth: "min-content" }}
-    >
+    // The body is the ONLY X-scroll container in the table (the header sits
+    // outside and gets `scrollLeft` synced via JS). Inner div is positioned
+    // relative so the absolutely-positioned virtual rows establish a scroll
+    // width — each row's grid-template-columns + `min-width: min-content`
+    // pushes its right edge past the parent's clientWidth, which is what
+    // makes `overflow: auto` engage horizontally.
+    <div ref={parentRef} className="flex-1 overflow-auto beatos-scroll">
       <div
         style={{
           height: virtualizer.getTotalSize(),

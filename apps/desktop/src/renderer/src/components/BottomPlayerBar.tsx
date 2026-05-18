@@ -13,6 +13,7 @@ import {
 
 import { usePlayerStore } from "@/stores/player";
 import { useTrackStore } from "@/stores/tracks";
+import { useSearchStore } from "@/stores/search";
 import { useToastStore } from "@/stores/toast";
 import { audioEngine } from "@/lib/audio-engine";
 import { CoverImage } from "./CoverImage";
@@ -63,40 +64,58 @@ export function BottomPlayerBar() {
   const playing = status === "playing";
   const errored = status === "error";
 
+  function getVisibleIds(): number[] {
+    const list = useTrackStore.getState().list;
+    const filterFn = useSearchStore.getState().filter;
+    return filterFn(list).map((t) => t.id);
+  }
+
   function handleTogglePlay(): void {
     const s = usePlayerStore.getState();
     // Prefer the user's current row selection in any case where the player
-    // is not actively running on a known-good track. Covers:
-    //   1. First play (currentTrackId == null)
-    //   2. Player wedged on a previously-failed track (status === "error")
-    //      and the user has since picked a different row — without this
-    //      fallback, clicking play would re-try the failed track forever.
-    //   3. Status idle (no track loaded yet) — same logic.
-    const needsSelectedTrack =
-      selectedTrack != null &&
+    // is not actively running on a known-good track. Covers first-play,
+    // recovery from a failed track, and idle state.
+    if (
+      selectedTrack &&
       (s.currentTrackId == null ||
         s.status === "error" ||
-        s.status === "idle" ||
-        selectedTrack.id !== s.currentTrackId);
-    if (needsSelectedTrack && selectedTrack) {
-      // Only auto-switch on the error/idle/null paths. If the player is
-      // playing or paused on a healthy track, the bottom-bar button should
-      // just toggle that track — clicking a different row + the bar's play
-      // button shouldn't yank playback away (Spotify semantics).
-      if (
-        s.status === "error" ||
-        s.status === "idle" ||
-        s.currentTrackId == null
-      ) {
-        const list = useTrackStore.getState().list;
-        const ids = list.map((t) => t.id);
-        const startIndex = ids.indexOf(selectedTrack.id);
-        if (startIndex < 0) return;
-        void s.playFromQueue({ trackIds: ids, startIndex, source: { kind: "all" } });
-        return;
-      }
+        s.status === "idle")
+    ) {
+      const ids = getVisibleIds();
+      const startIndex = ids.indexOf(selectedTrack.id);
+      if (startIndex < 0) return;
+      void s.playFromQueue({ trackIds: ids, startIndex, source: { kind: "all" } });
+      return;
     }
     s.togglePlay();
+  }
+
+  // Rebuild the queue from the CURRENT visible tracks before delegating to
+  // the store's next/prev. Two reasons:
+  //   1. Without this, next/prev step through the queue that was set at the
+  //      first playFromQueue (possibly stale if the user has since changed
+  //      the search filter or list route).
+  //   2. A single-track queue (one row visible at play time) ends after one
+  //      `next()` and the engine pauses — re-anchoring to the live visible
+  //      list lets the user keep clicking next as long as there's somewhere
+  //      to go.
+  // Shuffle mode is PRESERVED — store.syncQueue regenerates the shuffle
+  // order against the new ids without flipping the shuffle flag off.
+  function syncQueueFromVisible(): void {
+    const s = usePlayerStore.getState();
+    const ids = getVisibleIds();
+    if (ids.length === 0) return;
+    s.syncQueue(ids, s.currentTrackId);
+  }
+
+  function handlePrev(): void {
+    syncQueueFromVisible();
+    void usePlayerStore.getState().prev();
+  }
+
+  function handleNext(): void {
+    syncQueueFromVisible();
+    void usePlayerStore.getState().next();
   }
 
   return (
@@ -129,7 +148,7 @@ export function BottomPlayerBar() {
             size="icon"
             variant="ghost"
             disabled={!enabled}
-            onClick={() => usePlayerStore.getState().prev()}
+            onClick={handlePrev}
             aria-label="Previous"
           >
             <SkipBack className="h-4 w-4" />
@@ -151,7 +170,7 @@ export function BottomPlayerBar() {
             size="icon"
             variant="ghost"
             disabled={!enabled}
-            onClick={() => usePlayerStore.getState().next()}
+            onClick={handleNext}
             aria-label="Next"
           >
             <SkipForward className="h-4 w-4" />

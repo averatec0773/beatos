@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -48,6 +48,45 @@ export function TrackListPanel(): React.JSX.Element {
   }, [visible.length, current, select, visible]);
 
   const [dropping, setDropping] = useState(false);
+
+  // Single source of X-scroll: the body. The header sits in its own div with
+  // an *invisible* native X-scroll (so `scrollLeft` is programmable) and we
+  // mirror the body's scrollLeft into it on every body-scroll event. Without
+  // this, the previous "shared wrapper has overflow-x-auto AND the body's
+  // own overflow-y promotes overflow-x to auto" arrangement created two
+  // independent X-scroll containers, and dragging in the body area shifted
+  // only the body while the header stayed put.
+  const headerScrollRef = useRef<HTMLDivElement | null>(null);
+  const bodyScrollRef = useRef<HTMLDivElement | null>(null);
+  // `useCallback` keeps the prop reference stable across renders. Without it,
+  // VirtualTrackList's effect would re-subscribe to the scroll event on
+  // every parent render — a brief teardown window per render where a stray
+  // scroll could fire without a listener.
+  const syncHeaderScroll = useCallback((scrollLeft: number): void => {
+    if (headerScrollRef.current) headerScrollRef.current.scrollLeft = scrollLeft;
+  }, []);
+
+  // Reverse sync: user wheeling horizontally on the header (e.g. trackpad
+  // swipe) shouldn't desync the body. `syncing` is cleared synchronously
+  // right after the assignment — the re-entrant `scroll` event fires
+  // synchronously in browsers, so clearing immediately is sufficient and
+  // doesn't drop legitimate user scrolls that happen during the next frame.
+  useEffect(() => {
+    const header = headerScrollRef.current;
+    if (!header) return;
+    let syncing = false;
+    const onHeaderScroll = (): void => {
+      if (syncing) return;
+      const body = bodyScrollRef.current;
+      if (!body) return;
+      if (body.scrollLeft === header.scrollLeft) return;
+      syncing = true;
+      body.scrollLeft = header.scrollLeft;
+      syncing = false;
+    };
+    header.addEventListener("scroll", onHeaderScroll, { passive: true });
+    return () => header.removeEventListener("scroll", onHeaderScroll);
+  }, []);
 
   async function onSectionDrop(e: React.DragEvent<HTMLElement>): Promise<void> {
     e.preventDefault();
@@ -158,15 +197,21 @@ export function TrackListPanel(): React.JSX.Element {
           </span>
         </header>
         <FilterChipBar />
-        {/* Shared horizontal scroll wrapper so TableHeader and the virtualized
-            rows scroll together when columns are widened beyond the section.
-            `min-w-0` lets it shrink inside the flex parent; the inner pieces
-            set `min-w: min-content` so they grow only when the user actually
-            pins a column wider than the viewport. */}
-        <div className="flex-1 flex flex-col overflow-x-auto min-w-0">
-          <TableHeader />
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header wrapper: invisible native X-scroll so we can mirror the
+              body's scrollLeft into it via JS. `beatos-scroll` hides the
+              scrollbar UI. */}
+          <div
+            ref={headerScrollRef}
+            className="flex-shrink-0 beatos-scroll"
+            style={{ overflowX: "auto", overflowY: "hidden" }}
+          >
+            <TableHeader />
+          </div>
           <VirtualTrackList
             tracks={visible}
+            onScrollLeftChange={syncHeaderScroll}
+            scrollRef={bodyScrollRef}
             renderRow={(t) => (
             <TrackContextMenu
               key={t.id}

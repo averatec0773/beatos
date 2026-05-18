@@ -828,10 +828,12 @@ try {
         // Should be back at "/" after assertion 16 discard.
         await window.waitForSelector('[data-track-id]', { timeout: 5000 });
 
-        // Measure initial BPM column width via its bounding box.
-        const bpmHeader = window.locator('[data-column="bpm"]').first();
+        // Measure initial BPM column width via the GRID CELL's bounding box
+        // (v0.0.16: grid-based layout — `data-column` on the inner sort
+        // button only measures button content width, not the full track).
+        const bpmHeader = window.locator('[data-column-cell="bpm"]').first();
         const initialBox = await bpmHeader.boundingBox();
-        if (!initialBox) throw new Error('[data-column="bpm"] not visible');
+        if (!initialBox) throw new Error('[data-column-cell="bpm"] not visible');
         const initialWidth = initialBox.width;
 
         // Locate the BPM column resizer divider.
@@ -852,7 +854,7 @@ try {
 
         // Re-measure BPM column width.
         const newBox = await bpmHeader.boundingBox();
-        if (!newBox) throw new Error('[data-column="bpm"] disappeared after drag');
+        if (!newBox) throw new Error('[data-column-cell="bpm"] disappeared after drag');
         const newWidth = newBox.width;
 
         // Assert new width is at least initial + 30 (10px slack for clamping).
@@ -1272,20 +1274,15 @@ try {
         const rows = [...document.querySelectorAll("[data-track-id]")];
         const row = rows.find((r) => !r.className.includes("border-accent")) ?? rows[0];
         if (!header || !row) return { error: "header/row missing" };
-        const headerCols = [...header.querySelectorAll("[data-column]")];
-        const rowChildren = [...row.children].filter(
-          (c) =>
-            c.tagName !== "SPAN" &&
-            !(c.className.includes("w-3") && c.className.includes("-mx-1")) &&
-            !(c.classList.contains("w-1") && c.classList.contains("flex-shrink-0")),
-        );
-        const rowCells = rowChildren.slice(1, 6);
+        // v0.0.16: grid layout — query by data-column-cell which marks the
+        // grid track wrapper on both header and row. Avoids inner-button
+        // content-width false negatives.
         const diffs = [];
-        for (let i = 0; i < COLS.length; i++) {
-          const h = g(headerCols[i]);
-          const c = g(rowCells[i]);
-          if (!h || !c) { diffs.push({ col: COLS[i], error: "missing" }); continue; }
-          diffs.push({ col: COLS[i], leftDelta: c.left - h.left, rightDelta: c.right - h.right });
+        for (const col of COLS) {
+          const h = g(header.querySelector(`[data-column-cell="${col}"]`));
+          const c = g(row.querySelector(`[data-column-cell="${col}"]`));
+          if (!h || !c) { diffs.push({ col, error: "missing" }); continue; }
+          diffs.push({ col, leftDelta: c.left - h.left, rightDelta: c.right - h.right });
         }
         return { diffs };
       });
@@ -1305,6 +1302,64 @@ try {
     }
     // === end resize-align ===
 
+    // === v0.0.16: header tracks body scrollLeft ===
+    // After widening title to 400 px (above), horizontal scroll should be
+    // available. Programmatically scroll the body 80 px right and check the
+    // header followed. Regression guard against the dual-X-scroll-container
+    // class of bugs (shared wrapper + body each owning their own scroll).
+    try {
+      const result = await window.evaluate(() => {
+        // Body parent is the first scrollable descendant of the section that
+        // has overflow:auto. Easier: look for the beatos-scroll element that
+        // wraps the virtualizer.
+        const scrollables = [...document.querySelectorAll(".beatos-scroll")];
+        const body = scrollables.find((el) => el.querySelector("[data-track-id]"));
+        const header = scrollables.find(
+          (el) => el !== body && el.querySelector('[role="row"]'),
+        );
+        if (!body || !header) return { error: "scroll containers not found" };
+        body.scrollLeft = 80;
+        return new Promise((resolve) => {
+          // Wait for the scroll event + RAF sync to land.
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              resolve({ bodyScrollLeft: body.scrollLeft, headerScrollLeft: header.scrollLeft });
+            });
+          });
+        });
+      });
+      if (result.error) {
+        failures.push(`scroll-sync: ${result.error}`);
+      } else if (Math.abs(result.bodyScrollLeft - result.headerScrollLeft) > 1) {
+        failures.push(
+          `scroll-sync: header.scrollLeft=${result.headerScrollLeft} does not track body.scrollLeft=${result.bodyScrollLeft}`,
+        );
+      } else {
+        console.log(
+          `smoke: header tracks body scrollLeft PASS (body=${result.bodyScrollLeft}, header=${result.headerScrollLeft})`,
+        );
+      }
+      // Reset scroll for downstream assertions. Reset BOTH containers
+      // explicitly + wait for the sync handlers to flush before continuing —
+      // otherwise the next alignment check measures mid-flight scroll
+      // positions and reports phantom column desync.
+      await window.evaluate(() => {
+        const scrollables = [...document.querySelectorAll(".beatos-scroll")];
+        const body = scrollables.find((el) => el.querySelector("[data-track-id]"));
+        const header = scrollables.find(
+          (el) => el !== body && el.querySelector('[role="row"]'),
+        );
+        if (body) body.scrollLeft = 0;
+        if (header) header.scrollLeft = 0;
+        return new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+      });
+    } catch (e) {
+      failures.push(`scroll-sync assertion error: ${e.message}`);
+    }
+    // === end scroll-sync ===
+
     // === v0.0.15: TableHeader / TrackRow column alignment ===
     // Each header column must share its left + right edges with the same-position
     // body cell. Regression guard against ColumnResizer (w-3 -mx-1) vs row spacer
@@ -1323,33 +1378,18 @@ try {
         const rows = [...document.querySelectorAll("[data-track-id]")];
         const row = rows.find((r) => !r.className.includes("border-accent")) ?? rows[0];
         if (!header || !row) return { error: "header or row not found" };
-        // Header children: cover button, [col button, divider]+
-        const headerCols = [...header.querySelectorAll("[data-column]")];
-        // Row children: an accent span + cover wrapper + (cell, divider)+. The
-        // cells we want are the 5 non-spacer flex children after the cover.
-        // Spacers now use the same `w-3 -mx-1` geometry as TableHeader's
-        // ColumnResizer (so columns stay aligned when widths are pinned).
-        const rowChildren = [...row.children].filter(
-          (c) =>
-            c.tagName !== "SPAN" &&
-            !(c.className.includes("w-3") && c.className.includes("-mx-1")) &&
-            !(c.classList.contains("w-1") && c.classList.contains("flex-shrink-0")),
-        );
-        // rowChildren[0] is cover, rowChildren[1..5] are the 5 columns
-        const rowCells = rowChildren.slice(1, 6);
+        // v0.0.16: grid layout — query the grid-track wrapper by
+        // `data-column-cell`. Same selector on header and row, so the
+        // mapping is unambiguous.
         const diffs = [];
-        for (let i = 0; i < COLS.length; i++) {
-          const h = geom(headerCols[i]);
-          const c = geom(rowCells[i]);
+        for (const col of COLS) {
+          const h = geom(header.querySelector(`[data-column-cell="${col}"]`));
+          const c = geom(row.querySelector(`[data-column-cell="${col}"]`));
           if (!h || !c) {
-            diffs.push({ col: COLS[i], error: "missing" });
+            diffs.push({ col, error: "missing" });
             continue;
           }
-          diffs.push({
-            col: COLS[i],
-            leftDelta: c.left - h.left,
-            rightDelta: c.right - h.right,
-          });
+          diffs.push({ col, leftDelta: c.left - h.left, rightDelta: c.right - h.right });
         }
         return { diffs };
       });

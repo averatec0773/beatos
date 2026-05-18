@@ -33,15 +33,22 @@ export function ColumnResizer({ columnKey, currentWidth, getCurrentRenderedWidth
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
   }
 
+  // Absolute-positioned inside its parent header cell (a `position: relative`
+  // wrapper). Anchored to the cell's right edge so the resizer maps 1:1 to
+  // the column it controls. The hit area extends slightly past the right
+  // edge (negative margin) so a user can grab the boundary even when columns
+  // are tightly packed. The divider line uses `bg-text-tertiary` (vs the
+  // older `bg-border-subtle`) so it's actually visible at rest — the
+  // previous styling was so subtle users couldn't find the drag target.
   return (
     <div
       data-column-resizer={columnKey}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      className="group relative w-3 h-full flex-shrink-0 cursor-col-resize -mx-1 select-none"
+      className="group absolute top-0 bottom-0 right-0 w-3 -mr-1.5 cursor-col-resize z-10 select-none flex items-center justify-center"
     >
-      <div className="absolute left-1/2 top-2 bottom-2 w-px -translate-x-1/2 bg-border-subtle group-hover:bg-accent group-active:bg-accent transition-colors" />
+      <div className="h-4 w-px bg-text-tertiary group-hover:bg-accent group-hover:w-0.5 group-active:bg-accent transition-all" />
     </div>
   );
 }

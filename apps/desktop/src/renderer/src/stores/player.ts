@@ -46,6 +46,15 @@ interface PlayerState {
     startIndex: number;
     source: QueueSource;
   }): Promise<void>;
+  /**
+   * Replace the queue's contents and re-anchor `queueIndex` to wherever
+   * `anchorTrackId` sits in the new id list. Preserves shuffle mode: if
+   * shuffle is on, a fresh shuffle order is generated for the new ids with
+   * the anchor swapped to position 0 (so prev/next still walk from the
+   * current track). Used by the bottom-bar Prev/Next handlers to keep the
+   * queue aligned with the current visible filter.
+   */
+  syncQueue(trackIds: number[], anchorTrackId: number | null): void;
   next(): Promise<void>;
   prev(): Promise<void>;
   setPreferredRole(role: AudioRole): Promise<void>;
@@ -212,6 +221,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     _setStatus(s) {
       set({ status: s });
+    },
+
+    syncQueue(trackIds, anchorTrackId) {
+      const s = get();
+      const anchorIdx = anchorTrackId != null ? trackIds.indexOf(anchorTrackId) : -1;
+      const queueIndex = anchorIdx >= 0 ? anchorIdx : 0;
+      if (s.shuffle && trackIds.length > 0) {
+        const order = fisherYates(trackIds.length);
+        const pos = order.indexOf(queueIndex);
+        if (pos > 0) [order[0], order[pos]] = [order[pos], order[0]];
+        set({ queueTrackIds: trackIds, queueIndex, queueShuffleOrder: order });
+      } else {
+        set({ queueTrackIds: trackIds, queueIndex, queueShuffleOrder: null });
+      }
     },
 
     async playFromQueue({ trackIds, startIndex, source }) {
