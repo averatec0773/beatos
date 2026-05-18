@@ -96,6 +96,57 @@ describe("repairWavIfNeeded", () => {
     expect(repairWavIfNeeded(broken)).toBe(broken);
   });
 
+  it("strips bext (Broadcast Wave) chunk before fmt", () => {
+    // bext chunk is common in DAW exports (Pro Tools, Logic). Chromium rejects
+    // WAVs with bext even though it's a valid RIFF chunk. We must repair.
+    const clean = buildMinimalWav(200);
+    const cleanU8 = new Uint8Array(clean);
+    const bextLen = 64; // realistic bext body size
+    const out = new ArrayBuffer(12 + 8 + bextLen + (clean.byteLength - 12));
+    const o = new Uint8Array(out);
+    const ov = new DataView(out);
+    o.set([0x52, 0x49, 0x46, 0x46], 0); // "RIFF"
+    ov.setUint32(4, out.byteLength - 8, true);
+    o.set([0x57, 0x41, 0x56, 0x45], 8); // "WAVE"
+    // bext chunk header + body (left as zeros)
+    o.set([0x62, 0x65, 0x78, 0x74], 12);
+    ov.setUint32(16, bextLen, true);
+    // fmt + data after bext
+    o.set(cleanU8.subarray(12), 12 + 8 + bextLen);
+
+    const repaired = repairWavIfNeeded(out);
+    expect(repaired).not.toBe(out);
+    // Should be a clean 44+200 byte WAV now
+    expect(repaired.byteLength).toBe(244);
+    const u8 = new Uint8Array(repaired);
+    expect(String.fromCharCode(u8[12], u8[13], u8[14], u8[15])).toBe("fmt ");
+    expect(String.fromCharCode(u8[36], u8[37], u8[38], u8[39])).toBe("data");
+  });
+
+  it("strips LIST chunk between fmt and data", () => {
+    // Some apps insert INFO/LIST metadata between fmt and data.
+    const clean = buildMinimalWav(200);
+    const cleanU8 = new Uint8Array(clean);
+    // Parse clean: fmt is at [12..36) (8 header + 16 body), data is at [36..44+200)
+    const listLen = 32;
+    const out = new ArrayBuffer(clean.byteLength + 8 + listLen);
+    const o = new Uint8Array(out);
+    const ov = new DataView(out);
+    o.set(cleanU8.subarray(0, 36)); // RIFF + WAVE + fmt
+    // Insert LIST chunk after fmt
+    o.set([0x4c, 0x49, 0x53, 0x54], 36);
+    ov.setUint32(40, listLen, true);
+    // copy data chunk after LIST
+    o.set(cleanU8.subarray(36), 36 + 8 + listLen);
+    // Patch the outer RIFF size
+    ov.setUint32(4, out.byteLength - 8, true);
+
+    const repaired = repairWavIfNeeded(out);
+    expect(repaired).not.toBe(out);
+    const u8 = new Uint8Array(repaired);
+    expect(String.fromCharCode(u8[36], u8[37], u8[38], u8[39])).toBe("data");
+  });
+
   it("clamps malformed chunk size against file end", () => {
     // Build a WAV whose data chunk claims more bytes than the file holds.
     const buf = buildMinimalWav(200);

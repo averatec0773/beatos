@@ -30,11 +30,18 @@ export function repairWavIfNeeded(buffer: ArrayBuffer): ArrayBuffer {
   if (riff !== "RIFF" || wave !== "WAVE") return buffer;
 
   // Walk the chunks. RIFF chunk header is 8 bytes: 4-byte id + 4-byte LE size.
+  // We accept ONLY the canonical { fmt, data } structure as clean. Anything
+  // else triggers repair — covers JUNK / cue / LIST / smpl (post-data), and
+  // bext / ID3 / INFO / iXML / _PMX / Adtl / etc. (pre-fmt or between). All of
+  // these are valid RIFF chunks the spec allows, but Chromium's Electron-39
+  // WAV decoder rejects WAVs containing any of them with empty-message
+  // MEDIA_ERR_SRC_NOT_SUPPORTED. We preserve the audio bytes verbatim and
+  // throw away the metadata chunks Chromium can't parse.
   let pos = 12;
   let fmtStart = -1, fmtLen = -1;
   let dataStart = -1, dataLen = -1;
-  let sawJunk = false;
-  let sawTrailing = false;
+  let extraChunkCount = 0;
+  const seenIds: string[] = [];
   while (pos + 8 <= buffer.byteLength) {
     const id = String.fromCharCode(u8[pos], u8[pos + 1], u8[pos + 2], u8[pos + 3]);
     const size = view.getUint32(pos + 4, true);
@@ -42,23 +49,31 @@ export function repairWavIfNeeded(buffer: ArrayBuffer): ArrayBuffer {
     // Bound chunk body to the file (guards against malformed size fields).
     const safeSize = Math.min(size, buffer.byteLength - bodyStart);
     if (safeSize < 0) break;
+    seenIds.push(id);
     if (id === "fmt ") {
       fmtStart = bodyStart;
       fmtLen = safeSize;
     } else if (id === "data") {
       dataStart = bodyStart;
       dataLen = safeSize;
-    } else if (id === "JUNK" || id === "junk") {
-      sawJunk = true;
-    } else if (dataStart >= 0) {
-      sawTrailing = true; // anything after data we drop (cue, LIST, smpl, …)
+    } else {
+      extraChunkCount++;
     }
     // RIFF chunks pad to an even byte if size is odd.
     pos = bodyStart + safeSize + (safeSize & 1);
   }
 
-  // Clean RIFF already → fast path, zero copy.
-  if (!sawJunk && !sawTrailing && fmtStart >= 0 && dataStart >= 0) return buffer;
+  // Clean RIFF (only fmt + data, exactly that order) → fast path, zero copy.
+  if (
+    extraChunkCount === 0 &&
+    fmtStart >= 0 &&
+    dataStart >= 0 &&
+    seenIds.length === 2 &&
+    seenIds[0] === "fmt " &&
+    seenIds[1] === "data"
+  ) {
+    return buffer;
+  }
   // Can't repair without fmt or data chunks → leave alone, Chromium will
   // reject and onError handles it user-side.
   if (fmtStart < 0 || dataStart < 0 || fmtLen <= 0 || dataLen <= 0) return buffer;
