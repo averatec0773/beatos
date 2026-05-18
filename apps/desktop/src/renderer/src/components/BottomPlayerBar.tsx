@@ -25,6 +25,7 @@ export function BottomPlayerBar() {
 
   const currentTrackId = usePlayerStore((s) => s.currentTrackId);
   const currentAssetId = usePlayerStore((s) => s.currentAssetId);
+  const loadEpoch = usePlayerStore((s) => s.loadEpoch);
   const status = usePlayerStore((s) => s.status);
   const position = usePlayerStore((s) => s.position);
   const duration = usePlayerStore((s) => s.duration);
@@ -40,7 +41,11 @@ export function BottomPlayerBar() {
     [currentTrackId, trackList]
   );
 
-  // Sync audio.src
+  // Sync audio.src.
+  // Depends on BOTH currentAssetId AND loadEpoch so an explicit retry on the
+  // same asset (e.g. recovering from a stuck error state via togglePlay) also
+  // forces a full reset. Without the epoch, re-loading the same id would be a
+  // no-op effect — the audio element stays wedged and 0:00 never advances.
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
@@ -57,7 +62,7 @@ export function BottomPlayerBar() {
         usePlayerStore.getState()._setStatus("error");
       });
     }
-  }, [currentAssetId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentAssetId, loadEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync play/pause state
   useEffect(() => {
@@ -74,13 +79,21 @@ export function BottomPlayerBar() {
     }
   }, [status]);
 
-  // Sync volume/mute
+  // Sync volume/mute.
+  // BEATOS_AUDIO_MUTED=1 (set by smoke / diagnose harnesses) hard-forces mute
+  // regardless of user setting so test runs don't produce sound. The audio
+  // pipeline still loads + decodes + advances currentTime, so assertions
+  // about playback remain meaningful.
+  const audioForceMuted = useMemo(
+    () => (typeof window !== "undefined" && window.beatos?.isAudioForceMuted?.()) ?? false,
+    [],
+  );
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
     a.volume = volume;
-    a.muted = muted;
-  }, [volume, muted]);
+    a.muted = audioForceMuted || muted;
+  }, [volume, muted, audioForceMuted]);
 
   // Sync store-initiated seeks (e.g. prev() restart) → audio.currentTime
   // Skip tiny deltas to avoid feedback with onTimeUpdate (which writes the

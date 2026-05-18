@@ -28,6 +28,12 @@ interface PlayerState {
   queueIndex: number;
   queueShuffleOrder: number[] | null;
   queueSource: QueueSource | null;
+  /** Monotonic counter incremented on every loadAndPlay() call. The
+   *  BottomPlayerBar's audio.src useEffect depends on this so retrying the
+   *  same assetId still forces a fresh `<audio>` reset — fixes the case where
+   *  a failed load leaves the element stuck and clicking play on the same
+   *  track does nothing. */
+  loadEpoch: number;
 
   togglePlay(): void;
   seek(seconds: number): void;
@@ -72,28 +78,51 @@ function effectiveOrder(state: PlayerState): { order: number[]; cur: number } {
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => {
-  async function loadAndPlay(trackId: number, preferred: AudioRole | null) {
+  /**
+   * Load a track's audio asset into the player.
+   *
+   * `targetStatus` decides what state to land in once the new asset is loaded:
+   * - "playing" (default) — used by explicit play intent (row play button,
+   *   playFromQueue) and natural queue advance after a track ends.
+   * - "preserve" — keep whatever status was active before. Used for role
+   *   switching (WAV ↔ MP3) and manual next/prev so a paused user doesn't
+   *   get auto-played at, and a playing user keeps playing.
+   */
+  async function loadAndPlay(
+    trackId: number,
+    preferred: AudioRole | null,
+    targetStatus: "playing" | "preserve" = "playing",
+  ) {
     const list = await assetsApi.listForTrack(trackId);
     const asset = resolveAudioAsset(list, preferred);
     if (!asset) {
-      set({
+      set((s) => ({
         currentTrackId: trackId,
         currentAssetId: null,
         currentRole: null,
         status: "error",
         position: 0,
         duration: 0,
-      });
+        loadEpoch: s.loadEpoch + 1,
+      }));
       return;
     }
-    set({
+    const prevStatus = get().status;
+    const nextStatus =
+      targetStatus === "playing"
+        ? "playing"
+        : prevStatus === "playing"
+          ? "playing"
+          : "paused";
+    set((s) => ({
       currentTrackId: trackId,
       currentAssetId: asset.id,
       currentRole: asset.role as AudioRole,
-      status: "playing",
+      status: nextStatus,
       position: 0,
       duration: 0,
-    });
+      loadEpoch: s.loadEpoch + 1,
+    }));
   }
 
   return {
@@ -112,6 +141,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     queueIndex: 0,
     queueShuffleOrder: null,
     queueSource: null,
+    loadEpoch: 0,
 
     togglePlay() {
       const s = get();
@@ -209,7 +239,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
       const queueIndex = order[nextPos];
       set({ queueIndex });
-      await loadAndPlay(s.queueTrackIds[queueIndex], get().preferredRole);
+      await loadAndPlay(s.queueTrackIds[queueIndex], get().preferredRole, "preserve");
     },
 
     async prev() {
@@ -231,14 +261,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
       const queueIndex = order[prevPos];
       set({ queueIndex });
-      await loadAndPlay(s.queueTrackIds[queueIndex], get().preferredRole);
+      await loadAndPlay(s.queueTrackIds[queueIndex], get().preferredRole, "preserve");
     },
 
     async setPreferredRole(role) {
       const s = get();
       set({ preferredRole: role });
       if (s.currentTrackId == null) return;
-      await loadAndPlay(s.currentTrackId, role);
+      await loadAndPlay(s.currentTrackId, role, "preserve");
     },
 
     async _onEnded() {

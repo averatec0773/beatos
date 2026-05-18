@@ -32,6 +32,10 @@ const beatos = {
   },
   /** Returns the absolute filesystem path for a File from a drop / file input. */
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+  /** Test harness signal: when BEATOS_AUDIO_MUTED=1 is set in the main env,
+   *  smoke / diagnose runs against a real audio file without producing sound.
+   *  Renderer uses this to force `audio.muted = true` on every audio element. */
+  isAudioForceMuted: (): boolean => process.env.BEATOS_AUDIO_MUTED === "1",
 };
 
 contextBridge.exposeInMainWorld("beatos", beatos);

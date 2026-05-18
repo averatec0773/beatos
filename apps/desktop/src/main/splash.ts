@@ -160,18 +160,26 @@ export function closeSplashAndShowMain(
   mainWin: BrowserWindow,
   shownAt: number
 ): void {
+  // BEATOS_HEADLESS=1 keeps the main window invisible — used by smoke + diagnose
+  // harnesses so they don't steal focus or pop a Dock icon. Renderer + sidecar
+  // still run fully, so playback / asset protocol / API behavior is faithful.
+  const headless = process.env.BEATOS_HEADLESS === "1";
+  const showMain = (): void => {
+    if (!headless) mainWin.show();
+  };
+
   if (!splash || splash.isDestroyed()) {
-    mainWin.show();
+    showMain();
     return;
   }
   const delay = closeDelayMs(shownAt, Date.now());
   if (delay === 0) {
-    mainWin.show();
+    showMain();
     fadeOutAndClose(splash);
     return;
   }
   setTimeout(() => {
-    mainWin.show();
+    showMain();
     if (!splash.isDestroyed()) fadeOutAndClose(splash);
   }, delay);
 }

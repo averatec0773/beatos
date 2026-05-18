@@ -4,7 +4,7 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
-## [0.0.15] - 2026-05-17 — Auto-save, smoke housekeeping, producer management
+## [0.0.15] - 2026-05-18 — Auto-save, smoke housekeeping, producer management
 
 ### Added
 
@@ -12,7 +12,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **Producer management** — `POST /api/producers/preview` and `POST /api/producers/rewrite {from, to}` cover rename / merge / delete in one unified shape (`to: null` = delete). Atomic single-transaction rewrite; preview returns the affected-track count.
 - **Settings → Producers section** — list with a per-row Remove button (mirrors the Sources section). No confirmation dialog: removing immediately strips the producer from every track. Renames and merges live in the ChipMultiSelect ⋯ menu (renaming to an existing name effectively merges).
 - **ChipMultiSelect `⋯` per option** — hover-revealed manage button reveals an inline tray (rename input + delete + cancel) inside the picker. Wired for the Producer field in TrackEditor; commits via `/api/producers/rewrite`, then refreshes the distinct list.
+- **Closable + resizable preview panel** — right-side `TrackDetailPanel` gains an X close button, a left-edge hover resizer (280–600 px clamp), and a TopBar toggle (`PanelRightOpen` / `PanelRightClose`). Open / width state persists across reloads via sessionStorage.
+- **Headless + muted test mode** — `BEATOS_HEADLESS=1` keeps the main window invisible; `BEATOS_AUDIO_MUTED=1` force-mutes every `<audio>` element via a preload-exposed flag. Smoke and `diagnose-playback.mjs` default to both on; pass `SMOKE_SHOW=1`/`SMOKE_UNMUTED=1` (or `DIAG_*`) to opt back in.
 - Smoke regression #33: two tracks with case-different producer names → `POST /api/producers/rewrite` collapses them to one; distinct API no longer returns the merged-away spelling. Placed at the end of the block (state-mutating).
+- Smoke regression #34 (`BEATOS_REAL_AUDIO=<path>`): end-to-end playback against a real studio WAV — verifies muted, duration > 0, currentTime advances.
+
+### Fixed
+
+- **Stuck playback recovery** — `usePlayerStore` gains a `loadEpoch` counter that increments on every `loadAndPlay()`. The `BottomPlayerBar` audio-src effect now depends on `[currentAssetId, loadEpoch]`, so retrying the same asset (after an `onError`) actually re-runs `audio.src = …; audio.load()`. Previously the effect was a no-op when the assetId didn't change — the audio element stayed wedged and the timer froze at 0:00 until the user switched format (WAV ↔ MP3) to force an assetId delta.
+- **Library Updated column** changed from a fixed `widths.updated` to `flex-1 min-w-[80px]` in both `TableHeader` and `TrackRow`, so the column absorbs remaining horizontal space and the cell text is no longer clipped when the preview panel is open on smaller windows.
+
+### Changed
+
+- `apps/desktop/scripts/smoke.mjs` startup pass: deletes `logs/smoke-<digits>.{png,jsonl}` files with `mtime` older than 3 days. Regex-gated; `main.log`, `sidecar.jsonl`, and other shapes are untouched. Logs `purged N stale artifact(s)` when files actually fall out; silent otherwise.
+- `rewrite_producer` always counts a matched track as `affected` even when the resulting JSON is byte-identical to the original (e.g. the merge target already holds the canonical name). This keeps `/preview` and `/rewrite` counts consistent; no-op rows still skip the SQL `UPDATE` (no needless `updated_at` bumps).
+- `loadAndPlay` accepts a `targetStatus: "playing" | "preserve"` argument. `setPreferredRole` (WAV ↔ MP3 switch) and manual `next()` / `prev()` now pass `"preserve"` so a paused user stays paused after the switch. Explicit play intent (`playFromQueue` from a row's play button) and the natural end-of-track advance keep the default `"playing"`.
+- `BottomPlayerBar` + `TrackRow` display producer arrays sorted alphabetically (independent of insert order).
 
 ### Changed
 
@@ -25,7 +40,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Notes
 
-- 33 smoke / 222 vitest / 224 sidecar pytest all pass.
+- 33 smoke (34 with `BEATOS_REAL_AUDIO` set) / 222 vitest / 224 sidecar pytest all pass.
 
 ## [0.0.14.1] - 2026-05-17 — Playback for DAW-produced WAVs
 

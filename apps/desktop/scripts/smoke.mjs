@@ -132,12 +132,19 @@ const dbPath = join(userData, "smoke.db");
 let exitCode = 0;
 const failures = [];
 
+// Default behavior: window stays hidden + audio is muted so smoke runs in the
+// background without stealing focus or producing sound. Override by passing
+// SMOKE_SHOW=1 (visible window) or SMOKE_UNMUTED=1 (real audio) on the CLI.
+const showWindow = process.env.SMOKE_SHOW === "1";
+const unmuted = process.env.SMOKE_UNMUTED === "1";
 const app = await electron.launch({
   args: [mainEntry, "--smoke", "--no-splash"],
   env: {
     ...process.env,
     BEATOS_DB_PATH: dbPath,
     BEATOS_LOG_PATH: logPath,
+    ...(showWindow ? {} : { BEATOS_HEADLESS: "1" }),
+    ...(unmuted ? {} : { BEATOS_AUDIO_MUTED: "1" }),
   },
   timeout: 30_000,
 });
@@ -1264,6 +1271,62 @@ try {
       failures.push(`producer-rewrite assertion error: ${e.message}`);
     }
     // === end v0.0.15 ===
+
+    // === v0.0.15.1: real-audio regression ===
+    // Only runs when BEATOS_REAL_AUDIO is set; smoke stays self-contained by
+    // default. The reference user file pins the asset-protocol against an
+    // actual studio-produced WAV — bytes the synthetic fixture can't cover.
+    const realAudio = process.env.BEATOS_REAL_AUDIO;
+    if (realAudio) {
+      try {
+        // BeatOS rejects asset attaches outside any registered Source. Register
+        // the file's parent dir as a Source so attach succeeds.
+        const realRoot = realAudio.substring(0, realAudio.lastIndexOf("/"));
+        await postJson("/api/sources", { root_path: realRoot });
+        const realTrack = await postJson("/api/tracks", { title: "real-audio-smoke" });
+        await postJson(`/api/tracks/${realTrack.id}/assets`, {
+          role: "audio_tagged_wav",
+          path: realAudio,
+        });
+        // Force the renderer to re-fetch tracks so the new row is visible.
+        await window.evaluate(() => { window.location.hash = "#/"; });
+        await new Promise((r) => setTimeout(r, 200));
+        await window.reload();
+        await window.waitForLoadState("domcontentloaded");
+        await window.evaluate(() => { window.location.hash = "#/"; });
+        await new Promise((r) => setTimeout(r, 800));
+        const rowReal = window.locator("[data-track-id]").filter({ hasText: "real-audio-smoke" }).first();
+        await rowReal.waitFor({ timeout: 5000 });
+        await rowReal.locator("[data-row-play-button]").click();
+        await new Promise((r) => setTimeout(r, 2500));
+        const s = await window.evaluate(() => {
+          const a = document.querySelector("audio");
+          if (!a) return null;
+          return {
+            duration: a.duration,
+            currentTime: a.currentTime,
+            muted: a.muted,
+            error: a.error ? { code: a.error.code } : null,
+          };
+        });
+        if (!s) failures.push("real-audio: no audio element");
+        else if (s.error)
+          failures.push(`real-audio: error code=${s.error.code}`);
+        else if (!s.muted)
+          failures.push("real-audio: expected muted=true under BEATOS_AUDIO_MUTED");
+        else if (!(s.duration > 0))
+          failures.push(`real-audio: duration not > 0 (${s.duration})`);
+        else if (!(s.currentTime > 0))
+          failures.push(`real-audio: currentTime did not advance (${s.currentTime})`);
+        else
+          console.log(
+            `smoke: real audio (${realAudio.split("/").pop()}) plays PASS (muted, duration=${s.duration.toFixed(2)}s, t=${s.currentTime.toFixed(2)}s)`,
+          );
+      } catch (e) {
+        failures.push(`real-audio assertion error: ${e.message}`);
+      }
+    }
+    // === end v0.0.15.1 ===
 
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);

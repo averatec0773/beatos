@@ -68,14 +68,20 @@ console.log("[diag] db       =", dbPath);
 console.log("[diag] audio    =", audioPath);
 console.log("[diag] source   =", sourceDir);
 
+// Match smoke defaults: hidden window + muted audio. Pass DIAG_SHOW=1 or
+// DIAG_UNMUTED=1 to override when you want to watch / hear what's happening.
+const showWindow = process.env.DIAG_SHOW === "1";
+const unmuted = process.env.DIAG_UNMUTED === "1";
 const app = await electron.launch({
-  args: [join(repoRoot, "apps", "desktop", "out", "main", "index.js")],
+  args: [join(repoRoot, "apps", "desktop", "out", "main", "index.js"), "--no-splash"],
   env: {
     ...process.env,
     BEATOS_DB_PATH: dbPath,
     BEATOS_LOG_PATH: join(userData, "diag.log"),
     BEATOS_USER_DATA: userData,
     NODE_ENV: "production",
+    ...(showWindow ? {} : { BEATOS_HEADLESS: "1" }),
+    ...(unmuted ? {} : { BEATOS_AUDIO_MUTED: "1" }),
   },
 });
 
