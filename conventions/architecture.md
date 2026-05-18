@@ -118,7 +118,7 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | structlog + correlation IDs | `packages/beatos-http/beatos_http/logging_config.py` + `app.py` middleware | One JSON/line at `BEATOS_LOG_PATH` (default `apps/desktop/logs/sidecar.jsonl`); every line has `request_id`. |
 | Boot integration test | `packages/beatos-http/tests/test_boot_integration.py` | Real subprocess; asserts handshake + `/api/health` + JSONL output. |
 | `BEATOS_LOG_PATH` env contract | passed by Electron main, honored by sidecar `logging_config._default_log_path()` | Callers redirect via env; Electron defers to existing value. |
-| Smoke harness | `apps/desktop/scripts/smoke.mjs` | Playwright `_electron`: launches built app, asserts boot + zero ERROR JSONL. |
+| Smoke harness | `apps/desktop/scripts/smoke.mjs` + `scripts/smoke/{runner,fixtures,setup,library,player,editor,trash,sidebar}.mjs` (v0.0.19 split) | Playwright `_electron`: launches built app, asserts boot + zero ERROR JSONL. `smoke.mjs` is the thin entry; `runner.mjs` calls section functions in load-bearing chronological order. Each section reads `ctx` (app/window/baseUrl/fixtures/flags) and mutates `ctx.failures`. |
 | Dev reset | `apps/desktop/scripts/dev-reset.sh` | Kills orphan uvicorn, frees 5000-5050, clears logs. |
 | npm scripts | `dev:fresh`, `smoke`, `logs:tail` | Agent-runnable verification — see `memory/feedback_run_the_tools_you_built.md`. |
 

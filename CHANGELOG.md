@@ -4,6 +4,31 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.19] - 2026-05-18 — smoke.mjs split
+
+Third entry of the refactor pass. The 1500-line smoke harness was a single try-block sharing scope across all 33 assertions; we kept it that way as long as we did because CLAUDE.md §"Smoke assertion order is load-bearing" warned against reorganization. This version preserves that order exactly while splitting into a runner + per-domain section files.
+
+### Changed
+
+- **`apps/desktop/scripts/smoke.mjs` (1540 → 135 lines)** — thin entry. Builds the `ctx` object (app/window/userData/baseUrl/fixtures/flags/api closures), invokes `runner.runAssertions(ctx)`, prints PASS/FAIL, cleans userData. The boot block (window mount + console capture + sidecar log validation + screenshot) stays here because it's pre-assertion setup.
+- **`apps/desktop/scripts/smoke/runner.mjs`** (NEW, 69 lines) — calls the 28 section functions in original chronological order. The order comments preserve the v0.0.X markers from the source so future agents can map sections back to the commits that added them.
+- **`apps/desktop/scripts/smoke/fixtures.mjs`** (NEW, 74 lines) — pure data + builders: `TINY_PNG`, `makeTinyWav`, `makeDawStyleWav`. No I/O.
+- **`apps/desktop/scripts/smoke/setup.mjs`** (NEW, 141 lines) — `bootstrapPaths`, `launchApp`, `purgeOldArtifacts`, `checkSidecarLog`, `readHandshakeBaseUrl`, `makeApi(baseUrl) → { postJson, putJson }`.
+- **`apps/desktop/scripts/smoke/library.mjs`** (NEW, 471 lines) — `assertSeedAndDragDrop` (seeds `ctx.fixtures.{t1,t2,list,coverAsset}`), `assertEmptyListCopy`, `assertFilterChips`, `assertSortTitle`, `assertColumnResizerDrag`, `assertColumnAlignmentAfterResize`, `assertScrollSync`, `assertTableAlignment`.
+- **`apps/desktop/scripts/smoke/player.mjs`** (NEW, 212 lines) — `assertAttachAudioAndBottomBar`, `assertNoAudioDisabled`, `assertRowClickPopulatesBar`, `assertPlaybackStarts` (sets `ctx.flags.playbackStarted`), `assertResumeAfterEnd`, `assertDawWavDecode`, `assertRealAudioRegression`.
+- **`apps/desktop/scripts/smoke/editor.mjs`** (NEW, 404 lines) — `assertDoubleClickOpensEditor`, `assertKeyPickerRoundTrip`, `assertAutoSavePersists`, `assertEmptyTitleGatesSave`, `assertGenreChipSelect`, `assertProducerCustomChip`, `assertCoverDragSource`, `assertAnalyzeEndpointShape`, `assertAnalyze404OnNoAudio`, `assertProducerRewriteMerge`. Private `ensureEditorOpen(window)` helper centralises the editor-open boilerplate previously duplicated in three places.
+- **`apps/desktop/scripts/smoke/trash.mjs`** (NEW, 33 lines) — `assertTrashSoftDeleteRestore`.
+- **`apps/desktop/scripts/smoke/sidebar.mjs`** (NEW, 60 lines) — `assertDropCreateApiPath`, `assertSourceReorderApi`.
+
+### Verification
+
+33/33 smoke assertions pass with byte-identical PASS output (compared line-by-line to the v0.0.18 baseline). 233/233 vitest tests pass — no renderer code was touched.
+
+### Notes
+
+- **`ctx` shape** is the cross-section contract. Section functions read `ctx.app/window/userData/baseUrl/fixtures/flags/postJson/putJson/TINY_PNG/makeTinyWav/makeDawStyleWav/failures/rendererConsole`, mutate `ctx.failures` and `ctx.fixtures.*` (e.g. `seedAndDragDrop` writes `t1/t2/list/coverAsset`; `attachAudioAndBottomBar` writes `audioAsset/audioPath`). When adding a new section, document any `ctx.fixtures.*` it adds.
+- **Order constraint preserved**: `runner.mjs` calls the 28 functions in the same order the assertions originally fired. Reordering them risks state assumptions (e.g. `assertResumeAfterEnd` requires `assertPlaybackStarts` to have set `ctx.flags.playbackStarted`).
+
 ## [0.0.18] - 2026-05-18 — TrackEditor refactor
 
 Second entry of the v0.0.17+ refactor pass. Structural-only — no behavior change. `routes/TrackEditor.tsx` was 501 lines; now the route is 35 lines and the responsibilities are split into a state hook, a form component, a save-indicator component, and a pure-helpers module.

@@ -22,9 +22,9 @@ SidebarPanel refactor + top-bar polish. See [CHANGELOG.md](CHANGELOG.md#0017---2
 
 TrackEditor refactor. See [CHANGELOG.md](CHANGELOG.md#0018---2026-05-18--trackeditor-refactor).
 
-### v0.0.19+ — Refactor pass (continued)
+### v0.0.19 — SHIPPED 2026-05-18
 
-- **smoke.mjs split** — `apps/desktop/scripts/smoke.mjs` (~1500 lines) → `scripts/smoke/{runner,library,player,editor,trash,sidebar}.mjs`. Preserve assertion order; runner orchestrates.
+smoke.mjs split. See [CHANGELOG.md](CHANGELOG.md#0019---2026-05-18--smokemjs-split).
 
 ### Audio engine follow-ups (deferred from v0.0.16)
 
