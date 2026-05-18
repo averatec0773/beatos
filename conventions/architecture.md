@@ -250,13 +250,29 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Headless + muted test mode | `main/splash.ts::closeSplashAndShowMain` + `preload/index.ts::isAudioForceMuted` + `BottomPlayerBar.tsx` | `BEATOS_HEADLESS=1` skips `mainWin.show()`; `BEATOS_AUDIO_MUTED=1` exposes a preload flag `BottomPlayerBar` passes to `audioEngine.setForceMuted(true)` on mount. Smoke / diagnose harnesses opt in by default; pass `SMOKE_SHOW=1` / `SMOKE_UNMUTED=1` to override. |
 | Sort-preserved switching | `stores/player.ts::loadAndPlay(targetStatus)` | `next()`/`prev()`/`setPreferredRole` pass `"preserve"` so a paused user stays paused after a track or WAV↔MP3 switch. `playFromQueue` keeps default `"playing"` (explicit play intent). |
 
+### v0.0.20 — Stable MCP Framework
+
+| Capability | Location | Purpose |
+|---|---|---|
+| SQLite WAL in `run_migrations` | `packages/beatos-core/beatos_core/db.py:run_migrations` | `PRAGMA journal_mode=WAL` set on every connection; prevents SQLITE_BUSY when MCP reader overlaps HTTP writer. |
+| `tokens` table (2PC skeleton) | `packages/beatos-core/beatos_core/migrations/009_tokens.sql` | Single-use tokens for future write tools; schema is additive, no write tools yet. |
+| 2PC helpers | `packages/beatos-mcp/beatos_mcp/two_phase.py` | `issue_token(db, action, payload)` + `consume_token(db, token_id)` — write tools call `consume_token` inside the same DB transaction as the actual write. |
+| 6 MCP read tools | `packages/beatos-mcp/beatos_mcp/tools/` + `server.py` | `ping`, `list_tracks`, `get_track`, `list_sources`, `list_lists`, `list_distinct_values` — all registered and exercised by pytest. |
+| `BEATOS_DB_PATH` env discovery | `packages/beatos-mcp/beatos_mcp/db.py` | MCP process opens `BEATOS_DB_PATH` directly (read-only SQLite); raises on unset — no silent fallback. |
+| MCP structlog → JSONL | `packages/beatos-mcp/beatos_mcp/log.py` | `configure()` routes all log output to file + stderr; stdout is reserved for JSON-RPC only. |
+| Settings "AI Integration" panel | `apps/desktop/src/renderer/src/components/Settings/AIIntegrationSection.tsx` | Renders the Claude Desktop config snippet and `mcp:test-connection` result; copy-to-clipboard. |
+| `mcp:test-connection` IPC | `apps/desktop/src/main/mcp/test-connection.ts` | Main-process handler spawns `beatos-mcp` with `--ping`; resolves/rejects within 5 s; result surfaced in AI Integration panel. |
+
 ## MCP surface (aspirational)
 
-`packages/beatos-mcp/` currently only exposes `ping`. The planned surface (any read tool mirrors an existing HTTP route; any write tool requires two-phase commit):
+`packages/beatos-mcp/` ships 6 read tools as of v0.0.20. Any write tool requires two-phase commit:
 
-| Tool | Type | Notes |
+| Tool | Type | Status |
 |---|---|---|
-| `list_tracks(filter?)` / `get_track(id)` / `search_tracks(query)` | read | Mirror `/api/tracks*`. |
+| `ping` | read | Shipped v0.0.20. |
+| `list_tracks(filter?)` / `get_track(id)` | read | Shipped v0.0.20. |
+| `list_sources` / `list_lists` / `list_distinct_values` | read | Shipped v0.0.20. |
+| `search_tracks(query)` | read | Deferred → v0.0.23 (RAG). |
 | `list_platforms()` | read | Once adapters exist. |
 | `inject_to_platform(track_id, platform)` | write | Returns `confirm_token`; agent must call `confirm_inject(token)` separately. |
 | `draft_description(track_id)` | write | Writes to `description_draft` only — never to user's `description`. v0.2 RAG-ready. |
@@ -270,3 +286,6 @@ Trust boundary = local stdio process; no network auth needed. See [ROADMAP.md](.
 - `track.description` column — sacred (user-authored); AI output goes to `description_draft` only.
 - The two-phase commit pattern on MCP write tools — non-negotiable.
 - The Electron main / renderer separation — never `nodeIntegration: true`; always go through `preload.ts` contextBridge.
+- **MCP server NEVER writes to stdout (JSON-RPC only).** All code reachable by `beatos-mcp` (tools, helpers, imports) must use `beatos_mcp.log`; a stray `print()` corrupts the protocol stream and silently disconnects Claude Desktop.
+- **`tokens` table + `two_phase.py` are skeleton for v0.0.21+.** Do not gate them behind feature flags or remove. Write tools must call `consume_token` inside the same DB transaction as the actual write.
+- **`BEATOS_DB_PATH` is the contract with Claude Desktop.** Do not silently fall back to a default if unset — `beatos_mcp/db.py` must raise an explicit error so the AI client gets a clear signal, not a wrong-DB silently returning zero rows.

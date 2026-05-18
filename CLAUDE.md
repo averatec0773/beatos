@@ -25,6 +25,7 @@
 7. **SPA route reuse** — when a route stays mounted across param changes (`/track/1` → `/track/2` keeps `<TrackEditor>` mounted with new `params`), `useEffect([])` does NOT re-run. Per-track effects must depend on `params.id` (caught at v0.0.14.1: producer distinct went stale across tracks).
 8. **Upstream-store → local-form sync** must update both the form state AND the dirty baseline (e.g. `initialTrack`), otherwise the upstream patch (auto-analyze writing bpm/key) registers as a user edit and re-fires auto-save in a loop.
 9. **Audio goes through `audio-engine.ts`, not `<audio>`.** v0.0.16 migrated to Tone.js / Web Audio. Don't reintroduce HTMLAudioElement. New CSP directives (`worker-src 'self' blob:`, `connect-src beatos-asset:`) and protocol privilege (`corsEnabled: true`) are load-bearing — if Tone fetch fails silently, check them first.
+10. **MCP stdout is JSON-RPC only.** Any code reachable by `beatos-mcp` (tools, helpers, imports) must NEVER `print()` or write to stdout — Claude Desktop reads stdout as protocol bytes and a stray newline will silently disconnect. Log via `beatos_mcp.log.configure()` which routes to file + stderr.
 
 For per-file context (which columns, which patterns) read [conventions/architecture.md](conventions/architecture.md) §"What NOT to change without reading context first".
 
@@ -55,9 +56,9 @@ uv run pytest packages/beatos-http/tests/test_x.py::test_y   # single test
 
 Logs (dev): `apps/desktop/logs/main.log` (Electron + `[sidecar]`-tagged stderr) · `apps/desktop/logs/sidecar.jsonl` (structured, one JSON per line, includes `request_id`).
 
-## Ship gate
+## Doc sync (pre-commit)
 
-Before `git tag -a vX.Y.Z … && git push origin vX.Y.Z`, invoke the [harness](.claude/skills/harness/SKILL.md) skill. It verifies `CHANGELOG.md` has an entry, prunes the matching item from `ROADMAP.md`, and checks whether `conventions/` needs updating. **No silent ships.**
+Before any non-trivial `git commit`, invoke the [harness](.claude/skills/harness/SKILL.md) skill proactively. It reads the working tree, then for each of `CHANGELOG.md`, `conventions/`, `CLAUDE.md`, `README.md` decides whether a small targeted edit is needed. The user may also invoke it explicitly ("harness", "doc check", "check before commit", or equivalent). Skip for typo / comment / formatting / test-only diffs and for diffs that only touch `.claude/` or `memory/`. No enforcement hook, no version bump, no tag pipeline. "All unchanged" is a valid outcome.
 
 ## AI dev loop (v0.0.5+)
 
