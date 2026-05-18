@@ -5,6 +5,7 @@ import { useSourceStore } from "@/stores/sources";
 import { useTrackStore } from "@/stores/tracks";
 import { distinct } from "@/api/distinct";
 import { producers as producersApi } from "@/api/producers";
+import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
 
 function StorageSection(): React.JSX.Element {
   const [dbPath, setDbPath] = useState<string>("");
@@ -230,6 +231,12 @@ function AboutSection(): React.JSX.Element {
 }
 
 export function SettingsPanel(): React.JSX.Element {
+  const [dbPath, setDbPath] = useState<string>("");
+  useEffect(() => {
+    void window.beatos.getDbPath().then(setDbPath);
+  }, []);
+  const repoRoot = "<your beatos repo path>";
+
   return (
     <main className="beatos-scroll flex-1 overflow-y-auto p-8">
       <div className="max-w-2xl">
@@ -240,6 +247,7 @@ export function SettingsPanel(): React.JSX.Element {
         <StorageSection />
         <SourcesSection />
         <ProducersSection />
+        <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
         <AboutSection />
       </div>
     </main>
