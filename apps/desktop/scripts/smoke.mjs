@@ -1218,6 +1218,53 @@ try {
     }
     // === end v0.0.14.1 ===
 
+    // === v0.0.15: producer rewrite (merge) ===
+    // Goal: two tracks with case-different producer names → merge to one canonical value.
+    // Verifies POST /api/producers/rewrite collapses duplicates and updates affected tracks.
+    try {
+      const pt1 = await postJson("/api/tracks", { title: "ProdMergeA" });
+      const pt2 = await postJson("/api/tracks", { title: "ProdMergeB" });
+      await fetch(`${baseUrl}/api/tracks/${pt1.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ producer: ["Alice"] }),
+      });
+      await fetch(`${baseUrl}/api/tracks/${pt2.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ producer: ["alice"] }),
+      });
+      const preview = await postJson("/api/producers/preview", { values: ["Alice", "alice"] });
+      if (preview.affected !== 2) {
+        failures.push(`producer-preview: expected affected=2, got ${preview.affected}`);
+      }
+      const rewriteRes = await postJson("/api/producers/rewrite", {
+        from: ["Alice", "alice"],
+        to: "Alice",
+      });
+      if (rewriteRes.affected !== 2) {
+        failures.push(`producer-rewrite: expected affected=2, got ${rewriteRes.affected}`);
+      }
+      const after1 = await fetch(`${baseUrl}/api/tracks/${pt1.id}`).then((r) => r.json());
+      const after2 = await fetch(`${baseUrl}/api/tracks/${pt2.id}`).then((r) => r.json());
+      if (JSON.stringify(after1.producer) !== '["Alice"]') {
+        failures.push(`producer-rewrite: pt1 expected ["Alice"], got ${JSON.stringify(after1.producer)}`);
+      }
+      if (JSON.stringify(after2.producer) !== '["Alice"]') {
+        failures.push(`producer-rewrite: pt2 expected ["Alice"], got ${JSON.stringify(after2.producer)}`);
+      }
+      const distinct = await fetch(`${baseUrl}/api/tracks/distinct/producer`).then((r) => r.json());
+      if (distinct.includes("alice")) {
+        failures.push(`producer-rewrite: distinct still contains "alice": ${JSON.stringify(distinct)}`);
+      }
+      if (!failures.some((f) => f.startsWith("producer-"))) {
+        console.log("smoke: producer rewrite (merge) PASS (collapsed Alice/alice → Alice)");
+      }
+    } catch (e) {
+      failures.push(`producer-rewrite assertion error: ${e.message}`);
+    }
+    // === end v0.0.15 ===
+
   } catch (err) {
     failures.push(`drag-drop assertion section error: ${err.message}`);
   }

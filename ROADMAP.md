@@ -6,11 +6,9 @@ Pending and future work. Past versions: see [CHANGELOG.md](CHANGELOG.md). Code c
 
 ## v0.0.X — Polish and foundation
 
-### v0.0.15 (next) — Auto-save + smoke housekeeping + producer management
+### v0.0.15 — SHIPPED 2026-05-17
 
-- **Auto-save in TrackEditor** — debounced (800 ms after last edit). Drop manual Save button, drop `UnsavedChangesDialog`. Title required (inline validation, no save on empty). ESC just navigates away.
-- **Smoke 3-day cleanup** — `apps/desktop/scripts/smoke.mjs` startup pass: remove `apps/desktop/logs/smoke-*.{png,jsonl}` files with mtime older than 3 days. Keeps recent runs for diagnosis.
-- **Producer management** — UI to rename / delete / merge entries in the global Producer distinct list. Design TBD; candidates listed below.
+See [CHANGELOG.md](CHANGELOG.md#0015---2026-05-17--auto-save-smoke-housekeeping-producer-management).
 
 ### v0.0.16+ — Refactor pass (deferred)
 
@@ -69,20 +67,6 @@ Each is its own version to limit blast radius. No bundling with feature work.
 - Build / not build an in-app agent chat panel.
 - Build / not build smart collections (Lightroom-style).
 - Library sync across devices — almost certainly no.
-
----
-
-## Producer management — design candidates (for v0.0.15)
-
-User flagged the need to manage existing Producer values. Distinct list grows; need rename / delete / merge.
-
-**Option A — Settings → Producers section.** List view; per-row rename / delete; merge dialog. Discoverable but adds Settings complexity.
-
-**Option B — `ChipMultiSelect` dropdown enrichment.** Each producer row in the dropdown gets a `⋯` button → rename / delete / merge. In-flow, but crowds the picker.
-
-**Option C — Both.** Settings for bulk management; dropdown for in-context tweaks.
-
-To decide via a short brainstorm in v0.0.15.
 
 ---
 

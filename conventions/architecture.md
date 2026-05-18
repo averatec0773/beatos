@@ -232,6 +232,17 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Drop-to-create-track | `lib/create-track-from-file.ts` + `routes/TrackListPanel.tsx` drop zone | Drop `.wav`/`.mp3` on library → one track per file with smart Source path match. Attach failure rolls back orphan. Always-`preventDefault` on `dragover` (lesson from v0.0.13.2). |
 | Single DndContext, multi-type routing | `App.tsx` `onDragEnd` switches on id prefix | `track:` / `source:` / `list:` prefixes route to add-to-list / source-reorder / list-reorder. Avoids nested DndContexts. |
 
+### v0.0.15 — Auto-save + Producer Management
+
+| Capability | Location | Purpose |
+|---|---|---|
+| Auto-save TrackEditor | `routes/TrackEditor.tsx` (`AUTOSAVE_DEBOUNCE_MS = 800`) | Debounced auto-save gated on `isDirty && validTitle && saveState ∈ {idle,saved}`. No auto-retry on error (avoids tight loop). ESC / Close fires `flushAndClose()`. `data-save-status` attribute is the smoke + test hook. Both `track` and `initialTrack` baseline updated on save so upstream patches (auto-analyze) don't re-fire save. |
+| Producer rewrite | `tracks/service.py::rewrite_producer` + `count_tracks_with_producer` | Unified rename / merge / delete: removes matching values from each track's JSON array, appends `to_value` if non-empty. Empty arrays kept as `[]` (not NULL). Matched rows always counted as `affected` even when the resulting JSON equals the original (preview/rewrite count consistency); no-op rows skip the SQL UPDATE. |
+| `/api/producers/*` | `routes/producers.py` | `POST /preview {values}` → `{affected}` for confirmation dialogs. `POST /rewrite {from, to}` with `to: null` = delete, non-empty string = rename/merge. `extra='forbid'` on `RewritePayload`. |
+| Settings → Producers | `routes/SettingsPanel.tsx` `ProducersSection` | Checkbox list; Rename (1 selected) / Merge (2+) / Delete (any). Confirmation dialog shows preview count before commit. Refreshes distinct list + `useTrackStore` after success. |
+| ChipMultiSelect `⋯` per option | `components/ChipMultiSelect.tsx` (`onRenameOption` / `onDeleteOption` props) | Hover-revealed manage button swaps the row for an inline rename input + Check / Trash / Cancel. Calls back to the parent — picker itself doesn't import API. Wired only for Producer in TrackEditor. |
+| Smoke 3-day artifact purge | `scripts/smoke.mjs` startup block | Regex-gated `^smoke-\d+\.(png\|jsonl)$`; mtime older than 3 days unlinked. Leaves `main.log` / `sidecar.jsonl` / other shapes alone. Best-effort (race-tolerant). |
+
 ## MCP surface (aspirational)
 
 `packages/beatos-mcp/` currently only exposes `ping`. The planned surface (any read tool mirrors an existing HTTP route; any write tool requires two-phase commit):

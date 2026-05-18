@@ -4,6 +4,29 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.15] - 2026-05-17 — Auto-save, smoke housekeeping, producer management
+
+### Added
+
+- **Auto-save in TrackEditor** — debounced 800 ms after the last edit; replaces the manual Save button and `UnsavedChangesDialog`. Gated on a non-empty title; error state pauses auto-retry until the user edits again. ESC / Close button flushes one final save before navigation. `data-save-status` attribute drives smoke + tests.
+- **Producer management** — `POST /api/producers/preview` and `POST /api/producers/rewrite {from, to}` cover rename / merge / delete in one unified shape (`to: null` = delete). Atomic single-transaction rewrite; preview returns the affected-track count.
+- **Settings → Producers section** — list with checkbox per row; Rename / Merge / Delete actions reveal as 1 / 2+ / any are selected. Confirmation dialog shows the affected-track count from `/preview` before commit.
+- **ChipMultiSelect `⋯` per option** — hover-revealed manage button reveals an inline tray (rename input + delete + cancel) inside the picker. Wired for the Producer field in TrackEditor; commits via the same `/api/producers/rewrite` endpoint, then refreshes the distinct list.
+- Smoke regression #33: two tracks with case-different producer names → `POST /api/producers/rewrite` collapses them to one; distinct API no longer returns the merged-away spelling. Placed at the end of the block (state-mutating).
+
+### Changed
+
+- `apps/desktop/scripts/smoke.mjs` startup pass: deletes `logs/smoke-<digits>.{png,jsonl}` files with `mtime` older than 3 days. Regex-gated; `main.log`, `sidecar.jsonl`, and other shapes are untouched. Logs `purged N stale artifact(s)` when files actually fall out; silent otherwise.
+- `rewrite_producer` always counts a matched track as `affected` even when the resulting JSON is byte-identical to the original (e.g. the merge target already holds the canonical name). This keeps `/preview` and `/rewrite` counts consistent; no-op rows still skip the SQL `UPDATE` (no needless `updated_at` bumps).
+
+### Removed
+
+- `apps/desktop/src/renderer/src/components/UnsavedChangesDialog.tsx` and the dirty-tracking / blocker plumbing it required. Auto-save makes the prompt obsolete.
+
+### Notes
+
+- 33 smoke / 222 vitest / 224 sidecar pytest all pass.
+
 ## [0.0.14.1] - 2026-05-17 — Playback for DAW-produced WAVs
 
 ### Fixed

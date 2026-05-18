@@ -244,4 +244,83 @@ describe("ChipMultiSelect", () => {
     fireEvent.click(screen.getByRole("button", { name: /apply/i }));
     expect(onChange).toHaveBeenCalledWith(["pop"]);
   });
+
+  describe("per-option manage tray", () => {
+    it("renders ⋯ buttons only when onRenameOption/onDeleteOption is provided", () => {
+      const onChange = vi.fn();
+      const { rerender } = render(
+        <ChipMultiSelect value={[]} options={OPTIONS} onChange={onChange} />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /add/i }));
+      expect(screen.queryByTestId("chip-manage-pop")).not.toBeInTheDocument();
+
+      rerender(
+        <ChipMultiSelect
+          value={[]}
+          options={OPTIONS}
+          onChange={onChange}
+          onRenameOption={vi.fn()}
+        />,
+      );
+      expect(screen.getByTestId("chip-manage-pop")).toBeInTheDocument();
+    });
+
+    it("clicking ⋯ swaps the row for an inline input + check/trash/cancel buttons", () => {
+      const onChange = vi.fn();
+      render(
+        <ChipMultiSelect
+          value={[]}
+          options={OPTIONS}
+          onChange={onChange}
+          onRenameOption={vi.fn()}
+          onDeleteOption={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /add/i }));
+      fireEvent.click(screen.getByTestId("chip-manage-pop"));
+      const tray = screen.getByLabelText("Rename value") as HTMLInputElement;
+      expect(tray.value).toBe("pop");
+      expect(screen.getByLabelText("Confirm rename")).toBeInTheDocument();
+      expect(screen.getByLabelText("Delete value globally")).toBeInTheDocument();
+    });
+
+    it("Enter on the rename input calls onRenameOption with old and new values", async () => {
+      const onChange = vi.fn();
+      const onRename = vi.fn().mockResolvedValue(undefined);
+      render(
+        <ChipMultiSelect
+          value={[]}
+          options={OPTIONS}
+          onChange={onChange}
+          onRenameOption={onRename}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /add/i }));
+      fireEvent.click(screen.getByTestId("chip-manage-pop"));
+      const input = screen.getByLabelText("Rename value") as HTMLInputElement;
+      fireEvent.change(input, { target: { value: "Pop Music" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      // Microtask flush
+      await Promise.resolve();
+      expect(onRename).toHaveBeenCalledWith("pop", "Pop Music");
+    });
+
+    it("trash button calls onDeleteOption with the value", async () => {
+      const onChange = vi.fn();
+      const onDelete = vi.fn().mockResolvedValue(undefined);
+      render(
+        <ChipMultiSelect
+          value={[]}
+          options={OPTIONS}
+          onChange={onChange}
+          onDeleteOption={onDelete}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /add/i }));
+      fireEvent.click(screen.getByTestId("chip-manage-trap"));
+      fireEvent.click(screen.getByLabelText("Delete value globally"));
+      await Promise.resolve();
+      expect(onDelete).toHaveBeenCalledWith("trap");
+    });
+  });
 });

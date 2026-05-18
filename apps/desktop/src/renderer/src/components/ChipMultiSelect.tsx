@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { X, Plus, ChevronDown } from "lucide-react";
+import { X, Plus, ChevronDown, MoreHorizontal, Trash2, Check } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -23,6 +23,12 @@ interface Props {
    *  `>1` = caps multi-select; selecting more is blocked while at cap.
    *  Omit / undefined = unlimited. */
   maxSelections?: number;
+  /** When set, renders a per-option `⋯` button that lets the user rename
+   *  the value globally. Caller must update the upstream distinct list. */
+  onRenameOption?: (oldValue: string, newValue: string) => Promise<void>;
+  /** When set, the per-option manage tray also includes a Delete button
+   *  that removes the value from all tracks globally. */
+  onDeleteOption?: (value: string) => Promise<void>;
 }
 
 export function ChipMultiSelect({
@@ -33,12 +39,57 @@ export function ChipMultiSelect({
   placeholder,
   popoverTitle,
   maxSelections,
+  onRenameOption,
+  onDeleteOption,
 }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string[]>(value);
   const [customInput, setCustomInput] = useState("");
   const [customOptions, setCustomOptions] = useState<Option[]>([]);
+  const [managingValue, setManagingValue] = useState<string | null>(null);
+  const [manageInput, setManageInput] = useState("");
+  const [manageBusy, setManageBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const manageable = Boolean(onRenameOption || onDeleteOption);
+
+  function startManage(value: string): void {
+    setManagingValue(value);
+    setManageInput(value);
+  }
+
+  function cancelManage(): void {
+    setManagingValue(null);
+    setManageInput("");
+  }
+
+  async function commitRename(): Promise<void> {
+    if (!managingValue || !onRenameOption) return;
+    const trimmed = manageInput.trim();
+    if (!trimmed || trimmed === managingValue) {
+      cancelManage();
+      return;
+    }
+    setManageBusy(true);
+    try {
+      await onRenameOption(managingValue, trimmed);
+      setDraft((cur) => cur.map((v) => (v === managingValue ? trimmed : v)));
+      cancelManage();
+    } finally {
+      setManageBusy(false);
+    }
+  }
+
+  async function commitDelete(): Promise<void> {
+    if (!managingValue || !onDeleteOption) return;
+    setManageBusy(true);
+    try {
+      await onDeleteOption(managingValue);
+      setDraft((cur) => cur.filter((v) => v !== managingValue));
+      cancelManage();
+    } finally {
+      setManageBusy(false);
+    }
+  }
 
   function openPopover(): void {
     setDraft(value);
@@ -127,6 +178,103 @@ export function ChipMultiSelect({
   const isSingleSelect = maxSelections === 1;
   const singleValue = value[0] ?? null;
 
+  function renderOption(opt: Option): React.JSX.Element {
+    const selected = draft.includes(opt.value);
+    const disabled = atCap && !selected;
+    const isManaging = managingValue === opt.value;
+    if (isManaging) {
+      return (
+        <div
+          key={opt.value}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-bg-row-hover"
+          data-managing-option={opt.value}
+        >
+          <input
+            type="text"
+            value={manageInput}
+            disabled={manageBusy}
+            onChange={(e) => setManageInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void commitRename();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                cancelManage();
+              }
+            }}
+            autoFocus
+            className="min-w-0 flex-1 rounded border border-border-subtle bg-bg-elevated px-2 py-0.5 text-xs focus:outline-none focus:border-accent"
+            aria-label="Rename value"
+          />
+          {onRenameOption && (
+            <button
+              type="button"
+              onClick={() => void commitRename()}
+              disabled={manageBusy}
+              className="rounded p-1 text-text-secondary hover:bg-bg-elevated disabled:opacity-50"
+              aria-label="Confirm rename"
+            >
+              <Check className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {onDeleteOption && (
+            <button
+              type="button"
+              onClick={() => void commitDelete()}
+              disabled={manageBusy}
+              className="rounded p-1 text-danger hover:bg-bg-elevated disabled:opacity-50"
+              aria-label="Delete value globally"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={cancelManage}
+            disabled={manageBusy}
+            className="rounded p-1 text-text-tertiary hover:bg-bg-elevated disabled:opacity-50"
+            aria-label="Cancel"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      );
+    }
+    return (
+      <div
+        key={opt.value}
+        className={`group flex items-center gap-2.5 px-3 py-1.5 text-sm ${disabled ? "cursor-not-allowed text-text-tertiary opacity-50" : "cursor-pointer hover:bg-bg-row-hover"}`}
+      >
+        <label className="flex items-center gap-2.5 flex-1 min-w-0 cursor-inherit">
+          <input
+            type="checkbox"
+            checked={selected}
+            disabled={disabled}
+            onChange={() => toggleOption(opt.value)}
+            className="h-3.5 w-3.5 accent-accent"
+          />
+          <span className="truncate">{opt.label}</span>
+        </label>
+        {manageable && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              startManage(opt.value);
+            }}
+            className="opacity-0 group-hover:opacity-100 rounded p-0.5 text-text-tertiary hover:bg-bg-elevated focus:opacity-100 focus:outline-none"
+            aria-label={`Manage ${opt.label}`}
+            data-testid={`chip-manage-${opt.value}`}
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div data-chip-multiselect className={isSingleSelect ? "" : "flex flex-wrap items-center gap-1.5"}>
       {!isSingleSelect &&
@@ -192,46 +340,10 @@ export function ChipMultiSelect({
                       )}
                       {allOptions
                         .filter((o) => (o.group ?? "") === group)
-                        .map((opt) => {
-                          const selected = draft.includes(opt.value);
-                          const disabled = atCap && !selected;
-                          return (
-                            <label
-                              key={opt.value}
-                              className={`flex items-center gap-2.5 px-3 py-1.5 text-sm ${disabled ? "cursor-not-allowed text-text-tertiary opacity-50" : "cursor-pointer hover:bg-bg-row-hover"}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                disabled={disabled}
-                                onChange={() => toggleOption(opt.value)}
-                                className="h-3.5 w-3.5 accent-accent"
-                              />
-                              <span className="truncate">{opt.label}</span>
-                            </label>
-                          );
-                        })}
+                        .map((opt) => renderOption(opt))}
                     </div>
                   ))
-                : allOptions.map((opt) => {
-                    const selected = draft.includes(opt.value);
-                    const disabled = atCap && !selected;
-                    return (
-                      <label
-                        key={opt.value}
-                        className={`flex items-center gap-2.5 px-3 py-1.5 text-sm ${disabled ? "cursor-not-allowed text-text-tertiary opacity-50" : "cursor-pointer hover:bg-bg-row-hover"}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          disabled={disabled}
-                          onChange={() => toggleOption(opt.value)}
-                          className="h-3.5 w-3.5 accent-accent"
-                        />
-                        <span className="truncate">{opt.label}</span>
-                      </label>
-                    );
-                  })}
+                : allOptions.map((opt) => renderOption(opt))}
             </div>
 
             {allowCustomAdd && (

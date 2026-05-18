@@ -5,6 +5,7 @@ import { Wand2 } from "lucide-react";
 import { tracks } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
 import { distinct } from "@/api/distinct";
+import { producers as producersApi } from "@/api/producers";
 import { analysis } from "@/api/analysis";
 import type { AudioAnalysisResult } from "@/api/analysis";
 import { useTrackStore } from "@/stores/tracks";
@@ -68,13 +69,20 @@ export function TrackEditor(): React.JSX.Element {
   const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
   const [, setNowTick] = useState(0);
 
+  const refreshProducerOptions = useCallback(async () => {
+    try {
+      const vals = await distinct.values("producer");
+      setProducerOptions(vals.map((p) => ({ value: p, label: p })));
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
+
   // Re-fetch producers per track id (vocab is global; useEffect([]) is stale
   // across SPA route changes that reuse the same TrackEditor instance).
   useEffect(() => {
-    distinct.values("producer").then((vals) => {
-      setProducerOptions(vals.map((p) => ({ value: p, label: p })));
-    }).catch(() => {/* non-fatal */});
-  }, [params.id]);
+    void refreshProducerOptions();
+  }, [params.id, refreshProducerOptions]);
 
   useEffect(() => {
     if (!params.id) return;
@@ -383,6 +391,24 @@ export function TrackEditor(): React.JSX.Element {
                   allowCustomAdd
                   popoverTitle="Producers"
                   placeholder="Add producer..."
+                  onRenameOption={async (oldV, newV) => {
+                    await producersApi.rewrite([oldV], newV);
+                    await refreshProducerOptions();
+                    if (track.producer?.includes(oldV)) {
+                      patch(
+                        "producer",
+                        track.producer.map((p) => (p === oldV ? newV : p)),
+                      );
+                    }
+                  }}
+                  onDeleteOption={async (v) => {
+                    await producersApi.rewrite([v], null);
+                    await refreshProducerOptions();
+                    if (track.producer?.includes(v)) {
+                      const next = track.producer.filter((p) => p !== v);
+                      patch("producer", next.length ? next : null);
+                    }
+                  }}
                 />
               </div>
               <div>

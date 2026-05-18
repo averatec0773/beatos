@@ -364,3 +364,75 @@ async def list_trash() -> list[Track]:
 
 async def delete_track(track_id: int) -> None:
     await trash_track(track_id)
+
+
+async def count_tracks_with_producer(values: list[str]) -> int:
+    """Count non-trashed tracks whose producer array contains any of `values`."""
+    if not values:
+        return 0
+    db_path = resolve_db_path()
+    placeholders = ", ".join("?" for _ in values)
+    sql = (
+        f"SELECT COUNT(*) FROM track "
+        f"WHERE deleted_at IS NULL AND EXISTS ("
+        f"  SELECT 1 FROM json_each(track.producer) je WHERE je.value IN ({placeholders})"
+        f")"
+    )
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(sql, values) as cur:
+            row = await cur.fetchone()
+    return row[0] if row else 0
+
+
+async def rewrite_producer(from_values: list[str], to_value: str | None) -> int:
+    """Replace producer values across all tracks.
+
+    - rename:  from_values=["Drake"],          to_value="drake"
+    - merge:   from_values=["Drake","drake"],  to_value="Drake"
+    - delete:  from_values=["Drake"],          to_value=None
+
+    Per-track: removes every matching value; if `to_value` is non-empty and
+    not already present in the array after removal, appends it. Preserves
+    other producers' order. Empty arrays are kept as `[]` (not converted
+    to NULL) so the column stays uniform.
+
+    Returns the number of rows actually updated.
+    """
+    if not from_values:
+        return 0
+    db_path = resolve_db_path()
+    placeholders = ", ".join("?" for _ in from_values)
+    target = to_value.strip() if isinstance(to_value, str) else None
+    if target == "":
+        target = None
+    from_set = set(from_values)
+
+    select_sql = (
+        f"SELECT id, producer FROM track "
+        f"WHERE deleted_at IS NULL AND EXISTS ("
+        f"  SELECT 1 FROM json_each(track.producer) je WHERE je.value IN ({placeholders})"
+        f")"
+    )
+    now = _now()
+    updated = 0
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(select_sql, from_values) as cur:
+            rows = await cur.fetchall()
+        for track_id, producer_raw in rows:
+            current = _parse_json_list(producer_raw) or []
+            kept = [v for v in current if v not in from_set]
+            if target is not None and target not in kept:
+                kept.append(target)
+            updated += 1
+            new_raw = json.dumps(kept)
+            if new_raw == producer_raw:
+                # No-op write — skip to avoid bumping updated_at, but the track
+                # still matched the filter so count it as affected (matches
+                # what /api/producers/preview reports).
+                continue
+            await conn.execute(
+                "UPDATE track SET producer = ?, updated_at = ? WHERE id = ?",
+                (new_raw, now, track_id),
+            )
+        await conn.commit()
+    return updated
