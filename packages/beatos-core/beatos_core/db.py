@@ -58,6 +58,8 @@ async def run_migrations(db_path: pathlib.Path | str) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     async with aiosqlite.connect(db_path) as conn:
+        # WAL persists at file level; must run before any transaction opens.
+        await conn.execute("PRAGMA journal_mode=WAL")
         await _ensure_schema_version_table(conn)
         applied = await _applied_versions(conn)
 
