@@ -96,15 +96,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     const list = await assetsApi.listForTrack(trackId);
     const asset = resolveAudioAsset(list, preferred);
     if (!asset) {
-      set((s) => ({
+      // Track has no playable audio. Keep currentTrackId so the bar can still
+      // show metadata, but null out asset bits and report error.
+      set({
         currentTrackId: trackId,
         currentAssetId: null,
         currentRole: null,
         status: "error",
         position: 0,
         duration: 0,
-        loadEpoch: s.loadEpoch + 1,
-      }));
+      });
       return;
     }
     const prevStatus = get().status;
@@ -114,15 +115,21 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         : prevStatus === "playing"
           ? "playing"
           : "paused";
-    set((s) => ({
+    // IMPORTANT: do NOT bump loadEpoch here. The audio-src useEffect already
+    // re-fires naturally when currentAssetId changes. Bumping loadEpoch on
+    // every loadAndPlay caused mid-playback reloads (audio.load()) whenever a
+    // role switch / next / prev fell back to the same asset id — which
+    // surfaced as random "Playback failed (NETWORK)" toasts in dev mode if
+    // the sidecar hiccuped during the reload. Force-reload (loadEpoch++) is
+    // reserved for explicit retry intent from togglePlay's recovery branch.
+    set({
       currentTrackId: trackId,
       currentAssetId: asset.id,
       currentRole: asset.role as AudioRole,
       status: nextStatus,
       position: 0,
       duration: 0,
-      loadEpoch: s.loadEpoch + 1,
-    }));
+    });
   }
 
   return {
@@ -148,7 +155,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (s.status === "playing") {
         // Stuck-playing recovery: status says "playing" but no metadata loaded.
         // Click should retry the load instead of pausing into a dead state.
+        // Bump loadEpoch so the audio-src useEffect re-fires even when the
+        // asset id won't change.
         if (s.duration === 0 && s.currentTrackId != null) {
+          set({ loadEpoch: s.loadEpoch + 1 });
           loadAndPlay(s.currentTrackId, s.preferredRole).catch((e) => {
             console.warn("[player] stuck-playing retry failed", e);
           });
@@ -160,6 +170,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       } else if ((s.status === "error" || s.status === "idle") && s.currentTrackId != null) {
         // Recover from a stuck state — re-attempt load. Without this, clicking
         // the row play button on a track in error/idle status would no-op.
+        // Force a fresh audio.load() via loadEpoch.
+        set({ loadEpoch: s.loadEpoch + 1 });
         loadAndPlay(s.currentTrackId, s.preferredRole).catch((e) => {
           console.warn("[player] retry from error/idle failed", e);
         });
