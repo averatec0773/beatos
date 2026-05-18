@@ -96,6 +96,126 @@ describe("repairWavIfNeeded", () => {
     expect(repairWavIfNeeded(broken)).toBe(broken);
   });
 
+  it("transcodes IEEE FLOAT-32 (format=3) → PCM-16 (format=1)", () => {
+    // Build a tiny FLOAT-32 WAV: stereo, 44100 Hz, 4 samples.
+    // Known floats: [0.0, 1.0, -1.0, 0.5, 0.25, -0.5, 0.999, -0.999]
+    const samples = new Float32Array([0.0, 1.0, -1.0, 0.5, 0.25, -0.5, 0.999, -0.999]);
+    const dataLen = samples.byteLength;
+    const fmtLen = 16;
+    const buf = new ArrayBuffer(12 + 8 + fmtLen + 8 + dataLen);
+    const u8 = new Uint8Array(buf);
+    const v = new DataView(buf);
+    u8.set([0x52, 0x49, 0x46, 0x46], 0); // "RIFF"
+    v.setUint32(4, buf.byteLength - 8, true);
+    u8.set([0x57, 0x41, 0x56, 0x45], 8); // "WAVE"
+    u8.set([0x66, 0x6d, 0x74, 0x20], 12); // "fmt "
+    v.setUint32(16, fmtLen, true);
+    v.setUint16(20, 3, true); // format = IEEE FLOAT
+    v.setUint16(22, 2, true); // 2 channels
+    v.setUint32(24, 44100, true);
+    v.setUint32(28, 44100 * 8, true); // byteRate
+    v.setUint16(32, 8, true); // blockAlign = 2 ch * 4 bytes
+    v.setUint16(34, 32, true); // bits = 32
+    u8.set([0x64, 0x61, 0x74, 0x61], 36);
+    v.setUint32(40, dataLen, true);
+    // Write float samples
+    for (let i = 0; i < samples.length; i++) {
+      v.setFloat32(44 + i * 4, samples[i], true);
+    }
+
+    const out = repairWavIfNeeded(buf);
+    expect(out).not.toBe(buf);
+    const ou8 = new Uint8Array(out);
+    const ov = new DataView(out);
+    // Output fmt should be PCM-16
+    expect(ov.getUint16(20, true)).toBe(1); // format = PCM
+    expect(ov.getUint16(22, true)).toBe(2); // channels preserved
+    expect(ov.getUint32(24, true)).toBe(44100); // sampleRate preserved
+    expect(ov.getUint16(34, true)).toBe(16); // bitsPerSample = 16
+    expect(ov.getUint16(32, true)).toBe(4); // blockAlign = 2 ch * 2 bytes
+    // Data chunk
+    expect(String.fromCharCode(ou8[36], ou8[37], ou8[38], ou8[39])).toBe("data");
+    expect(ov.getUint32(40, true)).toBe(samples.length * 2);
+    // Verify scaled samples
+    expect(ov.getInt16(44, true)).toBe(0); // 0.0 → 0
+    expect(ov.getInt16(46, true)).toBe(32767); // 1.0 → 32767 (clamped)
+    expect(ov.getInt16(48, true)).toBe(-32768); // -1.0 → -32768 (clamped)
+    expect(ov.getInt16(50, true)).toBe(Math.round(0.5 * 32767)); // 16384
+    expect(ov.getInt16(52, true)).toBe(Math.round(0.25 * 32767)); // 8192
+    expect(ov.getInt16(54, true)).toBe(Math.round(-0.5 * 32768)); // -16384
+  });
+
+  it("FLOAT-32 with JUNK + trailing chunks still transcodes correctly", () => {
+    // Realistic user case from the field: DAW WAV with JUNK before fmt,
+    // format=3, and smpl/cue/LIST chunks after data.
+    const samples = new Float32Array([0.5, -0.5]);
+    const dataLen = samples.byteLength;
+    const junkLen = 28;
+    const trailerLen = 16;
+    const fmtLen = 16;
+    const total = 12 + 8 + junkLen + 8 + fmtLen + 8 + dataLen + 8 + trailerLen;
+    const buf = new ArrayBuffer(total);
+    const u8 = new Uint8Array(buf);
+    const v = new DataView(buf);
+    let p = 0;
+    u8.set([0x52, 0x49, 0x46, 0x46], p); p += 4;
+    v.setUint32(p, total - 8, true); p += 4;
+    u8.set([0x57, 0x41, 0x56, 0x45], p); p += 4;
+    u8.set([0x4a, 0x55, 0x4e, 0x4b], p); p += 4; v.setUint32(p, junkLen, true); p += 4;
+    p += junkLen;
+    u8.set([0x66, 0x6d, 0x74, 0x20], p); p += 4; v.setUint32(p, fmtLen, true); p += 4;
+    v.setUint16(p, 3, true); p += 2; // FLOAT
+    v.setUint16(p, 1, true); p += 2; // mono
+    v.setUint32(p, 44100, true); p += 4;
+    v.setUint32(p, 44100 * 4, true); p += 4;
+    v.setUint16(p, 4, true); p += 2;
+    v.setUint16(p, 32, true); p += 2;
+    u8.set([0x64, 0x61, 0x74, 0x61], p); p += 4; v.setUint32(p, dataLen, true); p += 4;
+    for (let i = 0; i < samples.length; i++) { v.setFloat32(p, samples[i], true); p += 4; }
+    u8.set([0x73, 0x6d, 0x70, 0x6c], p); p += 4; v.setUint32(p, trailerLen, true); p += 4;
+
+    const out = repairWavIfNeeded(buf);
+    const ov = new DataView(out);
+    expect(ov.getUint16(20, true)).toBe(1); // transcoded to PCM
+    expect(ov.getUint16(34, true)).toBe(16); // bits=16
+    // Output should have exactly 44 byte header + 2 samples * 2 bytes = 48 bytes
+    expect(out.byteLength).toBe(48);
+    expect(ov.getInt16(44, true)).toBe(Math.round(0.5 * 32767));
+    expect(ov.getInt16(46, true)).toBe(Math.round(-0.5 * 32768));
+  });
+
+  it("unwraps WAVE_FORMAT_EXTENSIBLE (0xFFFE) wrapping PCM", () => {
+    // EXTENSIBLE with PCM GUID in SubFormat. Chromium often rejects 0xFFFE.
+    const dataLen = 8;
+    const fmtLen = 40; // EXTENSIBLE fmt = 16 base + 24 extension
+    const buf = new ArrayBuffer(12 + 8 + fmtLen + 8 + dataLen);
+    const u8 = new Uint8Array(buf);
+    const v = new DataView(buf);
+    u8.set([0x52, 0x49, 0x46, 0x46], 0);
+    v.setUint32(4, buf.byteLength - 8, true);
+    u8.set([0x57, 0x41, 0x56, 0x45], 8);
+    u8.set([0x66, 0x6d, 0x74, 0x20], 12);
+    v.setUint32(16, fmtLen, true);
+    v.setUint16(20, 0xfffe, true); // EXTENSIBLE
+    v.setUint16(22, 2, true); v.setUint32(24, 44100, true);
+    v.setUint32(28, 176400, true); v.setUint16(32, 4, true);
+    v.setUint16(34, 16, true);
+    // Extension at offset 36: cbSize(2) + validBitsPerSample(2) + channelMask(4) + SubFormat GUID(16)
+    v.setUint16(36, 22, true); // cbSize
+    v.setUint16(38, 16, true); // validBitsPerSample
+    v.setUint32(40, 3, true); // channelMask = stereo
+    // SubFormat GUID = PCM: 01 00 00 00 ... (first 2 bytes = 0x0001 = PCM)
+    v.setUint16(44, 1, true); // first 2 bytes of GUID = format code 1 (PCM)
+    u8.set([0x64, 0x61, 0x74, 0x61], 60);
+    v.setUint32(64, dataLen, true);
+
+    const out = repairWavIfNeeded(buf);
+    expect(out).not.toBe(buf);
+    const ov = new DataView(out);
+    // formatCode in output should be plain PCM (1), NOT 0xfffe.
+    expect(ov.getUint16(20, true)).toBe(1);
+  });
+
   it("strips bext (Broadcast Wave) chunk before fmt", () => {
     // bext chunk is common in DAW exports (Pro Tools, Logic). Chromium rejects
     // WAVs with bext even though it's a valid RIFF chunk. We must repair.

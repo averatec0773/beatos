@@ -48,6 +48,7 @@ export function TrackRow({
       onKeyDown={(e) => {
         if (e.key === "Enter") onOpen();
       }}
+      style={{ minWidth: "max-content" }}
       className={`h-16 px-4 flex items-center cursor-grab active:cursor-grabbing cursor-pointer relative gap-3
         ${isDragging ? "opacity-50" : ""}
         ${highlighted ? "bg-bg-row-selected text-text-primary border-l-2 border-accent" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}
@@ -70,8 +71,10 @@ export function TrackRow({
           {[...(track.producer ?? [])].sort((a, b) => a.localeCompare(b)).join(", ")}
         </span>
       </div>
-      {/* 1px resizer spacer — matches ColumnResizer width so columns stay aligned */}
-      <div className="w-1 flex-shrink-0" />
+      {/* Spacer geometry MUST match TableHeader's <ColumnResizer/> exactly
+          (w-3 -mx-1) — otherwise the row drifts right of the header by ~8 px
+          per spacer once a column is pinned to a fixed pixel width. */}
+      <div className="w-3 -mx-1 flex-shrink-0" />
       <div className="text-left font-mono text-xs" style={{ width: widths.bpm, flexShrink: 0 }}>{track.bpm ?? "—"}</div>
       <div className="w-1 flex-shrink-0" />
       <div className="truncate text-xs" style={{ width: widths.key, flexShrink: 0 }}>{track.key_signature ?? "—"}</div>

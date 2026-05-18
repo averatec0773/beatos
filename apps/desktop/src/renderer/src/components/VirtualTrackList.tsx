@@ -22,8 +22,16 @@ export function VirtualTrackList({ tracks, renderRow }: Props): React.JSX.Elemen
 
   return (
     <div ref={parentRef} className="flex-1 overflow-y-auto beatos-scroll">
+      {/* Inner uses min-width: max-content so rows can grow horizontally past
+          the container — selection highlight then extends to the full row
+          width instead of truncating at the viewport edge. Horizontal scroll
+          is owned by the SHARED wrapper around <TableHeader> + this list. */}
       <div
-        style={{ height: virtualizer.getTotalSize(), width: "100%", position: "relative" }}
+        style={{
+          height: virtualizer.getTotalSize(),
+          minWidth: "max-content",
+          position: "relative",
+        }}
       >
         {virtualizer.getVirtualItems().map((vi) => (
           <div

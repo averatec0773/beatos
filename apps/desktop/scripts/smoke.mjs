@@ -1249,6 +1249,62 @@ try {
     }
     // === end v0.0.14.1 ===
 
+    // === v0.0.15: column alignment survives a user resize ===
+    // Pin the title column to a wide fixed pixel value (mimics dragging the
+    // ColumnResizer past its initial position), then re-measure. Header and
+    // row left/right deltas must STAY ≤1px. This pins the bug class where
+    // header drifts right of rows by ~8 px per spacer because TrackRow's
+    // spacer geometry didn't match TableHeader's ColumnResizer.
+    try {
+      await window.evaluate(() => {
+        const s = window.__beatos?.widths?.();
+        s?.setWidth?.("title", 400);
+      });
+      await new Promise((r) => setTimeout(r, 150));
+      const align = await window.evaluate(() => {
+        const COLS = ["title", "bpm", "key_signature", "genre", "updated_at"];
+        const g = (el) => {
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { left: Math.round(r.left), right: Math.round(r.right) };
+        };
+        const header = document.querySelector('[role="row"]');
+        const rows = [...document.querySelectorAll("[data-track-id]")];
+        const row = rows.find((r) => !r.className.includes("border-accent")) ?? rows[0];
+        if (!header || !row) return { error: "header/row missing" };
+        const headerCols = [...header.querySelectorAll("[data-column]")];
+        const rowChildren = [...row.children].filter(
+          (c) =>
+            c.tagName !== "SPAN" &&
+            !(c.className.includes("w-3") && c.className.includes("-mx-1")) &&
+            !(c.classList.contains("w-1") && c.classList.contains("flex-shrink-0")),
+        );
+        const rowCells = rowChildren.slice(1, 6);
+        const diffs = [];
+        for (let i = 0; i < COLS.length; i++) {
+          const h = g(headerCols[i]);
+          const c = g(rowCells[i]);
+          if (!h || !c) { diffs.push({ col: COLS[i], error: "missing" }); continue; }
+          diffs.push({ col: COLS[i], leftDelta: c.left - h.left, rightDelta: c.right - h.right });
+        }
+        return { diffs };
+      });
+      if (align.error) failures.push(`resize-align: ${align.error}`);
+      else {
+        const desync = align.diffs.filter(
+          (d) => d.error || Math.abs(d.leftDelta) > 1 || Math.abs(d.rightDelta) > 1,
+        );
+        if (desync.length > 0) {
+          failures.push(`resize-align: post-resize desync — ${JSON.stringify(desync)}`);
+        } else {
+          console.log("smoke: column alignment after title resize (400px) PASS");
+        }
+      }
+    } catch (e) {
+      failures.push(`resize-align assertion error: ${e.message}`);
+    }
+    // === end resize-align ===
+
     // === v0.0.15: TableHeader / TrackRow column alignment ===
     // Each header column must share its left + right edges with the same-position
     // body cell. Regression guard against ColumnResizer (w-3 -mx-1) vs row spacer
@@ -1271,8 +1327,13 @@ try {
         const headerCols = [...header.querySelectorAll("[data-column]")];
         // Row children: an accent span + cover wrapper + (cell, divider)+. The
         // cells we want are the 5 non-spacer flex children after the cover.
+        // Spacers now use the same `w-3 -mx-1` geometry as TableHeader's
+        // ColumnResizer (so columns stay aligned when widths are pinned).
         const rowChildren = [...row.children].filter(
-          (c) => c.tagName !== "SPAN" && !(c.classList.contains("w-1") && c.classList.contains("flex-shrink-0")),
+          (c) =>
+            c.tagName !== "SPAN" &&
+            !(c.className.includes("w-3") && c.className.includes("-mx-1")) &&
+            !(c.classList.contains("w-1") && c.classList.contains("flex-shrink-0")),
         );
         // rowChildren[0] is cover, rowChildren[1..5] are the 5 columns
         const rowCells = rowChildren.slice(1, 6);
