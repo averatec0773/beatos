@@ -15,8 +15,7 @@ class Track(BaseModel):
     genre: Optional[list[str]] = None
     mood: Optional[list[str]] = None
     tags: Optional[list[str]] = None
-    description: Optional[str] = Field(default=None, description="User-authored — sacred.")
-    description_draft: Optional[str] = Field(default=None, description="AI-generated draft.")
+    description: Optional[str] = None
     license_type: str = "lease_basic"
     price: Optional[float] = None
     producer: Optional[list[str]] = None
@@ -40,11 +39,11 @@ class TrackCreate(BaseModel):
 
 
 class TrackUpdate(BaseModel):
-    """Partial track update payload. description_draft NOT exposed (sacred).
+    """Partial track update payload.
 
     `extra='forbid'` makes the HTTP layer return 422 if a client sends
-    `description_draft` or any other unknown field — surfacing protocol
-    errors loudly rather than silently dropping data.
+    an unknown field — surfacing protocol errors loudly rather than
+    silently dropping data.
     """
 
     model_config = {"extra": "forbid"}

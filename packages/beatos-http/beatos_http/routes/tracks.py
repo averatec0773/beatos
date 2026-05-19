@@ -1,7 +1,7 @@
 """/api/tracks routes.
 
 v0.0.4: tracks are global. TrackUpdate.model_config['extra'] = 'forbid'
-makes pydantic return 422 for any unknown field including description_draft.
+makes pydantic return 422 for any unknown field.
 """
 from __future__ import annotations
 

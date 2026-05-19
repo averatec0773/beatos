@@ -48,11 +48,11 @@ def test_full_crud_flow(tmp_path):
     assert get_after.json()["deleted_at"] is not None
 
 
-def test_update_rejects_description_draft(tmp_path):
+def test_update_rejects_unknown_field(tmp_path):
     client = TestClient(create_app())
     track_id = client.post("/api/tracks", json={"title": "T"}).json()["id"]
 
-    res = client.put(f"/api/tracks/{track_id}", json={"description_draft": "x"})
+    res = client.put(f"/api/tracks/{track_id}", json={"nonexistent_field": "x"})
 
     assert res.status_code == 422  # TrackUpdate has extra='forbid'
 

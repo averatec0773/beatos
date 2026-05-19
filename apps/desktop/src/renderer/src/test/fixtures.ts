@@ -9,7 +9,6 @@ export const sampleTrack: Track = {
   mood: null,
   tags: null,
   description: null,
-  description_draft: null,
   license_type: "lease_basic",
   price: null,
   producer: null,

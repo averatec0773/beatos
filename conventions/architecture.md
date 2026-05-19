@@ -300,7 +300,6 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | `search_tracks(query)` | read | Deferred → v0.0.25 (RAG). |
 | `list_platforms()` | read | Once adapters exist. |
 | `inject_to_platform(track_id, platform)` | write | Returns `confirm_token`; agent must call `confirm_inject(token)` separately. |
-| `draft_description(track_id)` | write | Writes to `description_draft` only — never to user's `description`. v0.2 RAG-ready. |
 | `suggest_tags(track_id)` / `find_similar(track_id)` | read | v0.2 / v0.3 (audio + text RAG). |
 
 Trust boundary = local stdio process; no network auth needed. See [ROADMAP.md](../ROADMAP.md) for the build sequence.
@@ -308,7 +307,6 @@ Trust boundary = local stdio process; no network auth needed. See [ROADMAP.md](.
 ## What NOT to change without reading context first
 
 - `migrations/001_init.sql` — never modify after applied; add `002_*.sql` and forward.
-- `track.description` column — sacred (user-authored); AI output goes to `description_draft` only.
 - The two-phase commit pattern on MCP write tools — non-negotiable.
 - The Electron main / renderer separation — never `nodeIntegration: true`; always go through `preload.ts` contextBridge.
 - **MCP launcher NEVER writes to stdout.** The `beatos-mcp` launcher (`__main__.py`, `launcher.py`) and `mcp-proxy` subprocess space must use `beatos_mcp.log`; stdout is the JSON-RPC pipe to Claude Desktop. Tool implementations run in the sidecar HTTP process and are NOT subject to this constraint.
