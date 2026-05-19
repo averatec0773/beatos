@@ -1,4 +1,4 @@
-"""Shared fixtures for beatos-mcp tests."""
+"""Shared fixtures for beatos-core tests."""
 from __future__ import annotations
 
 import pathlib

@@ -64,7 +64,7 @@ stream and Claude Desktop will silently disconnect.
 ## Architecture notes
 
 - `db.py` opens read-only connections (`PRAGMA query_only=1`)
-- `two_phase.py` provides token-table helpers for v0.0.21+ write tools
+- `beatos_core.two_phase` provides token-table helpers for v0.0.21+ write tools
 - `tools/*.py` — one file per logical surface, all return `dict` payloads
 - `log.py` — structlog → JSONL file + stderr
 
