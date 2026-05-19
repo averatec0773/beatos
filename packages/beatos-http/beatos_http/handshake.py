@@ -13,6 +13,7 @@ from dataclasses import dataclass
 class Handshake:
     port: int
     started_at: str
+    pid: int
 
 
 def default_handshake_path() -> pathlib.Path:
@@ -25,9 +26,9 @@ def default_handshake_path() -> pathlib.Path:
         return pathlib.Path(override)
 
     if sys.platform == "darwin":
-        base = pathlib.Path.home() / "Library" / "Application Support" / "BeatOS"
+        base = pathlib.Path.home() / "Library" / "Application Support" / "beatos-desktop"
     elif sys.platform.startswith("win"):
-        base = pathlib.Path(os.environ.get("APPDATA", pathlib.Path.home())) / "BeatOS"
+        base = pathlib.Path(os.environ.get("APPDATA", pathlib.Path.home())) / "beatos-desktop"
     else:
         xdg = os.environ.get("XDG_RUNTIME_DIR")
         base = pathlib.Path(xdg) / "beatos" if xdg else pathlib.Path.home() / ".cache" / "beatos"
@@ -42,6 +43,7 @@ def write_handshake(port: int, path: pathlib.Path | None = None) -> pathlib.Path
     payload = {
         "port": port,
         "started_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+        "pid": os.getpid(),
     }
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(payload), encoding="utf-8")
@@ -53,4 +55,8 @@ def read_handshake(path: pathlib.Path | None = None) -> Handshake:
     """Read and parse the handshake JSON. Raises FileNotFoundError if missing."""
     path = path or default_handshake_path()
     data = json.loads(path.read_text(encoding="utf-8"))
-    return Handshake(port=int(data["port"]), started_at=str(data["started_at"]))
+    return Handshake(
+        port=int(data["port"]),
+        started_at=str(data["started_at"]),
+        pid=int(data["pid"]),
+    )

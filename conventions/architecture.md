@@ -16,7 +16,7 @@ BeatOS is a local-first desktop app for beat producers — catalog beats and the
 | **Adapter** | Platform-specific browser-automation class `inject(page, track_data)` (not yet implemented; v0.1.0). |
 | **Inject** | User action running an adapter against an open browser page; code fills form, user submits. Never auto-submit. |
 | **Sidecar** | Python backend (`packages/beatos-*`), launched as child process by Electron main. |
-| **MCP** | Model Context Protocol stdio facade; mirrors HTTP reads, writes require two-phase `confirm_*` commit. |
+| **MCP** | Model Context Protocol facade. Since v0.0.23: FastMCP server runs inside the sidecar (`beatos-http`), mounted at `/mcp` (Streamable HTTP). Claude Desktop reaches it via the `beatos-mcp` launcher → `mcp-proxy` stdio bridge. Writes require two-phase `await_approval` commit. |
 
 ## Data model: flat catalog of tracks
 
@@ -25,7 +25,7 @@ Tracks are global — they belong to BeatOS as a whole. Each track holds 0+ asse
 ## Layering rules
 
 1. `packages/beatos-core/` is pure Python business logic — no `fastapi` / `mcp` / Electron imports; allowed deps: stdlib, `aiosqlite`, `pydantic`, `playwright`, `mutagen`, `watchdog`.
-2. `packages/beatos-http/` and `packages/beatos-mcp/` are thin facades — each route / tool is a few lines calling into `beatos-core`.
+2. `packages/beatos-http/` and `packages/beatos-mcp/` are thin facades — each route / tool is a few lines calling into `beatos-core`. Since v0.0.23, `beatos-mcp` tools run inside the `beatos-http` process (mounted at `/mcp`); the `beatos-mcp` console script is a stdio bridge launcher only.
 3. `apps/desktop/electron/` (main + preload) is thin — spawns sidecar, creates `BrowserWindow`, exposes native dialogs / tray / shortcuts via IPC; business logic stays in `beatos-core`.
 4. The renderer (`apps/desktop/src/`) talks to `beatos-http` over `http://127.0.0.1:<port>`; port is ephemeral, written to a JSON handshake file, exposed via `contextBridge` in `preload.ts`.
 
@@ -69,11 +69,12 @@ packages/beatos-http/        ← FastAPI facade for the renderer
     routes/                  ← one router per resource group
     __main__.py              ← uvicorn entry
 
-packages/beatos-mcp/         ← MCP stdio facade for AI agents
+packages/beatos-mcp/         ← FastMCP tools + stdio bridge launcher
   beatos_mcp/
-    server.py                ← tool registration
+    server.py                ← FastMCP instance + ASGI app (mounted at /mcp by beatos-http)
     tools/                   ← one module per tool group
-    __main__.py              ← stdio MCP server entry
+    launcher.py              ← discovery + mcp-proxy exec logic
+    __main__.py              ← stdio bridge launcher entry (reads handshake, execs mcp-proxy)
 
 packages/beatos-platforms/   ← v0.0.12 per-platform vocab maps
   <platform>/                ← e.g. netease/ — {genre,mood}-map.json stubs
@@ -84,7 +85,7 @@ packages/beatos-platforms/   ← v0.0.12 per-platform vocab maps
 | Component | Location | Responsibility |
 |-----------|----------|----------------|
 | Migration runner | `packages/beatos-core/beatos_core/db.py` | Applies `migrations/*.sql` not in `schema_version`. Append-only. |
-| Handshake writer | `packages/beatos-http/beatos_http/handshake.py` | Writes `{"port", "started_at"}` JSON before uvicorn accepts. |
+| Handshake writer | `packages/beatos-http/beatos_http/handshake.py` | Writes `{"port", "pid", "started_at"}` JSON before uvicorn accepts. `pid` used by the `beatos-mcp` launcher for staleness detection. |
 | Handshake reader | `apps/desktop/electron/main.ts` | Polls handshake file (5s timeout), then creates `BrowserWindow`. |
 | Adapter registry | `packages/beatos-core/beatos_core/adapters/registry.py` | Maps platform name → adapter class. |
 | Audio analysis cache | `packages/beatos-core/beatos_core/audio_analysis/service.py` + migration `007` | librosa BPM+Key; keyed `(asset_id, sha256)` — once per content hash. |
@@ -274,6 +275,18 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Reject endpoint | `POST /api/tokens/{token}/reject` | Race-tolerant rejection. No-op on already-terminal tokens (handles Approve/Reject race). 404 if token doesn't exist. |
 | First write tool | `packages/beatos-mcp/beatos_mcp/tools/create_list.py` + `confirm_create_list.py` | Phase 1 (`create_list`) issues token only. User clicks Approve in BeatOS Settings; handler writes list table. Phase 2 (`confirm_create_list`) is read-only status check, returns `{status, list_id, ...}` or `{status: "awaiting_approval"}`. |
 
+### v0.0.23 — MCP Transport Migration
+
+| Capability | Location | Purpose |
+|---|---|---|
+| FastMCP server | `packages/beatos-mcp/beatos_mcp/server.py` | Replaces low-level `mcp.server.Server`. Defines 7 tools + `await_approval`. Exports `mcp` (FastMCP instance) and `app` (ASGI app). |
+| `/mcp` route | `packages/beatos-http/beatos_http/app.py` (`app.mount("/mcp", mcp_asgi_app)`) | MCP Streamable HTTP endpoint served by the sidecar process. Single-process SQLite ownership; `BEGIN IMMEDIATE` workaround no longer required. |
+| Stdio bridge launcher | `packages/beatos-mcp/beatos_mcp/launcher.py` + `__main__.py` | Reads `handshake.json` (port + pid), validates sidecar liveness, execs `mcp-proxy --transport streamablehttp <url>`. Claude Desktop config unchanged. |
+| `pid` in handshake | `packages/beatos-http/beatos_http/handshake.py` | Launcher uses pid for staleness detection (stale file from crashed sidecar). |
+| Tool annotations | `server.py` `@mcp.tool(annotations=...)` | `readOnlyHint` + `idempotentHint` on all read tools and `await_approval`. |
+| `await_approval(token)` | `beatos_mcp/server.py` | Unified 2PC status-check tool; replaces per-write-tool `confirm_*` pattern. |
+| `confirm_create_list` deprecated | `beatos_mcp/server.py` | Kept as alias; removed in v0.0.24. Use `await_approval`. |
+
 ## MCP surface (aspirational)
 
 `packages/beatos-mcp/` ships 6 read tools as of v0.0.20, plus the first write tool as of v0.0.21. Any write tool requires two-phase commit:
@@ -283,8 +296,9 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | `ping` | read | Shipped v0.0.20. |
 | `list_tracks(filter?)` / `get_track(id)` | read | Shipped v0.0.20. |
 | `list_lists` / `list_distinct_values` | read | Shipped v0.0.20. (`list_sources` shipped v0.0.20, removed v0.0.22.) |
-| `create_list(name)` | write | Shipped v0.0.21. Two-phase: phase 1 issues token; user approves in BeatOS Settings; phase 2 (`confirm_create_list(token)`) is read-only. |
-| `search_tracks(query)` | read | Deferred → v0.0.23 (RAG). |
+| `create_list(name)` | write | Shipped v0.0.21. Two-phase: phase 1 issues token; user approves in BeatOS Settings; phase 2 (`await_approval(token)`) is read-only. |
+| `await_approval(token)` | read | Shipped v0.0.23. Unified 2PC status-check across all write tools. |
+| `search_tracks(query)` | read | Deferred → v0.0.25 (RAG). |
 | `list_platforms()` | read | Once adapters exist. |
 | `inject_to_platform(track_id, platform)` | write | Returns `confirm_token`; agent must call `confirm_inject(token)` separately. |
 | `draft_description(track_id)` | write | Writes to `description_draft` only — never to user's `description`. v0.2 RAG-ready. |
@@ -298,7 +312,7 @@ Trust boundary = local stdio process; no network auth needed. See [ROADMAP.md](.
 - `track.description` column — sacred (user-authored); AI output goes to `description_draft` only.
 - The two-phase commit pattern on MCP write tools — non-negotiable.
 - The Electron main / renderer separation — never `nodeIntegration: true`; always go through `preload.ts` contextBridge.
-- **MCP server NEVER writes to stdout (JSON-RPC only).** All code reachable by `beatos-mcp` (tools, helpers, imports) must use `beatos_mcp.log`; a stray `print()` corrupts the protocol stream and silently disconnects Claude Desktop.
+- **MCP launcher NEVER writes to stdout.** The `beatos-mcp` launcher (`__main__.py`, `launcher.py`) and `mcp-proxy` subprocess space must use `beatos_mcp.log`; stdout is the JSON-RPC pipe to Claude Desktop. Tool implementations run in the sidecar HTTP process and are NOT subject to this constraint.
 - **`tokens` table + `two_phase.py` are skeleton for v0.0.21+.** Do not gate them behind feature flags or remove. Write tools must call `consume_token` inside the same DB transaction as the actual write.
 - **`BEATOS_DB_PATH` is the contract with Claude Desktop.** Do not silently fall back to a default if unset — `beatos_mcp/db.py` must raise an explicit error so the AI client gets a clear signal, not a wrong-DB silently returning zero rows.
 - **`beatos_core.two_phase.verify_token` is read-only.** Must NOT call `conn.commit()`. The lazy-expire commit (v0.0.20) was removed in v0.0.21 because it broke outer transactions (approve handler needs `verify+insert+consume` atomic). The cleanup task (`_periodic_token_cleanup`) owns the `pending → expired` transition.

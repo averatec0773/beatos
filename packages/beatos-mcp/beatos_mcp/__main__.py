@@ -1,20 +1,11 @@
-"""Entry point: `python -m beatos_mcp` runs the stdio MCP server."""
-from __future__ import annotations
+"""Entry point for the `beatos-mcp` console script.
 
-import asyncio
-
-from mcp.server.stdio import stdio_server
-
-from beatos_mcp.server import server
-
-
-async def _amain() -> None:
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(read_stream, write_stream, server.create_initialization_options())
-
-
-def main() -> None:
-    asyncio.run(_amain())
+After v0.0.23, this is no longer an MCP server -- it's a stdio->HTTP bridge launcher.
+The MCP server runs as an ASGI app mounted at /mcp on the beatos-http sidecar.
+This launcher reads the sidecar's handshake file and exec's mcp-proxy to bridge
+Claude Desktop's stdio transport to the sidecar's HTTP endpoint.
+"""
+from beatos_mcp.launcher import main
 
 
 if __name__ == "__main__":

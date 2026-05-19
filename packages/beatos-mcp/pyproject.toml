@@ -1,13 +1,15 @@
 [project]
 name = "beatos-mcp"
-version = "0.0.22"
-description = "BeatOS MCP facade — stdio MCP server exposing BeatOS to AI agents."
+version = "0.0.23"
+description = "BeatOS MCP facade — FastMCP server (mounted by beatos-http) + stdio bridge launcher."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
 license = { text = "MIT" }
 dependencies = [
     "beatos-core",
-    "mcp>=1.0",
+    "beatos-http",
+    "mcp>=1.27",
+    "mcp-proxy>=0.10,<0.13",
     "structlog>=25.5.0",
 ]
 

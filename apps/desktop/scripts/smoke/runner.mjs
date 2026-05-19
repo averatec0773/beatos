@@ -6,6 +6,7 @@ import * as player from "./player.mjs";
 import * as editor from "./editor.mjs";
 import * as trash from "./trash.mjs";
 import * as sidebar from "./sidebar.mjs";
+import * as mcp from "./mcp.mjs";
 
 export async function runAssertions(ctx) {
   // === seed + cover + drag (sets fixtures.{t1,t2,list,coverAsset}) ===
@@ -68,4 +69,8 @@ export async function runAssertions(ctx) {
 
   // === v0.0.22 sidebar order (appended last — non-mutating DOM check) ===
   await sidebar.assertSidebarOrder(ctx);
+
+  // === v0.0.23 handshake.pid + /mcp HTTP transport (read-only, safe to append last) ===
+  await mcp.assertHandshakePid(ctx);
+  await mcp.assertMcpInitialize(ctx);
 }

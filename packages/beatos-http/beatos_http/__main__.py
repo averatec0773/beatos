@@ -7,8 +7,10 @@ Steps:
 """
 from __future__ import annotations
 
+import atexit
 import socket
 
+from beatos_http.handshake import default_handshake_path
 from beatos_http.logging_config import configure as _configure_logging
 
 _configure_logging()
@@ -27,7 +29,15 @@ def _bind_ephemeral(host: str = "127.0.0.1") -> tuple[socket.socket, int]:
     return sock, port
 
 
+def _cleanup_handshake() -> None:
+    try:
+        default_handshake_path().unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
 def main() -> None:
+    atexit.register(_cleanup_handshake)
     sock, port = _bind_ephemeral()
     try:
         write_handshake(port=port)

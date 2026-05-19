@@ -4,6 +4,31 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.23] - 2026-05-19 — MCP transport migration
+
+### Changed
+- MCP transport: stdio is now a thin `mcp-proxy` bridge to the sidecar's HTTP `/mcp` endpoint, instead of a separate stdio MCP server.
+- `beatos-mcp` package role: now hosts FastMCP server + stdio launcher (no independent runtime).
+- `beatos-http` sidecar now mounts the MCP ASGI app at `/mcp` (Streamable HTTP).
+- `beatos-http` handshake file now includes `pid` for staleness detection.
+- **Handshake file location** on macOS/Windows now matches Electron's `app.getPath('userData')` (`~/Library/Application Support/beatos-desktop/runtime/handshake.json`). Previously the Python `default_handshake_path()` used `BeatOS/` while Electron used `beatos-desktop/` — the launcher was reading a stale file and failing with "stale pid". Fixed by aligning the Python default to the Electron userData name.
+
+### Added
+- Tool annotations (`readOnlyHint`, `idempotentHint`) on every read tool and `await_approval`.
+- `await_approval(token)` MCP tool — unified status-check across all 2PC write tools (replaces `confirm_create_list`).
+- `outputSchema` + `structuredContent` on all tools (free from FastMCP).
+
+### Deprecated
+- `confirm_create_list(token)` — use `await_approval` instead. Removed in v0.0.24.
+
+### Removed
+- `mcp.server.stdio.stdio_server` runtime in `beatos-mcp`.
+
+### Architecture
+- Single-process SQLite ownership: `BEGIN IMMEDIATE` workaround for `SQLITE_BUSY_SNAPSHOT` no longer required (still present in code, will be cleaned up in v0.0.24).
+- Claude Desktop user config unchanged (still invokes `beatos-mcp`).
+- Claude Code / Cursor users can now configure via `claude mcp add --transport http`.
+
 ## [0.0.22] - 2026-05-19 — Source removal (full)
 
 End-to-end deletion of the `Source` concept. The catalog now operates on individual files; folder-level auto-import (the watcher daemon) is retired in favor of manual drag-import. Schema reality made this safe: `track` and `asset` had no FK to `source.id` (confirmed at v0.0.21.1), so removal is a delete-only refactor with zero data migration on existing rows.
