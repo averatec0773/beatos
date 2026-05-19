@@ -19,18 +19,27 @@ export function ColumnResizer({ columnKey, currentWidth, getCurrentRenderedWidth
       ? getCurrentRenderedWidth()
       : currentWidth;
     dragging.current = true;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    e.currentTarget.setPointerCapture(e.pointerId);
   }
 
   function onPointerMove(e: React.PointerEvent) {
+    // Real-button-state guard: even if `dragging.current` is stale (lost
+    // pointerup, OS-cancelled capture), e.buttons reflects current hardware
+    // state. No button pressed → user is just hovering; bail and self-heal.
+    if (e.buttons === 0) {
+      dragging.current = false;
+      return;
+    }
     if (!dragging.current) return;
     const delta = e.clientX - startX.current;
     useColumnWidthStore.getState().setWidth(columnKey, startW.current + delta);
   }
 
-  function onPointerUp(e: React.PointerEvent) {
+  function endDrag(e: React.PointerEvent) {
     dragging.current = false;
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
   }
 
   // Absolute-positioned inside its parent header cell (a `position: relative`
@@ -45,7 +54,9 @@ export function ColumnResizer({ columnKey, currentWidth, getCurrentRenderedWidth
       data-column-resizer={columnKey}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onLostPointerCapture={endDrag}
       className="group absolute top-0 bottom-0 right-0 w-3 -mr-1.5 cursor-col-resize z-10 select-none flex items-center justify-center"
     >
       <div className="h-4 w-px bg-text-tertiary group-hover:bg-accent group-hover:w-0.5 group-active:bg-accent transition-all" />
