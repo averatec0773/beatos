@@ -2,9 +2,9 @@
 
 **BeatOS** is a local-first desktop app for beat producers: catalog beats + assets, publish to platforms via browser automation, expose the library to AI agents over MCP. Single-user, no server, no telemetry.
 
-**Stack:** Electron 39 + React 19 + Vite + Tailwind + Radix (renderer) · Python 3.11 + FastAPI + aiosqlite + structlog + mcp (sidecar) · SQLite · Playwright `_electron` (smoke harness).
+**Stack:** Electron 39 + React 19 + Vite + Tailwind + Radix (renderer) · Python 3.11 + FastAPI + aiosqlite + structlog + `mcp` (FastMCP, mounted on FastAPI sidecar at /mcp) + `mcp-proxy` (stdio bridge) · SQLite · Playwright `_electron` (smoke harness).
 
-**Monorepo:** `apps/desktop/` (Electron shell + React) · `packages/beatos-core/` (pure Python logic) · `packages/beatos-http/` (FastAPI facade) · `packages/beatos-mcp/` (MCP facade) · `packages/beatos-platforms/` (per-platform vocab maps).
+**Monorepo:** `apps/desktop/` (Electron shell + React) · `packages/beatos-core/` (pure Python logic) · `packages/beatos-http/` (FastAPI facade) · `packages/beatos-mcp/` (FastMCP tools + stdio bridge launcher) · `packages/beatos-platforms/` (per-platform vocab maps).
 
 > All files except `README.md` are agent instructions — starting context, not infallible. Verify against current code before acting on specifics; flag stale-looking content rather than following it blindly.
 
@@ -23,8 +23,7 @@
 5. **Always `preventDefault` in `dragover`** — including when `dataTransfer.types.includes("Files")` is false. Otherwise `drop` never fires (lesson re-applied across v0.0.13.2 / v0.0.14).
 6. **SPA route reuse** — when a route stays mounted across param changes (`/track/1` → `/track/2` keeps `<TrackEditor>` mounted with new `params`), `useEffect([])` does NOT re-run. Per-track effects must depend on `params.id` (caught at v0.0.14.1: producer distinct went stale across tracks).
 7. **Upstream-store → local-form sync** must update both the form state AND the dirty baseline (e.g. `initialTrack`), otherwise the upstream patch (auto-analyze writing bpm/key) registers as a user edit and re-fires auto-save in a loop.
-8. **MCP stdout is JSON-RPC only.** Any code reachable by `beatos-mcp` (tools, helpers, imports) must NEVER `print()` or write to stdout — Claude Desktop reads stdout as protocol bytes and a stray newline will silently disconnect. Log via `beatos_mcp.log.configure()` which routes to file + stderr.
-9. **Concurrent SQLite writers need `BEGIN IMMEDIATE` + `busy_timeout`.** WAL allows multiple readers + 1 writer, but two concurrent `BEGIN` (deferred) + write produces `SQLITE_BUSY_SNAPSHOT` — a distinct error code that the default busy_handler does NOT retry. The approve dispatcher (`beatos_http/routes/tokens.py::approve_token`) uses `BEGIN IMMEDIATE` so a second writer queues and waits up to the `timeout=5` instead of failing immediately. Use `BEGIN IMMEDIATE` for any handler in `_APPROVE_HANDLERS`.
+8. **MCP launcher stdout is JSON-RPC only.** The `beatos-mcp` launcher entrypoint (`__main__.py`, `launcher.py`) and the `mcp-proxy` subprocess space must NEVER `print()` or write to stdout — Claude Desktop reads stdout as protocol bytes and a stray newline will silently disconnect. Log via `beatos_mcp.log.configure()` (routes to file + stderr). Tool implementations are NOT subject to this constraint: they run inside the sidecar HTTP process and communicate over HTTP, not stdio.
 
 For per-file context (which columns, which patterns) read [conventions/architecture.md](conventions/architecture.md) §"What NOT to change without reading context first".
 

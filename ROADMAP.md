@@ -73,13 +73,9 @@ Smooth list drag-reorder: disable inner track-drop droppable during list drags s
 
 Source removal — full end-to-end deletion of the `Source` concept (renderer + sidecar + MCP + schema), sidebar reshape (`AllBeatsSection`), `OfflineBadge` repurposed to read `asset.missing`, watcher daemon retired. See [CHANGELOG.md](CHANGELOG.md#0022---2026-05-19--source-removal-full).
 
-### v0.0.23 — `draft_description` placeholder
+### v0.0.23 — SHIPPED 2026-05-19
 
-Closes the AI-write loop for the description field, even before v0.2 RAG lands. The tool writes only to `track.description_draft` — promoting to `description` is still a user action (see CLAUDE.md rule 1).
-
-- Tool: `draft_description(track_id, text) → token` / `confirm_promote_draft(token)` (the `confirm_*` step writes the draft, not the live description).
-- Renderer `TrackEditor` already has the `description_draft` field; surface a "Promote draft → description" affordance.
-- Real RAG generation arrives in v0.2; this version validates the write path with a passthrough `text` parameter.
+MCP transport migration: stdio→HTTP bridge via mcp-proxy; FastMCP + annotations; `await_approval`. See [CHANGELOG.md](CHANGELOG.md#0023---2026-05-19--mcp-transport-migration).
 
 ---
 
@@ -87,6 +83,16 @@ Closes the AI-write loop for the description field, even before v0.2 RAG lands. 
 
 - Smart query syntax: `bpm:>140 genre:trap producer:smoke`
 - `/api/tracks` already has filter primitives; need parser + chip↔query round-trip.
+
+---
+
+### v0.0.25 — `draft_description` placeholder
+
+Closes the AI-write loop for the description field, even before v0.2 RAG lands. The tool writes only to `track.description_draft` — promoting to `description` is still a user action.
+
+- Tool: `draft_description(track_id, text) → token` / `await_approval(token)` (the confirm step writes the draft, not the live description).
+- Renderer `TrackEditor` already has the `description_draft` field; surface a "Promote draft → description" affordance.
+- Real RAG generation arrives in v0.2; this version validates the write path with a passthrough `text` parameter.
 
 ---
 
