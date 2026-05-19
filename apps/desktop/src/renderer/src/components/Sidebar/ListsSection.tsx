@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useDroppable } from "@dnd-kit/core";
+import { useDndContext, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -21,7 +21,19 @@ function SidebarListRow({
   onClick: () => void;
   onDeleted?: () => void;
 }): React.JSX.Element {
-  const { setNodeRef, isOver } = useDroppable({ id: `list-drop:${list.id}` });
+  // The inner `list-drop:N` droppable exists ONLY to catch track-drag drops.
+  // When a list itself is being dragged (for reorder), the inner droppable
+  // must stay inert — otherwise dnd-kit's collision detection picks it over
+  // the outer SortableContext, stealing the "over" target and killing the
+  // row-shifting animation. Read the active drag id from context and gate
+  // the droppable on it.
+  const { active: activeDrag } = useDndContext();
+  const activeIsTrack =
+    typeof activeDrag?.id === "string" && activeDrag.id.startsWith("track:");
+  const { setNodeRef, isOver } = useDroppable({
+    id: `list-drop:${list.id}`,
+    disabled: !activeIsTrack,
+  });
   const rename = useListStore((s) => s.rename);
   const remove = useListStore((s) => s.remove);
 

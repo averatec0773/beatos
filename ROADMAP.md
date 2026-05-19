@@ -65,6 +65,10 @@ Sidebar Approvals module + 24h history view. Pending Confirmations UI moved from
 
 Sidebar polish: list drag-reorder fix + Trash header removal for visual rhythm consistency. See [CHANGELOG.md](CHANGELOG.md#00213---2026-05-19--sidebar-polish-patches).
 
+### v0.0.21.4 — SHIPPED 2026-05-19
+
+Smooth list drag-reorder: disable inner track-drop droppable during list drags so the outer SortableContext shift animation runs cleanly (now matches Source behavior). See [CHANGELOG.md](CHANGELOG.md#00214---2026-05-19--smooth-list-drag-reorder).
+
 ### v0.0.23 — Source removal (full)
 
 Delete the `Source` concept end-to-end. v0.0.21.1 already removed the attach gate; v0.0.23 deletes the data model and surrounding infrastructure. Schema reality: `track` and `asset` have no `source_id` FK, so removal is a contained delete-only refactor (no data migration on existing tracks/assets).

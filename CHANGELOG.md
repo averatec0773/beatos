@@ -4,6 +4,22 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.21.4] - 2026-05-19 — Smooth list drag-reorder
+
+Follow-up to v0.0.21.3. After the dragEnd dispatch was fixed, list reorder worked but felt rough compared to Source reorder: the green "+ drop track here" indicator flashed on target rows during list drags, and the SortableContext's row-shifting animation didn't run.
+
+### Fixed
+
+- **List drag-reorder now animates smoothly, matching Source behavior.** Root cause: each `SidebarListRow` registers two droppables — the outer `SortableContext` (`list:N`) and an inner `useDroppable("list-drop:N")` for track-drop targeting. Even after v0.0.21.3 routed `list-drop:N` to the reorder branch, the inner droppable was still active during list drags, so:
+  1. dnd-kit's collision detection picked the inner droppable → outer Sortable lost its "over" target → no shift animation
+  2. The inner droppable's `isOver` state flipped on, rendering the green "+" "drop track here" hint on the list being hovered (wrong feedback for a list drag)
+
+  Fix: `SidebarListRow` now reads `active` from `useDndContext()` and passes `disabled: !activeIsTrack` to `useDroppable`. The inner droppable participates only during track drags; during list drags, only the outer `list:N` Sortable sees the pointer, so SortableContext runs its strategy and rows shift fluidly. Sources never had this issue because they only register one droppable per row.
+
+### Notes
+
+- v0.0.21.3's `App.tsx` dragend `list-drop:` fallback stays as defense-in-depth; the disabled-droppable fix makes it unreachable in normal flow, but it preserves correctness if the inner droppable is ever re-enabled.
+
 ## [0.0.21.3] - 2026-05-19 — Sidebar polish patches
 
 Two small fixes after dogfooding v0.0.21.2.
