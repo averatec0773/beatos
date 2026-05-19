@@ -177,3 +177,81 @@ async def test_cleanup_task_runs_on_startup(tmp_path, monkeypatch):
                 async with conn.execute("SELECT 1 FROM tokens WHERE token='old'") as cur:
                     row = await cur.fetchone()
             assert row is None, "lifespan startup must have cleaned old terminal tokens"
+
+
+@pytest.mark.asyncio
+async def test_history_empty_returns_empty_array(client, db_path):
+    res = await client.get("/api/tokens?status=history")
+    assert res.status_code == 200
+    assert res.json() == []
+
+
+@pytest.mark.asyncio
+async def test_history_includes_consumed_rejected_expired_within_24h(client, db_path):
+    async with aiosqlite.connect(db_path) as conn:
+        from beatos_core.two_phase import consume_token_with_result, reject_token
+        t_ok = await create_token(conn, "create_list", {"name": "Done"})
+        await consume_token_with_result(conn, t_ok, {"list_id": 1})
+        t_rj = await create_token(conn, "create_list", {"name": "Nope"})
+        await reject_token(conn, t_rj)
+        now = time.time()
+        await conn.execute(
+            "INSERT INTO tokens (token, tool_name, payload, created_at, expires_at, status) "
+            "VALUES ('exp1', 'create_list', '{\"name\": \"Stale\"}', ?, ?, 'expired')",
+            (now - 600, now - 300),
+        )
+        await conn.commit()
+
+    res = await client.get("/api/tokens?status=history")
+    assert res.status_code == 200
+    body = res.json()
+    tokens = {row["token"]: row for row in body}
+    assert set(tokens.keys()) == {t_ok, t_rj, "exp1"}
+    assert tokens[t_ok]["status"] == "consumed"
+    assert tokens[t_ok]["result"] == {"list_id": 1}
+    assert tokens[t_rj]["status"] == "rejected"
+    assert tokens["exp1"]["status"] == "expired"
+
+
+@pytest.mark.asyncio
+async def test_history_excludes_rows_older_than_24h(client, db_path):
+    async with aiosqlite.connect(db_path) as conn:
+        now = time.time()
+        await conn.execute(
+            "INSERT INTO tokens (token, tool_name, payload, created_at, expires_at, status, consumed_at) "
+            "VALUES ('old', 'create_list', '{}', ?, ?, 'consumed', ?)",
+            (now - 26 * 3600, now - 25 * 3600 + 300, now - 25 * 3600),
+        )
+        await conn.commit()
+    res = await client.get("/api/tokens?status=history")
+    assert res.status_code == 200
+    assert res.json() == []
+
+
+@pytest.mark.asyncio
+async def test_history_excludes_pending_rows(client, db_path):
+    async with aiosqlite.connect(db_path) as conn:
+        await create_token(conn, "create_list", {"name": "Live"})
+    res = await client.get("/api/tokens?status=history")
+    assert res.status_code == 200
+    assert res.json() == []
+
+
+@pytest.mark.asyncio
+async def test_history_sorted_most_recent_first(client, db_path):
+    async with aiosqlite.connect(db_path) as conn:
+        from beatos_core.two_phase import consume_token_with_result
+        t1 = await create_token(conn, "create_list", {"name": "Earlier"})
+        await consume_token_with_result(conn, t1, {"list_id": 1})
+        await conn.execute(
+            "UPDATE tokens SET consumed_at=? WHERE token=?",
+            (time.time() - 600, t1),
+        )
+        await conn.commit()
+        t2 = await create_token(conn, "create_list", {"name": "Later"})
+        await consume_token_with_result(conn, t2, {"list_id": 2})
+        await conn.commit()
+
+    res = await client.get("/api/tokens?status=history")
+    body = res.json()
+    assert [r["token"] for r in body] == [t2, t1]

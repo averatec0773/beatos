@@ -127,23 +127,54 @@ async def reject_endpoint(token: str) -> dict:
 
 @router.get("")
 async def list_tokens(
-    status: Literal["pending"] = Query("pending"),
+    status: Literal["pending", "history"] = Query("pending"),
 ) -> list[dict]:
-    """List tokens by status. Currently only 'pending' is exposed."""
+    """List tokens by status.
+    - `pending`: open tokens awaiting user approval.
+    - `history`: terminal (consumed/rejected/expired) tokens from the last 24h,
+      most recent first. Includes status + consumed_at + result.
+    """
+    import time as _time
+
     async with aiosqlite.connect(resolve_db_path()) as conn:
+        if status == "pending":
+            async with conn.execute(
+                "SELECT token, tool_name, payload, created_at, expires_at "
+                "FROM tokens WHERE status='pending' ORDER BY created_at ASC",
+            ) as cur:
+                rows = await cur.fetchall()
+            return [
+                {
+                    "token": r[0],
+                    "tool_name": r[1],
+                    "payload": json.loads(r[2]),
+                    "created_at": r[3],
+                    "expires_at": r[4],
+                }
+                for r in rows
+            ]
+        # status == "history"
+        cutoff = _time.time() - 86400
         async with conn.execute(
-            "SELECT token, tool_name, payload, created_at, expires_at "
-            "FROM tokens WHERE status=? ORDER BY created_at ASC",
-            (status,),
+            "SELECT token, tool_name, payload, created_at, expires_at, "
+            "status, consumed_at, result "
+            "FROM tokens "
+            "WHERE status IN ('consumed', 'rejected', 'expired') "
+            "AND COALESCE(consumed_at, expires_at) > ? "
+            "ORDER BY COALESCE(consumed_at, expires_at) DESC",
+            (cutoff,),
         ) as cur:
             rows = await cur.fetchall()
-    return [
-        {
-            "token": r[0],
-            "tool_name": r[1],
-            "payload": json.loads(r[2]),
-            "created_at": r[3],
-            "expires_at": r[4],
-        }
-        for r in rows
-    ]
+        return [
+            {
+                "token": r[0],
+                "tool_name": r[1],
+                "payload": json.loads(r[2]),
+                "created_at": r[3],
+                "expires_at": r[4],
+                "status": r[5],
+                "consumed_at": r[6],
+                "result": json.loads(r[7]) if r[7] else None,
+            }
+            for r in rows
+        ]
