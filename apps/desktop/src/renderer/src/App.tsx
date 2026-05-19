@@ -78,11 +78,24 @@ export default function App(): React.JSX.Element {
             return;
           }
 
-          if (activeId.startsWith("list:") && overId.startsWith("list:") && activeId !== overId) {
+          // List → list reorder. Each list row has TWO droppables: the outer
+          // SortableContext (`list:N`) and an inner track-drop target
+          // (`list-drop:N`). When dragging a list, dnd-kit's collision detection
+          // usually picks the inner `list-drop:N`, so accept both ids here as
+          // valid reorder targets.
+          if (activeId.startsWith("list:")) {
+            const targetId =
+              overId.startsWith("list:")
+                ? Number(overId.slice("list:".length))
+                : overId.startsWith("list-drop:")
+                  ? Number(overId.slice("list-drop:".length))
+                  : null;
+            const sourceId = Number(activeId.slice("list:".length));
+            if (targetId == null || targetId === sourceId) return;
             const listStore = useListStore.getState();
             const userLists = listStore.all.filter((l) => l.kind !== "system");
-            const oldIdx = userLists.findIndex((l) => `list:${l.id}` === activeId);
-            const newIdx = userLists.findIndex((l) => `list:${l.id}` === overId);
+            const oldIdx = userLists.findIndex((l) => l.id === sourceId);
+            const newIdx = userLists.findIndex((l) => l.id === targetId);
             if (oldIdx < 0 || newIdx < 0) return;
             const reordered = arrayMove(userLists, oldIdx, newIdx);
             void listStore.reorder(reordered.map((l) => l.id));

@@ -61,6 +61,10 @@ Dropped the `OutOfSourceDialog` chain (asset attach no longer requires a registe
 
 Sidebar Approvals module + 24h history view. Pending Confirmations UI moved from `Settings → AI Integration` to a dedicated `/approvals` route with yellow count badge. See [CHANGELOG.md](CHANGELOG.md#00212---2026-05-19--sidebar-approvals-module).
 
+### v0.0.21.3 — SHIPPED 2026-05-19
+
+Sidebar polish: list drag-reorder fix + Trash header removal for visual rhythm consistency. See [CHANGELOG.md](CHANGELOG.md#00213---2026-05-19--sidebar-polish-patches).
+
 ### v0.0.23 — Source removal (full)
 
 Delete the `Source` concept end-to-end. v0.0.21.1 already removed the attach gate; v0.0.23 deletes the data model and surrounding infrastructure. Schema reality: `track` and `asset` have no `source_id` FK, so removal is a contained delete-only refactor (no data migration on existing tracks/assets).

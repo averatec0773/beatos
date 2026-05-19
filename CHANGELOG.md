@@ -4,11 +4,17 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
-## [Unreleased]
+## [0.0.21.3] - 2026-05-19 — Sidebar polish patches
 
-### Added
+Two small fixes after dogfooding v0.0.21.2.
 
-- **`ApprovalsSection` sidebar item** — one-button navigation to `/approvals` with yellow count badge showing pending token count.
+### Fixed
+
+- **Sidebar list drag-reorder didn't work.** Each `SidebarListRow` registers two droppables: the outer `SortableContext` (`list:N`) and an inner track-drop target (`list-drop:N`). When dragging one list over another, dnd-kit's collision detection picked the inner `list-drop:N` (because the button fills the inner rect), and `onDragEnd`'s reorder branch — which only matched `overId.startsWith("list:")` — fell through to the track-add branch and silently returned (because `activeId` was a list, not a track). `App.tsx::onDragEnd` now accepts either `list:N` or `list-drop:N` as a reorder target when `activeId.startsWith("list:")`.
+
+### Changed
+
+- **`TrashSection` no longer renders an uppercase "Trash" section header.** Matches `ApprovalsSection`, which has no header. The button itself is self-labeling. Sidebar visual rhythm is now consistent for single-button management sections.
 
 ## [0.0.21.2] - 2026-05-19 — Sidebar Approvals module
 
