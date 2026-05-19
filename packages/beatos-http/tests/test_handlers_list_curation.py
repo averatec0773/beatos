@@ -120,3 +120,24 @@ async def test_approve_reorder_list_updates_positions(client, db_path):
         ) as cur:
             rows = await cur.fetchall()
     assert rows == [(3, 0), (1, 1), (2, 2)]
+
+
+@pytest.mark.asyncio
+async def test_approve_add_tracks_to_list_409_when_track_vanished_mid_ttl(client, db_path):
+    """Track is deleted from track table between token-create and approve;
+    handler must surface this as 409 RowVanished, not 500."""
+    async with aiosqlite.connect(db_path) as conn:
+        tok = await create_token(
+            conn, "add_tracks_to_list", {"list_id": 10, "track_ids": [4, 5]}
+        )
+        # Delete track 4 from the track table (simulating mid-TTL vanish)
+        await conn.execute("DELETE FROM track WHERE id=4")
+        await conn.commit()
+    res = await client.post(f"/api/tokens/{tok}/approve")
+    assert res.status_code == 409
+    # No rows were added (rollback)
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) FROM track_list WHERE list_id=10 AND track_id IN (4,5)"
+        ) as cur:
+            assert (await cur.fetchone())[0] == 0

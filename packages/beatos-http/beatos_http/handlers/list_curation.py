@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import sqlite3
 
 import aiosqlite
 
@@ -63,13 +64,16 @@ async def _approve_add_tracks_to_list(conn: aiosqlite.Connection, token: str) ->
     now = _now()
     added = 0
     for offset, tid in enumerate(track_ids, start=1):
-        cur = await conn.execute(
-            "INSERT OR IGNORE INTO track_list (list_id, track_id, position, added_at) "
-            "VALUES (?, ?, ?, ?)",
-            (list_id, tid, max_pos + offset, now),
-        )
+        try:
+            cur = await conn.execute(
+                "INSERT OR IGNORE INTO track_list (list_id, track_id, position, added_at) "
+                "VALUES (?, ?, ?, ?)",
+                (list_id, tid, max_pos + offset, now),
+            )
+        except sqlite3.IntegrityError as e:
+            raise RowVanishedError(f"track id={tid} no longer exists (FK violation)") from e
         if cur.rowcount != 1:
-            raise RowVanishedError(f"track id={tid} could not be added (vanished?)")
+            raise RowVanishedError(f"track id={tid} already in list or vanished")
         added += 1
     result = {"list_id": list_id, "added_count": added}
     await consume_token_with_result(conn, token, result)
