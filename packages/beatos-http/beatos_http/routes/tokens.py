@@ -79,7 +79,7 @@ async def token_stream():
 
 @router.post("/{token}/approve")
 async def approve_token(token: str) -> dict:
-    async with aiosqlite.connect(resolve_db_path()) as conn:
+    async with aiosqlite.connect(resolve_db_path(), timeout=5) as conn:
         async with conn.execute(
             "SELECT tool_name, status FROM tokens WHERE token=?", (token,)
         ) as cur:
@@ -97,7 +97,7 @@ async def approve_token(token: str) -> dict:
                 status_code=400, detail=f"Unknown tool for approve: {tool_name}"
             )
 
-        await conn.execute("BEGIN")
+        await conn.execute("BEGIN IMMEDIATE")
         try:
             result = await handler(conn, token)
             await conn.commit()

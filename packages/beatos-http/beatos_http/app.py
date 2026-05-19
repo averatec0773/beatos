@@ -93,9 +93,11 @@ async def _handle_status_change_async(source_id: int, new_status: str) -> None:
 
 
 async def _periodic_token_cleanup(db_path_str: str) -> None:
-    """Hourly cleanup of terminal tokens older than 7 days. Inner try/except
-    so a single failure doesn't kill the loop."""
+    """Hourly cleanup of terminal tokens older than 7 days. Sleeps first to
+    avoid racing with the synchronous startup cleanup. Inner try/except so a
+    single failure doesn't kill the loop."""
     while True:
+        await asyncio.sleep(3600)
         try:
             async with aiosqlite.connect(db_path_str) as conn:
                 deleted = await cleanup_terminal_tokens(conn)
@@ -103,7 +105,6 @@ async def _periodic_token_cleanup(db_path_str: str) -> None:
                     log.info("token cleanup removed %d rows", deleted)
         except Exception:
             log.exception("token cleanup failed")
-        await asyncio.sleep(3600)
 
 
 @asynccontextmanager
