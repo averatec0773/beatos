@@ -3,7 +3,6 @@ import { Play, Pause } from "lucide-react";
 import { usePlayerStore } from "@/stores/player";
 import { useTrackStore } from "@/stores/tracks";
 import { useSearchStore } from "@/stores/search";
-import { useSourceStore } from "@/stores/sources";
 
 export function TrackRowPlayButton({
   trackId,
@@ -34,12 +33,7 @@ export function TrackRowPlayButton({
     const ids = visible.map((t) => t.id);
     const startIndex = ids.indexOf(trackId);
     if (startIndex < 0) return;
-    const activeFilter = useSourceStore.getState().activeFilter;
-    const source =
-      activeFilter == null
-        ? { kind: "all" as const }
-        : { kind: "source" as const, id: activeFilter };
-    usePlayerStore.getState().playFromQueue({ trackIds: ids, startIndex, source });
+    usePlayerStore.getState().playFromQueue({ trackIds: ids, startIndex, source: { kind: "all" } });
   };
 
   // Overlay-style: shown by row hover (parent toggles opacity) or when this

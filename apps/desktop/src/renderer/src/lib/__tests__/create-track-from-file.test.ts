@@ -16,12 +16,6 @@ vi.mock("@/stores/assets", () => ({
   },
 }));
 
-vi.mock("@/stores/sources", () => ({
-  useSourceStore: {
-    getState: vi.fn(),
-  },
-}));
-
 vi.mock("@/stores/tracks", () => ({
   useTrackStore: {
     getState: vi.fn(),
@@ -30,7 +24,6 @@ vi.mock("@/stores/tracks", () => ({
 
 import { tracks } from "@/api/tracks";
 import { useAssetStore } from "@/stores/assets";
-import { useSourceStore } from "@/stores/sources";
 import { useTrackStore } from "@/stores/tracks";
 
 function makeFile(name: string): File {
@@ -39,11 +32,6 @@ function makeFile(name: string): File {
 
 beforeEach(() => {
   vi.clearAllMocks();
-
-  // Default: one source exists
-  vi.mocked(useSourceStore.getState).mockReturnValue({
-    all: [{ id: 1, name: "My Source" }],
-  } as any);
 
   // Default: attach succeeds
   vi.mocked(useAssetStore.getState).mockReturnValue({
@@ -67,17 +55,6 @@ beforeEach(() => {
 });
 
 describe("createTracksFromFiles", () => {
-  it("returns error and no creates when sources list is empty", async () => {
-    vi.mocked(useSourceStore.getState).mockReturnValue({ all: [] } as any);
-
-    const result = await createTracksFromFiles([makeFile("beat.wav")]);
-
-    expect(result.created).toBe(0);
-    expect(result.skipped).toBe(0);
-    expect(result.errors).toContain("Create a Source first.");
-    expect(tracks.create).not.toHaveBeenCalled();
-  });
-
   it("creates 2 tracks for .wav + .mp3 and skips .pdf", async () => {
     vi.mocked(tracks.create)
       .mockResolvedValueOnce({ id: 1, title: "beat1" } as any)

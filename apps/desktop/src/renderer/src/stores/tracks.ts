@@ -2,7 +2,6 @@ import { create } from "zustand";
 
 import { Track, TrackUpdate, tracks as api } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
-import { useSourceStore } from "./sources";
 import { useAssetStore } from "./assets";
 import { useTrackQueryStore } from "./track-query";
 import { useTrashStore } from "./trash";
@@ -34,10 +33,8 @@ export const useTrackStore = create<TrackState>((set, get) => ({
       const queryState = useTrackQueryStore.getState();
       const { filters } = queryState;
       const inList = opts?.list_id != null;
-      const sourceFilter = useSourceStore.getState().activeFilter;
       const list = await api.list({
         list_id: opts?.list_id,
-        source_id: inList ? undefined : (sourceFilter ?? undefined),
         // Only forward sort when not in a list (lists use position order)
         sort_by: inList ? undefined : queryState.sortBy,
         sort_dir: inList ? undefined : queryState.sortDir,
@@ -123,12 +120,6 @@ export const useTrackStore = create<TrackState>((set, get) => ({
     void useTrashStore.getState().refresh();
   },
 }));
-
-useSourceStore.subscribe((state, prev) => {
-  if (state.activeFilter !== prev.activeFilter) {
-    useTrackStore.getState().refresh();
-  }
-});
 
 useTrackQueryStore.subscribe(() => {
   useTrackStore.getState().refresh();

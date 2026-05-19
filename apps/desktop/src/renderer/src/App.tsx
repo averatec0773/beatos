@@ -7,13 +7,11 @@ import { AppShell } from "@/routes/AppShell";
 import { TrackListPanel } from "@/routes/TrackListPanel";
 import { TrackEditor } from "@/routes/TrackEditor";
 import { SettingsPanel } from "@/routes/SettingsPanel";
-import { WelcomeScreen } from "@/routes/WelcomeScreen";
 import { TrashPanel } from "@/routes/TrashPanel";
 import { ApprovalsPanel } from "@/routes/ApprovalsPanel";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SidecarCrashToast } from "@/components/SidecarCrashToast";
 import { DragOverlayPreview } from "@/components/DragOverlayPreview";
-import { useSourceStore } from "@/stores/sources";
 import { useTrackStore } from "@/stores/tracks";
 import { useListStore } from "@/stores/lists";
 import { lists as listsApi } from "@/api/lists";
@@ -67,17 +65,6 @@ export default function App(): React.JSX.Element {
           const activeId = String(active.id);
           const overId = String(over.id);
 
-          if (activeId.startsWith("source:") && overId.startsWith("source:") && activeId !== overId) {
-            const srcStore = useSourceStore.getState();
-            const all = srcStore.all;
-            const oldIdx = all.findIndex((s) => `source:${s.id}` === activeId);
-            const newIdx = all.findIndex((s) => `source:${s.id}` === overId);
-            if (oldIdx < 0 || newIdx < 0) return;
-            const reordered = arrayMove(all, oldIdx, newIdx);
-            void srcStore.reorder(reordered.map((s) => s.id));
-            return;
-          }
-
           // List → list reorder. Each list row has TWO droppables: the outer
           // SortableContext (`list:N`) and an inner track-drop target
           // (`list-drop:N`). When dragging a list, dnd-kit's collision detection
@@ -127,7 +114,6 @@ export default function App(): React.JSX.Element {
       >
         <HashRouter>
           <Routes>
-            <Route path="/welcome" element={<WelcomeScreen />} />
             <Route element={<AppShell />}>
               <Route path="/" element={<TrackListPanel />} />
               <Route path="/tracks/:id/edit" element={<TrackEditor />} />
