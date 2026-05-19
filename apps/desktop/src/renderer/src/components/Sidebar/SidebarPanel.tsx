@@ -67,11 +67,6 @@ export function SidebarPanel(): React.JSX.Element {
   useEffect(() => {
     refreshLists();
     void refreshTrash();
-    const id = setInterval(() => {
-      refreshLists();
-      void refreshTrash();
-    }, 5000);
-    return () => clearInterval(id);
   }, [refreshLists, refreshTrash]);
 
   const sidebarWidth = useSidebarPanelStore((s) => s.width);
