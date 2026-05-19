@@ -17,8 +17,9 @@ from beatos_mcp.db import DBNotConfigured
 from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
 from beatos_mcp.tools.ingest import (
-    attach_asset as _attach_asset_impl,
+    attach_assets as _attach_assets_impl,
     create_tracks as _create_tracks_impl,
+    detach_assets as _detach_assets_impl,
 )
 from beatos_mcp.tools.list_curation import (
     add_tracks_to_list as _add_tracks_impl,
@@ -282,24 +283,47 @@ async def create_tracks(
 
 
 @mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=True))
-async def attach_asset(
-    track_id: Annotated[int, Field(description="Existing track id.")],
-    role: Annotated[Literal["audio", "cover"], Field(description="Asset role; one per track per role.")],
-    path: Annotated[
-        str,
+async def attach_assets(
+    items: Annotated[
+        list[dict],
         Field(
+            min_length=1,
+            max_length=500,
             description=(
-                "Absolute filesystem path to the asset file. "
-                "Audio: .mp3/.wav/.flac/.aif/.aiff. "
-                "Cover: .jpg/.jpeg/.png/.webp. "
-                "File must exist; replaces any existing asset of the same role."
+                "Each item: {track_id (int), role ('audio'|'cover'), "
+                "path (absolute filesystem path)}. "
+                "Audio: .mp3/.wav/.flac/.aif/.aiff. Cover: .jpg/.jpeg/.png/.webp. "
+                "Files must exist; existing role-slots are replaced in place. "
+                "Duplicate (track_id, role) pairs within the batch are rejected."
             ),
         ),
     ],
 ) -> dict:
-    """Attach an asset file to a track. Single-row tool. Returns a 2PC token.
-    The file is referenced by absolute path (BeatOS does not copy it)."""
-    return await _attach_asset_impl(track_id=track_id, role=role, path=path)
+    """Batch-attach assets to existing tracks. One 2PC token for the whole batch.
+    Files are referenced by absolute path (BeatOS does not copy them). Designed
+    for folder-import workflows: pair with create_tracks to onboard a folder
+    of beats in two approval clicks."""
+    return await _attach_assets_impl(items=items)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def detach_assets(
+    items: Annotated[
+        list[dict],
+        Field(
+            min_length=1,
+            max_length=500,
+            description=(
+                "Each item: {track_id (int), role ('audio'|'cover')}. "
+                "Idempotent: items whose asset is already absent are reported "
+                "with removed=false but do not fail the batch."
+            ),
+        ),
+    ],
+) -> dict:
+    """Batch-detach assets from tracks. Removes the asset row(s); the source
+    audio file on disk is not touched. Returns a 2PC token."""
+    return await _detach_assets_impl(items=items)
 
 
 # --- ASGI app for FastAPI mount ---

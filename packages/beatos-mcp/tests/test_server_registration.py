@@ -20,6 +20,8 @@ async def test_list_tools_includes_create_list_and_await_approval():
     assert "remove_tracks_from_list" in names
     assert "reorder_list" in names
     assert "create_tracks" in names
-    assert "attach_asset" in names
-    # 5 read tools + create_list + await_approval + 3 lifecycle tools + 5 list-curation tools + 2 metadata tools + 2 ingest tools
-    assert len(tools) == 19
+    assert "attach_assets" in names
+    assert "detach_assets" in names
+    assert "attach_asset" not in names  # singular retired in v0.0.24.2
+    # 5 read tools + create_list + await_approval + 3 lifecycle tools + 5 list-curation tools + 2 metadata tools + 3 ingest tools
+    assert len(tools) == 20
