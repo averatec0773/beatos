@@ -12,6 +12,7 @@ from beatos_core.db import resolve_db_path
 from beatos_core.two_phase import (
     TokenError,
     consume_token_with_result,
+    reject_token as _reject_token,
     verify_token,
 )
 
@@ -76,6 +77,21 @@ async def approve_token(token: str) -> dict:
             await conn.rollback()
             raise
         return result
+
+
+@router.post("/{token}/reject")
+async def reject_endpoint(token: str) -> dict:
+    """Mark a pending token rejected. No-op on already-terminal tokens
+    (race tolerance). 404 if token doesn't exist."""
+    async with aiosqlite.connect(resolve_db_path()) as conn:
+        async with conn.execute(
+            "SELECT 1 FROM tokens WHERE token=?", (token,)
+        ) as cur:
+            row = await cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Token not found")
+        await _reject_token(conn, token)
+    return {"ok": True}
 
 
 @router.get("")

@@ -103,3 +103,41 @@ async def test_approve_unknown_tool_returns_400(client, db_path):
         token = await create_token(conn, "nonexistent_tool", {})
     res = await client.post(f"/api/tokens/{token}/approve")
     assert res.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_reject_pending_marks_rejected(client, db_path):
+    async with aiosqlite.connect(db_path) as conn:
+        token = await create_token(conn, "create_list", {"name": "X"})
+    res = await client.post(f"/api/tokens/{token}/reject")
+    assert res.status_code == 200
+    assert res.json() == {"ok": True}
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT status FROM tokens WHERE token=?", (token,)
+        ) as cur:
+            row = await cur.fetchone()
+    assert row[0] == "rejected"
+
+
+@pytest.mark.asyncio
+async def test_reject_already_consumed_is_no_op_200(client, db_path):
+    async with aiosqlite.connect(db_path) as conn:
+        token = await create_token(conn, "create_list", {"name": "X"})
+    await client.post(f"/api/tokens/{token}/approve")
+    # Reject must NOT fail — Approve/Reject race tolerance
+    res = await client.post(f"/api/tokens/{token}/reject")
+    assert res.status_code == 200
+    # Status stays consumed
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT status FROM tokens WHERE token=?", (token,)
+        ) as cur:
+            row = await cur.fetchone()
+    assert row[0] == "consumed"
+
+
+@pytest.mark.asyncio
+async def test_reject_token_not_found_returns_404(client):
+    res = await client.post("/api/tokens/bogus/reject")
+    assert res.status_code == 404
