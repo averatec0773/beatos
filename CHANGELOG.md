@@ -4,6 +4,18 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.20.1] - 2026-05-18 — resizer self-heal + missed desktop bump
+
+Patch release for one user-reported regression caught after the v0.0.20 tag.
+
+### Fixed
+
+- **`apps/desktop/src/renderer/src/components/ColumnResizer.tsx`** — title-column auto-expanded on hover (no click) when a prior `pointerup` was lost (OS-cancelled capture, drag past window edge). The resizer now bails when `e.buttons === 0` on `pointermove`, and `endDrag` is wired to `pointerup` + `pointercancel` + `lostpointercapture` so a missed release self-heals on the next interaction. Capture is also taken on `e.currentTarget` (stable outer div) instead of `e.target` (could be the inner divider span).
+
+### Changed
+
+- **`apps/desktop/package.json`** bumped `0.0.19.1 → 0.0.20.1`. The v0.0.20 release commit (`8363dcc`) only bumped Python `pyproject.toml` versions; the desktop package was missed. Caught and corrected here.
+
 ## [0.0.20] - 2026-05-18 — Stable MCP Framework
 
 ### Architecture
