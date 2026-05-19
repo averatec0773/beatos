@@ -1,6 +1,6 @@
 {
   "name": "beatos-desktop",
-  "version": "0.0.20.3",
+  "version": "0.0.21",
   "description": "BeatOS — Electron desktop renderer for the local-first beat producer toolkit.",
   "main": "./out/main/index.js",
   "author": "averatec",
