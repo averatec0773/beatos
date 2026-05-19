@@ -42,3 +42,14 @@ async def connect():
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute("PRAGMA query_only=1")
         yield conn
+
+
+@contextlib.asynccontextmanager
+async def connect_writable():
+    """Yield a writable aiosqlite connection. Used by MCP write tools only;
+    read tools must stay on connect() which sets query_only=1 as
+    defense-in-depth."""
+    db_path = _resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        # Intentionally NO query_only here.
+        yield conn
