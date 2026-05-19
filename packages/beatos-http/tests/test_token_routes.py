@@ -141,3 +141,39 @@ async def test_reject_already_consumed_is_no_op_200(client, db_path):
 async def test_reject_token_not_found_returns_404(client):
     res = await client.post("/api/tokens/bogus/reject")
     assert res.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_cleanup_task_runs_on_startup(tmp_path, monkeypatch):
+    """Lifespan startup runs cleanup once synchronously — old terminal rows
+    must vanish before the app is ready to serve."""
+    import time
+    path = tmp_path / "test.db"
+    await run_migrations(path)
+    monkeypatch.setenv("BEATOS_DB_PATH", str(path))
+
+    # Insert an old expired token directly before lifespan starts
+    async with aiosqlite.connect(path) as conn:
+        await conn.execute(
+            "INSERT INTO tokens (token, tool_name, payload, created_at, expires_at, status, consumed_at) "
+            "VALUES ('old', 'create_list', '{}', 0, 0, 'expired', ?)",
+            (time.time() - 10 * 86400,),
+        )
+        await conn.commit()
+
+    # Verify it's there before lifespan
+    async with aiosqlite.connect(path) as conn:
+        async with conn.execute("SELECT 1 FROM tokens WHERE token='old'") as cur:
+            row = await cur.fetchone()
+        assert row is not None, "precondition: row exists before lifespan"
+
+    # Activate lifespan
+    app = create_app()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        async with app.router.lifespan_context(app):
+            # Lifespan startup ran; old row should be gone
+            async with aiosqlite.connect(path) as conn:
+                async with conn.execute("SELECT 1 FROM tokens WHERE token='old'") as cur:
+                    row = await cur.fetchone()
+            assert row is None, "lifespan startup must have cleaned old terminal tokens"

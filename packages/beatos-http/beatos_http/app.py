@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
+import aiosqlite
 import structlog
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
@@ -22,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from beatos_core.db import resolve_db_path, run_migrations
 from beatos_core.sources.monitor import SourceStatusMonitor
 from beatos_core.sources.service import get_source, list_sources
+from beatos_core.two_phase import cleanup_terminal_tokens
 from beatos_core.watcher.daemon import WatcherRegistry
 from beatos_http.routes import analysis, assets, lists, producers, sources, sweep, tokens, tracks
 
@@ -36,6 +38,7 @@ _ALLOWED_ORIGINS = [
 # Module-level runtime state (per-process singletons).
 _watcher_registry: Optional[WatcherRegistry] = None
 _monitor: Optional[SourceStatusMonitor] = None
+_cleanup_task: Optional[asyncio.Task] = None
 
 
 def get_watcher_registry() -> WatcherRegistry:
@@ -89,11 +92,32 @@ async def _handle_status_change_async(source_id: int, new_status: str) -> None:
             registry.start_for_source(source_id, root)
 
 
+async def _periodic_token_cleanup(db_path_str: str) -> None:
+    """Hourly cleanup of terminal tokens older than 7 days. Inner try/except
+    so a single failure doesn't kill the loop."""
+    while True:
+        try:
+            async with aiosqlite.connect(db_path_str) as conn:
+                deleted = await cleanup_terminal_tokens(conn)
+                if deleted:
+                    log.info("token cleanup removed %d rows", deleted)
+        except Exception:
+            log.exception("token cleanup failed")
+        await asyncio.sleep(3600)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _watcher_registry, _monitor
+    global _watcher_registry, _monitor, _cleanup_task
 
     await run_migrations(resolve_db_path())
+
+    # Cleanup once on startup so a fresh sidecar sees a tidy table.
+    db_path_str = str(resolve_db_path())
+    async with aiosqlite.connect(db_path_str) as conn:
+        await cleanup_terminal_tokens(conn)
+    # Then fire-and-forget the hourly loop.
+    _cleanup_task = asyncio.create_task(_periodic_token_cleanup(db_path_str))
 
     _watcher_registry = WatcherRegistry(on_new_file=_on_new_file_in_source)
 
@@ -112,6 +136,13 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        if _cleanup_task is not None:
+            _cleanup_task.cancel()
+            try:
+                await _cleanup_task
+            except asyncio.CancelledError:
+                pass
+            _cleanup_task = None
         if _monitor is not None:
             await _monitor.stop()
             _monitor = None
