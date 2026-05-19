@@ -4,6 +4,12 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [Unreleased]
+
+### Added
+
+- **`ApprovalsSection` sidebar item** — one-button navigation to `/approvals` with yellow count badge showing pending token count.
+
 ## [0.0.21.1] - 2026-05-19 — Drop OutOfSource attach guard
 
 Quick-win patch ahead of the planned v0.0.23 Source-removal milestone. The "file must live inside a registered Source to attach" rule was UI-layer friction (Track and Asset have no `source_id` at schema level), so peeling it off is a small, contained change. Now: any absolute path on disk is acceptable as an asset (cover, audio, etc).
