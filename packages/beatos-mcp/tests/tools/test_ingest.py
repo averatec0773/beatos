@@ -101,6 +101,13 @@ async def test_attach_asset_rejects_missing_track(db_path, tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_create_tracks_rejects_bool_bpm(db_path):
+    """Python bool is int subclass; reject it explicitly."""
+    with pytest.raises(ValueError, match="bpm"):
+        await create_tracks(items=[{"title": "X", "bpm": True}])
+
+
+@pytest.mark.asyncio
 async def test_attach_asset_warns_on_replacement(db_path, tmp_path):
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     async with aiosqlite.connect(db_path) as conn:

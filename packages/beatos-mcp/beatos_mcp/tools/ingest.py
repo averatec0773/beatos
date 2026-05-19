@@ -41,7 +41,7 @@ def _validate_create_items(items: list[dict[str, Any]]) -> None:
                             f"items[{i}].{field}[{j}] must be a non-empty string"
                         )
         bpm = it.get("bpm")
-        if bpm is not None and not isinstance(bpm, int):
+        if bpm is not None and (isinstance(bpm, bool) or not isinstance(bpm, int)):
             raise ValueError(f"items[{i}].bpm must be int or omitted")
 
 

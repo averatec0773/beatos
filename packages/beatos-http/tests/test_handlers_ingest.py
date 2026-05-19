@@ -83,6 +83,14 @@ async def test_approve_attach_asset_inserts(client, db_path, tmp_path):
     body = res.json()
     assert body["replaced"] is False
     assert isinstance(body["asset_id"], int)
+    # Confirm DB row carries metadata, not just the asset_id
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT size_bytes, mime FROM asset WHERE id=?", (body["asset_id"],)
+        ) as cur:
+            row = await cur.fetchone()
+    assert row[0] > 0  # size_bytes
+    assert row[1] is not None and "audio" in row[1].lower()  # mime e.g. "audio/x-wav"
 
 
 @pytest.mark.asyncio

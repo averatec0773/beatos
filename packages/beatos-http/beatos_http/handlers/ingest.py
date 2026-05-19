@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import mimetypes
 import os
 
 import aiosqlite
@@ -64,23 +65,24 @@ async def _approve_attach_asset(conn: aiosqlite.Connection, token: str) -> dict:
         raise RowVanishedError(f"asset file no longer exists: {path}")
     now = _now()
     size = os.path.getsize(path)
+    mime, _ = mimetypes.guess_type(path)
     async with conn.execute(
         "SELECT id FROM asset WHERE track_id=? AND role=?", (track_id, role)
     ) as c0:
         existing = await c0.fetchone()
     if existing is None:
         cur = await conn.execute(
-            "INSERT INTO asset (track_id, role, abs_path, size_bytes, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (track_id, role, path, size, now, now),
+            "INSERT INTO asset (track_id, role, abs_path, size_bytes, mime, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (track_id, role, path, size, mime, now, now),
         )
         asset_id = cur.lastrowid
         replaced = False
     else:
         asset_id = existing[0]
         await conn.execute(
-            "UPDATE asset SET abs_path=?, size_bytes=?, updated_at=? WHERE id=?",
-            (path, size, now, asset_id),
+            "UPDATE asset SET abs_path=?, size_bytes=?, mime=?, updated_at=? WHERE id=?",
+            (path, size, mime, now, asset_id),
         )
         replaced = True
     result = {"asset_id": asset_id, "replaced": replaced}
