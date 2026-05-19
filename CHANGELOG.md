@@ -19,6 +19,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - `restore_tracks(ids)` — clears deleted_at.
 - `purge_tracks(ids)` — PERMANENT physical delete (high-risk; checkbox-gated in approval card). ON DELETE CASCADE removes asset/track_list rows (requires PRAGMA foreign_keys=ON per connection, now enabled on approve_token's write connection). Source audio files on disk untouched.
 
+### List-curation write tools
+- `update_list(list_id, name)` — rename a user list (system lists immutable).
+- `delete_list(list_id)` — PERMANENTLY delete a user list (checkbox-gated).
+- `add_tracks_to_list(list_id, track_ids)` — append to tail; already-present ids skipped.
+- `remove_tracks_from_list(list_id, track_ids)` — idempotent; missing ids skipped.
+- `reorder_list(list_id, track_ids)` — full-membership reorder; mismatched membership rejected at token-create.
+
 ### Foundation (UI)
 - `/approvals` cards now render a preview-aware layout: `payload.preview.headline` + sample + warnings + expand-all + high-risk variant. Destructive tokens (`purge_tracks`, `delete_list`) show a red card with an "I understand this is permanent" checkbox gate on Approve.
 - Legacy `create_list` token rendering remains for tokens without a `preview` block (carries until v0.0.24 batch tools all ship).

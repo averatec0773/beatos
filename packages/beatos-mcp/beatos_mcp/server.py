@@ -16,6 +16,13 @@ from pydantic import Field
 from beatos_mcp.db import DBNotConfigured
 from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
+from beatos_mcp.tools.list_curation import (
+    add_tracks_to_list as _add_tracks_impl,
+    delete_list as _delete_list_impl,
+    remove_tracks_from_list as _remove_tracks_impl,
+    reorder_list as _reorder_list_impl,
+    update_list as _update_list_impl,
+)
 from beatos_mcp.tools.distinct import list_distinct_values as _list_distinct_impl
 from beatos_mcp.tools.lifecycle import (
     purge_tracks as _purge_tracks_impl,
@@ -169,6 +176,52 @@ async def purge_tracks(
     files on disk are not touched. The approval card requires a checkbox
     confirmation. Returns a 2PC token."""
     return await _purge_tracks_impl(ids=ids)
+
+
+@mcp.tool()
+async def update_list(
+    list_id: Annotated[int, Field(description="Target user list id.")],
+    name: Annotated[str, Field(min_length=1, max_length=200, description="New name.")],
+) -> dict:
+    """Rename a user list (system lists are immutable). Returns a 2PC token."""
+    return await _update_list_impl(list_id=list_id, name=name)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=True, idempotentHint=False, openWorldHint=False))
+async def delete_list(
+    list_id: Annotated[int, Field(description="User list id to delete.")],
+) -> dict:
+    """PERMANENTLY delete a user list. Member tracks are unaffected. System
+    lists are immutable. Returns a 2PC token; checkbox-gated in the approval card."""
+    return await _delete_list_impl(list_id=list_id)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def add_tracks_to_list(
+    list_id: Annotated[int, Field(description="Target list id.")],
+    track_ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to append.")],
+) -> dict:
+    """Append tracks to the end of a list. Already-present tracks are skipped (idempotent)."""
+    return await _add_tracks_impl(list_id=list_id, track_ids=track_ids)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def remove_tracks_from_list(
+    list_id: Annotated[int, Field(description="Target list id.")],
+    track_ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to remove from the list.")],
+) -> dict:
+    """Remove tracks from a list. Not-in-list ids are skipped (idempotent)."""
+    return await _remove_tracks_impl(list_id=list_id, track_ids=track_ids)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=False))
+async def reorder_list(
+    list_id: Annotated[int, Field(description="Target list id.")],
+    track_ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Full membership in the desired order. Must match current list contents exactly.")],
+) -> dict:
+    """Reorder a list. track_ids must be the full current membership in the
+    desired order (set equality required). Token-create rejects mismatches."""
+    return await _reorder_list_impl(list_id=list_id, track_ids=track_ids)
 
 
 # --- ASGI app for FastAPI mount ---
