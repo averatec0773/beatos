@@ -38,9 +38,10 @@ beforeEach(() => {
     attach: vi.fn().mockResolvedValue({ id: 99 }),
   } as any);
 
-  // Default: refresh is a no-op
+  // Default: refresh + refreshTotal are no-ops
   vi.mocked(useTrackStore.getState).mockReturnValue({
     refresh: vi.fn().mockResolvedValue(undefined),
+    refreshTotal: vi.fn().mockResolvedValue(undefined),
   } as any);
 
   // Default: create returns a track

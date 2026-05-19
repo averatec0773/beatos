@@ -53,5 +53,6 @@ export async function createTracksFromFiles(files: File[]): Promise<CreateResult
     }
   }
   void useTrackStore.getState().refresh();
+  void useTrackStore.getState().refreshTotal();
   return result;
 }
