@@ -30,8 +30,10 @@ def _make_wav(path: pathlib.Path, duration_seconds: float = 2.0) -> None:
 async def _fresh_db(tmp_path, monkeypatch):
     """Each test gets its own isolated global DB with migrations applied.
 
-    Also registers tmp_path as a Source so pre-existing tests that use
-    tmp_path directly continue to satisfy the OutOfSourceError guard.
+    Registers tmp_path as a Source so legacy fixtures that expect at least
+    one Source row (e.g. for OfflineBadge derivation) still see one.
+    The OutOfSource guard was removed in v0.0.21.1; this fixture no longer
+    has any gating role.
     """
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
@@ -191,28 +193,19 @@ async def test_attach_with_replace_swaps(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_attach_raises_when_path_outside_any_source(tmp_path):
+async def test_attach_accepts_path_outside_any_source(tmp_path):
+    """v0.0.21.1 removed the OutOfSource guard. Files anywhere on disk attach
+    successfully; Source membership is no longer a precondition."""
     import tempfile
-    from beatos_core.sources.service import create_source
-    from beatos_core.sources.models import SourceCreate
-    from beatos_core.assets.service import OutOfSourceError
-
-    src_dir = tmp_path / "in_source"
-    src_dir.mkdir()
-    await create_source(SourceCreate(root_path=str(src_dir)))
 
     t_id = await _create_track("T")
 
-    # Create a rogue file in a completely separate temp directory (not under tmp_path)
     with tempfile.TemporaryDirectory() as rogue_dir:
         rogue = pathlib.Path(rogue_dir) / "outside.wav"
         rogue.write_bytes(b"\x00" * 64)
 
-        with pytest.raises(OutOfSourceError) as exc:
-            await attach_asset(t_id, "audio_tagged_mp3", rogue)
-        assert exc.value.path == str(rogue.resolve())
-        # _fresh_db registers tmp_path; create_source added src_dir — 2 sources total
-        assert len(exc.value.available_sources) == 2
+        asset = await attach_asset(t_id, "audio_tagged_mp3", rogue)
+        assert asset.abs_path == str(rogue.resolve())
 
 
 @pytest.mark.asyncio

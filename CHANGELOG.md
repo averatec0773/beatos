@@ -4,6 +4,28 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.21.1] - 2026-05-19 — Drop OutOfSource attach guard
+
+Quick-win patch ahead of the planned v0.0.23 Source-removal milestone. The "file must live inside a registered Source to attach" rule was UI-layer friction (Track and Asset have no `source_id` at schema level), so peeling it off is a small, contained change. Now: any absolute path on disk is acceptable as an asset (cover, audio, etc).
+
+### Removed
+
+- **`OutOfSourceError` exception** (`packages/beatos-core/beatos_core/assets/service.py`) — `attach_asset` no longer calls `find_source_for_path` / `list_sources` before inserting; the 4-line guard block and its imports are gone.
+- **HTTP 422 `out_of_source` response** (`packages/beatos-http/beatos_http/routes/assets.py`) — the `except OutOfSourceError` handler dropped; attaches now return 200 from any path.
+- **`OutOfSourceDialog` component** + its store + its mount in `App.tsx` + its test. ~200 LOC of renderer deleted.
+- **`useAssetSlot.ts` + `AssetSlot.tsx`** — the 422-decode branch that opened the dialog is gone; attach errors now fall through to the generic `alert(...)` toast (only fires on real failures like missing file / permission denied).
+- **`stores/dialogs.ts`** entire file (only contained the OutOfSource request state).
+
+### Changed
+
+- **`test_asset_service.py`** — `test_attach_raises_when_path_outside_any_source` flipped to `test_attach_accepts_path_outside_any_source` (asserts success now).
+- **`test_assets_routes.py`** — `test_attach_out_of_source_returns_422` flipped to `test_attach_out_of_source_succeeds_v00211` (200 instead of 422).
+
+### Notes
+
+- `Source` data model, watcher daemon, sidebar/Settings Sources UI, and offline-badge derivation all unchanged. This patch only unhooks Sources from gating asset attachment. Full Source removal stays scheduled for v0.0.23 (see ROADMAP).
+- 296 pytest + 248 vitest tests pass. Build clean.
+
 ## [0.0.21] - 2026-05-19 — First MCP write tool, 2PC activation
 
 The 2PC token skeleton (v0.0.20) now powers a real write tool. AI agents request `create_list(name)`; the user approves in BeatOS Settings; the list is written atomically; the AI queries outcome via `confirm_create_list(token)`.

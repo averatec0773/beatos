@@ -22,8 +22,8 @@ def _make_wav(path: pathlib.Path, duration_seconds: float = 2.0) -> None:
 @pytest.fixture(autouse=True)
 async def _fresh_db(tmp_path, monkeypatch):
     """Each test gets its own isolated global DB with migrations applied.
-    Registers tmp_path as a Source so attach_asset's OutOfSourceError guard
-    is satisfied.
+    Registers tmp_path as a Source so OfflineBadge derivations still see one.
+    The OutOfSource guard itself was removed in v0.0.21.1.
     """
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
@@ -162,13 +162,11 @@ def test_attach_with_replace_true_swaps(tmp_path):
     assert second["id"] != first_id  # old row was deleted, new one inserted
 
 
-def test_attach_out_of_source_returns_422(tmp_path):
-    """A file outside any Source surfaces a structured 422 payload."""
+def test_attach_out_of_source_succeeds_v00211(tmp_path):
+    """v0.0.21.1 removed the OutOfSource guard. A file outside any registered
+    Source now attaches successfully (200), not rejected with 422."""
     client = TestClient(create_app())
     track_id = _create_track(client)
-    # tmp_path itself is registered as a Source in the autouse fixture, so
-    # we need a path outside tmp_path. Use the tmp_path parent dir — pytest's
-    # base tmp gives us a sibling we can write to.
     outside_dir = tmp_path.parent / "out-of-source-dir"
     outside_dir.mkdir(exist_ok=True)
     rogue = outside_dir / "outside.wav"
@@ -179,13 +177,9 @@ def test_attach_out_of_source_returns_422(tmp_path):
         json={"role": "audio_tagged_mp3", "path": str(rogue)},
     )
 
-    assert res.status_code == 422, res.text
+    assert res.status_code == 200, res.text
     body = res.json()
-    assert body["error"] == "out_of_source"
-    assert body["path"] == str(rogue.resolve())
-    assert isinstance(body["available_sources"], list)
-    assert len(body["available_sources"]) == 1
-    assert body["available_sources"][0]["root_path"] == str(tmp_path.resolve())
+    assert body["abs_path"] == str(rogue.resolve())
 
 
 # ---------------------------------------------------------------------------

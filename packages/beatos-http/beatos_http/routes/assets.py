@@ -8,7 +8,6 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from beatos_core.assets.service import (
-    OutOfSourceError,
     attach_asset,
     detach_asset,
     get_asset,
@@ -36,22 +35,10 @@ async def attach(
     payload: AssetCreate,
     replace: bool = Query(default=False),
 ):
-    """Attach an asset. Returns 200 with Asset JSON, or 422 with a structured
-    {error, path, available_sources} payload when the file lives outside any
-    registered Source.
-    """
+    """Attach an asset. Returns 200 with Asset JSON."""
     try:
         asset = await attach_asset(
             track_id, role=payload.role, path=payload.path, replace=replace
-        )
-    except OutOfSourceError as e:
-        return JSONResponse(
-            status_code=422,
-            content={
-                "error": "out_of_source",
-                "path": e.path,
-                "available_sources": [s.model_dump() for s in e.available_sources],
-            },
         )
     except ValueError as e:
         msg = str(e)

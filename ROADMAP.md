@@ -53,14 +53,29 @@ MCP `beatos-mcp` console script registration. The v0.0.20 → v0.0.20.1 releases
 
 First MCP write tool: `create_list` + 2PC activation. SSE-driven Pending Confirmations UI in Settings → AI Integration. See [CHANGELOG.md](CHANGELOG.md#0021---2026-05-19--first-mcp-write-tool-2pc-activation).
 
-### v0.0.22 candidates
+### v0.0.21.1 — SHIPPED 2026-05-19
 
-Pick one based on user value at the time:
+Dropped the `OutOfSourceDialog` chain (asset attach no longer requires a registered Source). Quick-win ahead of v0.0.23 full removal. See [CHANGELOG.md](CHANGELOG.md#00211---2026-05-19--drop-outofsource-attach-guard).
 
-- `draft_description` placeholder (original v0.0.22 scope — see below) — second MCP write tool, exercises the `description_draft` write path.
-- Pending-token global toast / sidebar badge — surface pending tokens outside the Settings panel. Settings-only display shipped in v0.0.21; this version adds main-window awareness.
+### v0.0.22 — Sidebar Approvals module
 
-### v0.0.22 — `draft_description` placeholder
+Promote the v0.0.21 Pending Confirmations UI from `Settings → AI Integration` to a dedicated sidebar nav destination with a count badge. Same SSE feed and `usePendingTokens` hook; new mount point + sidebar item + badge counter component. Settings section gets simplified to "connection info + Test connection" only.
+
+Why first: every future write tool (`draft_description`, `inject_to_platform`, ...) shares this approval queue. A first-class home prevents the queue from being buried.
+
+### v0.0.23 — Source removal (full)
+
+Delete the `Source` concept end-to-end. v0.0.21.1 already removed the attach gate; v0.0.23 deletes the data model and surrounding infrastructure. Schema reality: `track` and `asset` have no `source_id` FK, so removal is a contained delete-only refactor (no data migration on existing tracks/assets).
+
+Phased inside the version:
+1. Remove sidebar Sources section + `Settings → Sources` section + `SourceRow.tsx` + `useSourceStore` + `OfflineBadge` (or keep `OfflineBadge` driven by per-asset `path.exists()` instead of Source membership — TBD during brainstorm).
+2. Remove `packages/beatos-core/sources/` + `beatos-core/watcher/` (watcher daemon) + `packages/beatos-http/routes/sources.py`.
+3. Remove MCP `list_sources` tool + handler.
+4. Migration `011_drop_source.sql` — `DROP TABLE source;`.
+
+What's lost: folder-level auto-watch (new files in a registered folder no longer auto-appear). Manual drag-import remains the way new files enter. Future optional "migrate to managed dir" helper (v0.0.X+) lets the user move catalogued files into a single tidy location.
+
+### v0.0.24 — `draft_description` placeholder
 
 Closes the AI-write loop for the description field, even before v0.2 RAG lands. The tool writes only to `track.description_draft` — promoting to `description` is still a user action (see CLAUDE.md rule 1).
 

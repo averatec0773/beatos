@@ -9,13 +9,10 @@ import {
 } from "lucide-react";
 
 import { useAssetStore } from "@/stores/assets";
-import { useDialogStore } from "@/stores/dialogs";
 import { useSourceStore } from "@/stores/sources";
 import { CoverImage } from "@/components/CoverImage";
 import { OfflineBadge } from "./OfflineBadge";
 import type { Asset } from "@/api/assets";
-import type { Source } from "@/api/sources";
-import { ApiError } from "@/api/client";
 import { isPathOffline } from "@/lib/sourceOffline";
 
 interface Props {
@@ -42,7 +39,6 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
   const attach = useAssetStore((s) => s.attach);
   const detach = useAssetStore((s) => s.detach);
   const relocate = useAssetStore((s) => s.relocate);
-  const openOutOfSource = useDialogStore((s) => s.openOutOfSource);
 
   // Derive the asset for this role in component body — never inside the selector
   // (see feedback_zustand_stable_selectors).
@@ -75,24 +71,6 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
     try {
       await attach(trackId, role, picked, { replace });
     } catch (e) {
-      if (
-        e instanceof ApiError &&
-        e.status === 422 &&
-        typeof e.body === "object" && e.body !== null &&
-        (e.body as { error?: string }).error === "out_of_source"
-      ) {
-        const body = e.body as { path: string; available_sources: Source[] };
-        openOutOfSource({
-          filePath: body.path,
-          availableSources: body.available_sources,
-          onResolved: (resolvedPath: string) => {
-            attach(trackId, role, resolvedPath, { replace }).catch((err) => {
-              alert(`Attach failed: ${err instanceof Error ? err.message : String(err)}`);
-            });
-          },
-        });
-        return;
-      }
       alert(`Attach failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
