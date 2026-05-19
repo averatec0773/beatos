@@ -57,11 +57,9 @@ First MCP write tool: `create_list` + 2PC activation. SSE-driven Pending Confirm
 
 Dropped the `OutOfSourceDialog` chain (asset attach no longer requires a registered Source). Quick-win ahead of v0.0.23 full removal. See [CHANGELOG.md](CHANGELOG.md#00211---2026-05-19--drop-outofsource-attach-guard).
 
-### v0.0.22 — Sidebar Approvals module
+### v0.0.21.2 — SHIPPED 2026-05-19
 
-Promote the v0.0.21 Pending Confirmations UI from `Settings → AI Integration` to a dedicated sidebar nav destination with a count badge. Same SSE feed and `usePendingTokens` hook; new mount point + sidebar item + badge counter component. Settings section gets simplified to "connection info + Test connection" only.
-
-Why first: every future write tool (`draft_description`, `inject_to_platform`, ...) shares this approval queue. A first-class home prevents the queue from being buried.
+Sidebar Approvals module + 24h history view. Pending Confirmations UI moved from `Settings → AI Integration` to a dedicated `/approvals` route with yellow count badge. See [CHANGELOG.md](CHANGELOG.md#00212---2026-05-19--sidebar-approvals-module).
 
 ### v0.0.23 — Source removal (full)
 

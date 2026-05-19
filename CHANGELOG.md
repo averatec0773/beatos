@@ -10,6 +10,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 - **`ApprovalsSection` sidebar item** — one-button navigation to `/approvals` with yellow count badge showing pending token count.
 
+## [0.0.21.2] - 2026-05-19 — Sidebar Approvals module
+
+Promotes the v0.0.21 Pending Confirmations UI from `Settings → AI Integration` to a dedicated sidebar destination with a 24h recent-history view. `/approvals` is now the single source of truth for AI 2PC activity; Settings keeps only connection info.
+
+### Added
+
+- **Sidebar `Approvals` section** (`components/Sidebar/ApprovalsSection.tsx`) between `Lists` and `Trash`. Inbox icon + yellow count badge when pending > 0.
+- **`/approvals` route** with `ApprovalsPanel` showing two stacked sections: Pending (with Approve / Reject buttons) and Recent (24h history with ✓ / ✗ / ⌛ status glyphs).
+- **`usePendingTokensHistory` hook** — parallels `usePendingTokens`. Initial GET + SSE-driven refetch on the same `pending_changed` event.
+- **`PendingList` + `HistoryList` components** (`components/Approvals/`) — focused row layouts for each section.
+- **`GET /api/tokens?status=history`** — returns terminal-state (consumed / rejected / expired) tokens within the last 24h, sorted most recent first. Response includes `status`, `consumed_at`, and `result` fields not present in the pending response shape.
+
+### Removed
+
+- **`<PendingConfirmations>` block** in `Settings → AI Integration`. Single source of truth in `/approvals`.
+- **`components/Settings/PendingConfirmations.tsx`** + its test. Logic folded into `Approvals/PendingList.tsx`.
+
+### Notes
+
+- 24h cutoff is hardcoded; if a future version needs longer windows, extend the route with a `?since=<epoch>` parameter rather than parameterizing `history`.
+- Cleanup task (introduced v0.0.21) deletes terminal rows after 7 days, comfortably outside the 24h history window — history rows never disappear mid-session.
+
 ## [0.0.21.1] - 2026-05-19 — Drop OutOfSource attach guard
 
 Quick-win patch ahead of the planned v0.0.23 Source-removal milestone. The "file must live inside a registered Source to attach" rule was UI-layer friction (Track and Asset have no `source_id` at schema level), so peeling it off is a small, contained change. Now: any absolute path on disk is acceptable as an asset (cover, audio, etc).
