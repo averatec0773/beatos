@@ -4,7 +4,7 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
-## [0.0.24] — Unreleased — MCP write surface expansion
+## [0.0.24] — 2026-05-19 — MCP write surface expansion
 
 ### Foundation
 - Bumped default 2PC token TTL from 300s to 600s (bulk decisions deserve time).
