@@ -122,6 +122,29 @@ async def test_update_tracks_rolls_back_when_id_vanished(client, db_path):
 
 
 @pytest.mark.asyncio
+async def test_update_tracks_add_and_remove_overlap_add_wins(client, db_path):
+    """When the same value appears in both add and remove, add takes precedence
+    (remove runs first, then add re-introduces). Pin this behavior so refactors
+    can't silently flip it."""
+    async with aiosqlite.connect(db_path) as conn:
+        tok = await create_token(
+            conn,
+            "update_tracks",
+            {
+                "ids": [1],
+                "patch": {"producer": {"add": ["Smoke"], "remove": ["Smoke"]}},
+            },
+        )
+    res = await client.post(f"/api/tokens/{tok}/approve")
+    assert res.status_code == 200
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT producer FROM track WHERE id=1") as cur:
+            producers = json.loads((await cur.fetchone())[0])
+    # Track 1 starts with ["Smoke"]. remove drops it, add restores it. Net: ["Smoke"].
+    assert producers == ["Smoke"]
+
+
+@pytest.mark.asyncio
 async def test_merge_metadata_collapses_aliases(client, db_path):
     async with aiosqlite.connect(db_path) as conn:
         tok = await create_token(

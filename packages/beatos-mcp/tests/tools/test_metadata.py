@@ -103,6 +103,13 @@ async def test_update_tracks_warns_about_missing_ids(db_path):
 
 
 @pytest.mark.asyncio
+async def test_update_tracks_all_ids_missing_raises(db_path):
+    """If every supplied id is missing, don't issue a no-op token."""
+    with pytest.raises(ValueError, match="not found"):
+        await update_tracks(ids=[9998, 9999], patch={"bpm": 100})
+
+
+@pytest.mark.asyncio
 async def test_merge_metadata_payload(db_path):
     # All three rows have a producer matching at least one of these
     r = await merge_metadata(field="producer", from_=["smoke", "SMOKE"], to="Smoke")

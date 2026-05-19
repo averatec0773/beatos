@@ -28,21 +28,33 @@ def _validate_patch(patch: dict[str, Any]) -> None:
     unknown = set(patch) - _ALLOWED_FIELDS
     if unknown:
         raise ValueError(f"unknown patch fields: {sorted(unknown)}")
+    # Scalar field types
+    for field in _SCALAR_FIELDS:
+        if field in patch:
+            v = patch[field]
+            if v is None:
+                continue  # null clears
+            if field == "bpm":
+                if not isinstance(v, (int, float)) or isinstance(v, bool):
+                    raise ValueError(f"{field} must be a number or null")
+            elif not isinstance(v, str):
+                raise ValueError(f"{field} must be a string or null")
+    # Multi-value field shape
     for field in _MULTI_FIELDS:
         if field in patch:
             v = patch[field]
             if isinstance(v, list):
-                if not all(isinstance(x, str) for x in v):
-                    raise ValueError(f"{field} list must contain only strings")
+                if not all(isinstance(x, str) and x for x in v):
+                    raise ValueError(f"{field} list must contain only non-empty strings")
             elif isinstance(v, dict):
                 extra = set(v) - {"add", "remove"}
                 if extra:
                     raise ValueError(f"{field} delta has unknown keys: {sorted(extra)}")
                 for k in ("add", "remove"):
                     if k in v and not (
-                        isinstance(v[k], list) and all(isinstance(x, str) for x in v[k])
+                        isinstance(v[k], list) and all(isinstance(x, str) and x for x in v[k])
                     ):
-                        raise ValueError(f"{field}.{k} must be a list of strings")
+                        raise ValueError(f"{field}.{k} must be a list of non-empty strings")
             else:
                 raise ValueError(
                     f"{field} must be either a list of strings or a delta dict"

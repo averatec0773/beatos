@@ -46,3 +46,14 @@ async def test_streamable_http_app_exists() -> None:
     from beatos_mcp.server import app
     # Should be an ASGI callable
     assert callable(app)
+
+
+async def test_merge_metadata_exposes_from_alias() -> None:
+    """merge_metadata's Python param is `from_` (reserved word) but MCP clients
+    must see `from` via pydantic Field(alias='from'). Pin this so a FastMCP
+    upgrade can't silently break it."""
+    tools = await mcp.list_tools()
+    tool = next(t for t in tools if t.name == "merge_metadata")
+    props = tool.inputSchema.get("properties", {})
+    assert "from" in props, f"expected 'from' in inputSchema properties; got {list(props.keys())}"
+    assert "from_" not in props
