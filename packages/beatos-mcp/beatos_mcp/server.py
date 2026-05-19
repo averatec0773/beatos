@@ -1,171 +1,132 @@
-"""Tool registration for the BeatOS MCP server.
+"""FastMCP server for BeatOS.
 
-v0.0.22 exposes 5 read tools + 2 write tools (create_list and its confirm)
-gated by the 2PC token skeleton in beatos_core.two_phase.
+v0.0.23: migrated from low-level mcp.server.Server to FastMCP.
+The ASGI app is mounted at /mcp by beatos-http. Stdio clients (Claude Desktop)
+connect via the beatos-mcp launcher -> mcp-proxy bridge.
 """
 from __future__ import annotations
 
-import json
+from typing import Annotated, Any
 
-from mcp.server import Server
-from mcp.types import TextContent, Tool
+from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from beatos_mcp.db import DBNotConfigured
 from beatos_mcp.log import configure as configure_logging
-from beatos_mcp.tools.confirm_create_list import confirm_create_list
-from beatos_mcp.tools.create_list import create_list
-from beatos_mcp.tools.distinct import list_distinct_values
-from beatos_mcp.tools.lists import list_lists
-from beatos_mcp.tools.ping import ping
-from beatos_mcp.tools.tracks import TrackNotFound, get_track, list_tracks
+from beatos_mcp.tools.confirm_create_list import confirm_create_list as _confirm_create_list_impl
+from beatos_mcp.tools.create_list import create_list as _create_list_impl
+from beatos_mcp.tools.distinct import list_distinct_values as _list_distinct_impl
+from beatos_mcp.tools.lists import list_lists as _list_lists_impl
+from beatos_mcp.tools.ping import ping as _ping_impl
+from beatos_mcp.tools.tracks import (
+    TrackNotFound,
+    get_track as _get_track_impl,
+    list_tracks as _list_tracks_impl,
+)
 
 log = configure_logging()
-server = Server("beatos-mcp")
+mcp = FastMCP("beatos-mcp")
+
+_READ_ANNOTATIONS = ToolAnnotations(readOnlyHint=True, idempotentHint=True)
 
 
-_STRING_ARRAY = {"type": "array", "items": {"type": "string"}}
+# --- Read tools ---
 
-_LIST_TRACKS_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {
-        "list_id": {
-            "type": "integer",
-            "description": "Filter to tracks in this list. Use list_lists to discover ids."
-        },
-        "producers": {**_STRING_ARRAY, "description": "Exact-match producer names. Example: ['Yung X', 'Lazy Bee']. Use list_distinct_values('producer') to discover values."},
-        "genres":    {**_STRING_ARRAY, "description": "Exact-match genres. Example: ['trap', 'drill']."},
-        "moods":     {**_STRING_ARRAY, "description": "Exact-match moods. Example: ['dark', 'aggressive']."},
-        "keys":      {**_STRING_ARRAY, "description": "Exact-match key signatures. Example: ['Am', 'C#m']."},
-        "bpm_min": {"type": "number", "description": "Inclusive lower bound on BPM. Example: 120."},
-        "bpm_max": {"type": "number", "description": "Inclusive upper bound on BPM. Example: 140."},
-        "has_audio": {"type": "boolean", "description": "true = only tracks with at least one audio asset attached; false = only tracks without any. Omit for no filter."},
-        "sort_by": {"type": "string", "enum": ["created_at", "updated_at", "bpm", "name"], "description": "Default: created_at."},
-        "sort_dir": {"type": "string", "enum": ["asc", "desc"], "description": "Default: desc."},
-        "limit": {"type": "integer", "minimum": 1, "maximum": 500, "description": "Default 50, max 500. Values above are silently clamped."},
-        "offset": {"type": "integer", "minimum": 0, "description": "Default 0. Use with limit to page; prefer refining filter."},
-    },
-}
-
-_GET_TRACK_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["id"],
-    "properties": {"id": {"type": "integer", "description": "Track id (from list_tracks items)."}},
-}
-
-_NO_ARGS = {"type": "object", "additionalProperties": False, "properties": {}}
-
-_DISTINCT_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["field"],
-    "properties": {
-        "field": {
-            "type": "string",
-            "enum": ["producer", "genre", "mood", "key"],
-            "description": "Which track field to enumerate distinct values for. Returns {value, count} pairs sorted by count desc."
-        },
-    },
-}
-
-_CREATE_LIST_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {
-        "name": {
-            "type": "string",
-            "description": "Display name for the new list (e.g. 'Trap Beats 2026').",
-            "minLength": 1,
-            "maxLength": 200,
-        },
-    },
-    "required": ["name"],
-}
-
-_CONFIRM_CREATE_LIST_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {
-        "token": {
-            "type": "string",
-            "description": "Token returned by create_list.",
-        },
-    },
-    "required": ["token"],
-}
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def ping() -> dict:
+    """Liveness check — returns pong and the BeatOS version."""
+    return await _ping_impl()
 
 
-@server.list_tools()
-async def list_tools_handler() -> list[Tool]:
-    return [
-        Tool(name="ping",
-             description="Liveness check — returns pong and the BeatOS version.",
-             inputSchema=_NO_ARGS),
-        Tool(name="list_tracks",
-             description="List tracks in the BeatOS library with rich filtering. Default sort: created_at desc. Default limit: 50 (max 500). Returns {items, total, returned, limit, offset, hint?}. Use list_distinct_values first to discover what values exist for producer/genre/mood/key.",
-             inputSchema=_LIST_TRACKS_SCHEMA),
-        Tool(name="get_track",
-             description="Fetch a single track by id, including its audio/cover assets and both description fields (description = user-authored, description_draft = AI-suggested awaiting user review).",
-             inputSchema=_GET_TRACK_SCHEMA),
-        Tool(name="list_lists",
-             description="List all user + system lists. Returns full list; no pagination.",
-             inputSchema=_NO_ARGS),
-        Tool(name="list_distinct_values",
-             description="Enumerate distinct values + counts for one of producer/genre/mood/key. Call this before filtering list_tracks so you use the user's actual spelling.",
-             inputSchema=_DISTINCT_SCHEMA),
-        Tool(name="create_list",
-             description="Request creation of a new user list. Returns a 2PC token; the actual list is created only after the human approves in BeatOS → Settings → AI Integration. Tell the user to open BeatOS to approve.",
-             inputSchema=_CREATE_LIST_SCHEMA),
-        Tool(name="confirm_create_list",
-             description="Check the status of a create_list token. Returns {status: 'awaiting_approval' | 'approved' | 'rejected' | 'expired'}. On 'approved' also returns {list_id, name}.",
-             inputSchema=_CONFIRM_CREATE_LIST_SCHEMA),
-    ]
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def list_tracks(
+    list_id: Annotated[int | None, Field(description="Filter to tracks in this list. Use list_lists to discover ids.")] = None,
+    producers: Annotated[list[str] | None, Field(description="Exact-match producer names. Use list_distinct_values('producer') to discover values.")] = None,
+    genres: Annotated[list[str] | None, Field(description="Exact-match genres.")] = None,
+    moods: Annotated[list[str] | None, Field(description="Exact-match moods.")] = None,
+    keys: Annotated[list[str] | None, Field(description="Exact-match key signatures.")] = None,
+    bpm_min: Annotated[float | None, Field(description="Inclusive lower bound on BPM.")] = None,
+    bpm_max: Annotated[float | None, Field(description="Inclusive upper bound on BPM.")] = None,
+    has_audio: Annotated[bool | None, Field(description="true = only tracks with audio attached.")] = None,
+    sort_by: Annotated[str | None, Field(description="One of: created_at, updated_at, bpm, name. Default: created_at.")] = None,
+    sort_dir: Annotated[str | None, Field(description="asc or desc. Default: desc.")] = None,
+    limit: Annotated[int | None, Field(description="Default 50, max 500.")] = None,
+    offset: Annotated[int | None, Field(description="Default 0.")] = None,
+) -> dict:
+    """List tracks in the BeatOS library with rich filtering. Default sort: created_at desc.
+    Default limit: 50 (max 500). Returns {items, total, returned, limit, offset, hint?}.
+    Use list_distinct_values first to discover what values exist for producer/genre/mood/key.
+    Use get_track for full single-track detail including assets and description fields."""
+    kwargs: dict[str, Any] = {}
+    for k, v in {
+        "list_id": list_id, "producers": producers, "genres": genres,
+        "moods": moods, "keys": keys, "bpm_min": bpm_min, "bpm_max": bpm_max,
+        "has_audio": has_audio, "sort_by": sort_by, "sort_dir": sort_dir,
+        "limit": limit, "offset": offset,
+    }.items():
+        if v is not None:
+            kwargs[k] = v
+    return await _list_tracks_impl(**kwargs)
 
 
-def _text(payload) -> list[TextContent]:
-    return [TextContent(type="text", text=json.dumps(payload, default=str))]
-
-
-@server.call_tool()
-async def call_tool_handler(name: str, arguments: dict) -> list[TextContent]:
-    log.info("tool_call", tool=name, args_keys=sorted(arguments.keys()))
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def get_track(
+    id: Annotated[int, Field(description="Track id (from list_tracks items).")],
+) -> dict:
+    """Fetch a single track by id, including its audio/cover assets and both
+    description fields (description = user-authored; description_draft = AI-suggested
+    awaiting user review). For listing without per-track detail, use list_tracks."""
     try:
-        if name == "ping":
-            return _text(await ping())
-        if name == "list_tracks":
-            return _text(await list_tracks(**arguments))
-        if name == "get_track":
-            track_id = arguments.get("id")
-            if not isinstance(track_id, int):
-                raise ValueError("id must be an integer")
-            try:
-                return _text(await get_track(track_id))
-            except TrackNotFound as e:
-                raise ValueError(str(e)) from e
-        if name == "list_lists":
-            return _text(await list_lists())
-        if name == "list_distinct_values":
-            field = arguments.get("field")
-            if not isinstance(field, str):
-                raise ValueError("field is required")
-            return _text(await list_distinct_values(field))
-        if name == "create_list":
-            list_name = arguments.get("name")
-            if not isinstance(list_name, str):
-                raise ValueError("name must be a string")
-            return _text(await create_list(name=list_name))
-        if name == "confirm_create_list":
-            tok = arguments.get("token")
-            if not isinstance(tok, str):
-                raise ValueError("token must be a string")
-            return _text(await confirm_create_list(token=tok))
-    except DBNotConfigured as e:
-        log.warning("db_not_configured", error=str(e))
+        return await _get_track_impl(id)
+    except TrackNotFound as e:
         raise ValueError(str(e)) from e
-    except ValueError:
-        raise
-    except Exception as e:  # last-resort
-        log.error("tool_exception", tool=name, error=repr(e))
-        raise
-    raise ValueError(f"Unknown tool: {name}")
+
+
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def list_lists() -> dict:
+    """List all user + system lists. Returns full list; no pagination."""
+    return await _list_lists_impl()
+
+
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def list_distinct_values(
+    field: Annotated[str, Field(description="One of: producer, genre, mood, key.")],
+) -> dict:
+    """Enumerate distinct values + counts for one of producer/genre/mood/key.
+    Call this before filtering list_tracks so you use the user's actual spelling."""
+    return await _list_distinct_impl(field)
+
+
+# --- Write tools ---
+
+@mcp.tool()
+async def create_list(
+    name: Annotated[str, Field(min_length=1, max_length=200, description="Display name for the new list.")],
+) -> dict:
+    """Request creation of a new user list. Returns a 2PC token; the actual list is
+    created only after the human approves in BeatOS -> Approvals. Poll with await_approval."""
+    return await _create_list_impl(name=name)
+
+
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def await_approval(
+    token: Annotated[str, Field(description="Token returned by any write tool.")],
+) -> dict:
+    """Poll the status of a 2PC token returned by any write tool.
+    Returns {status: 'awaiting_approval' | 'approved' | 'rejected' | 'expired', ...}.
+    On approved, additional fields are tool-specific (e.g. {list_id, name} for create_list)."""
+    return await _confirm_create_list_impl(token=token)
+
+
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def confirm_create_list(
+    token: Annotated[str, Field(description="Token returned by create_list.")],
+) -> dict:
+    """DEPRECATED: use await_approval. Will be removed in v0.0.24.
+    Check the status of a create_list token."""
+    return await _confirm_create_list_impl(token=token)
+
+
+# --- ASGI app for FastAPI mount ---
+app = mcp.streamable_http_app()
