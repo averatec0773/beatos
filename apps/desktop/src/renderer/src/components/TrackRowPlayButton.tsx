@@ -33,7 +33,7 @@ export function TrackRowPlayButton({
     const ids = visible.map((t) => t.id);
     const startIndex = ids.indexOf(trackId);
     if (startIndex < 0) return;
-    usePlayerStore.getState().playFromQueue({ trackIds: ids, startIndex, source: { kind: "all" } });
+    usePlayerStore.getState().playFromQueue({ trackIds: ids, startIndex, origin: { kind: "all" } });
   };
 
   // Overlay-style: shown by row hover (parent toggles opacity) or when this

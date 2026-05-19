@@ -3,7 +3,6 @@ import { Image as ImageIcon, MoreHorizontal, AlertTriangle, RefreshCw } from "lu
 
 import { useAssetSlot } from "@/hooks/useAssetSlot";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { OfflineBadge } from "./OfflineBadge";
 import { CoverImage } from "./CoverImage";
 
 const COVER_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
@@ -56,7 +55,6 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
       className="relative w-[200px] h-[200px] bg-bg-elevated border border-border-subtle rounded-md overflow-hidden group"
     >
       <CoverImage assetId={asset.id} size={200} />
-      <OfflineBadge missing={asset.missing} className="absolute top-2 left-2" />
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}

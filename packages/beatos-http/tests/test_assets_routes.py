@@ -156,12 +156,11 @@ def test_attach_with_replace_true_swaps(tmp_path):
     assert second["id"] != first_id  # old row was deleted, new one inserted
 
 
-def test_attach_out_of_source_succeeds_v00211(tmp_path):
-    """v0.0.21.1 removed the OutOfSource guard. A file outside any registered
-    Source now attaches successfully (200), not rejected with 422."""
+def test_attach_accepts_arbitrary_absolute_path(tmp_path):
+    """Attach succeeds for any absolute path, regardless of containing directory."""
     client = TestClient(create_app())
     track_id = _create_track(client)
-    outside_dir = tmp_path.parent / "out-of-source-dir"
+    outside_dir = tmp_path.parent / "outside-tmp"
     outside_dir.mkdir(exist_ok=True)
     rogue = outside_dir / "outside.wav"
     _make_wav(rogue)

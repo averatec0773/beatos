@@ -3,7 +3,6 @@ import { MoreHorizontal, AlertTriangle, RefreshCw } from "lucide-react";
 
 import { useAssetSlot } from "@/hooks/useAssetSlot";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { OfflineBadge } from "./OfflineBadge";
 import { formatBytes } from "@/lib/format-bytes";
 
 interface Props {
@@ -127,7 +126,6 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
     >
       <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">{label}</span>
       <span className="flex-1 text-sm text-text-primary truncate" title={asset.abs_path}>{filename}</span>
-      <OfflineBadge missing={asset.missing} />
       <span className="w-20 text-right text-xs font-mono text-text-secondary">{formatBytes(asset.size_bytes)}</span>
       <button
         type="button"

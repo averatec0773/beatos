@@ -10,7 +10,6 @@ import {
 
 import { useAssetStore } from "@/stores/assets";
 import { CoverImage } from "@/components/CoverImage";
-import { OfflineBadge } from "./OfflineBadge";
 import type { Asset } from "@/api/assets";
 
 interface Props {
@@ -135,7 +134,6 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
       <div className="flex items-center gap-2 text-text-tertiary text-[10px] uppercase tracking-[0.05em] font-semibold">
         {roleIcon(role)}
         <span>{label}</span>
-        <OfflineBadge missing={asset.missing} className="ml-1" />
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}

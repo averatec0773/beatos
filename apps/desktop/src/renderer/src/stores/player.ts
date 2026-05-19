@@ -6,10 +6,10 @@ import { audioEngine } from "@/lib/audio-engine";
 
 export type PlayerStatus = "idle" | "loading" | "playing" | "paused" | "error";
 export type RepeatMode = "off" | "one" | "all";
-export type QueueSourceKind = "all" | "list" | "search";
+export type QueueOriginKind = "all" | "list" | "search";
 
-export interface QueueSource {
-  kind: QueueSourceKind;
+export interface QueueOrigin {
+  kind: QueueOriginKind;
   id?: number | string;
 }
 
@@ -28,7 +28,7 @@ interface PlayerState {
   queueTrackIds: number[];
   queueIndex: number;
   queueShuffleOrder: number[] | null;
-  queueSource: QueueSource | null;
+  queueOrigin: QueueOrigin | null;
 
   togglePlay(): void;
   seek(seconds: number): void;
@@ -44,7 +44,7 @@ interface PlayerState {
   playFromQueue(opts: {
     trackIds: number[];
     startIndex: number;
-    source: QueueSource;
+    origin: QueueOrigin;
   }): Promise<void>;
   /**
    * Replace the queue's contents and re-anchor `queueIndex` to wherever
@@ -150,7 +150,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     queueTrackIds: [],
     queueIndex: 0,
     queueShuffleOrder: null,
-    queueSource: null,
+    queueOrigin: null,
 
     togglePlay() {
       const s = get();
@@ -237,11 +237,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
     },
 
-    async playFromQueue({ trackIds, startIndex, source }) {
+    async playFromQueue({ trackIds, startIndex, origin }) {
       set({
         queueTrackIds: trackIds,
         queueIndex: startIndex,
-        queueSource: source,
+        queueOrigin: origin,
         queueShuffleOrder: null,
         shuffle: false,
       });

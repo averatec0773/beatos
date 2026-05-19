@@ -69,7 +69,7 @@ _SELECT_COLS = (
 
 # Subquery rendered after _SELECT_COLS to populate Track.cover_asset_id.
 # Uses a distinct alias `ax` for the inner asset reference so it cannot
-# shadow an outer `asset a` join (e.g. source_id filter route).
+# shadow an outer `asset a` join.
 _COVER_SUBQUERY_TEMPLATE = (
     "(SELECT ax.id FROM asset ax "
     "WHERE ax.track_id = {prefix}id AND ax.role = 'cover' LIMIT 1) AS cover_asset_id"
