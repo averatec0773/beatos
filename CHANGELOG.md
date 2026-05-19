@@ -4,6 +4,18 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.20.2] - 2026-05-18 — MCP console script ship fix
+
+First real Claude Desktop end-to-end verification (the v0.0.20 layer-3 hand-off) caught a ship-blocker: the `beatos-mcp` command that README, CLAUDE.md, and Settings → AI Integration all reference was never registered. `uv run beatos-mcp` failed with `Failed to spawn: 'beatos-mcp' — No such file or directory`, so no MCP client could ever connect.
+
+### Fixed
+
+- **`packages/beatos-mcp/pyproject.toml`** — added `[project.scripts]` block registering `beatos-mcp = "beatos_mcp.__main__:main"`. `beatos_mcp/__main__.py` already had the `main()` function; it just wasn't exposed as a console script. After `uv sync`, `uv run --directory <repo> beatos-mcp` now spawns the stdio MCP server correctly. Verified in Claude Desktop with `list_sources` returning the live 4-source library.
+
+### Notes
+
+- README + AIIntegrationSection config snippet template was correct all along; the package metadata was the only thing missing.
+
 ## [0.0.20.1] - 2026-05-18 — resizer self-heal + missed desktop bump
 
 Patch release for one user-reported regression caught after the v0.0.20 tag.
