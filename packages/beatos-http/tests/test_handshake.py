@@ -46,3 +46,22 @@ def test_default_path_falls_back_to_runtime_dir(tmp_path, monkeypatch):
 
     assert resolved.name == "handshake.json"
     assert "BeatOS" in str(resolved) or "beatos" in str(resolved)
+
+
+def test_handshake_includes_pid(tmp_path):
+    path = tmp_path / "handshake.json"
+    write_handshake(port=54321, path=path)
+
+    data = json.loads(path.read_text())
+    assert data["port"] == 54321
+    assert data["pid"] == os.getpid()
+    assert "started_at" in data
+
+
+def test_read_handshake_returns_pid(tmp_path):
+    path = tmp_path / "handshake.json"
+    write_handshake(port=54321, path=path)
+
+    hs = read_handshake(path)
+    assert hs.port == 54321
+    assert hs.pid == os.getpid()
