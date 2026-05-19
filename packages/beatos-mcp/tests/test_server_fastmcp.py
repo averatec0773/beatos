@@ -18,8 +18,20 @@ async def test_registered_tool_names() -> None:
         "list_lists",
         "list_distinct_values",
         "create_list",
-        "confirm_create_list",  # deprecated alias, still registered
         "await_approval",
+        "trash_tracks",
+        "restore_tracks",
+        "purge_tracks",
+        "update_list",
+        "delete_list",
+        "add_tracks_to_list",
+        "remove_tracks_from_list",
+        "reorder_list",
+        "update_tracks",
+        "merge_metadata",
+        "create_tracks",
+        "attach_asset",
+        "draft_descriptions",
     }
     assert names == expected
 
@@ -37,3 +49,14 @@ async def test_streamable_http_app_exists() -> None:
     from beatos_mcp.server import app
     # Should be an ASGI callable
     assert callable(app)
+
+
+async def test_merge_metadata_exposes_from_alias() -> None:
+    """merge_metadata's Python param is `from_` (reserved word) but MCP clients
+    must see `from` via pydantic Field(alias='from'). Pin this so a FastMCP
+    upgrade can't silently break it."""
+    tools = await mcp.list_tools()
+    tool = next(t for t in tools if t.name == "merge_metadata")
+    props = tool.inputSchema.get("properties", {})
+    assert "from" in props, f"expected 'from' in inputSchema properties; got {list(props.keys())}"
+    assert "from_" not in props

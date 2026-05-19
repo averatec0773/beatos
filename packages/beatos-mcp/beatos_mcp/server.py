@@ -14,9 +14,30 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from beatos_mcp.db import DBNotConfigured
-from beatos_mcp.tools.confirm_create_list import confirm_create_list as _confirm_create_list_impl
+from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
+from beatos_mcp.tools.draft_descriptions import draft_descriptions as _draft_descriptions_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
+from beatos_mcp.tools.ingest import (
+    attach_asset as _attach_asset_impl,
+    create_tracks as _create_tracks_impl,
+)
+from beatos_mcp.tools.list_curation import (
+    add_tracks_to_list as _add_tracks_impl,
+    delete_list as _delete_list_impl,
+    remove_tracks_from_list as _remove_tracks_impl,
+    reorder_list as _reorder_list_impl,
+    update_list as _update_list_impl,
+)
 from beatos_mcp.tools.distinct import list_distinct_values as _list_distinct_impl
+from beatos_mcp.tools.lifecycle import (
+    purge_tracks as _purge_tracks_impl,
+    restore_tracks as _restore_tracks_impl,
+    trash_tracks as _trash_tracks_impl,
+)
+from beatos_mcp.tools.metadata import (
+    merge_metadata as _merge_metadata_impl,
+    update_tracks as _update_tracks_impl,
+)
 from beatos_mcp.tools.lists import list_lists as _list_lists_impl
 from beatos_mcp.tools.ping import ping as _ping_impl
 from beatos_mcp.tools.tracks import (
@@ -114,18 +135,192 @@ async def await_approval(
     token: Annotated[str, Field(description="Token returned by any write tool.")],
 ) -> dict:
     """Poll the status of a 2PC token returned by any write tool.
-    Returns {status: 'awaiting_approval' | 'approved' | 'rejected' | 'expired', ...}.
-    On approved, additional fields are tool-specific (e.g. {list_id, name} for create_list)."""
-    return await _confirm_create_list_impl(token=token)
+    Returns {token, tool_name, status, ...} where status is one of
+    'awaiting_approval' | 'approved' | 'rejected' | 'expired' | 'not_found'.
+    On 'approved', a `result` field carries the tool-specific outcome
+    (e.g. {list_id, name} for create_list, {created_ids: [...]} for create_tracks)."""
+    return await _await_approval_impl(token=token)
 
 
-@mcp.tool(annotations=_READ_ANNOTATIONS)
-async def confirm_create_list(
-    token: Annotated[str, Field(description="Token returned by create_list.")],
+@mcp.tool(
+    annotations=ToolAnnotations(
+        destructiveHint=False,  # soft delete; restore_tracks undoes it
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+async def trash_tracks(
+    ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to move to trash.")],
 ) -> dict:
-    """DEPRECATED: use await_approval. Will be removed in v0.0.24.
-    Check the status of a create_list token."""
-    return await _confirm_create_list_impl(token=token)
+    """Move tracks to trash (soft delete; reversible via restore_tracks).
+    Returns a 2PC token. Affected tracks' titles appear in the approval card preview."""
+    return await _trash_tracks_impl(ids=ids)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+async def restore_tracks(
+    ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to restore from trash.")],
+) -> dict:
+    """Restore previously-trashed tracks. Returns a 2PC token."""
+    return await _restore_tracks_impl(ids=ids)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        destructiveHint=True,  # permanent
+        idempotentHint=False,
+        openWorldHint=False,
+    ),
+)
+async def purge_tracks(
+    ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to PERMANENTLY DELETE.")],
+) -> dict:
+    """PERMANENTLY delete tracks (and cascade their asset rows). Source audio
+    files on disk are not touched. The approval card requires a checkbox
+    confirmation. Returns a 2PC token."""
+    return await _purge_tracks_impl(ids=ids)
+
+
+@mcp.tool()
+async def update_list(
+    list_id: Annotated[int, Field(description="Target user list id.")],
+    name: Annotated[str, Field(min_length=1, max_length=200, description="New name.")],
+) -> dict:
+    """Rename a user list (system lists are immutable). Returns a 2PC token."""
+    return await _update_list_impl(list_id=list_id, name=name)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=True, idempotentHint=False, openWorldHint=False))
+async def delete_list(
+    list_id: Annotated[int, Field(description="User list id to delete.")],
+) -> dict:
+    """PERMANENTLY delete a user list. Member tracks are unaffected. System
+    lists are immutable. Returns a 2PC token; checkbox-gated in the approval card."""
+    return await _delete_list_impl(list_id=list_id)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def add_tracks_to_list(
+    list_id: Annotated[int, Field(description="Target list id.")],
+    track_ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to append.")],
+) -> dict:
+    """Append tracks to the end of a list. Already-present tracks are skipped (idempotent)."""
+    return await _add_tracks_impl(list_id=list_id, track_ids=track_ids)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def remove_tracks_from_list(
+    list_id: Annotated[int, Field(description="Target list id.")],
+    track_ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to remove from the list.")],
+) -> dict:
+    """Remove tracks from a list. Not-in-list ids are skipped (idempotent)."""
+    return await _remove_tracks_impl(list_id=list_id, track_ids=track_ids)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=False))
+async def reorder_list(
+    list_id: Annotated[int, Field(description="Target list id.")],
+    track_ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Full membership in the desired order. Must match current list contents exactly.")],
+) -> dict:
+    """Reorder a list. track_ids must be the full current membership in the
+    desired order (set equality required). Token-create rejects mismatches."""
+    return await _reorder_list_impl(list_id=list_id, track_ids=track_ids)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def update_tracks(
+    ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Target track ids.")],
+    patch: Annotated[
+        dict,
+        Field(
+            description=(
+                "Partial-update spec. Scalar fields: title, bpm, key, description (set or null-clear). "
+                "Multi-value fields producer/genre/mood accept either a list (replace) or "
+                "{add?: [...], remove?: [...]} (per-row delta). At least one field required."
+            ),
+        ),
+    ],
+) -> dict:
+    """Bulk-update tracks. Returns a 2PC token."""
+    return await _update_tracks_impl(ids=ids, patch=patch)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def merge_metadata(
+    field: Annotated[Literal["producer", "genre", "mood"], Field(description="Multi-value field to collapse.")],
+    from_: Annotated[
+        list[str],
+        Field(min_length=1, max_length=20, alias="from", description="Aliases to collapse into `to`."),
+    ],
+    to: Annotated[str, Field(min_length=1, max_length=200, description="Canonical replacement value.")],
+) -> dict:
+    """Library-wide rename. Any track whose `field` array contains any of `from`
+    has those entries replaced with `to` (deduped). Returns a 2PC token."""
+    return await _merge_metadata_impl(field=field, from_=from_, to=to)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=False))
+async def create_tracks(
+    items: Annotated[
+        list[dict],
+        Field(
+            min_length=1,
+            max_length=100,
+            description=(
+                "Each item: {title (required, 1-200 chars), bpm?, key?, "
+                "producer?: list[str], genre?: list[str], mood?: list[str]}."
+            ),
+        ),
+    ],
+) -> dict:
+    """Batch-create empty track rows (no assets attached). Returns a 2PC token."""
+    return await _create_tracks_impl(items=items)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=True))
+async def attach_asset(
+    track_id: Annotated[int, Field(description="Existing track id.")],
+    role: Annotated[Literal["audio", "cover"], Field(description="Asset role; one per track per role.")],
+    path: Annotated[
+        str,
+        Field(
+            description=(
+                "Absolute filesystem path to the asset file. "
+                "Audio: .mp3/.wav/.flac/.aif/.aiff. "
+                "Cover: .jpg/.jpeg/.png/.webp. "
+                "File must exist; replaces any existing asset of the same role."
+            ),
+        ),
+    ],
+) -> dict:
+    """Attach an asset file to a track. Single-row tool. Returns a 2PC token.
+    The file is referenced by absolute path (BeatOS does not copy it)."""
+    return await _attach_asset_impl(track_id=track_id, role=role, path=path)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def draft_descriptions(
+    items: Annotated[
+        list[dict],
+        Field(
+            min_length=1,
+            max_length=500,
+            description=(
+                "Each item: {track_id (int), text (str ≤5000 chars)}. "
+                "Writes track.description_draft only; never overwrites the live `description`."
+            ),
+        ),
+    ],
+) -> dict:
+    """Batch-write draft descriptions. The user promotes drafts → description in
+    the BeatOS UI; AI cannot write the live field. Returns a 2PC token."""
+    return await _draft_descriptions_impl(items=items)
 
 
 # --- ASGI app for FastAPI mount ---

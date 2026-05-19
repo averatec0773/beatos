@@ -79,31 +79,9 @@ MCP transport migration: stdio→HTTP bridge via mcp-proxy; FastMCP + annotation
 
 ---
 
-### v0.0.24 — MCP write surface expansion
+### v0.0.24 — SHIPPED 2026-05-19
 
-Closes the AI-write gap: 12 new write tools + batch transaction framework + `/approvals` card enrichment. The MCP write surface today is one tool (`create_list`); after v0.0.24 the AI can do meaningful library work (bulk metadata cleanup, list curation, lifecycle) under the existing 2PC pattern.
-
-**Batch framework** (foundation):
-- Single 2PC token covers N rows. `_APPROVE_HANDLERS` runs the whole batch in one transaction; partial failure rolls back the lot.
-- Token TTL raised to 10 min (bulk decisions deserve time).
-- `/approvals` card shows headline + count + 5-sample preview + expand-all + warnings.
-- High-risk variant styling (red, twice-confirm checkbox) for `purge_tracks` / `delete_list`.
-
-**New tools** (grouped by use case):
-- *Ingest*: `create_tracks(items[])` · `attach_asset(track_id, role, path)`
-- *Metadata*: `update_tracks(ids[], patch)` · `merge_metadata(field, from[], to)` — covers all rename/merge variants for producer/genre/mood
-- *List curation*: `update_list` · `delete_list` · `add_tracks_to_list` · `remove_tracks_from_list` · `reorder_list`
-- *Lifecycle*: `trash_tracks` · `restore_tracks` · `purge_tracks` (high-risk)
-- *AI content* (passthrough for v0.0.25): `draft_descriptions(items[])`
-
-**Cleanup**:
-- Delete `confirm_create_list` deprecated alias (v0.0.23 ships it for 1 version).
-- Remove the now-vestigial `BEGIN IMMEDIATE` calls in `routes/tokens.py` (single-process owns SQLite as of v0.0.23).
-- Re-evaluate the `sm._has_started` private-attr guard in `beatos-http/app.py`.
-
-**Not exposed via MCP** (by design):
-- `promote_draft → description` — stays a UI-only action per CLAUDE.md description model.
-- `delete_asset` — assets are bound to their track; lifecycle goes through trash/purge.
+MCP write surface expansion: 12 new tools (lifecycle / curation / metadata / ingest / AI), batch token framework, /approvals preview cards with high-risk variant. See [CHANGELOG.md](CHANGELOG.md#0024---2026-05-19--mcp-write-surface-expansion).
 
 ---
 

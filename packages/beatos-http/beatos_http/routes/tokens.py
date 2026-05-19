@@ -12,6 +12,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from beatos_core.db import resolve_db_path
 from beatos_core.two_phase import (
+    RowVanishedError,
     TokenError,
     consume_token_with_result,
     reject_token as _reject_token,
@@ -80,6 +81,10 @@ async def token_stream():
 @router.post("/{token}/approve")
 async def approve_token(token: str) -> dict:
     async with aiosqlite.connect(resolve_db_path(), timeout=5) as conn:
+        # SQLite ships with FK enforcement OFF per-connection. Enable it here
+        # so every ON DELETE CASCADE (asset→track, track_list→track,
+        # analysis_cache→asset) actually fires when handlers DELETE FROM track.
+        await conn.execute("PRAGMA foreign_keys=ON")
         async with conn.execute(
             "SELECT tool_name, status FROM tokens WHERE token=?", (token,)
         ) as cur:
@@ -97,11 +102,13 @@ async def approve_token(token: str) -> dict:
                 status_code=400, detail=f"Unknown tool for approve: {tool_name}"
             )
 
-        await conn.execute("BEGIN IMMEDIATE")
         try:
             result = await handler(conn, token)
             await conn.commit()
         except TokenError as e:
+            await conn.rollback()
+            raise HTTPException(status_code=409, detail=str(e))
+        except RowVanishedError as e:
             await conn.rollback()
             raise HTTPException(status_code=409, detail=str(e))
         except Exception:
@@ -178,3 +185,7 @@ async def list_tokens(
             }
             for r in rows
         ]
+
+
+# Side-effect import: registers @register_approve_handler for every batch tool.
+from beatos_http import handlers  # noqa: E402, F401

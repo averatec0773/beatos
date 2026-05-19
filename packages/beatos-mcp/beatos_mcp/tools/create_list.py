@@ -4,7 +4,7 @@ Phase 1 of two-phase commit. The actual INSERT into the list table happens
 when the user clicks Approve in BeatOS Settings → AI Integration → Pending
 confirmations (routed through POST /api/tokens/{t}/approve in beatos-http).
 
-AI can call confirm_create_list(token) to read the eventual outcome."""
+AI can call await_approval(token) to read the eventual outcome."""
 from __future__ import annotations
 
 from beatos_core.two_phase import create_token
@@ -40,6 +40,6 @@ async def create_list(name: str) -> dict:
         "message": (
             "Awaiting human approval. Open BeatOS → Settings → AI Integration "
             "→ Pending confirmations, and click Approve. You can call "
-            "confirm_create_list(token) to check status."
+            "await_approval(token) to check status."
         ),
     }

@@ -4,6 +4,43 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.24] — 2026-05-19 — MCP write surface expansion
+
+### Foundation
+- Bumped default 2PC token TTL from 300s to 600s (bulk decisions deserve time).
+- Removed the `BEGIN IMMEDIATE` workaround in `routes/tokens.py:approve_token`; obsolete since v0.0.23 made the sidecar the sole SQLite writer.
+- Retired the deprecated `confirm_create_list` MCP tool. Use `await_approval` for status polling on any token (tool-agnostic).
+- `await_approval` impl moved to its own file; envelope is now `{token, tool_name, status, result?}`.
+- Added `RowVanishedError` for batch handlers to signal mid-approve row disappearance; routes/tokens.py maps it to HTTP 409 + rollback.
+- Re-evaluated the `sm._has_started` private-attr guard in `beatos-http/app.py`: mcp 1.27.1 exposes no public `running`/`is_started` API, so `_has_started` guard is kept and `mcp` pin tightened to `>=1.27,<1.28` in `beatos-mcp/pyproject.toml`.
+
+### Lifecycle write tools
+- `trash_tracks(ids)` — soft delete, reversible via restore.
+- `restore_tracks(ids)` — clears deleted_at.
+- `purge_tracks(ids)` — PERMANENT physical delete (high-risk; checkbox-gated in approval card). ON DELETE CASCADE removes asset/track_list rows (requires PRAGMA foreign_keys=ON per connection, now enabled on approve_token's write connection). Source audio files on disk untouched.
+
+### List-curation write tools
+- `update_list(list_id, name)` — rename a user list (system lists immutable).
+- `delete_list(list_id)` — PERMANENTLY delete a user list (checkbox-gated).
+- `add_tracks_to_list(list_id, track_ids)` — append to tail; already-present ids skipped.
+- `remove_tracks_from_list(list_id, track_ids)` — idempotent; missing ids skipped.
+- `reorder_list(list_id, track_ids)` — full-membership reorder; mismatched membership rejected at token-create.
+
+### Foundation (UI)
+- `/approvals` cards now render a preview-aware layout: `payload.preview.headline` + sample + warnings + expand-all + high-risk variant. Destructive tokens (`purge_tracks`, `delete_list`) show a red card with an "I understand this is permanent" checkbox gate on Approve.
+- Legacy `create_list` token rendering remains for tokens without a `preview` block (carries until v0.0.24 batch tools all ship).
+
+### Metadata write tools
+- `update_tracks(ids, patch)` — per-id partial update. Scalar fields set; multi-value (producer/genre/mood) accept list-replace OR {add, remove} delta. Tool-facing `key` maps to DB `key_signature`.
+- `merge_metadata(field, from, to)` — library-wide alias collapse for producer/genre/mood. JSON1 scan; dedupes replacement values.
+
+### Ingest write tools
+- `create_tracks(items)` — batch create up to 100 empty track rows. Multi-value fields accept list[str].
+- `attach_asset(track_id, role, path)` — attach an audio or cover file by absolute path. Extension validated against role. Existing role-slot is replaced in place (UNIQUE(track_id, role)). Handler re-checks file existence at approve time and writes `size_bytes`.
+
+### AI-content write tool
+- `draft_descriptions(items)` — batch-write `track.description_draft`. Never touches the live `description` field (UI-only promotion). v0.0.25 swaps the passthrough impl for real RAG generation.
+
 ## [0.0.23] - 2026-05-19 — MCP transport migration
 
 ### Changed
