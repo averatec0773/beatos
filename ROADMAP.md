@@ -35,12 +35,27 @@ smoke.mjs split. See [CHANGELOG.md](CHANGELOG.md#0019---2026-05-18--smokemjs-spl
 
 MCP read-only framework. See [CHANGELOG.md](CHANGELOG.md#0020---2026-05-18--stable-mcp-framework).
 
+### Post-v0.0.20 patches (unreleased on `main`)
+
+Fixes landed after the `v0.0.20` tag was cut — decide at the start of the next session whether to cut `v0.0.20.1` or fold into v0.0.21.
+
+- `3d109a5` — fix: column resizer self-heals on lost pointerup. Title column was auto-expanding on hover (no click) when `pointerup` never fired; resizer now bails when `e.buttons === 0` and `endDrag` is wired to `pointerup` + `pointercancel` + `lostpointercapture`.
+
+### Next-session pickup notes
+
+1. **Resizer fix release decision**: tag `v0.0.20.1` (lowest-friction; user reported the bug, so a patch is honest) or fold into v0.0.21 commit history. Recommended: `v0.0.20.1`.
+2. **User-pending workflow refactor in working tree** (untouched by v0.0.20 agent runs): `D .claude/hooks/ship-changelog-gate.sh` + `M .claude/skills/harness/SKILL.md`. This is the "ship gate → pre-commit doc sync" transition. Commit separately, on its own, before starting v0.0.21 work.
+3. **Minor cleanup carry-over**: `_MULTI_VALUE` constant in `packages/beatos-mcp/beatos_mcp/tools/tracks.py` is dead (T9 code review flag) — one-line removal, fold into next commit that touches the file.
+4. **Verify MCP end-to-end in Claude Desktop** before starting write-tool work — confirm the read surface actually works in a real client (layer-3 validation from the v0.0.20 hand-off).
+
 ### v0.0.21 — MCP two-phase commit (first write tool)
 
 The 2PC token skeleton (table + `create/verify/consume` helpers) landed in v0.0.20. This version activates it with the first real write tool.
 
 - First write tool: `create_list(name) → confirm_token` / `confirm_create_list(token)`.
 - Tests cover: token expiry, double-confirm, wrong-token, concurrent confirm.
+- **Pre-req before starting**: the post-v0.0.20 patches above are resolved (tagged or folded), and `getRepoRoot` IPC is added so Settings → AI Integration shows the real repo path instead of `<your beatos repo path>` placeholder (deferred from v0.0.20 T14).
+- **Renderer side**: Surface pending tokens in Settings → AI Integration ("Pending confirmations" list with Approve / Reject per row). First place this UI lives.
 
 ### v0.0.22 — `draft_description` placeholder
 
