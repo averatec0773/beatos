@@ -8,11 +8,13 @@ import { useTrashStore } from "./trash";
 
 interface TrackState {
   list: Track[];
+  total: number | null;
   current: Track | null;
   loading: boolean;
   selectedIds: Set<number>;
   anchorId: number | null;
   refresh(opts?: { list_id?: number }): Promise<void>;
+  refreshTotal(): Promise<void>;
   select(id: number | null): void;
   selectOne(id: number, mode: "replace" | "toggle" | "range"): void;
   clearSelection(): void;
@@ -23,10 +25,19 @@ interface TrackState {
 
 export const useTrackStore = create<TrackState>((set, get) => ({
   list: [],
+  total: null,
   current: null,
   loading: false,
   selectedIds: new Set(),
   anchorId: null,
+  async refreshTotal() {
+    try {
+      const total = await api.count();
+      set({ total });
+    } catch (e) {
+      console.warn("[tracks] refreshTotal failed", e);
+    }
+  },
   async refresh(opts) {
     set({ loading: true });
     try {
@@ -101,6 +112,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
   async create(title) {
     const t = await api.create(title);
     set({ list: [...get().list, t] });
+    void get().refreshTotal();
     return t;
   },
   async update(id, updates) {
@@ -118,6 +130,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
       current: get().current?.id === id ? null : get().current,
     });
     void useTrashStore.getState().refresh();
+    void get().refreshTotal();
   },
 }));
 

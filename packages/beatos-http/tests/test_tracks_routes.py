@@ -321,6 +321,32 @@ def test_delete_purge_removes_row(tmp_path):
     assert get_res.status_code == 404
 
 
+def test_get_track_count_excludes_trashed(tmp_path):
+    """GET /api/tracks/count returns total count of non-trashed tracks."""
+    client = TestClient(create_app())
+
+    # Empty start
+    res = client.get("/api/tracks/count")
+    assert res.status_code == 200
+    assert res.json() == {"total": 0}
+
+    a_id = client.post("/api/tracks", json={"title": "a"}).json()["id"]
+    client.post("/api/tracks", json={"title": "b"})
+    client.post("/api/tracks", json={"title": "c"})
+
+    res = client.get("/api/tracks/count")
+    assert res.status_code == 200
+    assert res.json() == {"total": 3}
+
+    # Trash one
+    del_res = client.delete(f"/api/tracks/{a_id}")
+    assert del_res.status_code == 204
+
+    res = client.get("/api/tracks/count")
+    assert res.status_code == 200
+    assert res.json() == {"total": 2}
+
+
 def test_get_trash_returns_only_trashed(tmp_path):
     """GET /api/tracks/trash returns only trashed tracks."""
     client = TestClient(create_app())

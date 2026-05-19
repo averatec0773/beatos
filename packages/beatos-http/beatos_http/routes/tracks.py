@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Query, Response
 from beatos_core.models import Track, TrackCreate, TrackUpdate
 from beatos_core.lists.membership import tracks_in_list
 from beatos_core.tracks.service import (
+    count_tracks,
     create_track,
     delete_track,
     get_track,
@@ -88,6 +89,12 @@ async def distinct_values(field: str) -> list[str]:
 @router.get("/trash", response_model=list[Track])
 async def list_trashed() -> list[Track]:
     return await list_trash()
+
+
+@router.get("/count")
+async def get_track_count() -> dict[str, int]:
+    """Total count of non-trashed tracks. Used by the sidebar All Beats badge."""
+    return {"total": await count_tracks()}
 
 
 @router.get("/{track_id}", response_model=Track)

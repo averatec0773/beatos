@@ -7,6 +7,7 @@ import pytest
 from beatos_core.db import run_migrations
 from beatos_core.db import resolve_db_path
 from beatos_core.tracks.service import (
+    count_tracks,
     create_track,
     delete_track,
     get_track,
@@ -173,6 +174,17 @@ async def test_list_tracks_has_audio_true_when_untagged_wav_attached(attach_audi
     rows = await list_tracks()
     [row] = [r for r in rows if r.id == t.id]
     assert row.has_audio is True
+
+
+@pytest.mark.asyncio
+async def test_count_tracks_excludes_trashed():
+    assert await count_tracks() == 0
+    t1 = await create_track("a")
+    await create_track("b")
+    await create_track("c")
+    assert await count_tracks() == 3
+    await delete_track(t1.id)
+    assert await count_tracks() == 2
 
 
 @pytest.mark.asyncio

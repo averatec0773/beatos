@@ -22,6 +22,7 @@ beforeEach(() => {
       { id: 2 } as any,
       { id: 3 } as any,
     ],
+    total: 3,
   });
 });
 
@@ -41,6 +42,20 @@ it("clicking All Beats navigates to /", () => {
   );
   // Click should not throw; navigation is exercised by react-router-dom
   fireEvent.click(screen.getByText("All Beats"));
+});
+
+it("AllBeatsSection renders no count badge when total is null", () => {
+  useTrackStore.setState({ list: [], total: null });
+  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
+  const allBeatsButton = screen.getByText("All Beats").closest("button")!;
+  expect(allBeatsButton.textContent).toBe("All Beats");
+});
+
+it("AllBeatsSection renders no count badge when total is 0", () => {
+  useTrackStore.setState({ list: [], total: 0 });
+  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
+  const allBeatsButton = screen.getByText("All Beats").closest("button")!;
+  expect(allBeatsButton.textContent).toBe("All Beats");
 });
 
 it("renders sections in the v0.0.22 order", () => {

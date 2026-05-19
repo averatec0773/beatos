@@ -264,6 +264,17 @@ async def list_distinct_values(field: str) -> list[str]:
     return [r[0] for r in rows]
 
 
+async def count_tracks() -> int:
+    """Return total count of non-trashed tracks."""
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) FROM track WHERE deleted_at IS NULL"
+        ) as cur:
+            row = await cur.fetchone()
+            return int(row[0]) if row else 0
+
+
 async def get_track(track_id: int) -> Optional[Track]:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:

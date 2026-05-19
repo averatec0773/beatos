@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { matchPath, useLocation } from "react-router-dom";
 
 import { useListStore } from "@/stores/lists";
+import { useTrackStore } from "@/stores/tracks";
 import { useTrashStore } from "@/stores/trash";
 import {
   SIDEBAR_MAX_WIDTH,
@@ -59,6 +60,7 @@ function SidebarResizer(): React.JSX.Element {
 export function SidebarPanel(): React.JSX.Element {
   const refreshLists = useListStore((s) => s.refresh);
   const refreshTrash = useTrashStore((s) => s.refresh);
+  const refreshTotal = useTrackStore((s) => s.refreshTotal);
 
   const location = useLocation();
   const listRouteMatch = matchPath("/lists/:id", location.pathname);
@@ -67,7 +69,8 @@ export function SidebarPanel(): React.JSX.Element {
   useEffect(() => {
     refreshLists();
     void refreshTrash();
-  }, [refreshLists, refreshTrash]);
+    void refreshTotal();
+  }, [refreshLists, refreshTrash, refreshTotal]);
 
   const sidebarWidth = useSidebarPanelStore((s) => s.width);
 

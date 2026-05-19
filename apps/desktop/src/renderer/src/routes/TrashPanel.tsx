@@ -34,6 +34,7 @@ export function TrashPanel(): React.JSX.Element {
     await tracks.restore(id);
     await refresh();
     void useTrackStore.getState().refresh();
+    void useTrackStore.getState().refreshTotal();
   }
 
   async function onPurge(id: number, title: string): Promise<void> {

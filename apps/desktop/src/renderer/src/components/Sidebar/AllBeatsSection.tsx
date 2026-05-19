@@ -7,7 +7,7 @@ import { useTrackStore } from "@/stores/tracks";
 export function AllBeatsSection(): React.JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
-  const count = useTrackStore((s) => s.list.length);
+  const count = useTrackStore((s) => s.total);
   const active = location.pathname === "/";
 
   return (
@@ -24,7 +24,7 @@ export function AllBeatsSection(): React.JSX.Element {
     >
       <Music size={14} />
       <span className="flex-1">All Beats</span>
-      {count > 0 && (
+      {count != null && count > 0 && (
         <span className="text-[10px] text-text-tertiary">{count}</span>
       )}
     </button>
