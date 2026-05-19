@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 import aiosqlite
 import pytest
@@ -9,6 +10,7 @@ import pytest
 from beatos_core.two_phase import (
     TokenError,
     consume_token,
+    consume_token_with_result,
     create_token,
     verify_token,
 )
@@ -91,3 +93,27 @@ async def test_verify_token_does_not_commit_inside_outer_transaction(fresh_db):
         ) as cur:
             row = await cur.fetchone()
         assert row is None, "verify_token must not commit on lazy-expire"
+
+
+@pytest.mark.asyncio
+async def test_consume_token_with_result_stores_result_json(fresh_db):
+    async with aiosqlite.connect(fresh_db) as conn:
+        token = await create_token(conn, "create_list", {"name": "Trap"})
+        await consume_token_with_result(conn, token, {"list_id": 7})
+
+        async with conn.execute(
+            "SELECT status, result FROM tokens WHERE token=?", (token,)
+        ) as cur:
+            row = await cur.fetchone()
+        status, result_json = row
+        assert status == "consumed"
+        assert json.loads(result_json) == {"list_id": 7}
+
+
+@pytest.mark.asyncio
+async def test_consume_token_with_result_raises_when_already_consumed(fresh_db):
+    async with aiosqlite.connect(fresh_db) as conn:
+        token = await create_token(conn, "create_list", {"name": "Trap"})
+        await consume_token_with_result(conn, token, {"list_id": 7})
+        with pytest.raises(TokenError, match="not in pending state"):
+            await consume_token_with_result(conn, token, {"list_id": 999})

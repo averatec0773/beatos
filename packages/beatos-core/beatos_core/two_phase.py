@@ -91,3 +91,21 @@ async def consume_token(conn: aiosqlite.Connection, token: str) -> None:
     )
     if cur.rowcount != 1:
         raise TokenError(f"token not in pending state: {token}")
+
+
+async def consume_token_with_result(
+    conn: aiosqlite.Connection,
+    token: str,
+    result: dict,
+) -> None:
+    """Like consume_token, but also stores the write outcome (e.g. {"list_id": 7})
+    in the result column. Caller MUST be inside the same transaction as the
+    actual write so the two commit atomically."""
+    now = time.time()
+    cur = await conn.execute(
+        "UPDATE tokens SET status='consumed', consumed_at=?, result=? "
+        "WHERE token=? AND status='pending'",
+        (now, json.dumps(result), token),
+    )
+    if cur.rowcount != 1:
+        raise TokenError(f"token not in pending state: {token}")
