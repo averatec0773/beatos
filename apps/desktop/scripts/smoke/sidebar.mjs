@@ -1,5 +1,6 @@
-// Sidebar assertions (v0.0.14): drop-create API path + source reorder API.
-import { mkdirSync, writeFileSync } from "node:fs";
+// Sidebar assertions (v0.0.14): drop-create API path.
+// v0.0.22: source reorder removed; added sidebar-order assertion.
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Drop-create via API path. Playwright can't synthesize OS-level file drops in
@@ -24,37 +25,58 @@ export async function assertDropCreateApiPath(ctx) {
   }
 }
 
-// Source reorder API: POST /api/sources/reorder reverses the existing order.
-export async function assertSourceReorderApi(ctx) {
-  const { userData, postJson, baseUrl, failures } = ctx;
+// v0.0.22: assert the new sidebar order — All Beats / Trash / Lists / Approvals
+// (footer is non-button so omitted). Replaces the v0.0.14 source reorder API
+// assertion which targeted the now-removed /api/sources/reorder route.
+//
+// "All Beats", "Trash", "Approvals" each render as a single sidebar button whose
+// text starts with that label (count suffix appended, e.g. "All Beats5"). "Lists"
+// is a section header (plain text node, NOT a button), so we read the sidebar's
+// full topY-ordered text nodes instead of just buttons to anchor its position.
+export async function assertSidebarOrder(ctx) {
+  const { window, failures } = ctx;
   try {
-    const srcBDir = join(userData, "src-b");
-    mkdirSync(srcBDir, { recursive: true });
-    await postJson("/api/sources", { root_path: srcBDir });
-    const existing = await (await fetch(`${baseUrl}/api/sources`)).json();
-    if (!Array.isArray(existing) || existing.length < 2) {
-      console.log(`smoke: sidebar source reorder API SKIP (need 2+ sources, got ${existing?.length})`);
-    } else {
-      const reverseIds = existing.map((s) => s.id).reverse();
-      const r = await fetch(`${baseUrl}/api/sources/reorder`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: reverseIds }),
-      });
-      if (!r.ok) {
-        const text = await r.text().catch(() => "");
-        failures.push(`sidebar reorder: POST /api/sources/reorder returned ${r.status}: ${text.slice(0, 200)}`);
-      } else {
-        const after = await (await fetch(`${baseUrl}/api/sources`)).json();
-        const newOrder = after.map((s) => s.id);
-        if (JSON.stringify(newOrder) === JSON.stringify(reverseIds)) {
-          console.log("smoke: sidebar source reorder API PASS");
-        } else {
-          failures.push(`sidebar reorder: expected ${JSON.stringify(reverseIds)}, got ${JSON.stringify(newOrder)}`);
+    const positions = await window.evaluate(() => {
+      const sidebar = document.querySelector("aside");
+      if (!sidebar) return null;
+      // Walk all text-bearing descendants; for each "needle", record the top
+      // of the first element whose textContent contains it.
+      const needles = ["All Beats", "Trash", "Lists", "Approvals"];
+      const out = {};
+      const all = Array.from(sidebar.querySelectorAll("*"));
+      for (const needle of needles) {
+        for (const el of all) {
+          const txt = (el.textContent ?? "").trim();
+          // Only count leaf-ish nodes — avoid the <aside> root matching everything.
+          if (!txt || el.children.length > 4) continue;
+          if (txt.includes(needle)) {
+            const rect = el.getBoundingClientRect();
+            if (out[needle] === undefined) out[needle] = rect.top;
+            break;
+          }
         }
       }
+      return out;
+    });
+    if (!positions) {
+      failures.push("sidebar order: <aside> not found");
+      return;
     }
+    const required = ["All Beats", "Trash", "Lists", "Approvals"];
+    const missing = required.filter((n) => positions[n] === undefined);
+    if (missing.length > 0) {
+      failures.push(`sidebar order: missing labels ${JSON.stringify(missing)}; positions=${JSON.stringify(positions)}`);
+      return;
+    }
+    const tops = required.map((n) => positions[n]);
+    for (let i = 1; i < tops.length; i++) {
+      if (tops[i] <= tops[i - 1]) {
+        failures.push(`sidebar order: out of order — ${required[i - 1]}=${tops[i - 1]} not above ${required[i]}=${tops[i]}`);
+        return;
+      }
+    }
+    console.log("smoke: sidebar order (All Beats → Trash → Lists → Approvals) PASS");
   } catch (e) {
-    failures.push(`sidebar reorder assertion error: ${e.message}`);
+    failures.push(`sidebar order assertion error: ${e.message}`);
   }
 }

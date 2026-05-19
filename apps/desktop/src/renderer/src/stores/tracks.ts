@@ -2,18 +2,19 @@ import { create } from "zustand";
 
 import { Track, TrackUpdate, tracks as api } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
-import { useSourceStore } from "./sources";
 import { useAssetStore } from "./assets";
 import { useTrackQueryStore } from "./track-query";
 import { useTrashStore } from "./trash";
 
 interface TrackState {
   list: Track[];
+  total: number | null;
   current: Track | null;
   loading: boolean;
   selectedIds: Set<number>;
   anchorId: number | null;
   refresh(opts?: { list_id?: number }): Promise<void>;
+  refreshTotal(): Promise<void>;
   select(id: number | null): void;
   selectOne(id: number, mode: "replace" | "toggle" | "range"): void;
   clearSelection(): void;
@@ -24,20 +25,27 @@ interface TrackState {
 
 export const useTrackStore = create<TrackState>((set, get) => ({
   list: [],
+  total: null,
   current: null,
   loading: false,
   selectedIds: new Set(),
   anchorId: null,
+  async refreshTotal() {
+    try {
+      const total = await api.count();
+      set({ total });
+    } catch (e) {
+      console.warn("[tracks] refreshTotal failed", e);
+    }
+  },
   async refresh(opts) {
     set({ loading: true });
     try {
       const queryState = useTrackQueryStore.getState();
       const { filters } = queryState;
       const inList = opts?.list_id != null;
-      const sourceFilter = useSourceStore.getState().activeFilter;
       const list = await api.list({
         list_id: opts?.list_id,
-        source_id: inList ? undefined : (sourceFilter ?? undefined),
         // Only forward sort when not in a list (lists use position order)
         sort_by: inList ? undefined : queryState.sortBy,
         sort_dir: inList ? undefined : queryState.sortDir,
@@ -104,6 +112,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
   async create(title) {
     const t = await api.create(title);
     set({ list: [...get().list, t] });
+    void get().refreshTotal();
     return t;
   },
   async update(id, updates) {
@@ -121,14 +130,9 @@ export const useTrackStore = create<TrackState>((set, get) => ({
       current: get().current?.id === id ? null : get().current,
     });
     void useTrashStore.getState().refresh();
+    void get().refreshTotal();
   },
 }));
-
-useSourceStore.subscribe((state, prev) => {
-  if (state.activeFilter !== prev.activeFilter) {
-    useTrackStore.getState().refresh();
-  }
-});
 
 useTrackQueryStore.subscribe(() => {
   useTrackStore.getState().refresh();

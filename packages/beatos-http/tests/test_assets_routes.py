@@ -6,8 +6,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from beatos_core.db import run_migrations
-from beatos_core.sources.models import SourceCreate
-from beatos_core.sources.service import create_source
 from beatos_http.app import create_app
 
 
@@ -21,14 +19,10 @@ def _make_wav(path: pathlib.Path, duration_seconds: float = 2.0) -> None:
 
 @pytest.fixture(autouse=True)
 async def _fresh_db(tmp_path, monkeypatch):
-    """Each test gets its own isolated global DB with migrations applied.
-    Registers tmp_path as a Source so OfflineBadge derivations still see one.
-    The OutOfSource guard itself was removed in v0.0.21.1.
-    """
+    """Each test gets its own isolated global DB with migrations applied."""
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
     await run_migrations(db_path)
-    await create_source(SourceCreate(root_path=str(tmp_path)))
     yield
 
 
@@ -162,12 +156,11 @@ def test_attach_with_replace_true_swaps(tmp_path):
     assert second["id"] != first_id  # old row was deleted, new one inserted
 
 
-def test_attach_out_of_source_succeeds_v00211(tmp_path):
-    """v0.0.21.1 removed the OutOfSource guard. A file outside any registered
-    Source now attaches successfully (200), not rejected with 422."""
+def test_attach_accepts_arbitrary_absolute_path(tmp_path):
+    """Attach succeeds for any absolute path, regardless of containing directory."""
     client = TestClient(create_app())
     track_id = _create_track(client)
-    outside_dir = tmp_path.parent / "out-of-source-dir"
+    outside_dir = tmp_path.parent / "outside-tmp"
     outside_dir.mkdir(exist_ok=True)
     rogue = outside_dir / "outside.wav"
     _make_wav(rogue)

@@ -2,16 +2,12 @@
 
 Lifespan wiring (v0.0.4):
 - Run DB migrations on startup.
-- Start a WatcherRegistry observer for every currently-online Source.
-- Start a SourceStatusMonitor that flips watchers on/off as Sources go online/offline.
-- On shutdown: stop the monitor, then stop_all() observers.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Optional
 
 import aiosqlite
@@ -21,11 +17,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from beatos_core.db import resolve_db_path, run_migrations
-from beatos_core.sources.monitor import SourceStatusMonitor
-from beatos_core.sources.service import get_source, list_sources
 from beatos_core.two_phase import cleanup_terminal_tokens
-from beatos_core.watcher.daemon import WatcherRegistry
-from beatos_http.routes import analysis, assets, lists, producers, sources, sweep, tokens, tracks
+from beatos_http.routes import analysis, assets, lists, producers, sweep, tokens, tracks
 
 log = logging.getLogger(__name__)
 
@@ -36,60 +29,7 @@ _ALLOWED_ORIGINS = [
 ]
 
 # Module-level runtime state (per-process singletons).
-_watcher_registry: Optional[WatcherRegistry] = None
-_monitor: Optional[SourceStatusMonitor] = None
 _cleanup_task: Optional[asyncio.Task] = None
-
-
-def get_watcher_registry() -> WatcherRegistry:
-    """Return the lifespan-managed WatcherRegistry.
-
-    Raises RuntimeError if called outside the FastAPI lifespan (i.e. before
-    startup or after shutdown).
-    """
-    if _watcher_registry is None:
-        raise RuntimeError("Watcher registry not initialized (lifespan not active)")
-    return _watcher_registry
-
-
-def get_watcher_registry_or_none() -> Optional[WatcherRegistry]:
-    """Soft variant: returns None outside an active lifespan."""
-    return _watcher_registry
-
-
-def _on_new_file_in_source(path: Path, source_id: int) -> None:
-    """Called by watchdog on file create events. Currently diagnostic-only."""
-    log.debug("watcher: new file in source %d: %s", source_id, path)
-
-
-def _handle_status_change_sync(source_id: int, new_status: str) -> None:
-    """Sync bridge: schedule an async handler on the running event loop.
-
-    SourceStatusMonitor calls this from its own asyncio task; we forward to
-    an async coroutine because we need to look up the Source's root_path
-    (an async DB call) when flipping a watcher online.
-    """
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        return
-    loop.create_task(_handle_status_change_async(source_id, new_status))
-
-
-async def _handle_status_change_async(source_id: int, new_status: str) -> None:
-    registry = _watcher_registry
-    if registry is None:
-        return
-    if new_status == "offline":
-        registry.stop_for_source(source_id)
-        return
-    if new_status == "online":
-        src = await get_source(source_id)
-        if src is None:
-            return
-        root = Path(src.root_path)
-        if root.is_dir():
-            registry.start_for_source(source_id, root)
 
 
 async def _periodic_token_cleanup(db_path_str: str) -> None:
@@ -109,9 +49,10 @@ async def _periodic_token_cleanup(db_path_str: str) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _watcher_registry, _monitor, _cleanup_task
+    global _cleanup_task
 
     await run_migrations(resolve_db_path())
+    log.info("sidecar startup: migrations applied")
 
     # Cleanup once on startup so a fresh sidecar sees a tidy table.
     db_path_str = str(resolve_db_path())
@@ -119,20 +60,6 @@ async def lifespan(app: FastAPI):
         await cleanup_terminal_tokens(conn)
     # Then fire-and-forget the hourly loop.
     _cleanup_task = asyncio.create_task(_periodic_token_cleanup(db_path_str))
-
-    _watcher_registry = WatcherRegistry(on_new_file=_on_new_file_in_source)
-
-    # Start watchers for currently-online Sources.
-    for s in await list_sources():
-        root = Path(s.root_path)
-        if root.is_dir():
-            _watcher_registry.start_for_source(s.id, root)
-
-    _monitor = SourceStatusMonitor(
-        interval_s=5.0,
-        on_status_change=_handle_status_change_sync,
-    )
-    await _monitor.start()
 
     try:
         yield
@@ -144,12 +71,6 @@ async def lifespan(app: FastAPI):
             except asyncio.CancelledError:
                 pass
             _cleanup_task = None
-        if _monitor is not None:
-            await _monitor.stop()
-            _monitor = None
-        if _watcher_registry is not None:
-            _watcher_registry.stop_all()
-            _watcher_registry = None
 
 
 def create_app() -> FastAPI:
@@ -183,7 +104,6 @@ def create_app() -> FastAPI:
     app.include_router(assets.router)
     app.include_router(lists.router)
     app.include_router(sweep.router)
-    app.include_router(sources.router)
     app.include_router(analysis.router)
     app.include_router(producers.router)
     app.include_router(tokens.router)

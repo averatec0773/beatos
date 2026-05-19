@@ -69,17 +69,9 @@ Sidebar polish: list drag-reorder fix + Trash header removal for visual rhythm c
 
 Smooth list drag-reorder: disable inner track-drop droppable during list drags so the outer SortableContext shift animation runs cleanly (now matches Source behavior). See [CHANGELOG.md](CHANGELOG.md#00214---2026-05-19--smooth-list-drag-reorder).
 
-### v0.0.22 — Source removal (full)
+### v0.0.22 — SHIPPED 2026-05-19
 
-Delete the `Source` concept end-to-end. v0.0.21.1 already removed the attach gate; v0.0.22 deletes the data model and surrounding infrastructure. Schema reality: `track` and `asset` have no `source_id` FK, so removal is a contained delete-only refactor (no data migration on existing tracks/assets).
-
-Phased inside the version:
-1. Remove sidebar Sources section + `Settings → Sources` section + `SourceRow.tsx` + `useSourceStore` + `OfflineBadge` (or keep `OfflineBadge` driven by per-asset `path.exists()` instead of Source membership — TBD during brainstorm).
-2. Remove `packages/beatos-core/sources/` + `beatos-core/watcher/` (watcher daemon) + `packages/beatos-http/routes/sources.py`.
-3. Remove MCP `list_sources` tool + handler.
-4. Migration `011_drop_source.sql` — `DROP TABLE source;`.
-
-What's lost: folder-level auto-watch (new files in a registered folder no longer auto-appear). Manual drag-import remains the way new files enter. Future optional "migrate to managed dir" helper (v0.0.X+) lets the user move catalogued files into a single tidy location.
+Source removal — full end-to-end deletion of the `Source` concept (renderer + sidecar + MCP + schema), sidebar reshape (`AllBeatsSection`), `OfflineBadge` repurposed to read `asset.missing`, watcher daemon retired. See [CHANGELOG.md](CHANGELOG.md#0022---2026-05-19--source-removal-full).
 
 ### v0.0.23 — `draft_description` placeholder
 

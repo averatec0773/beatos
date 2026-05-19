@@ -1,7 +1,7 @@
 """Tool registration for the BeatOS MCP server.
 
-v0.0.20 exposes 6 read-only tools. Write tools follow in v0.0.21+ via the
-2PC token skeleton already in place (see beatos_core.two_phase).
+v0.0.22 exposes 5 read tools + 2 write tools (create_list and its confirm)
+gated by the 2PC token skeleton in beatos_core.two_phase.
 """
 from __future__ import annotations
 
@@ -17,7 +17,6 @@ from beatos_mcp.tools.create_list import create_list
 from beatos_mcp.tools.distinct import list_distinct_values
 from beatos_mcp.tools.lists import list_lists
 from beatos_mcp.tools.ping import ping
-from beatos_mcp.tools.sources import list_sources
 from beatos_mcp.tools.tracks import TrackNotFound, get_track, list_tracks
 
 log = configure_logging()
@@ -30,13 +29,9 @@ _LIST_TRACKS_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
-        "source_id": {
-            "type": "integer",
-            "description": "Filter to tracks whose audio lives under this source's root_path. Mutually exclusive with list_id. Use list_sources to discover ids."
-        },
         "list_id": {
             "type": "integer",
-            "description": "Filter to tracks in this list. Mutually exclusive with source_id. Use list_lists to discover ids."
+            "description": "Filter to tracks in this list. Use list_lists to discover ids."
         },
         "producers": {**_STRING_ARRAY, "description": "Exact-match producer names. Example: ['Yung X', 'Lazy Bee']. Use list_distinct_values('producer') to discover values."},
         "genres":    {**_STRING_ARRAY, "description": "Exact-match genres. Example: ['trap', 'drill']."},
@@ -113,9 +108,6 @@ async def list_tools_handler() -> list[Tool]:
         Tool(name="get_track",
              description="Fetch a single track by id, including its audio/cover assets and both description fields (description = user-authored, description_draft = AI-suggested awaiting user review).",
              inputSchema=_GET_TRACK_SCHEMA),
-        Tool(name="list_sources",
-             description="List all sources (folders BeatOS catalogs from). Returns full list; no pagination.",
-             inputSchema=_NO_ARGS),
         Tool(name="list_lists",
              description="List all user + system lists. Returns full list; no pagination.",
              inputSchema=_NO_ARGS),
@@ -151,8 +143,6 @@ async def call_tool_handler(name: str, arguments: dict) -> list[TextContent]:
                 return _text(await get_track(track_id))
             except TrackNotFound as e:
                 raise ValueError(str(e)) from e
-        if name == "list_sources":
-            return _text(await list_sources())
         if name == "list_lists":
             return _text(await list_lists())
         if name == "list_distinct_values":

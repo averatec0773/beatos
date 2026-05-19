@@ -135,7 +135,6 @@ export async function assertDawWavDecode(ctx) {
     await new Promise((r) => setTimeout(r, 200));
     await window.reload();
     await window.waitForLoadState("domcontentloaded");
-    // Clear any active source filter so SmokeDaw (created without source) is visible.
     await window.evaluate(() => { window.location.hash = "#/"; });
     await new Promise((r) => setTimeout(r, 800));
     const dawRow = window.locator("[data-track-id]").filter({ hasText: "SmokeDaw" }).first();
@@ -175,10 +174,7 @@ export async function assertRealAudioRegression(ctx) {
   const realAudio = process.env.BEATOS_REAL_AUDIO;
   if (!realAudio) return;
   try {
-    // BeatOS rejects asset attaches outside any registered Source. Register
-    // the file's parent dir as a Source so attach succeeds.
-    const realRoot = realAudio.substring(0, realAudio.lastIndexOf("/"));
-    await postJson("/api/sources", { root_path: realRoot });
+    // v0.0.22: Source removed — assets attach by absolute path directly.
     const realTrack = await postJson("/api/tracks", { title: "real-audio-smoke" });
     await postJson(`/api/tracks/${realTrack.id}/assets`, {
       role: "audio_tagged_wav",

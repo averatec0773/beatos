@@ -65,112 +65,8 @@ def test_get_missing_track_returns_404(tmp_path):
     assert res.status_code == 404
 
 
-def test_get_tracks_filtered_by_source(tmp_path):
-    """?source_id filters tracks to those with assets under that Source's root."""
-    import wave
-
-    def _make_wav(path):
-        with wave.open(str(path), "wb") as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(44100)
-            w.writeframes(b"\x00\x00" * 44100)
-
-    client = TestClient(create_app())
-
-    s1 = tmp_path / "s1"
-    s2 = tmp_path / "s2"
-    s1.mkdir()
-    s2.mkdir()
-    sid1 = client.post("/api/sources", json={"root_path": str(s1)}).json()["id"]
-    sid2 = client.post("/api/sources", json={"root_path": str(s2)}).json()["id"]
-
-    t1 = client.post("/api/tracks", json={"title": "T1"}).json()
-    t2 = client.post("/api/tracks", json={"title": "T2"}).json()
-    a1 = s1 / "a.wav"
-    a2 = s2 / "b.wav"
-    _make_wav(a1)
-    _make_wav(a2)
-    client.post(
-        f"/api/tracks/{t1['id']}/assets",
-        json={"role": "audio_tagged_mp3", "path": str(a1)},
-    )
-    client.post(
-        f"/api/tracks/{t2['id']}/assets",
-        json={"role": "audio_tagged_mp3", "path": str(a2)},
-    )
-
-    r1 = client.get(f"/api/tracks?source_id={sid1}")
-    assert r1.status_code == 200
-    assert {t["title"] for t in r1.json()} == {"T1"}
-
-    r2 = client.get(f"/api/tracks?source_id={sid2}")
-    assert {t["title"] for t in r2.json()} == {"T2"}
-
-    # No filter returns both.
-    r_all = client.get("/api/tracks")
-    assert {t["title"] for t in r_all.json()} == {"T1", "T2"}
-
-
-def test_get_tracks_unknown_source_returns_empty(tmp_path):
-    client = TestClient(create_app())
-    client.post("/api/tracks", json={"title": "T"})
-
-    r = client.get("/api/tracks?source_id=99999")
-
-    assert r.status_code == 200
-    assert r.json() == []
-
-
-def test_source_filter_has_audio_reflects_audio_assets(tmp_path):
-    """?source_id=<n> must return correct has_audio per track (Phase 1 follow-up)."""
-    import asyncio
-    from beatos_core.assets.service import attach_asset
-    from beatos_core.sources.service import create_source
-    from beatos_core.sources.models import SourceCreate
-
-    client = TestClient(create_app())
-
-    src_dir = tmp_path / "src"
-    src_dir.mkdir()
-
-    # Create source via service so root_path is registered.
-    source = asyncio.get_event_loop().run_until_complete(
-        create_source(SourceCreate(root_path=str(src_dir)))
-    )
-
-    # Create two tracks.
-    t_with_audio = client.post("/api/tracks", json={"title": "HasAudio"}).json()
-    t_no_audio = client.post("/api/tracks", json={"title": "NoAudio"}).json()
-
-    # Attach a non-audio asset to both so they both appear under the source filter.
-    cover1 = src_dir / "cover1.jpg"
-    cover2 = src_dir / "cover2.jpg"
-    cover1.write_bytes(b"\x00" * 64)
-    cover2.write_bytes(b"\x00" * 64)
-    asyncio.get_event_loop().run_until_complete(
-        attach_asset(t_with_audio["id"], role="cover", path=cover1)
-    )
-    asyncio.get_event_loop().run_until_complete(
-        attach_asset(t_no_audio["id"], role="cover", path=cover2)
-    )
-
-    # Attach an audio asset only to t_with_audio.
-    audio_file = src_dir / "beat.wav"
-    audio_file.write_bytes(b"\x00" * 64)
-    asyncio.get_event_loop().run_until_complete(
-        attach_asset(t_with_audio["id"], role="audio_tagged_wav", path=audio_file)
-    )
-
-    r = client.get(f"/api/tracks?source_id={source.id}")
-    assert r.status_code == 200
-    tracks = {t["title"]: t for t in r.json()}
-    assert tracks["HasAudio"]["has_audio"] is True
-    assert tracks["NoAudio"]["has_audio"] is False
-
-
 def test_get_tracks_filtered_by_list(tmp_path):
-    """?list_id returns only tracks in that list, spanning Sources."""
+    """?list_id returns only tracks in that list."""
     client = TestClient(create_app())
 
     t1 = client.post("/api/tracks", json={"title": "T1"}).json()
@@ -184,10 +80,6 @@ def test_get_tracks_filtered_by_list(tmp_path):
     r = client.get(f"/api/tracks?list_id={list_id}")
     assert r.status_code == 200
     assert {t["title"] for t in r.json()} == {"T1", "T3"}
-
-    # list_id beats source_id.
-    r2 = client.get(f"/api/tracks?list_id={list_id}&source_id=99999")
-    assert {t["title"] for t in r2.json()} == {"T1", "T3"}
 
     # Unknown list yields empty.
     r3 = client.get("/api/tracks?list_id=99999")
@@ -427,6 +319,32 @@ def test_delete_purge_removes_row(tmp_path):
 
     get_res = client.get(f"/api/tracks/{track_id}")
     assert get_res.status_code == 404
+
+
+def test_get_track_count_excludes_trashed(tmp_path):
+    """GET /api/tracks/count returns total count of non-trashed tracks."""
+    client = TestClient(create_app())
+
+    # Empty start
+    res = client.get("/api/tracks/count")
+    assert res.status_code == 200
+    assert res.json() == {"total": 0}
+
+    a_id = client.post("/api/tracks", json={"title": "a"}).json()["id"]
+    client.post("/api/tracks", json={"title": "b"})
+    client.post("/api/tracks", json={"title": "c"})
+
+    res = client.get("/api/tracks/count")
+    assert res.status_code == 200
+    assert res.json() == {"total": 3}
+
+    # Trash one
+    del_res = client.delete(f"/api/tracks/{a_id}")
+    assert del_res.status_code == 204
+
+    res = client.get("/api/tracks/count")
+    assert res.status_code == 200
+    assert res.json() == {"total": 2}
 
 
 def test_get_trash_returns_only_trashed(tmp_path):

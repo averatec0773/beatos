@@ -3,9 +3,6 @@ import { MoreHorizontal, AlertTriangle, RefreshCw } from "lucide-react";
 
 import { useAssetSlot } from "@/hooks/useAssetSlot";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { useSourceStore } from "@/stores/sources";
-import { isPathOffline } from "@/lib/sourceOffline";
-import { OfflineBadge } from "./OfflineBadge";
 import { formatBytes } from "@/lib/format-bytes";
 
 interface Props {
@@ -19,8 +16,6 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
   const { asset, pickAndAttach, detach, relocate, reveal } = useAssetSlot(
     trackId, role, label, extensions
   );
-  const sources = useSourceStore((s) => s.all);
-  const offline = asset ? isPathOffline(asset.abs_path, sources) : false;
   const [menuOpen, setMenuOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -131,7 +126,6 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
     >
       <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">{label}</span>
       <span className="flex-1 text-sm text-text-primary truncate" title={asset.abs_path}>{filename}</span>
-      {offline && <OfflineBadge />}
       <span className="w-20 text-right text-xs font-mono text-text-secondary">{formatBytes(asset.size_bytes)}</span>
       <button
         type="button"
@@ -149,24 +143,21 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
           <button
             type="button"
             onClick={reveal}
-            disabled={offline}
-            className={`w-full text-left px-3 py-2 ${offline ? "text-text-tertiary opacity-50 cursor-not-allowed" : "hover:bg-bg-row-hover"}`}
+            className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
             Reveal in Finder
           </button>
           <button
             type="button"
             onClick={() => pickAndAttach(true)}
-            disabled={offline}
-            className={`w-full text-left px-3 py-2 ${offline ? "text-text-tertiary opacity-50 cursor-not-allowed" : "hover:bg-bg-row-hover"}`}
+            className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
             Replace file…
           </button>
           <button
             type="button"
             onClick={detach}
-            disabled={offline}
-            className={`w-full text-left px-3 py-2 text-danger ${offline ? "opacity-50 cursor-not-allowed" : "hover:bg-bg-row-hover"}`}
+            className="w-full text-left px-3 py-2 text-danger hover:bg-bg-row-hover"
           >
             Detach
           </button>

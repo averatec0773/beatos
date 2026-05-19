@@ -10,8 +10,6 @@ import pytest
 from beatos_core.assets.service import attach_asset
 from beatos_core.audio_analysis.service import analyze_asset
 from beatos_core.db import resolve_db_path, run_migrations
-from beatos_core.sources.models import SourceCreate
-from beatos_core.sources.service import create_source
 
 FIXTURE_WAV = pathlib.Path(__file__).parent / "fixtures" / "click_120bpm_c_major.wav"
 
@@ -21,7 +19,6 @@ async def _fresh_db(tmp_path, monkeypatch):
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
     await run_migrations(db_path)
-    await create_source(SourceCreate(root_path=str(tmp_path)))
     yield
 
 
@@ -41,7 +38,7 @@ async def _create_track(title: str = "TestTrack") -> int:
 
 
 async def _attach_fixture(tmp_path: pathlib.Path, track_id: int) -> int:
-    """Copy the fixture WAV into tmp_path (source root) and attach it."""
+    """Copy the fixture WAV into tmp_path and attach it."""
     dest = tmp_path / "click_120bpm_c_major.wav"
     shutil.copy(FIXTURE_WAV, dest)
     asset = await attach_asset(track_id, role="audio_tagged_wav", path=dest)

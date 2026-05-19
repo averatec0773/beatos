@@ -1,6 +1,5 @@
 import { tracks } from "@/api/tracks";
 import { useAssetStore } from "@/stores/assets";
-import { useSourceStore } from "@/stores/sources";
 import { useTrackStore } from "@/stores/tracks";
 
 const AUDIO_EXT_TO_ROLE: Record<string, string> = {
@@ -16,11 +15,6 @@ export interface CreateResult {
 
 export async function createTracksFromFiles(files: File[]): Promise<CreateResult> {
   const result: CreateResult = { created: 0, skipped: 0, errors: [] };
-  const sources = useSourceStore.getState().all;
-  if (sources.length === 0) {
-    result.errors.push("Create a Source first.");
-    return result;
-  }
   for (const file of files) {
     const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
     const role = AUDIO_EXT_TO_ROLE[ext];
@@ -59,5 +53,6 @@ export async function createTracksFromFiles(files: File[]): Promise<CreateResult
     }
   }
   void useTrackStore.getState().refresh();
+  void useTrackStore.getState().refreshTotal();
   return result;
 }

@@ -21,7 +21,7 @@ class Asset(BaseModel):
     """A file attached to a track via a role.
 
     `linked`: BeatOS stores `abs_path` only, never copies the file.
-    `managed`: file lives inside the source folder (v0.0.4+).
+    `managed`: BeatOS copies the file into its own managed storage area.
     """
 
     id: int

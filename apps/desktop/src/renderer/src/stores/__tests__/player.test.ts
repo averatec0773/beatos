@@ -71,7 +71,7 @@ function resetStore() {
     queueTrackIds: [],
     queueIndex: 0,
     queueShuffleOrder: null,
-    queueSource: null,
+    queueOrigin: null,
   });
 }
 
@@ -168,7 +168,7 @@ describe("playFromQueue", () => {
     await usePlayerStore.getState().playFromQueue({
       trackIds: [1, 2, 3],
       startIndex: 1,
-      source: { kind: "all" },
+      origin: { kind: "all" },
     });
     const s = usePlayerStore.getState();
     expect(s.currentTrackId).toBe(2);
@@ -185,7 +185,7 @@ describe("playFromQueue", () => {
     await usePlayerStore.getState().playFromQueue({
       trackIds: [5],
       startIndex: 0,
-      source: { kind: "all" },
+      origin: { kind: "all" },
     });
     expect(usePlayerStore.getState().status).toBe("error");
   });
@@ -253,7 +253,7 @@ describe("togglePlay recovery", () => {
       mockAsset(99, "cover"),
     ]);
     await usePlayerStore.getState().playFromQueue({
-      trackIds: [5], startIndex: 0, source: { kind: "all" },
+      trackIds: [5], startIndex: 0, origin: { kind: "all" },
     });
     expect(usePlayerStore.getState().status).toBe("error");
 
@@ -299,7 +299,7 @@ describe("setPreferredRole", () => {
     await usePlayerStore.getState().playFromQueue({
       trackIds: [1],
       startIndex: 0,
-      source: { kind: "all" },
+      origin: { kind: "all" },
     });
     expect(usePlayerStore.getState().currentAssetId).toBe(10);
     await usePlayerStore.getState().setPreferredRole("audio_tagged_mp3");

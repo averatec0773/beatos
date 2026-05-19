@@ -3,9 +3,6 @@ import { Image as ImageIcon, MoreHorizontal, AlertTriangle, RefreshCw } from "lu
 
 import { useAssetSlot } from "@/hooks/useAssetSlot";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { useSourceStore } from "@/stores/sources";
-import { isPathOffline } from "@/lib/sourceOffline";
-import { OfflineBadge } from "./OfflineBadge";
 import { CoverImage } from "./CoverImage";
 
 const COVER_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
@@ -14,8 +11,6 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
   const { asset, pickAndAttach, detach, relocate, reveal } = useAssetSlot(
     trackId, "cover", "Cover", COVER_EXTENSIONS
   );
-  const sources = useSourceStore((s) => s.all);
-  const offline = asset ? isPathOffline(asset.abs_path, sources) : false;
   const [menuOpen, setMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   useClickOutside(containerRef, useCallback(() => setMenuOpen(false), []), menuOpen);
@@ -60,7 +55,6 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
       className="relative w-[200px] h-[200px] bg-bg-elevated border border-border-subtle rounded-md overflow-hidden group"
     >
       <CoverImage assetId={asset.id} size={200} />
-      {offline && <OfflineBadge className="absolute top-2 left-2" />}
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}
@@ -74,18 +68,18 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
           className="absolute right-2 top-10 bg-bg-elevated border border-border-subtle rounded-md shadow-lg text-sm z-10 w-44"
           onClick={() => setMenuOpen(false)}
         >
-          <button type="button" onClick={reveal} disabled={offline}
-            className={`w-full text-left px-3 py-2 ${offline ? "text-text-tertiary opacity-50 cursor-not-allowed" : "hover:bg-bg-row-hover"}`}
+          <button type="button" onClick={reveal}
+            className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
             Reveal in Finder
           </button>
-          <button type="button" onClick={() => pickAndAttach(true)} disabled={offline}
-            className={`w-full text-left px-3 py-2 ${offline ? "text-text-tertiary opacity-50 cursor-not-allowed" : "hover:bg-bg-row-hover"}`}
+          <button type="button" onClick={() => pickAndAttach(true)}
+            className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
             Replace…
           </button>
-          <button type="button" onClick={detach} disabled={offline}
-            className={`w-full text-left px-3 py-2 text-danger ${offline ? "opacity-50 cursor-not-allowed" : "hover:bg-bg-row-hover"}`}
+          <button type="button" onClick={detach}
+            className="w-full text-left px-3 py-2 text-danger hover:bg-bg-row-hover"
           >
             Detach
           </button>

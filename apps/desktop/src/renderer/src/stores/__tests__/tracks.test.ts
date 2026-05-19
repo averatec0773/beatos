@@ -11,37 +11,18 @@ vi.mock("@/api/tracks", () => ({
 }));
 
 import { useTrackStore } from "../tracks";
-import { useSourceStore } from "../sources";
 import { useTrackQueryStore } from "../track-query";
 import { tracks } from "@/api/tracks";
 
-describe("useTrackStore source filter", () => {
+describe("useTrackStore refresh", () => {
   beforeEach(() => {
     (tracks.list as ReturnType<typeof vi.fn>).mockReset();
     useTrackStore.setState({ list: [], current: null, loading: false });
-    useSourceStore.setState({ all: [], activeFilter: null });
     useTrackQueryStore.setState({
       sortBy: "updated_at",
       sortDir: "desc",
       filters: { producers: [], genres: [], moods: [], keys: [], bpm_min: null, bpm_max: null, has_audio: null },
     });
-  });
-
-  it("refresh passes activeFilter as source_id to tracks.list", async () => {
-    useSourceStore.setState({ activeFilter: 7 });
-    (tracks.list as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
-    await useTrackStore.getState().refresh();
-    expect(tracks.list).toHaveBeenCalledWith(
-      expect.objectContaining({ source_id: 7 }),
-    );
-  });
-
-  it("refresh omits source_id when filter is null", async () => {
-    useSourceStore.setState({ activeFilter: null });
-    (tracks.list as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
-    await useTrackStore.getState().refresh();
-    const call = (tracks.list as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(call.source_id).toBeUndefined();
   });
 
   it("refresh forwards sort_by and sort_dir for library view", async () => {

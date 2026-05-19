@@ -6,8 +6,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from beatos_core.db import run_migrations
-from beatos_core.sources.models import SourceCreate
-from beatos_core.sources.service import create_source
 from beatos_http.app import create_app
 
 FIXTURE_WAV = (
@@ -21,7 +19,6 @@ async def _fresh_db(tmp_path, monkeypatch):
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
     await run_migrations(db_path)
-    await create_source(SourceCreate(root_path=str(tmp_path)))
     yield
 
 

@@ -25,7 +25,6 @@ export type TrackUpdate = Partial<
 >;
 
 export interface ListParams {
-  source_id?: number;
   list_id?: number;
   sort_by?: string;
   sort_dir?: "asc" | "desc";
@@ -42,7 +41,6 @@ export const tracks = {
   list: (params: ListParams = {}): Promise<Track[]> => {
     const sp = new URLSearchParams();
     if (params.list_id != null) sp.set("list_id", String(params.list_id));
-    if (params.source_id != null) sp.set("source_id", String(params.source_id));
     if (params.sort_by) sp.set("sort_by", params.sort_by);
     if (params.sort_dir) sp.set("sort_dir", params.sort_dir);
     for (const p of params.producers ?? []) sp.append("producers", p);
@@ -62,4 +60,8 @@ export const tracks = {
   restore: (id: number) => apiPost<Track>(`/api/tracks/${id}/restore`),
   purge: (id: number) => apiDelete(`/api/tracks/${id}?purge=true`),
   listTrash: () => apiGet<Track[]>("/api/tracks/trash"),
+  count: async (): Promise<number> => {
+    const res = await apiGet<{ total: number }>("/api/tracks/count");
+    return res.total;
+  },
 };

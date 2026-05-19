@@ -3,21 +3,19 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Seeds Source + 2 tracks + 1 list + cover for Smoke1.
+// Seeds 2 tracks + 1 list + cover for Smoke1.
 // Verifies: track.cover_asset_id API wiring, cover img DOM render,
 // drag handle scoping, dnd-kit drag-add, multi-add API.
 // Mutates: ctx.fixtures.{ t1, t2, list, coverAsset } populated for downstream sections.
+// v0.0.22: Source removed — assets attach by absolute path directly, no Source seed.
 export async function assertSeedAndDragDrop(ctx) {
   const { window, userData, baseUrl, postJson, failures, TINY_PNG } = ctx;
-
-  // Seed: Source rooted at userData (writable, real dir), 2 tracks, 1 cover image, 1 List.
-  await postJson("/api/sources", { root_path: userData });
 
   const t1 = await postJson("/api/tracks", { title: "Smoke1" });
   const t2 = await postJson("/api/tracks", { title: "Smoke2" });
   const list = await postJson("/api/lists", { name: "SmokeList" });
 
-  // Cover asset for Smoke1: write a tiny PNG into the Source root and attach.
+  // Cover asset for Smoke1: write a tiny PNG into userData and attach by absolute path.
   const coverPath = join(userData, "smoke1-cover.png");
   writeFileSync(coverPath, TINY_PNG);
   const coverAsset = await postJson(`/api/tracks/${t1.id}/assets`, {
@@ -39,8 +37,9 @@ export async function assertSeedAndDragDrop(ctx) {
     console.log("smoke: track.cover_asset_id wiring PASS");
   }
 
-  // Force renderer to pick up the new state. After seeding, we're at #/welcome
-  // (zero sources at boot). Navigate to "/" so AppShell mounts and refreshes.
+  // Force renderer to pick up the new state. Navigate to "/" so the library
+  // view mounts and refreshes. (v0.0.22: WelcomeScreen removed; first-launch
+  // lands on All Beats directly.)
   await window.evaluate(() => { location.hash = "/"; });
   await window.evaluate(() => location.reload());
   await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });

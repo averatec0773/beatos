@@ -17,10 +17,6 @@ async def _fresh_db(tmp_path, monkeypatch):
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
     await run_migrations(db_path)
 
-    from beatos_core.sources.service import create_source
-    from beatos_core.sources.models import SourceCreate
-    await create_source(SourceCreate(root_path=str(tmp_path)))
-
     yield
 
 

@@ -84,7 +84,7 @@ export function BottomPlayerBar() {
       const ids = getVisibleIds();
       const startIndex = ids.indexOf(selectedTrack.id);
       if (startIndex < 0) return;
-      void s.playFromQueue({ trackIds: ids, startIndex, source: { kind: "all" } });
+      void s.playFromQueue({ trackIds: ids, startIndex, origin: { kind: "all" } });
       return;
     }
     s.togglePlay();

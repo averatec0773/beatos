@@ -69,7 +69,7 @@ _SELECT_COLS = (
 
 # Subquery rendered after _SELECT_COLS to populate Track.cover_asset_id.
 # Uses a distinct alias `ax` for the inner asset reference so it cannot
-# shadow an outer `asset a` join (e.g. source_id filter route).
+# shadow an outer `asset a` join.
 _COVER_SUBQUERY_TEMPLATE = (
     "(SELECT ax.id FROM asset ax "
     "WHERE ax.track_id = {prefix}id AND ax.role = 'cover' LIMIT 1) AS cover_asset_id"
@@ -262,6 +262,17 @@ async def list_distinct_values(field: str) -> list[str]:
         async with conn.execute(sql) as cur:
             rows = await cur.fetchall()
     return [r[0] for r in rows]
+
+
+async def count_tracks() -> int:
+    """Return total count of non-trashed tracks."""
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) FROM track WHERE deleted_at IS NULL"
+        ) as cur:
+            row = await cur.fetchone()
+            return int(row[0]) if row else 0
 
 
 async def get_track(track_id: int) -> Optional[Track]:

@@ -4,6 +4,30 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.22] - 2026-05-19 — Source removal (full)
+
+End-to-end deletion of the `Source` concept. The catalog now operates on individual files; folder-level auto-import (the watcher daemon) is retired in favor of manual drag-import. Schema reality made this safe: `track` and `asset` had no FK to `source.id` (confirmed at v0.0.21.1), so removal is a delete-only refactor with zero data migration on existing rows.
+
+### Removed
+
+- **Renderer:** `useSourceStore`, `@/api/sources`, `SourceRow`, `Sidebar/SourcesSection`, `lib/sourceOffline`, the `Settings → Sources` block, the dead `copyIntoSource` / `moveIntoSource` IPC bridges (`FS_COPY/MOVE_INTO_SOURCE` channels + main-process handlers + preload exposures + test mocks), `list_sources` from the displayed MCP tool list in `AIIntegrationSection`, `WelcomeScreen` (first-launch onboarded a Source — no longer needed), `QueueSourceKind` `"source"` variant, `source_id` field from `api.list` request shape.
+- **Sidecar:** `beatos_core/sources/` (models, service, monitor) and `beatos_core/watcher/` (daemon + scanner) modules; `/api/sources` route family; MCP `list_sources` tool; `source_id` query param on `GET /api/tracks`; `source_id` kwarg on MCP-internal `list_tracks` helper; the `SourceStatusMonitor` + `WatcherRegistry` lifespan plumbing in `beatos_http/app.py`.
+- **Schema:** migration `011_drop_source.sql` drops the `source` table.
+- **Tests:** removed Source / watcher / `list_sources` test files; rewrote shared HTTP and core fixtures to attach assets by absolute path directly (no `SourceCreate` seed).
+
+### Changed
+
+- **Sidebar order:** `ALL BEATS → TRASH → LISTS → APPROVALS → footer` (was `SOURCES → LISTS → APPROVALS → TRASH → footer`). New `AllBeatsSection` with `Music` icon and live track count, mirroring `TrashSection`'s layout.
+- **`OfflineBadge`** repurposed to read `asset.missing` (was driven by registered-Source online/offline status). Zero backend change — `asset.missing` was already maintained by the sweeper.
+- **Smoke harness:** `assertSourceReorderApi` removed; new `assertSidebarOrder` appended to the end of the smoke block verifies the rendered sidebar exposes `All Beats / Trash / Lists / Approvals` top-down.
+
+### Notes
+
+- **All Beats count semantics**: the badge next to "All Beats" reflects the currently-loaded track list rather than the global library total. On `/`, this equals the library total; on `/lists/:id` or `/trash` it reflects the scoped view. Acceptable simplification for v0.0.22; can be tightened later if needed.
+- **OfflineBadge dead path**: the `<OfflineBadge missing={asset.missing}/>` JSX in `AudioFileRow` / `CoverDropZone` / `AssetSlot` is unreachable in the rendering branch because each callsite has an unconditional early-return on `asset.missing`. Spec required keeping the component; the JSX is essentially dead code worth cleaning up in a follow-up.
+- **Watcher retirement**: new files dropped into a folder no longer auto-appear in the catalog. Use drag-import. A future opt-in "migrate catalogued files into a managed dir" helper is planned (separate version) for users who want a tidy single-folder layout.
+- **`QueueSourceKind` rename**: the renderer's `QueueSourceKind` / `QueueSource` types in `stores/player.ts` (with `kind: "all"` as the only variant after this version) remain — renaming to `QueueKind` / `Queue` is a separate follow-up to keep this diff focused.
+
 ## [0.0.21.4] - 2026-05-19 — Smooth list drag-reorder
 
 Follow-up to v0.0.21.3. After the dragEnd dispatch was fixed, list reorder worked but felt rough compared to Source reorder: the green "+ drop track here" indicator flashed on target rows during list drags, and the SortableContext's row-shifting animation didn't run.

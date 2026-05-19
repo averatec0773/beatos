@@ -13,7 +13,6 @@ const TOOL_NAMES = [
   "ping",
   "list_tracks",
   "get_track",
-  "list_sources",
   "list_lists",
   "list_distinct_values",
 ];
