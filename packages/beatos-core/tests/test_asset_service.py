@@ -28,20 +28,10 @@ def _make_wav(path: pathlib.Path, duration_seconds: float = 2.0) -> None:
 
 @pytest.fixture(autouse=True)
 async def _fresh_db(tmp_path, monkeypatch):
-    """Each test gets its own isolated global DB with migrations applied.
-
-    Registers tmp_path as a Source so legacy fixtures that expect at least
-    one Source row (e.g. for OfflineBadge derivation) still see one.
-    The OutOfSource guard was removed in v0.0.21.1; this fixture no longer
-    has any gating role.
-    """
+    """Each test gets its own isolated global DB with migrations applied."""
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
     await run_migrations(db_path)
-
-    from beatos_core.sources.service import create_source
-    from beatos_core.sources.models import SourceCreate
-    await create_source(SourceCreate(root_path=str(tmp_path)))
 
     yield
 
@@ -208,18 +198,3 @@ async def test_attach_accepts_path_outside_any_source(tmp_path):
         assert asset.abs_path == str(rogue.resolve())
 
 
-@pytest.mark.asyncio
-async def test_attach_succeeds_when_path_inside_source(tmp_path):
-    from beatos_core.sources.service import create_source
-    from beatos_core.sources.models import SourceCreate
-
-    src_dir = tmp_path / "in_source"
-    src_dir.mkdir()
-    await create_source(SourceCreate(root_path=str(src_dir)))
-
-    t_id = await _create_track("T")
-    inside = src_dir / "track.mp3"
-    inside.write_bytes(b"\x00" * 1024)
-
-    a = await attach_asset(t_id, "audio_tagged_mp3", inside)
-    assert str(inside) in a.abs_path

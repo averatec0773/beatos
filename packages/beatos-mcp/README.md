@@ -9,7 +9,6 @@ stdio MCP server exposing the BeatOS library to AI clients (Claude Desktop, Curs
 | `ping` | Liveness check |
 | `list_tracks(filter?)` | Filter + paginate tracks; mirrors HTTP query params |
 | `get_track(id)` | Single track with assets + description fields |
-| `list_sources()` | All sources |
 | `list_lists()` | All user + system lists |
 | `list_distinct_values(field)` | producer / genre / mood / key vocabulary + counts |
 

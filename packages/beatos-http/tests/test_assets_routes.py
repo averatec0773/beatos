@@ -6,8 +6,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from beatos_core.db import run_migrations
-from beatos_core.sources.models import SourceCreate
-from beatos_core.sources.service import create_source
 from beatos_http.app import create_app
 
 
@@ -21,14 +19,10 @@ def _make_wav(path: pathlib.Path, duration_seconds: float = 2.0) -> None:
 
 @pytest.fixture(autouse=True)
 async def _fresh_db(tmp_path, monkeypatch):
-    """Each test gets its own isolated global DB with migrations applied.
-    Registers tmp_path as a Source so OfflineBadge derivations still see one.
-    The OutOfSource guard itself was removed in v0.0.21.1.
-    """
+    """Each test gets its own isolated global DB with migrations applied."""
     db_path = tmp_path / "global.db"
     monkeypatch.setenv("BEATOS_DB_PATH", str(db_path))
     await run_migrations(db_path)
-    await create_source(SourceCreate(root_path=str(tmp_path)))
     yield
 
 
