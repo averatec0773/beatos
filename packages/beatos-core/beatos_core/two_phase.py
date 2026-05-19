@@ -72,11 +72,9 @@ async def verify_token(
         )
 
     if time.time() >= expires_at:
-        await conn.execute(
-            "UPDATE tokens SET status='expired' WHERE token=? AND status='pending'",
-            (token,),
-        )
-        await conn.commit()
+        # Note: cleanup_terminal_tokens owns the pending → expired UPDATE.
+        # verify_token is now strictly read-only so callers can use it
+        # inside their own transactions without risk of premature commit.
         raise TokenError(f"token expired: {token}")
 
     return json.loads(payload_json)
