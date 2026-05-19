@@ -7,8 +7,9 @@ readme = "README.md"
 license = { text = "MIT" }
 dependencies = [
     "beatos-core",
+    "beatos-http",
     "mcp>=1.27",
-    "mcp-proxy>=0.6,<0.7",
+    "mcp-proxy>=0.10,<0.13",
     "structlog>=25.5.0",
 ]
 

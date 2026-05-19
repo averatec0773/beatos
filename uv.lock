@@ -131,6 +131,7 @@ version = "0.0.22"
 source = { editable = "packages/beatos-mcp" }
 dependencies = [
     { name = "beatos-core" },
+    { name = "beatos-http" },
     { name = "mcp" },
     { name = "mcp-proxy" },
     { name = "structlog" },
@@ -139,8 +140,9 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "beatos-core", editable = "packages/beatos-core" },
+    { name = "beatos-http", editable = "packages/beatos-http" },
     { name = "mcp", specifier = ">=1.27" },
-    { name = "mcp-proxy", specifier = ">=0.6,<0.7" },
+    { name = "mcp-proxy", specifier = ">=0.10,<0.13" },
     { name = "structlog", specifier = ">=25.5.0" },
 ]
 
@@ -377,6 +379,18 @@ wheels = [
 ]
 
 [[package]]
+name = "httpx-auth"
+version = "0.23.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/d4/6bd616f89d1ce43f602b62ec274e33beee6c2bce3d68396e692daafdb57d/httpx_auth-0.23.1.tar.gz", hash = "sha256:27b5a6022ad1b41a303b8737fa2e3e4bce6bbbe7ab67fed0b261359be62e0434", size = 121418, upload-time = "2025-01-07T18:47:20.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/23/a72f91bea596b522ac297b948ffee6decdedb535c034fca8062bd72981ce/httpx_auth-0.23.1-py3-none-any.whl", hash = "sha256:04f8bd0824efe3d9fb79690cc670b0da98ea809babb7aea04a72f334d4fd5ec5", size = 45328, upload-time = "2025-01-07T18:47:18.694Z" },
+]
+
+[[package]]
 name = "httpx-sse"
 version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
@@ -514,15 +528,16 @@ wheels = [
 
 [[package]]
 name = "mcp-proxy"
-version = "0.6.0"
+version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "httpx-auth" },
     { name = "mcp" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/34/4e1cf8b6eb93bed8d9f3442408d6d6f266fde522fc2201c39bce49477976/mcp_proxy-0.6.0.tar.gz", hash = "sha256:e4f41dbd6c978cfe359dcbcc66cd14a4735606f9ff856e9b6888ef310038edd0", size = 20322, upload-time = "2025-05-13T06:46:50.294Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/59/140a08a3282ee66b9c4726db4fb168844110f773cd1248bf051409bef04a/mcp_proxy-0.12.0.tar.gz", hash = "sha256:bbe09d6760534e28e716c4662a9e0830b8f7a2804463c9791114889813ccb5d1", size = 38888, upload-time = "2026-05-14T20:13:07.418Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/03/ab61421d76fb81ca71125d815b25950c879514c4d665a69bc43cb6242b48/mcp_proxy-0.6.0-py3-none-any.whl", hash = "sha256:befbbd1ce7700b66bf16684971b753f78a1417e2ef360dfb536413a2c6ad6b3a", size = 13637, upload-time = "2025-05-13T06:46:49.06Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/4f/3ce993e1746ba239516a23ad363dffc788ca0c414ac6f119368eaed720d0/mcp_proxy-0.12.0-py3-none-any.whl", hash = "sha256:69b118e5c86dd46a32769a47c114ce8acb1162e0e38fb6f21283d7b56aa7faaa", size = 23394, upload-time = "2026-05-14T20:13:05.732Z" },
 ]
 
 [[package]]
