@@ -22,3 +22,29 @@ const noop = (): Promise<any> => Promise.resolve(null);
 };
 
 global.fetch = vi.fn();
+
+// EventSource mock for SSE-using hooks under jsdom.
+class MockEventSource {
+  url: string;
+  listeners: Record<string, ((ev: MessageEvent) => void)[]> = {};
+  onerror: ((ev: Event) => void) | null = null;
+  constructor(url: string) {
+    this.url = url;
+    (window as any).__lastEventSource = this;
+  }
+  addEventListener(type: string, cb: (ev: MessageEvent) => void) {
+    (this.listeners[type] ??= []).push(cb);
+  }
+  removeEventListener(type: string, cb: (ev: MessageEvent) => void) {
+    this.listeners[type] = (this.listeners[type] ?? []).filter((f) => f !== cb);
+  }
+  dispatch(type: string, data: string) {
+    (this.listeners[type] ?? []).forEach((cb) =>
+      cb({ data } as MessageEvent),
+    );
+  }
+  close() {
+    (window as any).__lastEventSource = null;
+  }
+}
+(global as any).EventSource = MockEventSource;
