@@ -17,7 +17,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 ### Lifecycle write tools
 - `trash_tracks(ids)` — soft delete, reversible via restore.
 - `restore_tracks(ids)` — clears deleted_at.
-- `purge_tracks(ids)` — PERMANENT physical delete (high-risk; checkbox-gated in approval card). Cascades asset rows. Source audio files on disk untouched.
+- `purge_tracks(ids)` — PERMANENT physical delete (high-risk; checkbox-gated in approval card). ON DELETE CASCADE removes asset/track_list rows (requires PRAGMA foreign_keys=ON per connection, now enabled on approve_token's write connection). Source audio files on disk untouched.
 
 ### Foundation (UI)
 - `/approvals` cards now render a preview-aware layout: `payload.preview.headline` + sample + warnings + expand-all + high-risk variant. Destructive tokens (`purge_tracks`, `delete_list`) show a red card with an "I understand this is permanent" checkbox gate on Approve.

@@ -1,6 +1,5 @@
 """Approve handlers for lifecycle tools: trash/restore/purge."""
 import datetime as dt
-import json
 
 import aiosqlite
 import pytest
@@ -105,3 +104,49 @@ async def test_approve_trash_rolls_back_when_id_vanished(client, db_path):
         ) as cur:
             row = await cur.fetchone()
     assert row[0] == 0
+
+
+@pytest.mark.asyncio
+async def test_purge_tracks_cascades_asset_and_track_list(client, db_path):
+    """Regression: ON DELETE CASCADE on asset.track_id and track_list.track_id
+    requires PRAGMA foreign_keys=ON per connection. Without it, purging a track
+    leaves orphan rows in asset and track_list."""
+    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    list_id: int
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute("PRAGMA foreign_keys=ON")
+        # Create a list and add track 1 to it
+        cur = await conn.execute(
+            "INSERT INTO list (name, kind, position, created_at) VALUES ('L', 'user', 0, ?)",
+            (now,),
+        )
+        list_id = cur.lastrowid
+        await conn.execute(
+            "INSERT INTO track_list (list_id, track_id, position, added_at) VALUES (?, 1, 0, ?)",
+            (list_id, now),
+        )
+        # Attach an asset to track 1
+        await conn.execute(
+            "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
+            "VALUES (1, 'audio', '/tmp/x.wav', ?, ?)",
+            (now, now),
+        )
+        tok = await create_token(conn, "purge_tracks", {"ids": [1]})
+        await conn.commit()
+
+    res = await client.post(f"/api/tokens/{tok}/approve")
+    assert res.status_code == 200
+    assert res.json()["purged_count"] == 1
+
+    async with aiosqlite.connect(db_path) as conn:
+        # track row must be gone
+        async with conn.execute("SELECT COUNT(*) FROM track WHERE id=1") as cur:
+            assert (await cur.fetchone())[0] == 0, "track row not deleted"
+        # asset row must be cascaded away
+        async with conn.execute("SELECT COUNT(*) FROM asset WHERE track_id=1") as cur:
+            assert (await cur.fetchone())[0] == 0, "orphan asset row remained (foreign_keys=OFF?)"
+        # track_list membership must be cascaded away
+        async with conn.execute(
+            "SELECT COUNT(*) FROM track_list WHERE track_id=1"
+        ) as cur:
+            assert (await cur.fetchone())[0] == 0, "orphan track_list row remained (foreign_keys=OFF?)"

@@ -48,8 +48,13 @@ async def connect():
 async def connect_writable():
     """Yield a writable aiosqlite connection. Used by MCP write tools only;
     read tools must stay on connect() which sets query_only=1 as
-    defense-in-depth."""
+    defense-in-depth.
+
+    PRAGMA foreign_keys=ON is required: SQLite ships with FK enforcement off
+    per-connection, which silently neutralises every ON DELETE CASCADE in the
+    schema. Set it here so all write paths through this context manager respect
+    cascades (asset.track_id, track_list.track_id, analysis_cache.asset_id)."""
     db_path = _resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
-        # Intentionally NO query_only here.
+        await conn.execute("PRAGMA foreign_keys=ON")
         yield conn

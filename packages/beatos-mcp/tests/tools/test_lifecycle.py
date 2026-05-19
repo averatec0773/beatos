@@ -99,3 +99,25 @@ async def test_purge_tracks_marks_destructive(db_path):
     p = await _fetch_payload(db_path, res["token"])
     assert p["preview"]["risk"] == "destructive"
     assert "PERMANENTLY" in p["preview"]["headline"].upper()
+
+
+@pytest.mark.asyncio
+async def test_trash_tracks_raises_when_all_already_trashed(db_path):
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute("UPDATE track SET deleted_at='2026-01-01' WHERE id IN (1,2)")
+        await conn.commit()
+    with pytest.raises(ValueError, match="already trashed or not found"):
+        await trash_tracks(ids=[1, 2])
+
+
+@pytest.mark.asyncio
+async def test_restore_tracks_raises_when_all_already_live(db_path):
+    # Tracks 1, 2, 3 are not trashed (deleted_at IS NULL) — none eligible for restore
+    with pytest.raises(ValueError, match="already restored or not found"):
+        await restore_tracks(ids=[1, 2, 3])
+
+
+@pytest.mark.asyncio
+async def test_purge_tracks_raises_when_all_ids_unknown(db_path):
+    with pytest.raises(ValueError, match="not found"):
+        await purge_tracks(ids=[9000, 9001])

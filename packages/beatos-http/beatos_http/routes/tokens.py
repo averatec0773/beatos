@@ -81,6 +81,10 @@ async def token_stream():
 @router.post("/{token}/approve")
 async def approve_token(token: str) -> dict:
     async with aiosqlite.connect(resolve_db_path(), timeout=5) as conn:
+        # SQLite ships with FK enforcement OFF per-connection. Enable it here
+        # so every ON DELETE CASCADE (asset→track, track_list→track,
+        # analysis_cache→asset) actually fires when handlers DELETE FROM track.
+        await conn.execute("PRAGMA foreign_keys=ON")
         async with conn.execute(
             "SELECT tool_name, status FROM tokens WHERE token=?", (token,)
         ) as cur:

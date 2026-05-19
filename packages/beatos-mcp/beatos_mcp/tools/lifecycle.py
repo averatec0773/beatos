@@ -10,17 +10,7 @@ import aiosqlite
 from beatos_core.two_phase import create_token
 from beatos_mcp.db import connect_writable
 from beatos_mcp.preview import build_preview, format_track_sample
-
-_MAX_IDS = 500
-
-
-def _validate_ids(ids: list[int]) -> None:
-    if not isinstance(ids, list) or not ids:
-        raise ValueError("ids must be a non-empty list of integers")
-    if len(ids) > _MAX_IDS:
-        raise ValueError(f"ids list too large: max {_MAX_IDS}")
-    if not all(isinstance(x, int) for x in ids):
-        raise ValueError("ids must contain only integers")
+from beatos_mcp.validate import validate_ids
 
 
 async def _fetch_titles(
@@ -53,7 +43,7 @@ async def _emit_token(tool_name: str, payload: dict) -> dict:
 
 
 async def trash_tracks(ids: list[int]) -> dict:
-    _validate_ids(ids)
+    validate_ids(ids)
     async with connect_writable() as conn:
         info = await _fetch_titles(conn, ids)
     warnings: list[str] = []
@@ -64,6 +54,8 @@ async def trash_tracks(ids: list[int]) -> dict:
     if already_trashed:
         warnings.append(f"{len(already_trashed)} already in trash, will be skipped")
     keep = [i for i in ids if i in info and info[i][1] is None]
+    if not keep:
+        raise ValueError("all provided ids were already trashed or not found")
     sample_rows = [(i, info[i][0]) for i in keep[:5]]
     payload = {
         "ids": keep,
@@ -77,7 +69,7 @@ async def trash_tracks(ids: list[int]) -> dict:
 
 
 async def restore_tracks(ids: list[int]) -> dict:
-    _validate_ids(ids)
+    validate_ids(ids)
     async with connect_writable() as conn:
         info = await _fetch_titles(conn, ids)
     warnings: list[str] = []
@@ -88,6 +80,8 @@ async def restore_tracks(ids: list[int]) -> dict:
     if not_trashed:
         warnings.append(f"{len(not_trashed)} not in trash, will be skipped")
     keep = [i for i in ids if i in info and info[i][1] is not None]
+    if not keep:
+        raise ValueError("all provided ids were already restored or not found")
     sample_rows = [(i, info[i][0]) for i in keep[:5]]
     payload = {
         "ids": keep,
@@ -101,7 +95,7 @@ async def restore_tracks(ids: list[int]) -> dict:
 
 
 async def purge_tracks(ids: list[int]) -> dict:
-    _validate_ids(ids)
+    validate_ids(ids)
     async with connect_writable() as conn:
         info = await _fetch_titles(conn, ids)
     warnings: list[str] = []
@@ -109,6 +103,8 @@ async def purge_tracks(ids: list[int]) -> dict:
     if missing:
         warnings.append(f"{len(missing)} of {len(ids)} ids not found, will be skipped")
     keep = [i for i in ids if i in info]
+    if not keep:
+        raise ValueError("all provided ids were not found")
     sample_rows = [(i, info[i][0]) for i in keep[:5]]
     payload = {
         "ids": keep,
