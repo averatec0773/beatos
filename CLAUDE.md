@@ -40,7 +40,7 @@ npm run dev:fresh              # kill orphan uvicorn + start dev (Vite + sidecar
 npm run build                  # typecheck + electron-vite build
 npm run smoke                  # built-app smoke harness (run build first)
 npm run logs:tail              # tail Electron main.log + sidecar.jsonl
-npx vitest run                 # renderer + main tests (233 as of v0.0.16)
+npx vitest run                 # renderer + main tests
 npx vitest run path/to/x.test.ts   # single file
 node scripts/diagnose-playback.mjs --tiny  # audio playback diagnostic
 
@@ -51,7 +51,7 @@ node scripts/diagnose-playback.mjs --tiny  # audio playback diagnostic
 # Canonical example: src/renderer/src/__tests__/TrackEditor.test.tsx
 
 # from repo root
-uv run pytest                  # sidecar tests (213 as of v0.0.14)
+uv run pytest                  # sidecar tests
 uv run pytest packages/beatos-http/tests/test_x.py::test_y   # single test
 ```
 
@@ -60,6 +60,10 @@ Logs (dev): `apps/desktop/logs/main.log` (Electron + `[sidecar]`-tagged stderr) 
 ## Doc sync (pre-commit)
 
 Before any non-trivial `git commit`, invoke the [harness](.claude/skills/harness/SKILL.md) skill proactively. It reads the working tree, then for each of `CHANGELOG.md`, `conventions/`, `CLAUDE.md`, `README.md` decides whether a small targeted edit is needed. The user may also invoke it explicitly ("harness", "doc check", "check before commit", or equivalent). Skip for typo / comment / formatting / test-only diffs and for diffs that only touch `.claude/` or `memory/`. No enforcement hook, no version bump, no tag pipeline. "All unchanged" is a valid outcome.
+
+## Subagent model
+
+When dispatching via the `Agent` tool, pick by task weight: current top-tier for judgment-heavy work (planning, deep review, hard debugging); next tier down for routine analysis, lookups, parallel exploration. Omitting `model` inherits the parent's model. Do not pin subagents to a model more than one tier or one generation behind the current latest — older models drift from current code / conventions / docs and produce stale advice. The rule is version-relative on purpose: as the family advances, what counts as "acceptable" advances too.
 
 ## AI dev loop (v0.0.5+)
 
