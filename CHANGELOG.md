@@ -14,6 +14,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - Added `RowVanishedError` for batch handlers to signal mid-approve row disappearance; routes/tokens.py maps it to HTTP 409 + rollback.
 - Re-evaluated the `sm._has_started` private-attr guard in `beatos-http/app.py`: mcp 1.27.1 exposes no public `running`/`is_started` API, so `_has_started` guard is kept and `mcp` pin tightened to `>=1.27,<1.28` in `beatos-mcp/pyproject.toml`.
 
+### Foundation (UI)
+- `/approvals` cards now render a preview-aware layout: `payload.preview.headline` + sample + warnings + expand-all + high-risk variant. Destructive tokens (`purge_tracks`, `delete_list`) show a red card with an "I understand this is permanent" checkbox gate on Approve.
+- Legacy `create_list` token rendering remains for tokens without a `preview` block (carries until v0.0.24 batch tools all ship).
+
 ## [0.0.23] - 2026-05-19 — MCP transport migration
 
 ### Changed
