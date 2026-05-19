@@ -6,7 +6,7 @@ import { audioEngine } from "@/lib/audio-engine";
 
 export type PlayerStatus = "idle" | "loading" | "playing" | "paused" | "error";
 export type RepeatMode = "off" | "one" | "all";
-export type QueueSourceKind = "all" | "source" | "list" | "search";
+export type QueueSourceKind = "all" | "list" | "search";
 
 export interface QueueSource {
   kind: QueueSourceKind;

@@ -17,8 +17,6 @@ const noop = (): Promise<any> => Promise.resolve(null);
   getRepoRoot: () => Promise.resolve("/tmp/test-repo"),
   setDbPath: () => Promise.resolve({ restartRequired: true }),
   pickFolder: () => Promise.resolve(null),
-  copyIntoSource: noop,
-  moveIntoSource: noop,
 };
 
 global.fetch = vi.fn();

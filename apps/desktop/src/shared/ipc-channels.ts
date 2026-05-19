@@ -11,8 +11,6 @@ export const IPC_CHANNELS = {
   STORAGE_SET_DB_PATH: "storage:set-db-path",
   STORAGE_PICK_FOLDER: "storage:pick-folder",
   STORAGE_GET_REPO_ROOT: "storage:get-repo-root",
-  FS_COPY_INTO_SOURCE: "fs:copy-into-source",
-  FS_MOVE_INTO_SOURCE: "fs:move-into-source",
   SIDECAR_CRASHED: "sidecar-crashed",
   DRAG_OUT_FILE: "drag-out-file",
   MCP_TEST_CONNECTION: "mcp:test-connection",

@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
 
-import { useSourceStore } from "@/stores/sources";
 import { useTrackStore } from "@/stores/tracks";
 import { distinct } from "@/api/distinct";
 import { producers as producersApi } from "@/api/producers";
@@ -51,75 +49,6 @@ function StorageSection(): React.JSX.Element {
         <p className="mt-2 text-xs text-text-tertiary">
           A restart is required after changing this path.
         </p>
-      </div>
-    </section>
-  );
-}
-
-function SourcesSection(): React.JSX.Element {
-  const sources = useSourceStore((s) => s.all);
-  const refresh = useSourceStore((s) => s.refresh);
-  const add = useSourceStore((s) => s.add);
-  const remove = useSourceStore((s) => s.remove);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  async function onAdd(): Promise<void> {
-    const folder = await window.beatos.openFolderDialog();
-    if (!folder) return;
-    try {
-      await add({ root_path: folder });
-    } catch (e) {
-      alert(`Failed to add Source: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
-  async function onRemove(id: number, name: string): Promise<void> {
-    if (!confirm(`Remove Source "${name}"? This won't delete files on disk.`)) return;
-    try {
-      await remove(id);
-    } catch (e) {
-      alert(`Failed to remove: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
-  return (
-    <section>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Sources</h2>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border-subtle text-text-primary hover:bg-bg-row-hover text-sm"
-        >
-          <Plus size={14} /> Add Source
-        </button>
-      </div>
-      <div className="divide-y divide-border-subtle border border-border-subtle rounded-md overflow-hidden">
-        {sources.length === 0 ? (
-          <div className="px-4 py-3 text-text-tertiary text-sm">No Sources configured.</div>
-        ) : (
-          sources.map((s) => (
-            <div key={s.id} className="px-4 py-3 flex items-center gap-3 bg-bg-elevated">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm text-text-primary truncate">{s.name}</div>
-                <code className="text-[11px] text-text-tertiary truncate block">{s.root_path}</code>
-              </div>
-              <span className="text-[10px] uppercase tracking-wider text-text-tertiary">
-                {s.status}
-              </span>
-              <button
-                type="button"
-                onClick={() => onRemove(s.id, s.name)}
-                className="text-danger text-xs hover:underline"
-              >
-                Remove
-              </button>
-            </div>
-          ))
-        )}
       </div>
     </section>
   );
@@ -243,10 +172,9 @@ export function SettingsPanel(): React.JSX.Element {
       <div className="max-w-2xl">
         <h1 className="text-2xl font-bold mb-1">Settings</h1>
         <p className="text-text-secondary text-sm mb-8">
-          Storage location and Source management.
+          Storage location and library management.
         </p>
         <StorageSection />
-        <SourcesSection />
         <ProducersSection />
         <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
         <AboutSection />

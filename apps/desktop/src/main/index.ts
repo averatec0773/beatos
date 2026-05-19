@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, protocol, shell } from "electron";
-import { join, dirname, basename } from "node:path";
-import { existsSync, mkdirSync, readFileSync, unlinkSync, promises as fsPromises } from "node:fs";
+import { join, dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { spawn, ChildProcess } from "node:child_process";
 import readline from "node:readline";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
@@ -286,28 +286,6 @@ app.whenReady().then(async () => {
     });
     return result.canceled ? null : result.filePaths[0];
   });
-
-  ipcMain.handle(
-    IPC_CHANNELS.FS_COPY_INTO_SOURCE,
-    async (_e, src: string, destSourceRoot: string, subfolder: string | null) => {
-      const targetDir = subfolder ? join(destSourceRoot, subfolder) : destSourceRoot;
-      mkdirSync(targetDir, { recursive: true });
-      const dest = join(targetDir, basename(src));
-      await fsPromises.copyFile(src, dest);
-      return dest;
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.FS_MOVE_INTO_SOURCE,
-    async (_e, src: string, destSourceRoot: string, subfolder: string | null) => {
-      const targetDir = subfolder ? join(destSourceRoot, subfolder) : destSourceRoot;
-      mkdirSync(targetDir, { recursive: true });
-      const dest = join(targetDir, basename(src));
-      await fsPromises.rename(src, dest);
-      return dest;
-    }
-  );
 
   ipcMain.handle(
     IPC_CHANNELS.DIALOG_OPEN_FILE,

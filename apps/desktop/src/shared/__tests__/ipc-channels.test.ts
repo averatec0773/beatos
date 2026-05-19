@@ -15,8 +15,6 @@ describe("IPC_CHANNELS", () => {
         "DIALOG_OPEN_FILE": "dialog:open-file",
         "DIALOG_OPEN_FOLDER": "dialog:open-folder",
         "DRAG_OUT_FILE": "drag-out-file",
-        "FS_COPY_INTO_SOURCE": "fs:copy-into-source",
-        "FS_MOVE_INTO_SOURCE": "fs:move-into-source",
         "GET_API_BASE": "get-api-base",
         "MCP_TEST_CONNECTION": "mcp:test-connection",
         "PATH_ENSURE_DIR": "path:ensure-dir",

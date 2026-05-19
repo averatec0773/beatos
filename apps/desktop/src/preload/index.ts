@@ -19,10 +19,6 @@ const beatos = {
   setDbPath: (p: string): Promise<{ restartRequired: boolean }> =>
     ipcRenderer.invoke(IPC_CHANNELS.STORAGE_SET_DB_PATH, p),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke(IPC_CHANNELS.STORAGE_PICK_FOLDER),
-  copyIntoSource: (src: string, root: string, sub: string | null): Promise<string> =>
-    ipcRenderer.invoke(IPC_CHANNELS.FS_COPY_INTO_SOURCE, src, root, sub),
-  moveIntoSource: (src: string, root: string, sub: string | null): Promise<string> =>
-    ipcRenderer.invoke(IPC_CHANNELS.FS_MOVE_INTO_SOURCE, src, root, sub),
   testMcpConnection: (): Promise<
     | { ok: true; toolsCount: number; version: string }
     | { ok: false; error: string }
