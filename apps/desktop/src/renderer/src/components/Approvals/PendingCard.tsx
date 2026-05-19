@@ -35,7 +35,9 @@ function extractPreview(payload: Record<string, unknown>): Preview | null {
   if (
     typeof obj.headline !== "string" ||
     !Array.isArray(obj.sample) ||
-    !Array.isArray(obj.warnings)
+    !obj.sample.every((x) => typeof x === "string") ||
+    !Array.isArray(obj.warnings) ||
+    !obj.warnings.every((x) => typeof x === "string")
   ) {
     return null;
   }
@@ -145,7 +147,7 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
       {preview.warnings.length > 0 && (
         <ul className="mt-2 space-y-1 text-xs text-warning">
           {preview.warnings.map((w, i) => (
-            <li key={i}><span>⚠ </span><span>{w}</span></li>
+            <li key={i}><span aria-hidden="true">⚠ </span><span>{w}</span></li>
           ))}
         </ul>
       )}
