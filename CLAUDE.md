@@ -6,7 +6,7 @@
 
 **Monorepo:** `apps/desktop/` (Electron shell + React) · `packages/beatos-core/` (pure Python logic) · `packages/beatos-http/` (FastAPI facade) · `packages/beatos-mcp/` (MCP facade) · `packages/beatos-platforms/` (per-platform vocab maps).
 
-> All files except `README.md` are agent instructions. Treat them as authoritative.
+> All files except `README.md` are agent instructions — starting context, not infallible. Verify against current code before acting on specifics; flag stale-looking content rather than following it blindly.
 
 ## Session start
 
@@ -16,17 +16,15 @@
 
 ## Critical agent rules
 
-1. **`track.description` is sacred** — user-authored only. AI output goes to `track.description_draft`. Promoting a draft is an explicit user action.
-2. **Migrations are append-only.** Never edit an applied `migrations/*.sql`; add `00N+1_*.sql`. (Single exception in v0.0.4 — never repeat.)
-3. **`beatos-core` has no web / RPC / Electron deps.** If you reach for `fastapi` / `mcp` / Electron-side imports in core, you are in the wrong layer.
-4. **MCP / inject is human-in-the-loop.** Two-phase commit (`token` → `confirm_*`) on any write tool. Never programmatically submit a platform upload form.
-5. **Zustand v5 stable selectors** — never `.filter` / `.map` / `.find` inside a selector (infinite re-render → black screen). Select the list, derive in `useMemo`.
-6. **Always `preventDefault` in `dragover`** — including when `dataTransfer.types.includes("Files")` is false. Otherwise `drop` never fires (lesson re-applied across v0.0.13.2 / v0.0.14).
-7. **SPA route reuse** — when a route stays mounted across param changes (`/track/1` → `/track/2` keeps `<TrackEditor>` mounted with new `params`), `useEffect([])` does NOT re-run. Per-track effects must depend on `params.id` (caught at v0.0.14.1: producer distinct went stale across tracks).
-8. **Upstream-store → local-form sync** must update both the form state AND the dirty baseline (e.g. `initialTrack`), otherwise the upstream patch (auto-analyze writing bpm/key) registers as a user edit and re-fires auto-save in a loop.
-9. **Audio goes through `audio-engine.ts`, not `<audio>`.** v0.0.16 migrated to Tone.js / Web Audio. Don't reintroduce HTMLAudioElement. New CSP directives (`worker-src 'self' blob:`, `connect-src beatos-asset:`) and protocol privilege (`corsEnabled: true`) are load-bearing — if Tone fetch fails silently, check them first.
-10. **MCP stdout is JSON-RPC only.** Any code reachable by `beatos-mcp` (tools, helpers, imports) must NEVER `print()` or write to stdout — Claude Desktop reads stdout as protocol bytes and a stray newline will silently disconnect. Log via `beatos_mcp.log.configure()` which routes to file + stderr.
-11. **Concurrent SQLite writers need `BEGIN IMMEDIATE` + `busy_timeout`.** WAL allows multiple readers + 1 writer, but two concurrent `BEGIN` (deferred) + write produces `SQLITE_BUSY_SNAPSHOT` — a distinct error code that the default busy_handler does NOT retry. The approve dispatcher (`beatos_http/routes/tokens.py::approve_token`) uses `BEGIN IMMEDIATE` so a second writer queues and waits up to the `timeout=5` instead of failing immediately. Use `BEGIN IMMEDIATE` for any handler in `_APPROVE_HANDLERS`.
+1. **Migrations are append-only.** Never edit an applied `migrations/*.sql`; add `00N+1_*.sql`. (Single exception in v0.0.4 — never repeat.)
+2. **`beatos-core` has no web / RPC / Electron deps.** If you reach for `fastapi` / `mcp` / Electron-side imports in core, you are in the wrong layer.
+3. **MCP / inject is human-in-the-loop.** Two-phase commit (`token` → `confirm_*`) on any write tool. Never programmatically submit a platform upload form.
+4. **Zustand v5 stable selectors** — never `.filter` / `.map` / `.find` inside a selector (infinite re-render → black screen). Select the list, derive in `useMemo`.
+5. **Always `preventDefault` in `dragover`** — including when `dataTransfer.types.includes("Files")` is false. Otherwise `drop` never fires (lesson re-applied across v0.0.13.2 / v0.0.14).
+6. **SPA route reuse** — when a route stays mounted across param changes (`/track/1` → `/track/2` keeps `<TrackEditor>` mounted with new `params`), `useEffect([])` does NOT re-run. Per-track effects must depend on `params.id` (caught at v0.0.14.1: producer distinct went stale across tracks).
+7. **Upstream-store → local-form sync** must update both the form state AND the dirty baseline (e.g. `initialTrack`), otherwise the upstream patch (auto-analyze writing bpm/key) registers as a user edit and re-fires auto-save in a loop.
+8. **MCP stdout is JSON-RPC only.** Any code reachable by `beatos-mcp` (tools, helpers, imports) must NEVER `print()` or write to stdout — Claude Desktop reads stdout as protocol bytes and a stray newline will silently disconnect. Log via `beatos_mcp.log.configure()` which routes to file + stderr.
+9. **Concurrent SQLite writers need `BEGIN IMMEDIATE` + `busy_timeout`.** WAL allows multiple readers + 1 writer, but two concurrent `BEGIN` (deferred) + write produces `SQLITE_BUSY_SNAPSHOT` — a distinct error code that the default busy_handler does NOT retry. The approve dispatcher (`beatos_http/routes/tokens.py::approve_token`) uses `BEGIN IMMEDIATE` so a second writer queues and waits up to the `timeout=5` instead of failing immediately. Use `BEGIN IMMEDIATE` for any handler in `_APPROVE_HANDLERS`.
 
 For per-file context (which columns, which patterns) read [conventions/architecture.md](conventions/architecture.md) §"What NOT to change without reading context first".
 
@@ -63,15 +61,11 @@ Before any non-trivial `git commit`, invoke the [harness](.claude/skills/harness
 
 ## Subagent model
 
-When dispatching via the `Agent` tool, pick by task weight: current top-tier for judgment-heavy work (planning, deep review, hard debugging); next tier down for routine analysis, lookups, parallel exploration. Omitting `model` inherits the parent's model.
+When dispatching via the `Agent` tool, pick by task weight: current top-tier for judgment-heavy work (planning, deep review, hard debugging); next tier down for routine analysis. Cheap parallel lookups where stale conventions won't bite are fine on older tiers. Omitting `model` inherits the parent's.
 
-**Reviewer ≠ author.** When a subagent's job is to review work the parent produced (code, design, analysis), explicitly set `model` to a different family than the parent — a reviewer that shares the author's weights also shares its blind spots, and the second opinion stops being independent. The constraint is "different", not "stronger": top-tier author paired with next-tier reviewer is fine either direction.
-
-Do not pin subagents to a model more than one tier or one generation behind the current latest — older models drift from current code / conventions / docs and produce stale advice. The rule is version-relative on purpose: as the family advances, what counts as "acceptable" advances too.
+For high-stakes review (architecture decisions, security, hard debugging), prefer a reviewer family different from the author — shared weights share blind spots. For routine checks, same family is fine.
 
 ## AI dev loop (v0.0.5+)
-
-If the smoke harness or MCP tools below are available, **drive the app directly** — don't ask the user to click + screenshot.
 
 - **Audio playback issues** → `node scripts/diagnose-playback.mjs [--tiny|--large]` or `BEATOS_TEST_AUDIO=/path/to.wav node scripts/diagnose-playback.mjs`. Captures every HTMLMediaElement event with timestamps. Byte-level WAV repair lives in `src/main/asset-protocol.ts::repairWavIfNeeded`.
 
