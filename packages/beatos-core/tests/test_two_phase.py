@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 
 import aiosqlite
 import pytest
@@ -12,6 +13,7 @@ from beatos_core.two_phase import (
     consume_token,
     consume_token_with_result,
     create_token,
+    get_token_status,
     reject_token,
     verify_token,
 )
@@ -148,3 +150,32 @@ async def test_reject_token_no_op_on_terminal_token(fresh_db):
         ) as cur:
             row = await cur.fetchone()
         assert row[0] == "consumed"
+
+
+@pytest.mark.asyncio
+async def test_get_token_status_pending(fresh_db):
+    async with aiosqlite.connect(fresh_db) as conn:
+        token = await create_token(conn, "create_list", {"name": "X"})
+        info = await get_token_status(conn, token)
+        assert info["tool_name"] == "create_list"
+        assert info["status"] == "pending"
+        assert info["payload"] == {"name": "X"}
+        assert info["result"] is None
+        assert info["expires_at"] > time.time()
+
+
+@pytest.mark.asyncio
+async def test_get_token_status_consumed_returns_result(fresh_db):
+    async with aiosqlite.connect(fresh_db) as conn:
+        token = await create_token(conn, "create_list", {"name": "Y"})
+        await consume_token_with_result(conn, token, {"list_id": 42})
+        info = await get_token_status(conn, token)
+        assert info["status"] == "consumed"
+        assert info["result"] == {"list_id": 42}
+
+
+@pytest.mark.asyncio
+async def test_get_token_status_raises_when_not_found(fresh_db):
+    async with aiosqlite.connect(fresh_db) as conn:
+        with pytest.raises(TokenError, match="not found"):
+            await get_token_status(conn, "bogus")

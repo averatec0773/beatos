@@ -122,3 +122,23 @@ async def reject_token(conn: aiosqlite.Connection, token: str) -> None:
         (now, token),
     )
     await conn.commit()
+
+
+async def get_token_status(conn: aiosqlite.Connection, token: str) -> dict:
+    """Read-only. Returns token metadata. Used by confirm_* tools to
+    report status back to AI."""
+    async with conn.execute(
+        "SELECT tool_name, status, payload, result, expires_at FROM tokens WHERE token=?",
+        (token,),
+    ) as cur:
+        row = await cur.fetchone()
+    if row is None:
+        raise TokenError(f"token not found: {token}")
+    tool_name, status, payload_json, result_json, expires_at = row
+    return {
+        "tool_name": tool_name,
+        "status": status,
+        "payload": json.loads(payload_json),
+        "result": json.loads(result_json) if result_json else None,
+        "expires_at": expires_at,
+    }
