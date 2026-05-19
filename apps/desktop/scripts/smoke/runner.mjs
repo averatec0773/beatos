@@ -50,7 +50,6 @@ export async function runAssertions(ctx) {
   // === v0.0.14 sidebar / trash ===
   await sidebar.assertDropCreateApiPath(ctx);
   await trash.assertTrashSoftDeleteRestore(ctx);
-  await sidebar.assertSourceReorderApi(ctx);
 
   // === v0.0.14.1 DAW WAV regression (runs late: extra track shouldn't
   // contaminate count-sensitive earlier assertions) ===
@@ -66,4 +65,7 @@ export async function runAssertions(ctx) {
 
   // === v0.0.15.1 real-audio regression (opt-in via BEATOS_REAL_AUDIO) ===
   await player.assertRealAudioRegression(ctx);
+
+  // === v0.0.22 sidebar order (appended last — non-mutating DOM check) ===
+  await sidebar.assertSidebarOrder(ctx);
 }

@@ -10,18 +10,17 @@ BeatOS is a local-first desktop app for beat producers — catalog beats and the
 
 | Term | Meaning |
 |---|---|
-| **Track** | Beat record with metadata + 0+ assets; globally unique, not owned by any Source. |
-| **Asset** | File attached to a Track via `role` (`audio_tagged_wav`, `audio_untagged_mp3`, `cover`, `stems`). |
-| **Source** | Registered folder BeatOS watches; affiliation computed at runtime by `abs_path` prefix-matching `root_path`. |
+| **Track** | Beat record with metadata + 0+ assets; globally unique. |
+| **Asset** | File attached to a Track via `role` (`audio_tagged_wav`, `audio_untagged_mp3`, `cover`, `stems`). Stored with absolute path; `missing: bool` reflects on-disk presence (sweeper-maintained). |
 | **List** | User-curated playlist; membership preserved across soft-delete / restore. |
 | **Adapter** | Platform-specific browser-automation class `inject(page, track_data)` (not yet implemented; v0.1.0). |
 | **Inject** | User action running an adapter against an open browser page; code fills form, user submits. Never auto-submit. |
 | **Sidecar** | Python backend (`packages/beatos-*`), launched as child process by Electron main. |
 | **MCP** | Model Context Protocol stdio facade; mirrors HTTP reads, writes require two-phase `confirm_*` commit. |
 
-## Data model: Sources, not Libraries
+## Data model: flat catalog of tracks
 
-Tracks are global — they belong to BeatOS as a whole, not to any Source; Source affiliation is derived at runtime by path-prefix matching, and an offline Source (drive unplugged) leaves its tracks read-only for file ops but fully editable for metadata, with Lists / search / filter spanning all Sources. Settled in v0.0.4 after the per-Source mount-point model was rejected.
+Tracks are global — they belong to BeatOS as a whole. Each track holds 0+ assets, each asset stores an absolute path on disk and a `missing` flag (sweeper-maintained). Lists, search, and filter span the entire catalog. The earlier "Source" concept (registered watched folders, v0.0.4–v0.0.21) was retired in v0.0.22; folder-level auto-import is gone, manual drag-import is the only way new files enter the catalog.
 
 ## Layering rules
 
@@ -60,9 +59,7 @@ packages/beatos-core/        ← business logic
     library/                 ← library lifecycle service
     tracks/                  ← track CRUD + queries
     assets/                  ← reference / managed mode, relocate
-    sources/                 ← v0.0.4 source registry + status monitor
     lists/                   ← user-list CRUD + membership
-    watcher/                 ← watchdog registry (per-source observer)
     audio_analysis/          ← v0.0.13 librosa BPM + Key pipeline
 
 packages/beatos-http/        ← FastAPI facade for the renderer
@@ -257,7 +254,7 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | SQLite WAL in `run_migrations` | `packages/beatos-core/beatos_core/db.py:run_migrations` | `PRAGMA journal_mode=WAL` set on every connection; prevents SQLITE_BUSY when MCP reader overlaps HTTP writer. |
 | `tokens` table (2PC skeleton) | `packages/beatos-core/beatos_core/migrations/009_tokens.sql` | Single-use tokens for future write tools; schema is additive, no write tools yet. |
 | 2PC helpers | `packages/beatos-mcp/beatos_mcp/two_phase.py` | `issue_token(db, action, payload)` + `consume_token(db, token_id)` — write tools call `consume_token` inside the same DB transaction as the actual write. |
-| 6 MCP read tools | `packages/beatos-mcp/beatos_mcp/tools/` + `server.py` | `ping`, `list_tracks`, `get_track`, `list_sources`, `list_lists`, `list_distinct_values` — all registered and exercised by pytest. |
+| 5 MCP read tools | `packages/beatos-mcp/beatos_mcp/tools/` + `server.py` | `ping`, `list_tracks`, `get_track`, `list_lists`, `list_distinct_values` — all registered and exercised by pytest. (`list_sources` removed in v0.0.22 with the Source concept.) |
 | `BEATOS_DB_PATH` env discovery | `packages/beatos-mcp/beatos_mcp/db.py` | MCP process opens `BEATOS_DB_PATH` directly (read-only SQLite); raises on unset — no silent fallback. |
 | MCP structlog → JSONL | `packages/beatos-mcp/beatos_mcp/log.py` | `configure()` routes all log output to file + stderr; stdout is reserved for JSON-RPC only. |
 | Settings "AI Integration" panel | `apps/desktop/src/renderer/src/components/Settings/AIIntegrationSection.tsx` | Renders the Claude Desktop config snippet and `mcp:test-connection` result; copy-to-clipboard. |
@@ -285,7 +282,7 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 |---|---|---|
 | `ping` | read | Shipped v0.0.20. |
 | `list_tracks(filter?)` / `get_track(id)` | read | Shipped v0.0.20. |
-| `list_sources` / `list_lists` / `list_distinct_values` | read | Shipped v0.0.20. |
+| `list_lists` / `list_distinct_values` | read | Shipped v0.0.20. (`list_sources` shipped v0.0.20, removed v0.0.22.) |
 | `create_list(name)` | write | Shipped v0.0.21. Two-phase: phase 1 issues token; user approves in BeatOS Settings; phase 2 (`confirm_create_list(token)`) is read-only. |
 | `search_tracks(query)` | read | Deferred → v0.0.23 (RAG). |
 | `list_platforms()` | read | Once adapters exist. |
