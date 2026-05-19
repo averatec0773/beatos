@@ -49,13 +49,16 @@ MCP `beatos-mcp` console script registration. The v0.0.20 → v0.0.20.1 releases
 - ✅ Dead `_MULTI_VALUE` constant removed (commit `2a35e5e`).
 - ✅ **Claude Desktop end-to-end verification** (v0.0.20.2) — `beatos` MCP server connects from Claude Desktop; `list_sources` returns the live 4-source library. The first real layer-3 confirmation that the read surface works in a third-party client.
 
-### v0.0.21 — MCP two-phase commit (first write tool)
+### v0.0.21 — SHIPPED 2026-05-19
 
-The 2PC token skeleton (table + `create/verify/consume` helpers) landed in v0.0.20. This version activates it with the first real write tool.
+First MCP write tool: `create_list` + 2PC activation. SSE-driven Pending Confirmations UI in Settings → AI Integration. See [CHANGELOG.md](CHANGELOG.md#0021---2026-05-19--first-mcp-write-tool-2pc-activation).
 
-- First write tool: `create_list(name) → confirm_token` / `confirm_create_list(token)`.
-- Tests cover: token expiry, double-confirm, wrong-token, concurrent confirm.
-- **Renderer side**: Surface pending tokens in Settings → AI Integration ("Pending confirmations" list with Approve / Reject per row). First place this UI lives.
+### v0.0.22 candidates
+
+Pick one based on user value at the time:
+
+- `draft_description` placeholder (original v0.0.22 scope — see below) — second MCP write tool, exercises the `description_draft` write path.
+- Pending-token global toast / sidebar badge — surface pending tokens outside the Settings panel. Settings-only display shipped in v0.0.21; this version adds main-window awareness.
 
 ### v0.0.22 — `draft_description` placeholder
 

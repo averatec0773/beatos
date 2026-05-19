@@ -4,6 +4,41 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.21] - 2026-05-19 — First MCP write tool, 2PC activation
+
+The 2PC token skeleton (v0.0.20) now powers a real write tool. AI agents request `create_list(name)`; the user approves in BeatOS Settings; the list is written atomically; the AI queries outcome via `confirm_create_list(token)`.
+
+### Added
+
+- **MCP write tools**: `create_list(name)` issues a 2PC token (does not write); `confirm_create_list(token)` reads back the eventual status (`awaiting_approval` / `approved` / `rejected` / `expired`).
+- **HTTP token surface** under `/api/tokens`: `GET ?status=pending`, `POST /{token}/approve` (verify+insert+consume atomic), `POST /{token}/reject` (race-tolerant), `GET /stream` (SSE `pending_changed` feed).
+- **Approve dispatcher** in `beatos_http/routes/tokens.py::_APPROVE_HANDLERS` — registry pattern; every future write tool registers one decorator.
+- **Pending Confirmations UI** in `Settings → AI Integration` — SSE-driven real-time list with Approve / Reject per row. Empty state renders nothing.
+- **Token cleanup background task** in sidecar — runs once on startup + hourly (sleeps first). Transitions pending → expired past TTL; deletes terminal rows older than 7 days.
+- **`tokens.result` JSON column** (migration `010_tokens_result.sql`) — stores write outcomes so confirm tools have deterministic answers.
+- **`use-click-outside` + `useApiBase` + `usePendingTokens` renderer hooks** — small composable utilities. `useApiBase` was missing; added now.
+
+### Changed
+
+- **`beatos_core.two_phase` (moved)** — was `packages/beatos-mcp/beatos_mcp/two_phase.py`, now `packages/beatos-core/beatos_core/two_phase.py`. Both `beatos-mcp` (issuance) and `beatos-http` (approve/cleanup) import from the shared core module; sibling-package imports would violate CLAUDE.md layering.
+- **`verify_token` is now strictly read-only** — the v0.0.20 lazy-expire `UPDATE + COMMIT` was breaking outer transactions. The cleanup task owns `pending → expired` instead.
+- **New helpers in `two_phase.py`**: `consume_token_with_result(conn, token, result)`, `reject_token(conn, token)` (no-op on terminal race), `get_token_status(conn, token)` (read-only), `cleanup_terminal_tokens(conn, max_age_days=7)`.
+- **`beatos_mcp.db.connect_writable()`** — new context manager for write tools (does NOT set `PRAGMA query_only=1`). Read tools keep the existing `connect()` for defense-in-depth.
+- **Approve handler uses `BEGIN IMMEDIATE` + `timeout=5`** — concurrent approvers under WAL no longer fail with `SQLITE_BUSY_SNAPSHOT`. Documented as CLAUDE.md rule 11.
+
+### Migration
+
+- `010_tokens_result.sql` adds a nullable `result TEXT` column. Existing DBs auto-apply on next BeatOS launch.
+
+### Dependencies
+
+- Added `sse-starlette>=2.1` to `beatos-http`.
+
+### Notes
+
+- Settings panel is the only surface for pending tokens in this version. Sidebar badge / global toast deferred to v0.0.22+ candidate.
+- The hourly cleanup loop's failure case is logged but does not crash the sidecar; the loop continues.
+
 ## [0.0.20.3] - 2026-05-19 — Renderer polish + sidecar race fix
 
 Three independent user-visible fixes from dogfooding, plus a sidecar concurrency bug surfaced while wiring v0.0.21 internals.
