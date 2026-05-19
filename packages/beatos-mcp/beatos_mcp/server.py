@@ -12,6 +12,8 @@ from mcp.types import TextContent, Tool
 
 from beatos_mcp.db import DBNotConfigured
 from beatos_mcp.log import configure as configure_logging
+from beatos_mcp.tools.confirm_create_list import confirm_create_list
+from beatos_mcp.tools.create_list import create_list
 from beatos_mcp.tools.distinct import list_distinct_values
 from beatos_mcp.tools.lists import list_lists
 from beatos_mcp.tools.ping import ping
@@ -72,6 +74,32 @@ _DISTINCT_SCHEMA = {
     },
 }
 
+_CREATE_LIST_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "name": {
+            "type": "string",
+            "description": "Display name for the new list (e.g. 'Trap Beats 2026').",
+            "minLength": 1,
+            "maxLength": 200,
+        },
+    },
+    "required": ["name"],
+}
+
+_CONFIRM_CREATE_LIST_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "token": {
+            "type": "string",
+            "description": "Token returned by create_list.",
+        },
+    },
+    "required": ["token"],
+}
+
 
 @server.list_tools()
 async def list_tools_handler() -> list[Tool]:
@@ -94,6 +122,12 @@ async def list_tools_handler() -> list[Tool]:
         Tool(name="list_distinct_values",
              description="Enumerate distinct values + counts for one of producer/genre/mood/key. Call this before filtering list_tracks so you use the user's actual spelling.",
              inputSchema=_DISTINCT_SCHEMA),
+        Tool(name="create_list",
+             description="Request creation of a new user list. Returns a 2PC token; the actual list is created only after the human approves in BeatOS → Settings → AI Integration. Tell the user to open BeatOS to approve.",
+             inputSchema=_CREATE_LIST_SCHEMA),
+        Tool(name="confirm_create_list",
+             description="Check the status of a create_list token. Returns {status: 'awaiting_approval' | 'approved' | 'rejected' | 'expired'}. On 'approved' also returns {list_id, name}.",
+             inputSchema=_CONFIRM_CREATE_LIST_SCHEMA),
     ]
 
 
@@ -126,6 +160,16 @@ async def call_tool_handler(name: str, arguments: dict) -> list[TextContent]:
             if not isinstance(field, str):
                 raise ValueError("field is required")
             return _text(await list_distinct_values(field))
+        if name == "create_list":
+            list_name = arguments.get("name")
+            if not isinstance(list_name, str):
+                raise ValueError("name must be a string")
+            return _text(await create_list(name=list_name))
+        if name == "confirm_create_list":
+            tok = arguments.get("token")
+            if not isinstance(tok, str):
+                raise ValueError("token must be a string")
+            return _text(await confirm_create_list(token=tok))
     except DBNotConfigured as e:
         log.warning("db_not_configured", error=str(e))
         raise ValueError(str(e)) from e
