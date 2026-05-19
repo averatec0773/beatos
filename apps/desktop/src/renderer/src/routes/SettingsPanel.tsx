@@ -232,10 +232,11 @@ function AboutSection(): React.JSX.Element {
 
 export function SettingsPanel(): React.JSX.Element {
   const [dbPath, setDbPath] = useState<string>("");
+  const [repoRoot, setRepoRoot] = useState<string>("");
   useEffect(() => {
     void window.beatos.getDbPath().then(setDbPath);
+    void window.beatos.getRepoRoot().then(setRepoRoot);
   }, []);
-  const repoRoot = "<your beatos repo path>";
 
   return (
     <main className="beatos-scroll flex-1 overflow-y-auto p-8">

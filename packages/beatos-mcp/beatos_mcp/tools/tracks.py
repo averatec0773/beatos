@@ -85,8 +85,6 @@ _SORT_DIRS = {"asc", "desc"}
 _SORT_COL = {"created_at": "created_at", "updated_at": "updated_at",
              "bpm": "bpm", "name": "title"}
 
-_MULTI_VALUE = {"producer", "genre", "mood"}
-
 
 def _multi_clause(field: str, values: list[str]) -> tuple[str, list]:
     placeholders = ", ".join("?" for _ in values)

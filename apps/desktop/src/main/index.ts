@@ -268,6 +268,8 @@ app.whenReady().then(async () => {
 
   ipcMain.handle(IPC_CHANNELS.STORAGE_GET_DB_PATH, () => resolveDbPath());
 
+  ipcMain.handle(IPC_CHANNELS.STORAGE_GET_REPO_ROOT, () => repoRoot());
+
   ipcMain.handle(IPC_CHANNELS.MCP_TEST_CONNECTION, () =>
     testMcpConnection({ repoRoot: repoRoot(), dbPath: resolveDbPath() })
   );

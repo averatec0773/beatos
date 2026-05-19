@@ -14,6 +14,7 @@ const noop = (): Promise<any> => Promise.resolve(null);
   quitApp: noop,
   getHomePath: () => Promise.resolve("/Users/test"),
   getDbPath: () => Promise.resolve("/tmp/test.db"),
+  getRepoRoot: () => Promise.resolve("/tmp/test-repo"),
   setDbPath: () => Promise.resolve({ restartRequired: true }),
   pickFolder: () => Promise.resolve(null),
   copyIntoSource: noop,

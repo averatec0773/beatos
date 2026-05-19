@@ -15,6 +15,7 @@ const beatos = {
   getHomePath: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.PATH_HOME),
   ensureDir: (dir: string): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.PATH_ENSURE_DIR, dir),
   getDbPath: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.STORAGE_GET_DB_PATH),
+  getRepoRoot: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.STORAGE_GET_REPO_ROOT),
   setDbPath: (p: string): Promise<{ restartRequired: boolean }> =>
     ipcRenderer.invoke(IPC_CHANNELS.STORAGE_SET_DB_PATH, p),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke(IPC_CHANNELS.STORAGE_PICK_FOLDER),

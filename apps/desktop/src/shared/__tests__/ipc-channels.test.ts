@@ -25,6 +25,7 @@ describe("IPC_CHANNELS", () => {
         "SHELL_REVEAL_IN_FINDER": "shell:reveal-in-finder",
         "SIDECAR_CRASHED": "sidecar-crashed",
         "STORAGE_GET_DB_PATH": "storage:get-db-path",
+        "STORAGE_GET_REPO_ROOT": "storage:get-repo-root",
         "STORAGE_PICK_FOLDER": "storage:pick-folder",
         "STORAGE_SET_DB_PATH": "storage:set-db-path",
       }
