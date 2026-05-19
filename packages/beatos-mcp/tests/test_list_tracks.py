@@ -90,40 +90,6 @@ async def test_filter_by_genre_multi_value(fresh_db):
 
 
 @pytest.mark.asyncio
-async def test_filter_by_source_id(fresh_db):
-    async with aiosqlite.connect(fresh_db) as conn:
-        cur = await conn.execute(
-            "INSERT INTO source (name, root_path, position, created_at) "
-            "VALUES ('S1', '/x', 0, '2026-05-18')"
-        )
-        src_id = cur.lastrowid
-        cur = await conn.execute(
-            "INSERT INTO track (title, created_at, updated_at) VALUES ('a', '2026-05-18', '2026-05-18')"
-        )
-        tid_a = cur.lastrowid
-        cur = await conn.execute(
-            "INSERT INTO track (title, created_at, updated_at) VALUES ('b', '2026-05-18', '2026-05-18')"
-        )
-        tid_b = cur.lastrowid
-        await conn.execute(
-            "INSERT INTO asset (track_id, role, abs_path, missing, created_at, updated_at) "
-            "VALUES (?, 'audio_tagged_wav', '/x/a.wav', 0, '2026-05-18', '2026-05-18')",
-            (tid_a,),
-        )
-        # b's asset lives outside source root → excluded
-        await conn.execute(
-            "INSERT INTO asset (track_id, role, abs_path, missing, created_at, updated_at) "
-            "VALUES (?, 'audio_tagged_wav', '/y/b.wav', 0, '2026-05-18', '2026-05-18')",
-            (tid_b,),
-        )
-        await conn.commit()
-
-    result = await list_tracks(source_id=src_id)
-    titles = {t["title"] for t in result["items"]}
-    assert titles == {"a"}
-
-
-@pytest.mark.asyncio
 async def test_filter_by_list_id(fresh_db):
     # Junction table is `track_list` (verified from 002_lists_and_index.sql).
     # `added_at` is required (no default).
@@ -150,11 +116,6 @@ async def test_filter_by_list_id(fresh_db):
     titles = {t["title"] for t in result["items"]}
     assert titles == {"in"}
 
-
-@pytest.mark.asyncio
-async def test_source_and_list_mutually_exclusive(fresh_db):
-    with pytest.raises(ValueError, match="mutually exclusive"):
-        await list_tracks(source_id=1, list_id=1)
 
 
 @pytest.mark.asyncio

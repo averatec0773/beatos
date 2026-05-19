@@ -139,7 +139,6 @@ def _build_filter_clauses(
 
 async def list_tracks(
     *,
-    source_id: int | None = None,
     list_id: int | None = None,
     producers: list[str] | None = None,
     genres: list[str] | None = None,
@@ -153,8 +152,6 @@ async def list_tracks(
     limit: int = DEFAULT_LIMIT,
     offset: int = 0,
 ) -> dict:
-    if source_id is not None and list_id is not None:
-        raise ValueError("source_id and list_id are mutually exclusive")
     if sort_by not in _SORTABLE:
         raise ValueError(f"sort_by must be one of {sorted(_SORTABLE)}; got {sort_by!r}")
     if sort_dir not in _SORT_DIRS:
@@ -174,13 +171,6 @@ async def list_tracks(
         join = "JOIN track_list tl ON tl.track_id = track.id "
         clauses.append("tl.list_id = ?")
         params.append(list_id)
-    elif source_id is not None:
-        join = "JOIN asset asrc ON asrc.track_id = track.id "
-        clauses.append(
-            "EXISTS (SELECT 1 FROM source s WHERE s.id=? "
-            "AND (asrc.abs_path GLOB s.root_path || '/*' OR asrc.abs_path = s.root_path))"
-        )
-        params.append(source_id)
 
     where = " AND ".join(clauses)
     sort_col = _SORT_COL[sort_by]
