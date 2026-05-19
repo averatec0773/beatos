@@ -38,6 +38,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - `create_tracks(items)` — batch create up to 100 empty track rows. Multi-value fields accept list[str].
 - `attach_asset(track_id, role, path)` — attach an audio or cover file by absolute path. Extension validated against role. Existing role-slot is replaced in place (UNIQUE(track_id, role)). Handler re-checks file existence at approve time and writes `size_bytes`.
 
+### AI-content write tool
+- `draft_descriptions(items)` — batch-write `track.description_draft`. Never touches the live `description` field (UI-only promotion). v0.0.25 swaps the passthrough impl for real RAG generation.
+
 ## [0.0.23] - 2026-05-19 — MCP transport migration
 
 ### Changed

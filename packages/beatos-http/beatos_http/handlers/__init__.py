@@ -2,6 +2,7 @@
 
 Importing this module triggers the @register_approve_handler decorators
 in each handler file, populating routes/tokens._APPROVE_HANDLERS."""
+from beatos_http.handlers import draft_descriptions  # noqa: F401
 from beatos_http.handlers import ingest  # noqa: F401
 from beatos_http.handlers import lifecycle  # noqa: F401
 from beatos_http.handlers import list_curation  # noqa: F401
