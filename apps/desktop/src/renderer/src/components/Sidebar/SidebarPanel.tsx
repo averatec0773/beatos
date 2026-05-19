@@ -12,6 +12,7 @@ import {
 
 import { SourcesSection } from "@/components/Sidebar/SourcesSection";
 import { ListsSection } from "@/components/Sidebar/ListsSection";
+import { ApprovalsSection } from "@/components/Sidebar/ApprovalsSection";
 import { TrashSection } from "@/components/Sidebar/TrashSection";
 import { SidebarFooter } from "@/components/Sidebar/SidebarFooter";
 
@@ -84,6 +85,7 @@ export function SidebarPanel(): React.JSX.Element {
       <SidebarResizer />
       <SourcesSection onListRoute={onListRoute} />
       <ListsSection activeListId={activeListId} />
+      <ApprovalsSection />
       <TrashSection />
       <SidebarFooter />
     </aside>
