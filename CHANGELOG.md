@@ -4,6 +4,19 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.24.2] — 2026-05-19 — Batch asset attach/detach
+
+### Added
+- `attach_assets(items)` — batch attach (≤500). Each item `{track_id, role, path}`. One 2PC token replaces N. Closes the folder-import pain: 50 tracks × 2 assets used to be ~100 approval clicks; now it's 1.
+- `detach_assets(items)` — batch detach (≤500). Each item `{track_id, role}`. Idempotent: items whose asset is already absent are reported with `removed=false` but do not fail the batch.
+- Atomic batch attach: if ANY file vanished between token issuance and approve, the entire batch rolls back (RowVanishedError → HTTP 409). No partial writes.
+
+### Removed
+- Singular `attach_asset` MCP tool (v0.0.24-only). Replaced by `attach_assets([{...}])`. Tool count: 19 → 20.
+
+### Renderer
+- `PendingCard` expanded-items view now formats attach/detach item shapes (e.g. `#42 audio: trap.wav`, `#7 cover`) instead of opaque `#1`/`#2`.
+
 ## [0.0.24.1] — 2026-05-19 — Drop `description_draft`
 
 ### Removed

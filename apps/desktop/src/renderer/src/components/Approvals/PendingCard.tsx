@@ -56,13 +56,32 @@ function fullItemCount(payload: Record<string, unknown>): number {
   return 0;
 }
 
+function basename(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash >= 0 ? path.slice(slash + 1) : path;
+}
+
 function renderExpandedItems(payload: Record<string, unknown>): string[] {
   const ids = payload.ids ?? payload.track_ids;
   if (Array.isArray(ids)) return ids.map((id) => `#${String(id)}`);
   if (Array.isArray(payload.items))
     return payload.items.map((it, i) => {
       const obj = it as Record<string, unknown>;
-      return typeof obj.title === "string" ? `#${i + 1} ${obj.title}` : `#${i + 1}`;
+      // attach_assets: {track_id, role, path}
+      if (
+        typeof obj.track_id === "number" &&
+        typeof obj.role === "string" &&
+        typeof obj.path === "string"
+      ) {
+        return `#${obj.track_id} ${obj.role}: ${basename(obj.path)}`;
+      }
+      // detach_assets: {track_id, role}
+      if (typeof obj.track_id === "number" && typeof obj.role === "string") {
+        return `#${obj.track_id} ${obj.role}`;
+      }
+      // create_tracks: {title, ...}
+      if (typeof obj.title === "string") return `#${i + 1} ${obj.title}`;
+      return `#${i + 1}`;
     });
   return [];
 }
