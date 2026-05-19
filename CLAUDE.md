@@ -63,7 +63,11 @@ Before any non-trivial `git commit`, invoke the [harness](.claude/skills/harness
 
 ## Subagent model
 
-When dispatching via the `Agent` tool, pick by task weight: current top-tier for judgment-heavy work (planning, deep review, hard debugging); next tier down for routine analysis, lookups, parallel exploration. Omitting `model` inherits the parent's model. Do not pin subagents to a model more than one tier or one generation behind the current latest — older models drift from current code / conventions / docs and produce stale advice. The rule is version-relative on purpose: as the family advances, what counts as "acceptable" advances too.
+When dispatching via the `Agent` tool, pick by task weight: current top-tier for judgment-heavy work (planning, deep review, hard debugging); next tier down for routine analysis, lookups, parallel exploration. Omitting `model` inherits the parent's model.
+
+**Reviewer ≠ author.** When a subagent's job is to review work the parent produced (code, design, analysis), explicitly set `model` to a different family than the parent — a reviewer that shares the author's weights also shares its blind spots, and the second opinion stops being independent. The constraint is "different", not "stronger": top-tier author paired with next-tier reviewer is fine either direction.
+
+Do not pin subagents to a model more than one tier or one generation behind the current latest — older models drift from current code / conventions / docs and produce stale advice. The rule is version-relative on purpose: as the family advances, what counts as "acceptable" advances too.
 
 ## AI dev loop (v0.0.5+)
 
