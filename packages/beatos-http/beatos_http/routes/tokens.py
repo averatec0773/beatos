@@ -181,3 +181,7 @@ async def list_tokens(
             }
             for r in rows
         ]
+
+
+# Side-effect import: registers @register_approve_handler for every batch tool.
+from beatos_http import handlers  # noqa: E402, F401

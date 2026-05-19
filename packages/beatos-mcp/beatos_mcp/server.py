@@ -17,6 +17,11 @@ from beatos_mcp.db import DBNotConfigured
 from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
 from beatos_mcp.tools.distinct import list_distinct_values as _list_distinct_impl
+from beatos_mcp.tools.lifecycle import (
+    purge_tracks as _purge_tracks_impl,
+    restore_tracks as _restore_tracks_impl,
+    trash_tracks as _trash_tracks_impl,
+)
 from beatos_mcp.tools.lists import list_lists as _list_lists_impl
 from beatos_mcp.tools.ping import ping as _ping_impl
 from beatos_mcp.tools.tracks import (
@@ -119,6 +124,51 @@ async def await_approval(
     On 'approved', a `result` field carries the tool-specific outcome
     (e.g. {list_id, name} for create_list, {created_ids: [...]} for create_tracks)."""
     return await _await_approval_impl(token=token)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        destructiveHint=False,  # soft delete; restore_tracks undoes it
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+async def trash_tracks(
+    ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to move to trash.")],
+) -> dict:
+    """Move tracks to trash (soft delete; reversible via restore_tracks).
+    Returns a 2PC token. Affected tracks' titles appear in the approval card preview."""
+    return await _trash_tracks_impl(ids=ids)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+async def restore_tracks(
+    ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to restore from trash.")],
+) -> dict:
+    """Restore previously-trashed tracks. Returns a 2PC token."""
+    return await _restore_tracks_impl(ids=ids)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        destructiveHint=True,  # permanent
+        idempotentHint=False,
+        openWorldHint=False,
+    ),
+)
+async def purge_tracks(
+    ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to PERMANENTLY DELETE.")],
+) -> dict:
+    """PERMANENTLY delete tracks (and cascade their asset rows). Source audio
+    files on disk are not touched. The approval card requires a checkbox
+    confirmation. Returns a 2PC token."""
+    return await _purge_tracks_impl(ids=ids)
 
 
 # --- ASGI app for FastAPI mount ---

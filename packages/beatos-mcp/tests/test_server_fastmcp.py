@@ -19,6 +19,9 @@ async def test_registered_tool_names() -> None:
         "list_distinct_values",
         "create_list",
         "await_approval",
+        "trash_tracks",
+        "restore_tracks",
+        "purge_tracks",
     }
     assert names == expected
 
