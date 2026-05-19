@@ -142,3 +142,30 @@ async def get_token_status(conn: aiosqlite.Connection, token: str) -> dict:
         "result": json.loads(result_json) if result_json else None,
         "expires_at": expires_at,
     }
+
+
+async def cleanup_terminal_tokens(
+    conn: aiosqlite.Connection,
+    max_age_days: int = 7,
+) -> int:
+    """Transition pending → expired for tokens past TTL, then delete tokens
+    in terminal state older than max_age_days. Returns total rows deleted.
+
+    Uses COALESCE(consumed_at, expires_at) so any rows whose consumed_at is
+    NULL (legacy / future bugs) are still cleaned by their expires_at."""
+    now = time.time()
+    # Phase 1: transition stale pending → expired
+    await conn.execute(
+        "UPDATE tokens SET status='expired', consumed_at=? "
+        "WHERE status='pending' AND expires_at < ?",
+        (now, now),
+    )
+    # Phase 2: delete terminal rows older than threshold
+    cutoff = now - max_age_days * 86400
+    cur = await conn.execute(
+        "DELETE FROM tokens "
+        "WHERE status != 'pending' AND COALESCE(consumed_at, expires_at) < ?",
+        (cutoff,),
+    )
+    await conn.commit()
+    return cur.rowcount or 0
