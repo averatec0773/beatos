@@ -8,7 +8,7 @@
 
 A local-first desktop library for the beats on your hard drive — catalog, play, tag, and (soon) publish without anything leaving your machine.
 
-[![version](https://img.shields.io/badge/version-0.0.20.2-7c5cff?style=flat-square)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.0.20.3-7c5cff?style=flat-square)](CHANGELOG.md)
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-1f1f1f?style=flat-square)](#install)
 [![license](https://img.shields.io/badge/license-MIT-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)

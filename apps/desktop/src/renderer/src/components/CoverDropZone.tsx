@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Image as ImageIcon, MoreHorizontal, AlertTriangle, RefreshCw } from "lucide-react";
 
 import { useAssetSlot } from "@/hooks/useAssetSlot";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import { useSourceStore } from "@/stores/sources";
 import { isPathOffline } from "@/lib/sourceOffline";
 import { OfflineBadge } from "./OfflineBadge";
@@ -16,6 +17,8 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
   const sources = useSourceStore((s) => s.all);
   const offline = asset ? isPathOffline(asset.abs_path, sources) : false;
   const [menuOpen, setMenuOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useClickOutside(containerRef, useCallback(() => setMenuOpen(false), []), menuOpen);
 
   if (asset && asset.missing) {
     return (
@@ -45,6 +48,7 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
 
   return (
     <div
+      ref={containerRef}
       draggable={asset != null && !asset.missing}
       onDragStart={(e) => {
         if (!asset || asset.missing) return;

@@ -127,7 +127,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         data-cover-drag-source
         className="w-full"
       >
-        <CoverImage assetId={coverAsset?.id ?? null} size={320} className="w-full" />
+        <CoverImage assetId={coverAsset?.id ?? null} size={320} responsive />
       </div>
       <div>
         <div className="text-2xl font-bold leading-tight">{current.title}</div>

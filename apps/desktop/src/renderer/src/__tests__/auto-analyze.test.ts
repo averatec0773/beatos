@@ -9,7 +9,7 @@ vi.mock("@/stores/tracks");
 import * as analysisModule from "@/api/analysis";
 import * as tracksModule from "@/api/tracks";
 import { useTrackStore } from "@/stores/tracks";
-import { maybeAutoAnalyze } from "@/lib/auto-analyze";
+import { maybeAutoAnalyze, useAnalyzingStore } from "@/lib/auto-analyze";
 
 function makeTrack(overrides: Partial<Track> = {}): Track {
   return {
@@ -55,6 +55,7 @@ describe("maybeAutoAnalyze", () => {
     vi.clearAllMocks();
     mockRefresh = vi.fn().mockResolvedValue(undefined);
     vi.mocked(useTrackStore.getState).mockReturnValue({ refresh: mockRefresh } as any);
+    useAnalyzingStore.setState({ inflight: {} });
   });
 
   it("skips when track already has both bpm and key_signature", async () => {
@@ -153,6 +154,37 @@ describe("maybeAutoAnalyze", () => {
       key_signature: "F# minor",
     });
     expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("dedupes concurrent calls for the same track id (multi-asset import)", async () => {
+    // Slow analyze so both calls overlap in time
+    let resolveAnalyze: ((r: AudioAnalysisResult) => void) | undefined;
+    vi.mocked(tracksModule.tracks.get).mockResolvedValue(
+      makeTrack({ bpm: null, key_signature: null })
+    );
+    vi.mocked(analysisModule.analysis.analyze).mockReturnValue(
+      new Promise<AudioAnalysisResult>((res) => {
+        resolveAnalyze = res;
+      })
+    );
+    vi.mocked(tracksModule.tracks.update).mockResolvedValue(
+      makeTrack({ bpm: 140, key_signature: "C major" })
+    );
+
+    const first = maybeAutoAnalyze(1);
+    // Yield once so `first` reaches `await tracks.get` AFTER setting inflight
+    await Promise.resolve();
+    const second = maybeAutoAnalyze(1);
+    await second; // second returns immediately via inflight guard
+
+    expect(analysisModule.analysis.analyze).toHaveBeenCalledTimes(1);
+
+    resolveAnalyze!(
+      makeResult({ bpm: 140, bpm_confidence: 0.9, key: "C major", key_confidence: 0.8 })
+    );
+    await first;
+    // Lock cleaned up so a follow-up call is allowed
+    expect(useAnalyzingStore.getState().inflight[1]).toBeFalsy();
   });
 
   it("logs warn and does not throw when analysis.analyze throws", async () => {

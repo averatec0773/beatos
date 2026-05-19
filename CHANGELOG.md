@@ -4,6 +4,22 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.20.3] - 2026-05-19 — Renderer polish + sidecar race fix
+
+Three independent user-visible fixes from dogfooding, plus a sidecar concurrency bug surfaced while wiring v0.0.21 internals.
+
+### Fixed
+
+- **Auto-analyze double-fire on multi-asset import.** Dropping a track with several audio roles (tagged/untagged × WAV/MP3) used to fan out into N parallel sidecar analyses, leaving the "Analyze audio" button stuck and burning CPU. New shared `useAnalyzingStore` (Zustand) tracks an `inflight` dict keyed by track id; both `maybeAutoAnalyze` (auto path) and the manual button respect the lock. Concurrent calls for the same track de-dup; different tracks remain independent.
+- **Action menus stay open after clicking elsewhere.** `AudioFileRow` and `CoverDropZone` overflow menus didn't close on outside-click. New `use-click-outside` hook (mousedown-based, no-op while disabled) closes them. Listens on mousedown rather than click so drag-selects that release outside still dismiss the popover.
+- **Non-square cover images stretched parent layout.** `CoverImage` now always wraps in an `aspect-square` box with the inner `<img>` using `object-cover`. New `responsive` prop lets the wrapper fill parent width while staying square (used by `TrackDetailPanel`); fixed-size callers unchanged.
+- **Sidecar `database is locked` on concurrent approves.** The token cleanup background task added during v0.0.21 prep was opening an eager first-iteration SQLite connection in parallel with the synchronous startup cleanup, racing the concurrent-approve test path. Two fixes: (1) `_periodic_token_cleanup` now sleeps 3600 s **before** its first run (synchronous startup cleanup already covers boot tidying), (2) the approve handler uses `BEGIN IMMEDIATE` + `timeout=5` so concurrent approvers queue and wait instead of failing with `SQLITE_BUSY_SNAPSHOT`.
+
+### Notes
+
+- This release is cut from the in-progress `v0.0.21` branch — it includes internal 2PC scaffolding (migration 010, `/api/tokens/*` endpoints, SSE stream) that no user-facing flow exercises yet. The MCP write tools `create_list` / `confirm_create_list` are not registered until v0.0.21 ships.
+- 285 pytest + 238 vitest tests pass.
+
 ## [0.0.20.2] - 2026-05-18 — MCP console script ship fix
 
 First real Claude Desktop end-to-end verification (the v0.0.20 layer-3 hand-off) caught a ship-blocker: the `beatos-mcp` command that README, CLAUDE.md, and Settings → AI Integration all reference was never registered. `uv run beatos-mcp` failed with `Failed to spawn: 'beatos-mcp' — No such file or directory`, so no MCP client could ever connect.

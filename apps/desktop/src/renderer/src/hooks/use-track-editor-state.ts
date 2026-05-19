@@ -9,6 +9,7 @@ import { analysis } from "@/api/analysis";
 import type { AudioAnalysisResult } from "@/api/analysis";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
+import { useAnalyzingStore } from "@/lib/auto-analyze";
 import { shallowEqualEditable } from "@/lib/shallow-equal-track";
 import {
   AUTOSAVE_DEBOUNCE_MS,
@@ -52,6 +53,9 @@ export function useTrackEditorState(): TrackEditorState {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [producerOptions, setProducerOptions] = useState<ProducerOption[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
+  const externallyAnalyzing = useAnalyzingStore((s) =>
+    track ? !!s.inflight[track.id] : false,
+  );
   const [analyzeResult, setAnalyzeResult] = useState<AudioAnalysisResult | null>(null);
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -210,6 +214,11 @@ export function useTrackEditorState(): TrackEditorState {
 
   const runAnalyze = useCallback(async () => {
     if (!track) return;
+    // Block manual click while auto-analyze (or a prior manual click) is in
+    // flight for this track — sidecar analysis is heavy and concurrent calls
+    // for the same track cause user-visible "button stuck" behavior.
+    if (useAnalyzingStore.getState().inflight[track.id]) return;
+    useAnalyzingStore.getState().setInflight(track.id, true);
     setAnalyzing(true);
     try {
       const result = await analysis.analyze(track.id);
@@ -220,6 +229,7 @@ export function useTrackEditorState(): TrackEditorState {
       alert(`Analysis failed: ${msg}`);
     } finally {
       setAnalyzing(false);
+      useAnalyzingStore.getState().setInflight(track.id, false);
     }
   }, [track]);
 
@@ -237,7 +247,7 @@ export function useTrackEditorState(): TrackEditorState {
     onDelete,
     producerOptions,
     refreshProducerOptions,
-    analyzing,
+    analyzing: analyzing || externallyAnalyzing,
     analyzeResult,
     analyzeDialogOpen,
     runAnalyze,

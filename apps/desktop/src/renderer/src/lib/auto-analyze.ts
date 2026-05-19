@@ -1,3 +1,5 @@
+import { create } from "zustand";
+
 import { analysis } from "@/api/analysis";
 import { tracks } from "@/api/tracks";
 import { useTrackStore } from "@/stores/tracks";
@@ -7,7 +9,29 @@ import {
   KEY_AUTOFILL_THRESHOLD,
 } from "@/lib/audio-analysis-constants";
 
+interface AnalyzingState {
+  inflight: Record<number, boolean>;
+  setInflight: (trackId: number, value: boolean) => void;
+}
+
+// Shared analysis-in-flight signal. Both `maybeAutoAnalyze` (audio-asset
+// import path) and the manual "Analyze audio" button write here so a single
+// import that attaches multiple audio roles can't fan out into N concurrent
+// sidecar calls, and so the manual button reflects auto-analysis progress.
+export const useAnalyzingStore = create<AnalyzingState>((set) => ({
+  inflight: {},
+  setInflight(trackId, value) {
+    set((s) => ({ inflight: { ...s.inflight, [trackId]: value } }));
+  },
+}));
+
 export async function maybeAutoAnalyze(trackId: number): Promise<void> {
+  const store = useAnalyzingStore.getState();
+  if (store.inflight[trackId]) {
+    console.info("[auto-analyze] skip — already running for track", trackId);
+    return;
+  }
+  store.setInflight(trackId, true);
   const toast = useToastStore.getState();
   try {
     const t = await tracks.get(trackId);
@@ -66,5 +90,7 @@ export async function maybeAutoAnalyze(trackId: number): Promise<void> {
     const msg = e instanceof Error ? e.message : String(e);
     console.warn("[auto-analyze] failed", e);
     toast.show("error", `Auto-analyze failed: ${msg}`, 6000);
+  } finally {
+    useAnalyzingStore.getState().setInflight(trackId, false);
   }
 }

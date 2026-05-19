@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { MoreHorizontal, AlertTriangle, RefreshCw } from "lucide-react";
 
 import { useAssetSlot } from "@/hooks/useAssetSlot";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import { useSourceStore } from "@/stores/sources";
 import { isPathOffline } from "@/lib/sourceOffline";
 import { OfflineBadge } from "./OfflineBadge";
@@ -22,6 +23,8 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
   const offline = asset ? isPathOffline(asset.abs_path, sources) : false;
   const [menuOpen, setMenuOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useClickOutside(containerRef, useCallback(() => setMenuOpen(false), []), menuOpen);
 
   const filename = asset ? (asset.abs_path.split("/").pop() ?? asset.abs_path) : null;
 
@@ -116,6 +119,7 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
 
   return (
     <div
+      ref={containerRef}
       data-role={role}
       data-file-row
       onDragOver={handleDragOver}
