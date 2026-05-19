@@ -69,9 +69,9 @@ Sidebar polish: list drag-reorder fix + Trash header removal for visual rhythm c
 
 Smooth list drag-reorder: disable inner track-drop droppable during list drags so the outer SortableContext shift animation runs cleanly (now matches Source behavior). See [CHANGELOG.md](CHANGELOG.md#00214---2026-05-19--smooth-list-drag-reorder).
 
-### v0.0.23 — Source removal (full)
+### v0.0.22 — Source removal (full)
 
-Delete the `Source` concept end-to-end. v0.0.21.1 already removed the attach gate; v0.0.23 deletes the data model and surrounding infrastructure. Schema reality: `track` and `asset` have no `source_id` FK, so removal is a contained delete-only refactor (no data migration on existing tracks/assets).
+Delete the `Source` concept end-to-end. v0.0.21.1 already removed the attach gate; v0.0.22 deletes the data model and surrounding infrastructure. Schema reality: `track` and `asset` have no `source_id` FK, so removal is a contained delete-only refactor (no data migration on existing tracks/assets).
 
 Phased inside the version:
 1. Remove sidebar Sources section + `Settings → Sources` section + `SourceRow.tsx` + `useSourceStore` + `OfflineBadge` (or keep `OfflineBadge` driven by per-asset `path.exists()` instead of Source membership — TBD during brainstorm).
@@ -81,7 +81,7 @@ Phased inside the version:
 
 What's lost: folder-level auto-watch (new files in a registered folder no longer auto-appear). Manual drag-import remains the way new files enter. Future optional "migrate to managed dir" helper (v0.0.X+) lets the user move catalogued files into a single tidy location.
 
-### v0.0.24 — `draft_description` placeholder
+### v0.0.23 — `draft_description` placeholder
 
 Closes the AI-write loop for the description field, even before v0.2 RAG lands. The tool writes only to `track.description_draft` — promoting to `description` is still a user action (see CLAUDE.md rule 1).
 
@@ -91,7 +91,7 @@ Closes the AI-write loop for the description field, even before v0.2 RAG lands. 
 
 ---
 
-### v0.0.23+ — Search upgrade (candidate)
+### v0.0.24+ — Search upgrade (candidate)
 
 - Smart query syntax: `bpm:>140 genre:trap producer:smoke`
 - `/api/tracks` already has filter primitives; need parser + chip↔query round-trip.
