@@ -9,8 +9,24 @@ import { useTrackStore } from "@/stores/tracks";
 import { distinct } from "@/api/distinct";
 import { producers as producersApi } from "@/api/producers";
 
+const FAKE_BASE = "http://127.0.0.1:5555";
+
+vi.mock("@/hooks/use-api-base", () => ({
+  useApiBase: () => FAKE_BASE,
+}));
+
+vi.mock("@/stores/lists", () => ({
+  useListStore: {
+    getState: () => ({ refresh: vi.fn().mockResolvedValue(undefined) }),
+  },
+}));
+
 describe("SettingsPanel", () => {
   beforeEach(() => {
+    (global.fetch as any) = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([]),
+    });
     useSourceStore.setState({
       all: [
         { id: 1, name: "Main", root_path: "/main", position: 0, created_at: "x", status: "online", track_count: 12 },

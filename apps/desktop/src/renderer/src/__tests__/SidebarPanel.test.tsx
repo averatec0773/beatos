@@ -1,11 +1,16 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { DndContext } from "@dnd-kit/core";
+import { vi, beforeEach } from "vitest";
 import { SidebarPanel } from "@/components/Sidebar/SidebarPanel";
 import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
 
 beforeEach(() => {
+  (global.fetch as any) = vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve([]),
+  });
   useSourceStore.setState({
     all: [
       { id: 1, name: "Main", root_path: "/m", position: 0, created_at: "x", status: "online", track_count: 10 },

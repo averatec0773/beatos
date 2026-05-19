@@ -4,13 +4,29 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { AIIntegrationSection } from "../components/Settings/AIIntegrationSection";
 
+const FAKE_BASE = "http://127.0.0.1:5555";
+
 const mockBeatos = {
   testMcpConnection: vi.fn(),
 };
 
+vi.mock("@/hooks/use-api-base", () => ({
+  useApiBase: () => FAKE_BASE,
+}));
+
+vi.mock("@/stores/lists", () => ({
+  useListStore: {
+    getState: () => ({ refresh: vi.fn().mockResolvedValue(undefined) }),
+  },
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
   (window as unknown as { beatos: unknown }).beatos = mockBeatos;
+  (global.fetch as any) = vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve([]),
+  });
 });
 
 describe("AIIntegrationSection", () => {
@@ -60,5 +76,27 @@ describe("AIIntegrationSection", () => {
     await waitFor(() =>
       expect(screen.getByText(/Spawn failed/i)).toBeInTheDocument(),
     );
+  });
+
+  it("renders PendingConfirmations between Status and Database rows when tokens exist", async () => {
+    // Mock fetch to return a single pending token
+    (global.fetch as any) = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([{
+        token: "abc",
+        tool_name: "create_list",
+        payload: { name: "Trap" },
+        created_at: Date.now() / 1000,
+        expires_at: Date.now() / 1000 + 300,
+      }]),
+    });
+    const user = userEvent.setup();
+    render(<AIIntegrationSection dbPath="/x/beatos.db" repoRoot="/r" />);
+    // Expand the section
+    await user.click(screen.getByRole("button", { name: /AI Integration/i }));
+    // Pending header should appear once the hook fetches
+    await waitFor(() => {
+      expect(screen.getByText(/Pending confirmations \(1\)/i)).toBeInTheDocument();
+    });
   });
 });

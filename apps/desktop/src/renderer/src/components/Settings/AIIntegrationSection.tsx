@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+import { usePendingTokens } from "@/hooks/use-pending-tokens";
+import { PendingConfirmations } from "@/components/Settings/PendingConfirmations";
+
 type TestResult =
   | { ok: true; toolsCount: number; version: string }
   | { ok: false; error: string };
@@ -39,6 +42,7 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
   const [testState, setTestState] = useState<
     "idle" | "testing" | { kind: "result"; result: TestResult }
   >("idle");
+  const { tokens, approve, reject } = usePendingTokens();
 
   const configJson = buildConfigJson(repoRoot, dbPath);
 
@@ -104,6 +108,8 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
                 : `✗ ${testState.result.error}`}
             </div>
           )}
+
+          <PendingConfirmations tokens={tokens} onApprove={approve} onReject={reject} />
 
           <div className="flex items-center justify-between gap-3">
             <span>Database</span>
