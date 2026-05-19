@@ -86,6 +86,10 @@ export function ChipMultiSelect({
       await onDeleteOption(managingValue);
       setDraft((cur) => cur.filter((v) => v !== managingValue));
       cancelManage();
+      // Close popover so the user sees the change reflected on the outer
+      // chip area immediately. Otherwise the popover stays open looking
+      // almost identical and it's unclear the delete took effect.
+      setOpen(false);
     } finally {
       setManageBusy(false);
     }

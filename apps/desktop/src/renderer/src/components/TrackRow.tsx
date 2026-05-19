@@ -59,10 +59,10 @@ export function TrackRow({
       style={{ gridTemplateColumns: gridCols, columnGap: TABLE_COL_GAP, minWidth: "min-content" }}
       className={`h-16 px-4 grid items-center cursor-grab active:cursor-grabbing cursor-pointer relative
         ${isDragging ? "opacity-50" : ""}
-        ${highlighted ? "bg-bg-row-selected text-text-primary border-l-2 border-accent" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}
+        ${highlighted ? "bg-accent-soft text-text-primary" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}
     >
       {highlighted && !isDragging && (
-        <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-accent" />
+        <span className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />
       )}
 
       {/* Cover + per-row play overlay. Fixed 48 × 48 — matches the cover grid

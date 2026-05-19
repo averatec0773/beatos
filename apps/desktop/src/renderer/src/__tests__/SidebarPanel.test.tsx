@@ -58,7 +58,7 @@ it("AllBeatsSection renders no count badge when total is 0", () => {
   expect(allBeatsButton.textContent).toBe("All Beats");
 });
 
-it("renders sections in the v0.0.22 order", () => {
+it("renders sections in Claude-style order", () => {
   const { container } = render(
     <MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>,
   );
@@ -67,7 +67,7 @@ it("renders sections in the v0.0.22 order", () => {
   const aside = container.querySelector("aside");
   expect(aside).not.toBeNull();
   const text = aside!.textContent ?? "";
-  const required = ["All Beats", "Trash", "Lists", "Approvals"];
+  const required = ["All Beats", "Trash", "Approvals", "Lists", "@averatec0773", "Settings"];
   const indices = required.map((needle) => text.indexOf(needle));
   expect(indices.every((i) => i >= 0)).toBe(true);
   const sorted = [...indices].sort((a, b) => a - b);

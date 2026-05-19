@@ -14,6 +14,7 @@ const config: Config = {
         "bg-sidebar": "var(--bg-sidebar)",
         "bg-row-hover": "var(--bg-row-hover)",
         "bg-row-selected": "var(--bg-row-selected)",
+        "bg-row-active": "var(--bg-row-active)",
         "border-subtle": "var(--border-subtle)",
         "text-primary": "var(--text-primary)",
         "text-secondary": "var(--text-secondary)",
@@ -22,6 +23,7 @@ const config: Config = {
         "accent-soft": "var(--accent-soft)",
         danger: "var(--danger)",
         success: "var(--success)",
+        warning: "var(--warning)",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

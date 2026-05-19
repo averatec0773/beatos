@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createTracksFromFiles } from "../create-track-from-file";
+import { importAsNewTracks } from "../create-track-from-file";
 
 // --- module mocks ---
 
@@ -55,7 +55,7 @@ beforeEach(() => {
   });
 });
 
-describe("createTracksFromFiles", () => {
+describe("importAsNewTracks", () => {
   it("creates 2 tracks for .wav + .mp3 and skips .pdf", async () => {
     vi.mocked(tracks.create)
       .mockResolvedValueOnce({ id: 1, title: "beat1" } as any)
@@ -67,7 +67,7 @@ describe("createTracksFromFiles", () => {
       makeFile("document.pdf"),
     ];
 
-    const result = await createTracksFromFiles(files);
+    const result = await importAsNewTracks(files, "untagged");
 
     expect(result.created).toBe(2);
     expect(result.skipped).toBe(1);
@@ -84,7 +84,7 @@ describe("createTracksFromFiles", () => {
       attach: vi.fn().mockRejectedValue(new Error("attach error")),
     } as any);
 
-    const result = await createTracksFromFiles([makeFile("bad.wav")]);
+    const result = await importAsNewTracks([makeFile("bad.wav")], "untagged");
 
     expect(result.created).toBe(0);
     expect(result.errors[0]).toContain("attach failed");
@@ -96,7 +96,7 @@ describe("createTracksFromFiles", () => {
       throw new Error("no path");
     });
 
-    const result = await createTracksFromFiles([makeFile("beat.wav")]);
+    const result = await importAsNewTracks([makeFile("beat.wav")], "untagged");
 
     expect(result.created).toBe(0);
     expect(result.errors[0]).toContain("cannot read path");
@@ -106,7 +106,7 @@ describe("createTracksFromFiles", () => {
   it("records error when getPathForFile returns empty string", async () => {
     (window.beatos.getPathForFile as ReturnType<typeof vi.fn>).mockReturnValue("");
 
-    const result = await createTracksFromFiles([makeFile("beat.wav")]);
+    const result = await importAsNewTracks([makeFile("beat.wav")], "untagged");
 
     expect(result.created).toBe(0);
     expect(result.errors[0]).toContain("empty path from webUtils");

@@ -2,57 +2,110 @@ import { tracks } from "@/api/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { useTrackStore } from "@/stores/tracks";
 
-const AUDIO_EXT_TO_ROLE: Record<string, string> = {
-  ".wav": "audio_tagged_wav",
-  ".mp3": "audio_tagged_mp3",
-};
+export type AudioTag = "tagged" | "untagged";
 
-export interface CreateResult {
+function roleFor(ext: string, tag: AudioTag): string | null {
+  if (ext === ".wav") return tag === "tagged" ? "audio_tagged_wav" : "audio_untagged_wav";
+  if (ext === ".mp3") return tag === "tagged" ? "audio_tagged_mp3" : "audio_untagged_mp3";
+  return null;
+}
+
+export interface ImportResult {
   created: number;
+  attached: number;
   skipped: number;
   errors: string[];
 }
 
-export async function createTracksFromFiles(files: File[]): Promise<CreateResult> {
-  const result: CreateResult = { created: 0, skipped: 0, errors: [] };
+interface PathedFile {
+  name: string;
+  absPath: string;
+  ext: string;
+}
+
+function resolveFiles(files: File[]): { ok: PathedFile[]; errors: string[]; skipped: number } {
+  const ok: PathedFile[] = [];
+  const errors: string[] = [];
+  let skipped = 0;
   for (const file of files) {
     const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-    const role = AUDIO_EXT_TO_ROLE[ext];
-    if (!role) {
-      result.skipped++;
+    if (ext !== ".wav" && ext !== ".mp3") {
+      skipped++;
       continue;
     }
     let absPath: string;
     try {
       absPath = window.beatos.getPathForFile(file);
-    } catch (e) {
-      result.errors.push(`${file.name}: cannot read path`);
+    } catch {
+      errors.push(`${file.name}: cannot read path`);
       continue;
     }
     if (!absPath) {
-      result.errors.push(`${file.name}: empty path from webUtils`);
+      errors.push(`${file.name}: empty path from webUtils`);
       continue;
     }
+    ok.push({ name: file.name, absPath, ext });
+  }
+  return { ok, errors, skipped };
+}
 
-    const titleStem = file.name.replace(/\.(wav|mp3)$/i, "");
-    let created;
+export async function importAsNewTracks(
+  files: File[],
+  tag: AudioTag,
+): Promise<ImportResult> {
+  const { ok, errors, skipped } = resolveFiles(files);
+  const result: ImportResult = { created: 0, attached: 0, skipped, errors };
+
+  for (const f of ok) {
+    const role = roleFor(f.ext, tag);
+    if (!role) {
+      result.skipped++;
+      continue;
+    }
+    const titleStem = f.name.replace(/\.(wav|mp3)$/i, "");
+    let created: Awaited<ReturnType<typeof tracks.create>>;
     try {
       created = await tracks.create(titleStem);
     } catch (e) {
-      result.errors.push(`${file.name}: create failed - ${e instanceof Error ? e.message : String(e)}`);
+      result.errors.push(`${f.name}: create failed - ${e instanceof Error ? e.message : String(e)}`);
       continue;
     }
-
     try {
-      await useAssetStore.getState().attach(created.id, role as any, absPath);
+      await useAssetStore.getState().attach(created.id, role as any, f.absPath);
       result.created++;
     } catch (e) {
-      // Rollback: delete the orphan track (soft-delete is fine — user can purge from Trash)
-      try { await tracks.remove(created.id); } catch { /* best-effort */ }
-      result.errors.push(`${file.name}: attach failed - ${e instanceof Error ? e.message : String(e)}`);
+      try { await tracks.remove(created.id); } catch { /* best-effort rollback */ }
+      result.errors.push(`${f.name}: attach failed - ${e instanceof Error ? e.message : String(e)}`);
     }
   }
   void useTrackStore.getState().refresh();
   void useTrackStore.getState().refreshTotal();
+  return result;
+}
+
+export async function attachAudioToTrack(
+  files: File[],
+  trackId: number,
+  tag: AudioTag,
+): Promise<ImportResult> {
+  const { ok, errors, skipped } = resolveFiles(files);
+  const result: ImportResult = { created: 0, attached: 0, skipped, errors };
+  if (ok.length !== 1) {
+    result.errors.push("attach mode expects exactly one audio file");
+    return result;
+  }
+  const f = ok[0];
+  const role = roleFor(f.ext, tag);
+  if (!role) {
+    result.skipped++;
+    return result;
+  }
+  try {
+    await useAssetStore.getState().attach(trackId, role as any, f.absPath, { replace: true });
+    result.attached++;
+  } catch (e) {
+    result.errors.push(`${f.name}: attach failed - ${e instanceof Error ? e.message : String(e)}`);
+  }
+  void useTrackStore.getState().refresh();
   return result;
 }

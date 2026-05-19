@@ -14,6 +14,7 @@ import { AllBeatsSection } from "@/components/Sidebar/AllBeatsSection";
 import { ListsSection } from "@/components/Sidebar/ListsSection";
 import { ApprovalsSection } from "@/components/Sidebar/ApprovalsSection";
 import { TrashSection } from "@/components/Sidebar/TrashSection";
+import { SettingsSection } from "@/components/Sidebar/SettingsSection";
 import { SidebarFooter } from "@/components/Sidebar/SidebarFooter";
 
 function SidebarResizer(): React.JSX.Element {
@@ -80,11 +81,16 @@ export function SidebarPanel(): React.JSX.Element {
       style={{ width: sidebarWidth }}
     >
       <SidebarResizer />
-      <AllBeatsSection />
-      <TrashSection />
+      <div className="flex flex-col gap-0.5">
+        <AllBeatsSection />
+        <TrashSection />
+        <ApprovalsSection />
+      </div>
       <ListsSection activeListId={activeListId} />
-      <ApprovalsSection />
-      <SidebarFooter />
+      <div className="mt-auto flex flex-col gap-0.5">
+        <SidebarFooter />
+        <SettingsSection />
+      </div>
     </aside>
   );
 }

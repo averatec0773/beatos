@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { CoverImage } from "@/components/CoverImage";
+import { formatRowDate } from "@/lib/format-row-date";
 import {
   PREVIEW_MAX_WIDTH,
   PREVIEW_MIN_WIDTH,
@@ -142,17 +143,53 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         <dd className="font-mono">{current.bpm ?? "—"}</dd>
         <dt className="text-text-tertiary">Key</dt>
         <dd>{current.key_signature ?? "—"}</dd>
+        <dt className="text-text-tertiary">Genre</dt>
+        <dd>{current.genre && current.genre.length > 0 ? current.genre.join(", ") : "—"}</dd>
         <dt className="text-text-tertiary">Mood</dt>
         <dd>{current.mood && current.mood.length > 0 ? current.mood.join(", ") : "—"}</dd>
-        <dt className="text-text-tertiary">License</dt>
-        <dd>{current.license_type}</dd>
-        <dt className="text-text-tertiary">Price</dt>
-        <dd>{current.price ? `$${current.price}` : "—"}</dd>
       </dl>
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-t border-border-subtle pt-3">
-        Platform status
+        Credits
       </div>
-      <div className="text-text-tertiary text-sm">No platforms wired yet.</div>
+      <dl className="grid grid-cols-[80px_1fr] gap-x-3 gap-y-2 text-sm">
+        <dt className="text-text-tertiary">Producer</dt>
+        <dd>
+          {current.producer && current.producer.length > 0
+            ? current.producer.join(", ")
+            : <span className="text-text-tertiary">—</span>}
+        </dd>
+        <dt className="text-text-tertiary">Tags</dt>
+        <dd>
+          {current.tags && current.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {current.tags.map((t) => (
+                <span
+                  key={t}
+                  className="text-[11px] px-1.5 py-0.5 rounded bg-bg-row-hover text-text-secondary"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-text-tertiary">—</span>
+          )}
+        </dd>
+        <dt className="text-text-tertiary">Added</dt>
+        <dd className="font-mono text-text-secondary">{formatRowDate(current.created_at)}</dd>
+        <dt className="text-text-tertiary">Updated</dt>
+        <dd className="font-mono text-text-secondary">{formatRowDate(current.updated_at)}</dd>
+      </dl>
+      {current.description && current.description.trim().length > 0 && (
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-t border-border-subtle pt-3 mb-2">
+            Description
+          </div>
+          <div className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">
+            {current.description}
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

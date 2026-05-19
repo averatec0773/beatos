@@ -3,6 +3,7 @@ import { Wand2 } from "lucide-react";
 
 import type { Track } from "@/api/tracks";
 import { producers as producersApi } from "@/api/producers";
+import { useToastStore } from "@/stores/toast";
 import { CoverDropZone } from "@/components/CoverDropZone";
 import { FileRowsSection } from "@/components/FileRowsSection";
 import { KeyPicker } from "@/components/KeyPicker";
@@ -155,11 +156,23 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                     }
                   }}
                   onDeleteOption={async (v) => {
-                    await producersApi.rewrite([v], null);
-                    await refreshProducerOptions();
-                    if (track.producer?.includes(v)) {
-                      const next = track.producer.filter((p) => p !== v);
-                      patch("producer", next.length ? next : null);
+                    try {
+                      const r = await producersApi.rewrite([v], null);
+                      await refreshProducerOptions();
+                      if (track.producer?.includes(v)) {
+                        const next = track.producer.filter((p) => p !== v);
+                        patch("producer", next.length ? next : null);
+                      }
+                      useToastStore.getState().show(
+                        "success",
+                        `Deleted "${v}" from ${r.affected} track${r.affected === 1 ? "" : "s"}`,
+                      );
+                    } catch (e) {
+                      useToastStore.getState().show(
+                        "error",
+                        `Delete failed: ${e instanceof Error ? e.message : String(e)}`,
+                      );
+                      throw e;
                     }
                   }}
                 />

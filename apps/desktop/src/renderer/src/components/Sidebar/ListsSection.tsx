@@ -105,11 +105,12 @@ function SidebarListRow({
           type="button"
           onClick={onClick}
           className={[
-            "w-full px-3 py-1.5 text-left text-sm rounded-md flex items-center justify-between",
-            active
-              ? "bg-bg-row-active text-accent"
-              : isOver
-                ? "bg-accent-soft border-l-2 border-accent text-text-primary"
+            "w-full px-3 py-1.5 text-left text-[15px] rounded-md flex items-center justify-between",
+            "data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-accent",
+            isOver
+              ? "bg-accent-soft border-l-2 border-accent text-text-primary"
+              : active
+                ? "bg-bg-row-active text-accent"
                 : "text-text-primary hover:bg-bg-row-hover",
           ].join(" ")}
         >

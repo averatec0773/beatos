@@ -20,7 +20,8 @@
   --bg-elevated-hover: #1f1f1f;
   --bg-sidebar: #000000;
   --bg-row-hover: #1a1a1a;
-  --bg-row-selected: #2a2a2a;
+  --bg-row-selected: #2e2e2e;
+  --bg-row-active: rgba(124, 92, 255, 0.18);
 
   /* Borders */
   --border-subtle: #282828;
@@ -37,6 +38,7 @@
   /* Semantic */
   --danger: #f15e6c;
   --success: #3ecf8e;
+  --warning: #f5b800;
 }
 
 html,

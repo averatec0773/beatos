@@ -8,7 +8,7 @@
 
 A local-first desktop library for the beats on your hard drive — catalog, play, tag, and (soon) publish without anything leaving your machine.
 
-[![version](https://img.shields.io/badge/version-0.0.21.4-7c5cff?style=flat-square)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.0.24.2-7c5cff?style=flat-square)](CHANGELOG.md)
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-1f1f1f?style=flat-square)](#install)
 [![license](https://img.shields.io/badge/license-MIT-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
@@ -19,13 +19,8 @@ A local-first desktop library for the beats on your hard drive — catalog, play
 
 <div align="center">
   <br/>
-  <table>
-    <tr>
-      <td align="center" width="800" height="360" style="background:#121212;color:#7c5cff;">
-        <em>Screenshot placeholder — Library view + bottom player coming soon.</em>
-      </td>
-    </tr>
-  </table>
+  <img src="screenshots/main.png" alt="BeatOS — library view with sidebar, track list, and Now Focused preview panel" width="1100" />
+  <br/>
   <br/>
 </div>
 
@@ -49,9 +44,9 @@ Spotify-style bottom bar powered by Tone.js + Web Audio. Four audio roles per tr
 </td>
 <td width="33%" valign="top">
 
-### Tag, automatically
+### Analyze on demand
 
-Drop a file → BeatOS auto-fills BPM and Key via a librosa pipeline (HPSS → beat tracking + Krumhansl-Schmuckler). Per-field confidence scores; you stay in control of what gets written.
+Click *Analyze audio* on any track → BeatOS extracts BPM and Key via a librosa pipeline (HPSS → beat tracking + Krumhansl-Schmuckler) running off the event loop. Per-field confidence scores; you stay in control of what gets written.
 
 </td>
 </tr>
@@ -59,7 +54,7 @@ Drop a file → BeatOS auto-fills BPM and Key via a librosa pipeline (HPSS → b
 
 ## Built for AI agents
 
-A separate MCP (Model Context Protocol) stdio server exposes the library to AI assistants like Claude. Read tools ship today; write tools follow a two-phase `token → confirm_*` commit pattern so an agent can never silently mutate your catalog.
+A separate MCP (Model Context Protocol) stdio server exposes the library to AI assistants like Claude. 20 tools ship today: 5 read tools + 15 write tools covering tracks, lists, trash, assets, and metadata. Every write goes through a two-phase `token → await_approval` commit pattern — the AI proposes, you review in the Approvals panel, you confirm. The agent can never silently mutate your catalog.
 
 ## Local-first, by design
 
@@ -101,9 +96,9 @@ npm run logs:tail                      # follow main.log + sidecar.jsonl
 **Test**
 
 ```bash
-npx vitest run                         # renderer + main (237 tests)
-uv run pytest                          # sidecar (258 tests)
-npm run build && npm run smoke         # Playwright _electron end-to-end (33 assertions)
+npx vitest run                         # renderer + main (249 tests)
+uv run pytest                          # sidecar (347 tests)
+npm run build && npm run smoke         # Playwright _electron end-to-end
 ```
 
 ## Stack

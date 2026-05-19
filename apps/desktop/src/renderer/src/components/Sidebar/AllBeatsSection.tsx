@@ -16,7 +16,7 @@ export function AllBeatsSection(): React.JSX.Element {
       data-all-beats-link
       onClick={() => navigate("/")}
       className={[
-        "w-full px-3 py-1.5 text-left text-sm rounded-md flex items-center gap-2",
+        "w-full px-3 py-1.5 text-left text-[15px] rounded-md flex items-center gap-2",
         active
           ? "bg-bg-row-active text-accent"
           : "text-text-primary hover:bg-bg-row-hover",

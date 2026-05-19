@@ -15,7 +15,7 @@ export function TrashSection(): React.JSX.Element {
       data-trash-link
       onClick={() => navigate("/trash")}
       className={[
-        "w-full px-3 py-1.5 text-left text-sm rounded-md flex items-center gap-2",
+        "w-full px-3 py-1.5 text-left text-[15px] rounded-md flex items-center gap-2",
         location.pathname === "/trash"
           ? "bg-bg-row-active text-accent"
           : "text-text-primary hover:bg-bg-row-hover",

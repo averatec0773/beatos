@@ -1,3 +1,4 @@
+import asyncio
 import datetime as _dt
 import pathlib
 
@@ -49,7 +50,10 @@ async def analyze_asset(asset_id: int) -> AudioAnalysisResult:
                 analyzed_at=_dt.datetime.fromisoformat(row[5]),
             )
 
-    raw = analyze(asset.abs_path)
+    # librosa is CPU-bound and synchronous; run in a thread so it doesn't
+    # block the sidecar's asyncio event loop — otherwise every concurrent
+    # HTTP request (track list, asset fetches) stalls until analysis finishes.
+    raw = await asyncio.to_thread(analyze, asset.abs_path)
     now = _dt.datetime.now(_dt.timezone.utc)
 
     async with aiosqlite.connect(db_path) as conn:

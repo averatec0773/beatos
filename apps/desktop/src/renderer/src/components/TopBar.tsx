@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { PanelRightOpen, PanelRightClose } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { TopBarRouteTitle } from "@/components/TopBarRouteTitle";
@@ -12,7 +12,7 @@ export function TopBar(): React.JSX.Element {
   const togglePreview = usePreviewPanelStore((s) => s.toggle);
   return (
     <header
-      className="h-14 flex-shrink-0 border-b border-border-subtle px-3 flex items-center gap-3 select-none bg-bg-base"
+      className="h-14 flex-shrink-0 border-b border-border-subtle pr-3 pb-2 flex items-center gap-3 select-none bg-bg-base"
       style={{ paddingLeft: "88px", WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <button
@@ -40,15 +40,6 @@ export function TopBar(): React.JSX.Element {
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         {previewOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-      </button>
-      <button
-        type="button"
-        onClick={() => navigate("/settings")}
-        className="text-text-tertiary hover:text-text-primary p-1.5"
-        aria-label="Settings"
-        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-      >
-        <Settings size={16} />
       </button>
     </header>
   );

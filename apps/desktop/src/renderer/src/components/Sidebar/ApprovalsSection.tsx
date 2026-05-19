@@ -16,7 +16,7 @@ export function ApprovalsSection(): React.JSX.Element {
       data-approvals-link
       onClick={() => navigate("/approvals")}
       className={[
-        "w-full px-3 py-1.5 text-left text-sm rounded-md flex items-center gap-2",
+        "w-full px-3 py-1.5 text-left text-[15px] rounded-md flex items-center gap-2",
         location.pathname === "/approvals"
           ? "bg-bg-row-active text-accent"
           : "text-text-primary hover:bg-bg-row-hover",
@@ -25,7 +25,12 @@ export function ApprovalsSection(): React.JSX.Element {
       <Inbox size={14} />
       <span className="flex-1">Approvals</span>
       {count > 0 && (
-        <span className="text-[10px] text-warning font-medium">{count}</span>
+        <span
+          className="min-w-[20px] h-[20px] px-1.5 inline-flex items-center justify-center rounded-full bg-warning text-[11px] font-semibold text-black"
+          aria-label={`${count} pending`}
+        >
+          {count}
+        </span>
       )}
     </button>
   );

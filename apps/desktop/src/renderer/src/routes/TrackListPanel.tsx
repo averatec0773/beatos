@@ -2,11 +2,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Plus } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { createTracksFromFiles } from "@/lib/create-track-from-file";
+import {
+  attachAudioToTrack,
+  importAsNewTracks,
+} from "@/lib/create-track-from-file";
 
 import { useTrackStore } from "@/stores/tracks";
 import { useSearchStore } from "@/stores/search";
 import { useListStore } from "@/stores/lists";
+import { useToastStore } from "@/stores/toast";
 import { TrackRow } from "@/components/TrackRow";
 import { EmptyState } from "@/components/EmptyState";
 import { TrackDetailPanel } from "@/routes/TrackDetailPanel";
@@ -14,6 +18,7 @@ import { TrackContextMenu } from "@/components/TrackContextMenu";
 import { VirtualTrackList } from "@/components/VirtualTrackList";
 import { TableHeader } from "@/components/TableHeader";
 import { FilterChipBar } from "@/components/FilterChipBar";
+import { ImportAudioDialog } from "@/components/ImportAudioDialog";
 
 export function TrackListPanel(): React.JSX.Element {
   const list = useTrackStore((s) => s.list);
@@ -48,6 +53,8 @@ export function TrackListPanel(): React.JSX.Element {
   }, [visible.length, current, select, visible]);
 
   const [dropping, setDropping] = useState(false);
+  const [importFiles, setImportFiles] = useState<File[]>([]);
+  const importDialogOpen = importFiles.length > 0;
 
   // Single source of X-scroll: the body. The header sits in its own div with
   // an *invisible* native X-scroll (so `scrollLeft` is programmable) and we
@@ -88,17 +95,42 @@ export function TrackListPanel(): React.JSX.Element {
     return () => header.removeEventListener("scroll", onHeaderScroll);
   }, []);
 
-  async function onSectionDrop(e: React.DragEvent<HTMLElement>): Promise<void> {
+  function onSectionDrop(e: React.DragEvent<HTMLElement>): void {
     e.preventDefault();
     setDropping(false);
-    const files = Array.from(e.dataTransfer.files);
+    const files = Array.from(e.dataTransfer.files).filter((f) => {
+      const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
+      return ext === ".wav" || ext === ".mp3";
+    });
     if (files.length === 0) return;
-    const result = await createTracksFromFiles(files);
-    if (result.errors.length > 0) {
-      alert(`Issues:\n${result.errors.join("\n")}`);
+    setImportFiles(files);
+  }
+
+  async function runImport(opts: {
+    destination: "new" | "attach";
+    tag: "tagged" | "untagged";
+  }): Promise<void> {
+    const files = importFiles;
+    setImportFiles([]);
+    const toast = useToastStore.getState();
+    if (opts.destination === "attach" && current) {
+      const r = await attachAudioToTrack(files, current.id, opts.tag);
+      if (r.errors.length > 0) {
+        toast.show("error", `Attach failed: ${r.errors.join("; ")}`, 6000);
+      } else {
+        toast.show("success", `Attached ${opts.tag} audio to "${current.title}"`);
+      }
+      return;
     }
-    if (result.created > 0 || result.skipped > 0) {
-      console.info(`[drop-create] created ${result.created}, skipped ${result.skipped}`);
+    const r = await importAsNewTracks(files, opts.tag);
+    if (r.errors.length > 0) {
+      toast.show("warning", `Imported ${r.created}/${files.length} — ${r.errors.length} failed`, 6000);
+      console.warn("[import] errors:", r.errors);
+    } else if (r.created > 0) {
+      toast.show(
+        "success",
+        r.created === 1 ? `Imported 1 track (${opts.tag})` : `Imported ${r.created} tracks (${opts.tag})`,
+      );
     }
   }
 
@@ -159,6 +191,13 @@ export function TrackListPanel(): React.JSX.Element {
           {emptyEl}
         </section>
         <TrackDetailPanel />
+        <ImportAudioDialog
+          open={importDialogOpen}
+          files={importFiles}
+          attachCandidate={current ? { id: current.id, title: current.title } : null}
+          onCancel={() => setImportFiles([])}
+          onConfirm={(opts) => void runImport(opts)}
+        />
       </>
     );
   }
@@ -225,7 +264,7 @@ export function TrackListPanel(): React.JSX.Element {
                 refresh(listId != null ? { list_id: listId } : undefined)
               }
             >
-              <div>
+              <div className="data-[state=open]:ring-2 data-[state=open]:ring-inset data-[state=open]:ring-accent">
                 <TrackRow
                   track={t}
                   coverAssetId={t.cover_asset_id}
@@ -253,6 +292,13 @@ export function TrackListPanel(): React.JSX.Element {
         </div>
       </section>
       <TrackDetailPanel />
+      <ImportAudioDialog
+        open={importDialogOpen}
+        files={importFiles}
+        attachCandidate={current ? { id: current.id, title: current.title } : null}
+        onCancel={() => setImportFiles([])}
+        onConfirm={(opts) => void runImport(opts)}
+      />
     </>
   );
 }
