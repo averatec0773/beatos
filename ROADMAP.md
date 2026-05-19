@@ -79,10 +79,31 @@ MCP transport migration: stdio→HTTP bridge via mcp-proxy; FastMCP + annotation
 
 ---
 
-### v0.0.24+ — Search upgrade (candidate)
+### v0.0.24 — MCP write surface expansion
 
-- Smart query syntax: `bpm:>140 genre:trap producer:smoke`
-- `/api/tracks` already has filter primitives; need parser + chip↔query round-trip.
+Closes the AI-write gap: 12 new write tools + batch transaction framework + `/approvals` card enrichment. The MCP write surface today is one tool (`create_list`); after v0.0.24 the AI can do meaningful library work (bulk metadata cleanup, list curation, lifecycle) under the existing 2PC pattern.
+
+**Batch framework** (foundation):
+- Single 2PC token covers N rows. `_APPROVE_HANDLERS` runs the whole batch in one transaction; partial failure rolls back the lot.
+- Token TTL raised to 10 min (bulk decisions deserve time).
+- `/approvals` card shows headline + count + 5-sample preview + expand-all + warnings.
+- High-risk variant styling (red, twice-confirm checkbox) for `purge_tracks` / `delete_list`.
+
+**New tools** (grouped by use case):
+- *Ingest*: `create_tracks(items[])` · `attach_asset(track_id, role, path)`
+- *Metadata*: `update_tracks(ids[], patch)` · `merge_metadata(field, from[], to)` — covers all rename/merge variants for producer/genre/mood
+- *List curation*: `update_list` · `delete_list` · `add_tracks_to_list` · `remove_tracks_from_list` · `reorder_list`
+- *Lifecycle*: `trash_tracks` · `restore_tracks` · `purge_tracks` (high-risk)
+- *AI content* (passthrough for v0.0.25): `draft_descriptions(items[])`
+
+**Cleanup**:
+- Delete `confirm_create_list` deprecated alias (v0.0.23 ships it for 1 version).
+- Remove the now-vestigial `BEGIN IMMEDIATE` calls in `routes/tokens.py` (single-process owns SQLite as of v0.0.23).
+- Re-evaluate the `sm._has_started` private-attr guard in `beatos-http/app.py`.
+
+**Not exposed via MCP** (by design):
+- `promote_draft → description` — stays a UI-only action per CLAUDE.md description model.
+- `delete_asset` — assets are bound to their track; lifecycle goes through trash/purge.
 
 ---
 
@@ -93,6 +114,13 @@ Closes the AI-write loop for the description field, even before v0.2 RAG lands. 
 - Tool: `draft_description(track_id, text) → token` / `await_approval(token)` (the confirm step writes the draft, not the live description).
 - Renderer `TrackEditor` already has the `description_draft` field; surface a "Promote draft → description" affordance.
 - Real RAG generation arrives in v0.2; this version validates the write path with a passthrough `text` parameter.
+
+---
+
+### v0.0.26+ — Search upgrade (candidate)
+
+- Smart query syntax: `bpm:>140 genre:trap producer:smoke`
+- `/api/tracks` already has filter primitives; need parser + chip↔query round-trip.
 
 ---
 
