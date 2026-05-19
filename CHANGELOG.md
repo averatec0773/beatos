@@ -11,6 +11,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - `beatos-mcp` package role: now hosts FastMCP server + stdio launcher (no independent runtime).
 - `beatos-http` sidecar now mounts the MCP ASGI app at `/mcp` (Streamable HTTP).
 - `beatos-http` handshake file now includes `pid` for staleness detection.
+- **Handshake file location** on macOS/Windows now matches Electron's `app.getPath('userData')` (`~/Library/Application Support/beatos-desktop/runtime/handshake.json`). Previously the Python `default_handshake_path()` used `BeatOS/` while Electron used `beatos-desktop/` — the launcher was reading a stale file and failing with "stale pid". Fixed by aligning the Python default to the Electron userData name.
 
 ### Added
 - Tool annotations (`readOnlyHint`, `idempotentHint`) on every read tool and `await_approval`.

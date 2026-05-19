@@ -26,9 +26,9 @@ def default_handshake_path() -> pathlib.Path:
         return pathlib.Path(override)
 
     if sys.platform == "darwin":
-        base = pathlib.Path.home() / "Library" / "Application Support" / "BeatOS"
+        base = pathlib.Path.home() / "Library" / "Application Support" / "beatos-desktop"
     elif sys.platform.startswith("win"):
-        base = pathlib.Path(os.environ.get("APPDATA", pathlib.Path.home())) / "BeatOS"
+        base = pathlib.Path(os.environ.get("APPDATA", pathlib.Path.home())) / "beatos-desktop"
     else:
         xdg = os.environ.get("XDG_RUNTIME_DIR")
         base = pathlib.Path(xdg) / "beatos" if xdg else pathlib.Path.home() / ".cache" / "beatos"
