@@ -11,14 +11,14 @@ import json
 
 import aiosqlite
 
-from beatos_mcp.db import connect_writable
+from beatos_mcp.db import connect
 
 
 async def await_approval(token: str) -> dict:
     if not isinstance(token, str) or not token:
         raise ValueError("token must be a non-empty string")
 
-    async with connect_writable() as conn:
+    async with connect() as conn:
         async with conn.execute(
             "SELECT tool_name, status, result, expires_at FROM tokens WHERE token=?",
             (token,),

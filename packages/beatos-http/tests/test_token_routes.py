@@ -255,3 +255,46 @@ async def test_history_sorted_most_recent_first(client, db_path):
     res = await client.get("/api/tokens?status=history")
     body = res.json()
     assert [r["token"] for r in body] == [t2, t1]
+
+
+@pytest.mark.asyncio
+async def test_row_vanished_in_handler_yields_409_and_rollback(client, db_path):
+    """Stub a handler that raises RowVanishedError; verify dispatcher emits 409,
+    rolls back, and leaves the token pending. Safety net for batch handlers
+    introduced in v0.0.24 Tasks 3+."""
+    from beatos_core.two_phase import RowVanishedError
+    from beatos_http.routes.tokens import _APPROVE_HANDLERS, register_approve_handler
+
+    @register_approve_handler("__test_row_vanished__")
+    async def _stub(conn, token):
+        # Simulate a write that "succeeded" then a row-vanished discovery.
+        await conn.execute(
+            "INSERT INTO list (name, kind, position, created_at) "
+            "VALUES ('SHOULD_ROLLBACK', 'user', 0, '2026-01-01')"
+        )
+        raise RowVanishedError("simulated mid-batch vanish")
+
+    try:
+        async with aiosqlite.connect(db_path) as conn:
+            tok = await create_token(conn, "__test_row_vanished__", {"x": 1})
+
+        res = await client.post(f"/api/tokens/{tok}/approve")
+        assert res.status_code == 409
+        assert "simulated" in res.json()["detail"].lower()
+
+        # The INSERT inside the handler must have been rolled back.
+        async with aiosqlite.connect(db_path) as conn:
+            async with conn.execute(
+                "SELECT COUNT(*) FROM list WHERE name='SHOULD_ROLLBACK'"
+            ) as cur:
+                count = (await cur.fetchone())[0]
+        assert count == 0, "RowVanishedError should roll back the handler's writes"
+
+        # Token must still be pending (not consumed, not rejected).
+        async with aiosqlite.connect(db_path) as conn:
+            async with conn.execute(
+                "SELECT status FROM tokens WHERE token=?", (tok,)
+            ) as cur:
+                assert (await cur.fetchone())[0] == "pending"
+    finally:
+        _APPROVE_HANDLERS.pop("__test_row_vanished__", None)
