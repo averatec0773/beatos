@@ -73,6 +73,24 @@ async def test_update_list_empty_name_rejected(db_path):
 
 
 @pytest.mark.asyncio
+async def test_update_list_collision_warning(db_path):
+    # Seed a second user list whose name is what we'll try to rename list 10 to
+    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute(
+            "INSERT INTO list (id, name, kind, position, created_at) "
+            "VALUES (11, 'Other', 'user', 1, ?)",
+            (now,),
+        )
+        await conn.commit()
+    r = await update_list(list_id=10, name="Other")
+    p = await _payload(db_path, r["token"])
+    assert p["list_id"] == 10
+    assert p["name"] == "Other"
+    assert any("already exists" in w.lower() for w in p["preview"]["warnings"])
+
+
+@pytest.mark.asyncio
 async def test_delete_list_marks_destructive(db_path):
     r = await delete_list(list_id=10)
     p = await _payload(db_path, r["token"])
