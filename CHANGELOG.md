@@ -34,6 +34,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - `update_tracks(ids, patch)` — per-id partial update. Scalar fields set; multi-value (producer/genre/mood) accept list-replace OR {add, remove} delta. Tool-facing `key` maps to DB `key_signature`.
 - `merge_metadata(field, from, to)` — library-wide alias collapse for producer/genre/mood. JSON1 scan; dedupes replacement values.
 
+### Ingest write tools
+- `create_tracks(items)` — batch create up to 100 empty track rows. Multi-value fields accept list[str].
+- `attach_asset(track_id, role, path)` — attach an audio or cover file by absolute path. Extension validated against role. Existing role-slot is replaced in place (UNIQUE(track_id, role)). Handler re-checks file existence at approve time and writes `size_bytes`.
+
 ## [0.0.23] - 2026-05-19 — MCP transport migration
 
 ### Changed

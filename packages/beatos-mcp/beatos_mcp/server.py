@@ -16,6 +16,10 @@ from pydantic import Field
 from beatos_mcp.db import DBNotConfigured
 from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
+from beatos_mcp.tools.ingest import (
+    attach_asset as _attach_asset_impl,
+    create_tracks as _create_tracks_impl,
+)
 from beatos_mcp.tools.list_curation import (
     add_tracks_to_list as _add_tracks_impl,
     delete_list as _delete_list_impl,
@@ -258,6 +262,45 @@ async def merge_metadata(
     """Library-wide rename. Any track whose `field` array contains any of `from`
     has those entries replaced with `to` (deduped). Returns a 2PC token."""
     return await _merge_metadata_impl(field=field, from_=from_, to=to)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=False))
+async def create_tracks(
+    items: Annotated[
+        list[dict],
+        Field(
+            min_length=1,
+            max_length=100,
+            description=(
+                "Each item: {title (required, 1-200 chars), bpm?, key?, "
+                "producer?: list[str], genre?: list[str], mood?: list[str]}."
+            ),
+        ),
+    ],
+) -> dict:
+    """Batch-create empty track rows (no assets attached). Returns a 2PC token."""
+    return await _create_tracks_impl(items=items)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=True))
+async def attach_asset(
+    track_id: Annotated[int, Field(description="Existing track id.")],
+    role: Annotated[Literal["audio", "cover"], Field(description="Asset role; one per track per role.")],
+    path: Annotated[
+        str,
+        Field(
+            description=(
+                "Absolute filesystem path to the asset file. "
+                "Audio: .mp3/.wav/.flac/.aif/.aiff. "
+                "Cover: .jpg/.jpeg/.png/.webp. "
+                "File must exist; replaces any existing asset of the same role."
+            ),
+        ),
+    ],
+) -> dict:
+    """Attach an asset file to a track. Single-row tool. Returns a 2PC token.
+    The file is referenced by absolute path (BeatOS does not copy it)."""
+    return await _attach_asset_impl(track_id=track_id, role=role, path=path)
 
 
 # --- ASGI app for FastAPI mount ---
