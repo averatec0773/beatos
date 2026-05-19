@@ -11,9 +11,9 @@ from beatos_mcp.tools.tracks import TrackNotFound, get_track
 async def test_get_track_returns_full_row(fresh_db):
     async with aiosqlite.connect(fresh_db) as conn:
         cur = await conn.execute(
-            "INSERT INTO track (title, bpm, key_signature, description, description_draft, "
+            "INSERT INTO track (title, bpm, key_signature, description, "
             "created_at, updated_at) "
-            "VALUES ('My Beat', 130, 'Am', 'final desc', 'draft desc', '2026-05-18', '2026-05-18')"
+            "VALUES ('My Beat', 130, 'Am', 'final desc', '2026-05-18', '2026-05-18')"
         )
         await conn.commit()
         track_id = cur.lastrowid
@@ -24,7 +24,6 @@ async def test_get_track_returns_full_row(fresh_db):
     assert result["bpm"] == 130
     assert result["key_signature"] == "Am"
     assert result["description"] == "final desc"
-    assert result["description_draft"] == "draft desc"
     assert result["assets"] == []
 
 

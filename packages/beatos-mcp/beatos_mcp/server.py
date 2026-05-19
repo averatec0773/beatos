@@ -15,7 +15,6 @@ from pydantic import Field
 
 from beatos_mcp.db import DBNotConfigured
 from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
-from beatos_mcp.tools.draft_descriptions import draft_descriptions as _draft_descriptions_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
 from beatos_mcp.tools.ingest import (
     attach_asset as _attach_asset_impl,
@@ -95,9 +94,8 @@ async def list_tracks(
 async def get_track(
     id: Annotated[int, Field(description="Track id (from list_tracks items).")],
 ) -> dict:
-    """Fetch a single track by id, including its audio/cover assets and both
-    description fields (description = user-authored; description_draft = AI-suggested
-    awaiting user review). For listing without per-track detail, use list_tracks."""
+    """Fetch a single track by id, including its audio/cover assets. For listing
+    without per-track detail, use list_tracks."""
     try:
         return await _get_track_impl(id)
     except TrackNotFound as e:
@@ -302,25 +300,6 @@ async def attach_asset(
     """Attach an asset file to a track. Single-row tool. Returns a 2PC token.
     The file is referenced by absolute path (BeatOS does not copy it)."""
     return await _attach_asset_impl(track_id=track_id, role=role, path=path)
-
-
-@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
-async def draft_descriptions(
-    items: Annotated[
-        list[dict],
-        Field(
-            min_length=1,
-            max_length=500,
-            description=(
-                "Each item: {track_id (int), text (str ≤5000 chars)}. "
-                "Writes track.description_draft only; never overwrites the live `description`."
-            ),
-        ),
-    ],
-) -> dict:
-    """Batch-write draft descriptions. The user promotes drafts → description in
-    the BeatOS UI; AI cannot write the live field. Returns a 2PC token."""
-    return await _draft_descriptions_impl(items=items)
 
 
 # --- ASGI app for FastAPI mount ---

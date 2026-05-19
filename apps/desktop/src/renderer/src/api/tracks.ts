@@ -9,7 +9,6 @@ export interface Track {
   mood: string[] | null;
   tags: string[] | null;
   description: string | null;
-  description_draft: string | null;
   license_type: string;
   price: number | null;
   producer: string[] | null;
@@ -21,7 +20,7 @@ export interface Track {
 }
 
 export type TrackUpdate = Partial<
-  Omit<Track, "id" | "description_draft" | "has_audio" | "created_at" | "updated_at">
+  Omit<Track, "id" | "has_audio" | "created_at" | "updated_at">
 >;
 
 export interface ListParams {

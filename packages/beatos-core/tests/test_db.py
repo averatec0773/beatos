@@ -29,7 +29,7 @@ async def test_run_migrations_is_idempotent(tmp_path):
         ) as cur:
             (count,) = await cur.fetchone()
 
-    assert count == 11
+    assert count == 12
 
 
 @pytest.mark.asyncio
@@ -44,7 +44,7 @@ async def test_run_migrations_records_applied_version(tmp_path):
         ) as cur:
             rows = await cur.fetchall()
 
-    assert [r[0] for r in rows] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert [r[0] for r in rows] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 
 @pytest.mark.asyncio
@@ -74,8 +74,8 @@ async def test_track_has_no_library_id(tmp_path: pathlib.Path) -> None:
         async with conn.execute("PRAGMA table_info(track)") as cur:
             cols = [r[1] for r in await cur.fetchall()]
     assert "library_id" not in cols
+    assert "description_draft" not in cols
     assert "title" in cols
-    assert "description_draft" in cols
 
 
 @pytest.mark.asyncio

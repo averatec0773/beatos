@@ -14,7 +14,7 @@ class TrackNotFound(RuntimeError):
 # Use fully-qualified column names so the same SELECT works in JOIN queries (T9 uses these).
 _TRACK_COLS = (
     "track.id, track.title, track.producer, track.genre, track.mood, "
-    "track.key_signature, track.bpm, track.description, track.description_draft, "
+    "track.key_signature, track.bpm, track.description, "
     "track.created_at, track.updated_at, track.deleted_at"
 )
 _ASSET_COLS = "id, track_id, role, abs_path, missing"
@@ -41,10 +41,9 @@ def _row_to_track(row: tuple) -> dict:
         "key_signature": row[5],
         "bpm": row[6],
         "description": row[7],
-        "description_draft": row[8],
-        "created_at": row[9],
-        "updated_at": row[10],
-        "deleted_at": row[11],
+        "created_at": row[8],
+        "updated_at": row[9],
+        "deleted_at": row[10],
     }
 
 

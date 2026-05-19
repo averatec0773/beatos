@@ -1,7 +1,7 @@
 """Shared input validation helpers for MCP write tools.
 
 MAX_IDS is the cap for ids/track_ids lists across batch tools (trash, restore,
-purge, update_tracks, add/remove_tracks_to_list, reorder_list, draft_descriptions).
+purge, update_tracks, add/remove_tracks_to_list, reorder_list).
 create_tracks has its own MAX_ITEMS=100 since each item is a record."""
 from __future__ import annotations
 

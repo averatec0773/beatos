@@ -85,17 +85,7 @@ MCP write surface expansion: 12 new tools (lifecycle / curation / metadata / ing
 
 ---
 
-### v0.0.25 — `draft_description` placeholder
-
-Closes the AI-write loop for the description field, even before v0.2 RAG lands. The tool writes only to `track.description_draft` — promoting to `description` is still a user action.
-
-- Tool: `draft_description(track_id, text) → token` / `await_approval(token)` (the confirm step writes the draft, not the live description).
-- Renderer `TrackEditor` already has the `description_draft` field; surface a "Promote draft → description" affordance.
-- Real RAG generation arrives in v0.2; this version validates the write path with a passthrough `text` parameter.
-
----
-
-### v0.0.26+ — Search upgrade (candidate)
+### v0.0.25+ — Search upgrade (candidate)
 
 - Smart query syntax: `bpm:>140 genre:trap producer:smoke`
 - `/api/tracks` already has filter primitives; need parser + chip↔query round-trip.
@@ -119,8 +109,7 @@ Closes the AI-write loop for the description field, even before v0.2 RAG lands. 
 
 - Embed each track's user-authored `description` with a small local model (`bge-small-en` or `mxbai-embed-large` via Ollama).
 - Store vectors in `sqlite-vec` extension on the same SQLite file.
-- MCP tool `draft_description(track_id)`: k-NN over existing descriptions + few-shot LLM to produce a draft in the user's voice.
-- Output lands in `track.description_draft` — user approves to promote. **Never** overwrites `description`.
+- MCP tool `draft_description(track_id) → token`: k-NN over existing descriptions + few-shot LLM to produce a draft in the user's voice. Token approved in `/approvals` (the 2PC review is the staging gate; no separate draft column).
 
 ### v0.3 — Audio-content RAG
 

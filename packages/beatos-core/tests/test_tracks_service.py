@@ -82,15 +82,6 @@ async def test_update_partial_preserves_other_fields():
 
 
 @pytest.mark.asyncio
-async def test_update_rejects_description_draft():
-    """description_draft is sacred — only AI tools may set it."""
-    t = await create_track("Untitled")
-
-    with pytest.raises(ValueError):
-        await update_track(t.id, {"description_draft": "AI text"})
-
-
-@pytest.mark.asyncio
 async def test_update_rejects_unknown_field():
     t = await create_track("Untitled")
 

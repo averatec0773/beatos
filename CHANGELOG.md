@@ -4,6 +4,16 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.24.1] — 2026-05-19 — Drop `description_draft`
+
+### Removed
+- `track.description_draft` column (migration `012_drop_description_draft.sql`).
+- `draft_descriptions` MCP tool + its handler. The two-field design was redundant once 2PC made every AI write user-reviewed before commit; the `/approvals` card is the staging gate.
+- The "sacred field" guard in `update_track` (no more `_FORBIDDEN_FIELDS`).
+
+### Why
+AI agents can already write live `description` via `update_tracks` (intended behavior — 2PC reviews each change). A separate draft column added a parallel staging mechanism that duplicated the audit surface without adding safety. Future RAG `draft_description` (v0.2) will write directly to `description` via the same 2PC path.
+
 ## [0.0.24] — 2026-05-19 — MCP write surface expansion
 
 ### Foundation
