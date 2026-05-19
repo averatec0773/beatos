@@ -39,11 +39,15 @@ MCP read-only framework. See [CHANGELOG.md](CHANGELOG.md#0020---2026-05-18--stab
 
 Resizer self-heal patch + missed `apps/desktop/package.json` bump. See [CHANGELOG.md](CHANGELOG.md#00201---2026-05-18--resizer-self-heal--missed-desktop-bump).
 
-### v0.0.21 prerequisites — DONE 2026-05-18 (commit `2a35e5e`)
+### v0.0.20.2 — SHIPPED 2026-05-18
 
-- ✅ `getRepoRoot` IPC: new `STORAGE_GET_REPO_ROOT` channel; Settings → AI Integration now shows the real Claude Desktop config snippet instead of the `<your beatos repo path>` placeholder (deferred from v0.0.20 T14).
-- ✅ Dead `_MULTI_VALUE` constant removed from `packages/beatos-mcp/beatos_mcp/tools/tracks.py` (T9 code review flag).
-- ⏳ **Claude Desktop end-to-end verification** still pending — user must add the auto-filled config snippet to Claude Desktop and confirm the 6 read tools work in a real client (layer-3 validation from v0.0.20 hand-off). Blocks starting v0.0.21 main work.
+MCP `beatos-mcp` console script registration. The v0.0.20 → v0.0.20.1 releases were never actually MCP-usable by an external client; the Claude Desktop dogfood verification caught it. See [CHANGELOG.md](CHANGELOG.md#00202---2026-05-18--mcp-console-script-ship-fix).
+
+### v0.0.21 prerequisites — ALL DONE 2026-05-18
+
+- ✅ `getRepoRoot` IPC (commit `2a35e5e`) — Settings → AI Integration shows real path, no more placeholder.
+- ✅ Dead `_MULTI_VALUE` constant removed (commit `2a35e5e`).
+- ✅ **Claude Desktop end-to-end verification** (v0.0.20.2) — `beatos` MCP server connects from Claude Desktop; `list_sources` returns the live 4-source library. The first real layer-3 confirmation that the read surface works in a third-party client.
 
 ### v0.0.21 — MCP two-phase commit (first write tool)
 
