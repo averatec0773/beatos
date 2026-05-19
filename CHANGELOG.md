@@ -30,6 +30,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - `/approvals` cards now render a preview-aware layout: `payload.preview.headline` + sample + warnings + expand-all + high-risk variant. Destructive tokens (`purge_tracks`, `delete_list`) show a red card with an "I understand this is permanent" checkbox gate on Approve.
 - Legacy `create_list` token rendering remains for tokens without a `preview` block (carries until v0.0.24 batch tools all ship).
 
+### Metadata write tools
+- `update_tracks(ids, patch)` — per-id partial update. Scalar fields set; multi-value (producer/genre/mood) accept list-replace OR {add, remove} delta. Tool-facing `key` maps to DB `key_signature`.
+- `merge_metadata(field, from, to)` — library-wide alias collapse for producer/genre/mood. JSON1 scan; dedupes replacement values.
+
 ## [0.0.23] - 2026-05-19 — MCP transport migration
 
 ### Changed

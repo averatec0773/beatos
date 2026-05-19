@@ -27,6 +27,8 @@ async def test_registered_tool_names() -> None:
         "add_tracks_to_list",
         "remove_tracks_from_list",
         "reorder_list",
+        "update_tracks",
+        "merge_metadata",
     }
     assert names == expected
 

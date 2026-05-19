@@ -29,6 +29,10 @@ from beatos_mcp.tools.lifecycle import (
     restore_tracks as _restore_tracks_impl,
     trash_tracks as _trash_tracks_impl,
 )
+from beatos_mcp.tools.metadata import (
+    merge_metadata as _merge_metadata_impl,
+    update_tracks as _update_tracks_impl,
+)
 from beatos_mcp.tools.lists import list_lists as _list_lists_impl
 from beatos_mcp.tools.ping import ping as _ping_impl
 from beatos_mcp.tools.tracks import (
@@ -222,6 +226,38 @@ async def reorder_list(
     """Reorder a list. track_ids must be the full current membership in the
     desired order (set equality required). Token-create rejects mismatches."""
     return await _reorder_list_impl(list_id=list_id, track_ids=track_ids)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def update_tracks(
+    ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Target track ids.")],
+    patch: Annotated[
+        dict,
+        Field(
+            description=(
+                "Partial-update spec. Scalar fields: title, bpm, key, description (set or null-clear). "
+                "Multi-value fields producer/genre/mood accept either a list (replace) or "
+                "{add?: [...], remove?: [...]} (per-row delta). At least one field required."
+            ),
+        ),
+    ],
+) -> dict:
+    """Bulk-update tracks. Returns a 2PC token."""
+    return await _update_tracks_impl(ids=ids, patch=patch)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
+async def merge_metadata(
+    field: Annotated[Literal["producer", "genre", "mood"], Field(description="Multi-value field to collapse.")],
+    from_: Annotated[
+        list[str],
+        Field(min_length=1, max_length=20, alias="from", description="Aliases to collapse into `to`."),
+    ],
+    to: Annotated[str, Field(min_length=1, max_length=200, description="Canonical replacement value.")],
+) -> dict:
+    """Library-wide rename. Any track whose `field` array contains any of `from`
+    has those entries replaced with `to` (deduped). Returns a 2PC token."""
+    return await _merge_metadata_impl(field=field, from_=from_, to=to)
 
 
 # --- ASGI app for FastAPI mount ---
