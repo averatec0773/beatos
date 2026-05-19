@@ -6,7 +6,7 @@ import asyncio
 import aiosqlite
 import pytest
 
-from beatos_mcp.two_phase import (
+from beatos_core.two_phase import (
     TokenError,
     consume_token,
     create_token,

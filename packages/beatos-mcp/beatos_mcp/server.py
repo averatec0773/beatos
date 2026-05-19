@@ -1,7 +1,7 @@
 """Tool registration for the BeatOS MCP server.
 
 v0.0.20 exposes 6 read-only tools. Write tools follow in v0.0.21+ via the
-2PC token skeleton already in place (see beatos_mcp.two_phase).
+2PC token skeleton already in place (see beatos_core.two_phase).
 """
 from __future__ import annotations
 
