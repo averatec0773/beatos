@@ -15,11 +15,17 @@ import time
 
 import aiosqlite
 
-DEFAULT_TTL_SEC = 300
+DEFAULT_TTL_SEC = 600  # was 300
 
 
 class TokenError(RuntimeError):
     """Raised on every 2PC failure mode (not found, tool mismatch, expired, consumed)."""
+
+
+class RowVanishedError(RuntimeError):
+    """Raised by a batch handler when an UPDATE/DELETE returns 0 rows because
+    the target id was deleted between token-create and approve. The dispatch
+    in routes/tokens.py treats this as a 409 and rolls the transaction back."""
 
 
 async def create_token(

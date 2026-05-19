@@ -4,6 +4,16 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.24] — Unreleased — MCP write surface expansion
+
+### Foundation
+- Bumped default 2PC token TTL from 300s to 600s (bulk decisions deserve time).
+- Removed the `BEGIN IMMEDIATE` workaround in `routes/tokens.py:approve_token`; obsolete since v0.0.23 made the sidecar the sole SQLite writer.
+- Retired the deprecated `confirm_create_list` MCP tool. Use `await_approval` for status polling on any token (tool-agnostic).
+- `await_approval` impl moved to its own file; envelope is now `{token, tool_name, status, result?}`.
+- Added `RowVanishedError` for batch handlers to signal mid-approve row disappearance; routes/tokens.py maps it to HTTP 409 + rollback.
+- Re-evaluated the `sm._has_started` private-attr guard in `beatos-http/app.py`: mcp 1.27.1 exposes no public `running`/`is_started` API, so `_has_started` guard is kept and `mcp` pin tightened to `>=1.27,<1.28` in `beatos-mcp/pyproject.toml`.
+
 ## [0.0.23] - 2026-05-19 — MCP transport migration
 
 ### Changed

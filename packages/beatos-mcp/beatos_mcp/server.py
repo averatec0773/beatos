@@ -14,7 +14,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from beatos_mcp.db import DBNotConfigured
-from beatos_mcp.tools.confirm_create_list import confirm_create_list as _confirm_create_list_impl
+from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
 from beatos_mcp.tools.distinct import list_distinct_values as _list_distinct_impl
 from beatos_mcp.tools.lists import list_lists as _list_lists_impl
@@ -114,18 +114,11 @@ async def await_approval(
     token: Annotated[str, Field(description="Token returned by any write tool.")],
 ) -> dict:
     """Poll the status of a 2PC token returned by any write tool.
-    Returns {status: 'awaiting_approval' | 'approved' | 'rejected' | 'expired', ...}.
-    On approved, additional fields are tool-specific (e.g. {list_id, name} for create_list)."""
-    return await _confirm_create_list_impl(token=token)
-
-
-@mcp.tool(annotations=_READ_ANNOTATIONS)
-async def confirm_create_list(
-    token: Annotated[str, Field(description="Token returned by create_list.")],
-) -> dict:
-    """DEPRECATED: use await_approval. Will be removed in v0.0.24.
-    Check the status of a create_list token."""
-    return await _confirm_create_list_impl(token=token)
+    Returns {token, tool_name, status, ...} where status is one of
+    'awaiting_approval' | 'approved' | 'rejected' | 'expired' | 'not_found'.
+    On 'approved', a `result` field carries the tool-specific outcome
+    (e.g. {list_id, name} for create_list, {created_ids: [...]} for create_tracks)."""
+    return await _await_approval_impl(token=token)
 
 
 # --- ASGI app for FastAPI mount ---

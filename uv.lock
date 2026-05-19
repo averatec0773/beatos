@@ -141,7 +141,7 @@ dependencies = [
 requires-dist = [
     { name = "beatos-core", editable = "packages/beatos-core" },
     { name = "beatos-http", editable = "packages/beatos-http" },
-    { name = "mcp", specifier = ">=1.27" },
+    { name = "mcp", specifier = ">=1.27,<1.28" },
     { name = "mcp-proxy", specifier = ">=0.10,<0.13" },
     { name = "structlog", specifier = ">=25.5.0" },
 ]

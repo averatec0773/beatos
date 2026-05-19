@@ -18,7 +18,6 @@ async def test_registered_tool_names() -> None:
         "list_lists",
         "list_distinct_values",
         "create_list",
-        "confirm_create_list",  # deprecated alias, still registered
         "await_approval",
     }
     assert names == expected

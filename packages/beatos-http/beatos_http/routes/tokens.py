@@ -12,6 +12,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from beatos_core.db import resolve_db_path
 from beatos_core.two_phase import (
+    RowVanishedError,
     TokenError,
     consume_token_with_result,
     reject_token as _reject_token,
@@ -97,11 +98,13 @@ async def approve_token(token: str) -> dict:
                 status_code=400, detail=f"Unknown tool for approve: {tool_name}"
             )
 
-        await conn.execute("BEGIN IMMEDIATE")
         try:
             result = await handler(conn, token)
             await conn.commit()
         except TokenError as e:
+            await conn.rollback()
+            raise HTTPException(status_code=409, detail=str(e))
+        except RowVanishedError as e:
             await conn.rollback()
             raise HTTPException(status_code=409, detail=str(e))
         except Exception:

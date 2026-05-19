@@ -266,26 +266,25 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Capability | Location | Purpose |
 |---|---|---|
 | `tokens.result` column | `packages/beatos-core/beatos_core/migrations/010_tokens_result.sql` | JSON column added to tokens table; stores 2PC write outcomes (e.g., `{"list_id": 7}`) so confirm_* tools have deterministic answers. |
-| 2PC helpers (shared) | `packages/beatos-core/beatos_core/two_phase.py` | Moved from `beatos-mcp` in v0.0.21 so `beatos-http` can import. Functions: `create_token`, `verify_token` (read-only — expiry check only, no commit), `consume_token`, `consume_token_with_result`, `reject_token`, `get_token_status`, `cleanup_terminal_tokens`. |
+| 2PC helpers (shared) | `packages/beatos-core/beatos_core/two_phase.py` | Moved from `beatos-mcp` in v0.0.21 so `beatos-http` can import. Functions: `create_token`, `verify_token` (read-only — expiry check only, no commit), `consume_token`, `consume_token_with_result`, `reject_token`, `get_token_status`, `cleanup_terminal_tokens`. Errors: `TokenError` (all 2PC failures), `RowVanishedError` (batch mid-approve row disappearance → HTTP 409). Default TTL: 600s. |
 | Approve dispatcher | `packages/beatos-http/beatos_http/routes/tokens.py::_APPROVE_HANDLERS` | Registry-pattern dispatch keyed by `tool_name`. Each write tool adds one `@register_approve_handler` decorator. Handler runs inside `BEGIN IMMEDIATE` transaction; verify + write + consume are atomic. |
 | Token cleanup task | `packages/beatos-http/beatos_http/app.py::_periodic_token_cleanup` | Sidecar lifespan startup runs cleanup once, then hourly loop. Transitions pending→expired past TTL; deletes terminal-state rows older than 7 days. |
 | SSE token stream | `GET /api/tokens/stream` | Real-time push to renderer via `pending_changed` events. Internally polls SQLite at 1 s interval. Used by Settings panel to auto-refresh pending approvals. |
 | Token list endpoint | `GET /api/tokens?status=pending` | Returns all pending tokens (tool_name, payload, created_at, expires_at). Consumed by Settings → AI Integration → Pending confirmations. |
 | Approve endpoint | `POST /api/tokens/{token}/approve` | Atomic verify+write+consume. Calls the registered handler for the token's `tool_name`. Returns the handler's result dict (e.g., `{"list_id": 7, ...}`). 404 if token not found; 409 if not in pending state. |
 | Reject endpoint | `POST /api/tokens/{token}/reject` | Race-tolerant rejection. No-op on already-terminal tokens (handles Approve/Reject race). 404 if token doesn't exist. |
-| First write tool | `packages/beatos-mcp/beatos_mcp/tools/create_list.py` + `confirm_create_list.py` | Phase 1 (`create_list`) issues token only. User clicks Approve in BeatOS Settings; handler writes list table. Phase 2 (`confirm_create_list`) is read-only status check, returns `{status, list_id, ...}` or `{status: "awaiting_approval"}`. |
+| First write tool | `packages/beatos-mcp/beatos_mcp/tools/create_list.py` | Phase 1 (`create_list`) issues token only. User clicks Approve in BeatOS Settings; handler writes list table. Phase 2 is `await_approval(token)` — tool-agnostic, returns `{token, tool_name, status, result?}`. |
 
 ### v0.0.23 — MCP Transport Migration
 
 | Capability | Location | Purpose |
 |---|---|---|
-| FastMCP server | `packages/beatos-mcp/beatos_mcp/server.py` | Replaces low-level `mcp.server.Server`. Defines 7 tools + `await_approval`. Exports `mcp` (FastMCP instance) and `app` (ASGI app). |
-| `/mcp` route | `packages/beatos-http/beatos_http/app.py` (`app.mount("/mcp", mcp_asgi_app)`) | MCP Streamable HTTP endpoint served by the sidecar process. Single-process SQLite ownership; `BEGIN IMMEDIATE` workaround no longer required. |
+| FastMCP server | `packages/beatos-mcp/beatos_mcp/server.py` | Replaces low-level `mcp.server.Server`. Defines 7 tools (5 read + `create_list` + `await_approval`). Exports `mcp` (FastMCP instance) and `app` (ASGI app). |
+| `/mcp` route | `packages/beatos-http/beatos_http/app.py` (`app.mount("/mcp", mcp_asgi_app)`) | MCP Streamable HTTP endpoint served by the sidecar process. Single-process SQLite ownership; `BEGIN IMMEDIATE` workaround removed in v0.0.24. |
 | Stdio bridge launcher | `packages/beatos-mcp/beatos_mcp/launcher.py` + `__main__.py` | Reads `handshake.json` (port + pid), validates sidecar liveness, execs `mcp-proxy --transport streamablehttp <url>`. Claude Desktop config unchanged. |
 | `pid` in handshake | `packages/beatos-http/beatos_http/handshake.py` | Launcher uses pid for staleness detection (stale file from crashed sidecar). |
 | Tool annotations | `server.py` `@mcp.tool(annotations=...)` | `readOnlyHint` + `idempotentHint` on all read tools and `await_approval`. |
-| `await_approval(token)` | `beatos_mcp/server.py` | Unified 2PC status-check tool; replaces per-write-tool `confirm_*` pattern. |
-| `confirm_create_list` deprecated | `beatos_mcp/server.py` | Kept as alias; removed in v0.0.24. Use `await_approval`. |
+| `await_approval(token)` | `beatos_mcp/tools/await_approval.py` | Unified 2PC status-check tool; tool-agnostic envelope `{token, tool_name, status, result?}`. `confirm_create_list` alias removed in v0.0.24. |
 
 ## MCP surface (aspirational)
 

@@ -73,6 +73,8 @@ async def lifespan(app: FastAPI):
     # entries (e.g. multiple test fixtures) skip re-entry.
     sm = mcp.session_manager
     mcp_task: asyncio.Task | None = None
+    # v0.0.24: verified against mcp 1.27.1 — no public running/is_started API exists.
+    # Pre-mcp public-API: keep _has_started guard, pinned in beatos-mcp pyproject.toml to mcp>=1.27,<1.28.
     if not sm._has_started:
         ready = asyncio.Event()
 
