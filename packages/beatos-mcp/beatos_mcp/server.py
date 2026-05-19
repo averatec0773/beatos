@@ -6,6 +6,7 @@ connect via the beatos-mcp launcher -> mcp-proxy bridge.
 """
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -13,7 +14,6 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from beatos_mcp.db import DBNotConfigured
-from beatos_mcp.log import configure as configure_logging
 from beatos_mcp.tools.confirm_create_list import confirm_create_list as _confirm_create_list_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
 from beatos_mcp.tools.distinct import list_distinct_values as _list_distinct_impl
@@ -25,8 +25,8 @@ from beatos_mcp.tools.tracks import (
     list_tracks as _list_tracks_impl,
 )
 
-log = configure_logging()
-mcp = FastMCP("beatos-mcp")
+log = logging.getLogger(__name__)
+mcp = FastMCP("beatos-mcp", streamable_http_path="/")
 
 _READ_ANNOTATIONS = ToolAnnotations(readOnlyHint=True, idempotentHint=True)
 

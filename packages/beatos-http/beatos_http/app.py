@@ -2,6 +2,7 @@
 
 Lifespan wiring (v0.0.4):
 - Run DB migrations on startup.
+v0.0.23: Mount FastMCP app and manage its lifespan.
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from beatos_core.db import resolve_db_path, run_migrations
 from beatos_core.two_phase import cleanup_terminal_tokens
 from beatos_http.routes import analysis, assets, lists, producers, sweep, tokens, tracks
+from beatos_mcp.server import app as mcp_asgi_app, mcp
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +63,27 @@ async def lifespan(app: FastAPI):
     # Then fire-and-forget the hourly loop.
     _cleanup_task = asyncio.create_task(_periodic_token_cleanup(db_path_str))
 
+    # Initialize FastMCP session manager (v0.0.23: MCP mounted at /mcp).
+    # session_manager.run() uses an anyio task group that must be entered and
+    # exited in the same asyncio task.  Running it in a dedicated background
+    # task decouples the cancel-scope lifecycle from the lifespan coroutine,
+    # which avoids the "exit from different task" error that pytest-asyncio
+    # triggers during fixture teardown.  The session_manager instance is a
+    # module-level singleton that can only be started once; subsequent lifespan
+    # entries (e.g. multiple test fixtures) skip re-entry.
+    sm = mcp.session_manager
+    mcp_task: asyncio.Task | None = None
+    if not sm._has_started:
+        ready = asyncio.Event()
+
+        async def _run_mcp() -> None:
+            async with sm.run():
+                ready.set()
+                await asyncio.get_event_loop().create_future()  # park until cancelled
+
+        mcp_task = asyncio.create_task(_run_mcp())
+        await ready.wait()
+
     try:
         yield
     finally:
@@ -71,6 +94,12 @@ async def lifespan(app: FastAPI):
             except asyncio.CancelledError:
                 pass
             _cleanup_task = None
+        if mcp_task is not None:
+            mcp_task.cancel()
+            try:
+                await mcp_task
+            except asyncio.CancelledError:
+                pass
 
 
 def create_app() -> FastAPI:
@@ -107,5 +136,7 @@ def create_app() -> FastAPI:
     app.include_router(analysis.router)
     app.include_router(producers.router)
     app.include_router(tokens.router)
+
+    app.mount("/mcp", mcp_asgi_app)
 
     return app

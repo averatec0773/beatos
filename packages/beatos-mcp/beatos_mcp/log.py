@@ -40,10 +40,10 @@ def configure() -> structlog.stdlib.BoundLogger:
         stderr_handler = logging.StreamHandler(sys.stderr)
 
         root = logging.getLogger()
-        root.handlers.clear()
-        root.addHandler(file_handler)
-        root.addHandler(stderr_handler)
-        root.setLevel(logging.INFO)
+        if not root.handlers:
+            root.addHandler(file_handler)
+            root.addHandler(stderr_handler)
+            root.setLevel(logging.INFO)
 
         structlog.configure(
             processors=[
