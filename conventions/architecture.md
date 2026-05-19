@@ -263,15 +263,30 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Settings "AI Integration" panel | `apps/desktop/src/renderer/src/components/Settings/AIIntegrationSection.tsx` | Renders the Claude Desktop config snippet and `mcp:test-connection` result; copy-to-clipboard. |
 | `mcp:test-connection` IPC | `apps/desktop/src/main/mcp/test-connection.ts` | Main-process handler spawns `beatos-mcp` with `--ping`; resolves/rejects within 5 s; result surfaced in AI Integration panel. |
 
+### v0.0.21 — First Write Tool + HTTP Approve Surface
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `tokens.result` column | `packages/beatos-core/beatos_core/migrations/010_tokens_result.sql` | JSON column added to tokens table; stores 2PC write outcomes (e.g., `{"list_id": 7}`) so confirm_* tools have deterministic answers. |
+| 2PC helpers (shared) | `packages/beatos-core/beatos_core/two_phase.py` | Moved from `beatos-mcp` in v0.0.21 so `beatos-http` can import. Functions: `create_token`, `verify_token` (read-only — expiry check only, no commit), `consume_token`, `consume_token_with_result`, `reject_token`, `get_token_status`, `cleanup_terminal_tokens`. |
+| Approve dispatcher | `packages/beatos-http/beatos_http/routes/tokens.py::_APPROVE_HANDLERS` | Registry-pattern dispatch keyed by `tool_name`. Each write tool adds one `@register_approve_handler` decorator. Handler runs inside `BEGIN IMMEDIATE` transaction; verify + write + consume are atomic. |
+| Token cleanup task | `packages/beatos-http/beatos_http/app.py::_periodic_token_cleanup` | Sidecar lifespan startup runs cleanup once, then hourly loop. Transitions pending→expired past TTL; deletes terminal-state rows older than 7 days. |
+| SSE token stream | `GET /api/tokens/stream` | Real-time push to renderer via `pending_changed` events. Internally polls SQLite at 1 s interval. Used by Settings panel to auto-refresh pending approvals. |
+| Token list endpoint | `GET /api/tokens?status=pending` | Returns all pending tokens (tool_name, payload, created_at, expires_at). Consumed by Settings → AI Integration → Pending confirmations. |
+| Approve endpoint | `POST /api/tokens/{token}/approve` | Atomic verify+write+consume. Calls the registered handler for the token's `tool_name`. Returns the handler's result dict (e.g., `{"list_id": 7, ...}`). 404 if token not found; 409 if not in pending state. |
+| Reject endpoint | `POST /api/tokens/{token}/reject` | Race-tolerant rejection. No-op on already-terminal tokens (handles Approve/Reject race). 404 if token doesn't exist. |
+| First write tool | `packages/beatos-mcp/beatos_mcp/tools/create_list.py` + `confirm_create_list.py` | Phase 1 (`create_list`) issues token only. User clicks Approve in BeatOS Settings; handler writes list table. Phase 2 (`confirm_create_list`) is read-only status check, returns `{status, list_id, ...}` or `{status: "awaiting_approval"}`. |
+
 ## MCP surface (aspirational)
 
-`packages/beatos-mcp/` ships 6 read tools as of v0.0.20. Any write tool requires two-phase commit:
+`packages/beatos-mcp/` ships 6 read tools as of v0.0.20, plus the first write tool as of v0.0.21. Any write tool requires two-phase commit:
 
 | Tool | Type | Status |
 |---|---|---|
 | `ping` | read | Shipped v0.0.20. |
 | `list_tracks(filter?)` / `get_track(id)` | read | Shipped v0.0.20. |
 | `list_sources` / `list_lists` / `list_distinct_values` | read | Shipped v0.0.20. |
+| `create_list(name)` | write | Shipped v0.0.21. Two-phase: phase 1 issues token; user approves in BeatOS Settings; phase 2 (`confirm_create_list(token)`) is read-only. |
 | `search_tracks(query)` | read | Deferred → v0.0.23 (RAG). |
 | `list_platforms()` | read | Once adapters exist. |
 | `inject_to_platform(track_id, platform)` | write | Returns `confirm_token`; agent must call `confirm_inject(token)` separately. |
@@ -289,3 +304,5 @@ Trust boundary = local stdio process; no network auth needed. See [ROADMAP.md](.
 - **MCP server NEVER writes to stdout (JSON-RPC only).** All code reachable by `beatos-mcp` (tools, helpers, imports) must use `beatos_mcp.log`; a stray `print()` corrupts the protocol stream and silently disconnects Claude Desktop.
 - **`tokens` table + `two_phase.py` are skeleton for v0.0.21+.** Do not gate them behind feature flags or remove. Write tools must call `consume_token` inside the same DB transaction as the actual write.
 - **`BEATOS_DB_PATH` is the contract with Claude Desktop.** Do not silently fall back to a default if unset — `beatos_mcp/db.py` must raise an explicit error so the AI client gets a clear signal, not a wrong-DB silently returning zero rows.
+- **`beatos_core.two_phase.verify_token` is read-only.** Must NOT call `conn.commit()`. The lazy-expire commit (v0.0.20) was removed in v0.0.21 because it broke outer transactions (approve handler needs `verify+insert+consume` atomic). The cleanup task (`_periodic_token_cleanup`) owns the `pending → expired` transition.
+- **`_APPROVE_HANDLERS` in `beatos_http/routes/tokens.py` is the sole translator.** This registry is the only place that maps a token's `tool_name` to actual write code. Do not dispatch tokens from the MCP server side; all write tool dispatch must go through `POST /api/tokens/{token}/approve` in the HTTP facade.

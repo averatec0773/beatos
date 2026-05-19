@@ -26,6 +26,7 @@
 8. **Upstream-store → local-form sync** must update both the form state AND the dirty baseline (e.g. `initialTrack`), otherwise the upstream patch (auto-analyze writing bpm/key) registers as a user edit and re-fires auto-save in a loop.
 9. **Audio goes through `audio-engine.ts`, not `<audio>`.** v0.0.16 migrated to Tone.js / Web Audio. Don't reintroduce HTMLAudioElement. New CSP directives (`worker-src 'self' blob:`, `connect-src beatos-asset:`) and protocol privilege (`corsEnabled: true`) are load-bearing — if Tone fetch fails silently, check them first.
 10. **MCP stdout is JSON-RPC only.** Any code reachable by `beatos-mcp` (tools, helpers, imports) must NEVER `print()` or write to stdout — Claude Desktop reads stdout as protocol bytes and a stray newline will silently disconnect. Log via `beatos_mcp.log.configure()` which routes to file + stderr.
+11. **Concurrent SQLite writers need `BEGIN IMMEDIATE` + `busy_timeout`.** WAL allows multiple readers + 1 writer, but two concurrent `BEGIN` (deferred) + write produces `SQLITE_BUSY_SNAPSHOT` — a distinct error code that the default busy_handler does NOT retry. The approve dispatcher (`beatos_http/routes/tokens.py::approve_token`) uses `BEGIN IMMEDIATE` so a second writer queues and waits up to the `timeout=5` instead of failing immediately. Use `BEGIN IMMEDIATE` for any handler in `_APPROVE_HANDLERS`.
 
 For per-file context (which columns, which patterns) read [conventions/architecture.md](conventions/architecture.md) §"What NOT to change without reading context first".
 
