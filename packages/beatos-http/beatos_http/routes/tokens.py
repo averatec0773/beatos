@@ -1,12 +1,14 @@
 """/api/tokens routes — 2PC write-tool surface (list, approve, reject, SSE)."""
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import json
 from typing import Awaitable, Callable, Literal
 
 import aiosqlite
 from fastapi import APIRouter, HTTPException, Query
+from sse_starlette.sse import EventSourceResponse
 
 from beatos_core.db import resolve_db_path
 from beatos_core.two_phase import (
@@ -44,6 +46,35 @@ async def _approve_create_list(conn: aiosqlite.Connection, token: str) -> dict:
     list_id = cur.lastrowid
     await consume_token_with_result(conn, token, {"list_id": list_id})
     return {"list_id": list_id, "name": name}
+
+
+@router.get("/stream")
+async def token_stream():
+    """SSE stream — emits 'pending_changed' whenever the set of pending tokens
+    changes. Payload carries only count; clients re-GET /api/tokens?status=pending
+    for details. Internal implementation polls SQLite every 1 second."""
+    db = resolve_db_path()
+
+    async def event_gen():
+        last_pending: set[str] = set()
+        emitted_initial = False
+        while True:
+            async with aiosqlite.connect(db) as conn:
+                async with conn.execute(
+                    "SELECT token FROM tokens WHERE status='pending'"
+                ) as cur:
+                    rows = await cur.fetchall()
+            current = {r[0] for r in rows}
+            if not emitted_initial or current != last_pending:
+                yield {
+                    "event": "pending_changed",
+                    "data": json.dumps({"count": len(current)}),
+                }
+                last_pending = current
+                emitted_initial = True
+            await asyncio.sleep(1.0)
+
+    return EventSourceResponse(event_gen())
 
 
 @router.post("/{token}/approve")
