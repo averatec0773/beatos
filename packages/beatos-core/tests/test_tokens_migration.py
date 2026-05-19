@@ -1,4 +1,4 @@
-"""009_tokens migration creates the tokens table + expected columns + index."""
+"""009_tokens + 010_tokens migrations create the tokens table + expected columns + index."""
 import pathlib
 import aiosqlite
 import pytest
@@ -23,6 +23,7 @@ async def test_tokens_table_columns(tmp_path: pathlib.Path):
         "expires_at": "REAL",
         "status": "TEXT",
         "consumed_at": "REAL",
+        "result": "TEXT",
     }
 
 
