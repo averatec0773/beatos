@@ -132,13 +132,15 @@ source = { editable = "packages/beatos-mcp" }
 dependencies = [
     { name = "beatos-core" },
     { name = "mcp" },
+    { name = "mcp-proxy" },
     { name = "structlog" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "beatos-core", editable = "packages/beatos-core" },
-    { name = "mcp", specifier = ">=1.0" },
+    { name = "mcp", specifier = ">=1.27" },
+    { name = "mcp-proxy", specifier = ">=0.6,<0.7" },
     { name = "structlog", specifier = ">=25.5.0" },
 ]
 
@@ -508,6 +510,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/38/83/d1efe7c2980d8a3afa476f4e3d42d53dd54c0ab94c27bee5d755b45c8b73/mcp-1.27.1.tar.gz", hash = "sha256:0f47e1820f8f8f941466b39749eb1d1839a04caddca2bc60e9d46e8a99914924", size = 608458, upload-time = "2026-05-08T16:50:12.601Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/73/42d9596facebdb533b7f0b86c1b0364ef350d1f8ba78b1052e8a58b48b65/mcp-1.27.1-py3-none-any.whl", hash = "sha256:1af3c4203b329430fde7a87b4fcb6392a041f5cb851fd68fc674016ab4e7c06f", size = 216260, upload-time = "2026-05-08T16:50:10.547Z" },
+]
+
+[[package]]
+name = "mcp-proxy"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcp" },
+    { name = "uvicorn" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/34/4e1cf8b6eb93bed8d9f3442408d6d6f266fde522fc2201c39bce49477976/mcp_proxy-0.6.0.tar.gz", hash = "sha256:e4f41dbd6c978cfe359dcbcc66cd14a4735606f9ff856e9b6888ef310038edd0", size = 20322, upload-time = "2025-05-13T06:46:50.294Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/03/ab61421d76fb81ca71125d815b25950c879514c4d665a69bc43cb6242b48/mcp_proxy-0.6.0-py3-none-any.whl", hash = "sha256:befbbd1ce7700b66bf16684971b753f78a1417e2ef360dfb536413a2c6ad6b3a", size = 13637, upload-time = "2025-05-13T06:46:49.06Z" },
 ]
 
 [[package]]
