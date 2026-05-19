@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { matchPath, useLocation } from "react-router-dom";
 
-import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
 import { useTrashStore } from "@/stores/trash";
 import {
@@ -10,7 +9,7 @@ import {
   useSidebarPanelStore,
 } from "@/stores/sidebar-panel";
 
-import { SourcesSection } from "@/components/Sidebar/SourcesSection";
+import { AllBeatsSection } from "@/components/Sidebar/AllBeatsSection";
 import { ListsSection } from "@/components/Sidebar/ListsSection";
 import { ApprovalsSection } from "@/components/Sidebar/ApprovalsSection";
 import { TrashSection } from "@/components/Sidebar/TrashSection";
@@ -58,22 +57,22 @@ function SidebarResizer(): React.JSX.Element {
 }
 
 export function SidebarPanel(): React.JSX.Element {
-  const refreshSources = useSourceStore((s) => s.refresh);
   const refreshLists = useListStore((s) => s.refresh);
   const refreshTrash = useTrashStore((s) => s.refresh);
 
   const location = useLocation();
   const listRouteMatch = matchPath("/lists/:id", location.pathname);
   const activeListId = listRouteMatch ? Number(listRouteMatch.params.id) : null;
-  const onListRoute = activeListId != null;
 
   useEffect(() => {
-    refreshSources();
     refreshLists();
     void refreshTrash();
-    const id = setInterval(() => refreshSources(), 5000);
+    const id = setInterval(() => {
+      refreshLists();
+      void refreshTrash();
+    }, 5000);
     return () => clearInterval(id);
-  }, [refreshSources, refreshLists, refreshTrash]);
+  }, [refreshLists, refreshTrash]);
 
   const sidebarWidth = useSidebarPanelStore((s) => s.width);
 
@@ -83,10 +82,10 @@ export function SidebarPanel(): React.JSX.Element {
       style={{ width: sidebarWidth }}
     >
       <SidebarResizer />
-      <SourcesSection onListRoute={onListRoute} />
+      <AllBeatsSection />
+      <TrashSection />
       <ListsSection activeListId={activeListId} />
       <ApprovalsSection />
-      <TrashSection />
       <SidebarFooter />
     </aside>
   );

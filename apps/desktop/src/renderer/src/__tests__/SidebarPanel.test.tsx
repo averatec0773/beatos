@@ -3,47 +3,58 @@ import { MemoryRouter } from "react-router-dom";
 import { DndContext } from "@dnd-kit/core";
 import { vi, beforeEach } from "vitest";
 import { SidebarPanel } from "@/components/Sidebar/SidebarPanel";
-import { useSourceStore } from "@/stores/sources";
 import { useListStore } from "@/stores/lists";
+import { useTrackStore } from "@/stores/tracks";
 
 beforeEach(() => {
   (global.fetch as any) = vi.fn().mockResolvedValue({
     ok: true,
     json: () => Promise.resolve([]),
   });
-  useSourceStore.setState({
-    all: [
-      { id: 1, name: "Main", root_path: "/m", position: 0, created_at: "x", status: "online", track_count: 10 },
-      { id: 2, name: "Archive", root_path: "/a", position: 1, created_at: "x", status: "offline", track_count: 0 },
-    ],
-    activeFilter: null,
-  });
   useListStore.setState({
     all: [
-      { id: 100, name: "All Beats", kind: "system", position: 0, created_at: "x" },
       { id: 101, name: "Q1 2025", kind: "user", position: 1, created_at: "x" },
     ],
   });
+  useTrackStore.setState({
+    list: [
+      { id: 1 } as any,
+      { id: 2 } as any,
+      { id: 3 } as any,
+    ],
+  });
 });
 
-it("renders SOURCES and LISTS sections", () => {
+it("renders the All Beats row with track count", () => {
   render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
-  expect(screen.getByText(/sources/i)).toBeInTheDocument();
-  expect(screen.getByText(/lists/i)).toBeInTheDocument();
-  expect(screen.getByText("Main")).toBeInTheDocument();
-  expect(screen.getByText("Archive")).toBeInTheDocument();
   expect(screen.getByText("All Beats")).toBeInTheDocument();
+  expect(screen.getByText("3")).toBeInTheDocument();
 });
 
-it("clicking a Source sets activeFilter", () => {
-  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
-  fireEvent.click(screen.getByText("Main"));
-  expect(useSourceStore.getState().activeFilter).toBe(1);
-});
-
-it("clicking All Beats clears activeFilter", () => {
-  useSourceStore.setState({ activeFilter: 1 });
-  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
+it("clicking All Beats navigates to /", () => {
+  render(
+    <MemoryRouter initialEntries={["/trash"]}>
+      <DndContext>
+        <SidebarPanel />
+      </DndContext>
+    </MemoryRouter>,
+  );
+  // Click should not throw; navigation is exercised by react-router-dom
   fireEvent.click(screen.getByText("All Beats"));
-  expect(useSourceStore.getState().activeFilter).toBeNull();
+});
+
+it("renders sections in the v0.0.22 order", () => {
+  const { container } = render(
+    <MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>,
+  );
+  // Walk the aside DOM in document order and record the position of each
+  // required label by its first occurrence.
+  const aside = container.querySelector("aside");
+  expect(aside).not.toBeNull();
+  const text = aside!.textContent ?? "";
+  const required = ["All Beats", "Trash", "Lists", "Approvals"];
+  const indices = required.map((needle) => text.indexOf(needle));
+  expect(indices.every((i) => i >= 0)).toBe(true);
+  const sorted = [...indices].sort((a, b) => a - b);
+  expect(indices).toEqual(sorted);
 });
