@@ -12,6 +12,7 @@ from beatos_core.two_phase import (
     consume_token,
     consume_token_with_result,
     create_token,
+    reject_token,
     verify_token,
 )
 
@@ -117,3 +118,33 @@ async def test_consume_token_with_result_raises_when_already_consumed(fresh_db):
         await consume_token_with_result(conn, token, {"list_id": 7})
         with pytest.raises(TokenError, match="not in pending state"):
             await consume_token_with_result(conn, token, {"list_id": 999})
+
+
+@pytest.mark.asyncio
+async def test_reject_token_marks_rejected(fresh_db):
+    async with aiosqlite.connect(fresh_db) as conn:
+        token = await create_token(conn, "create_list", {"name": "X"})
+        await reject_token(conn, token)
+        async with conn.execute(
+            "SELECT status, consumed_at FROM tokens WHERE token=?", (token,)
+        ) as cur:
+            row = await cur.fetchone()
+        status, consumed_at = row
+        assert status == "rejected"
+        assert consumed_at is not None
+
+
+@pytest.mark.asyncio
+async def test_reject_token_no_op_on_terminal_token(fresh_db):
+    """Approve/Reject race: one wins, the other must not raise."""
+    async with aiosqlite.connect(fresh_db) as conn:
+        token = await create_token(conn, "create_list", {"name": "X"})
+        await consume_token_with_result(conn, token, {"list_id": 1})
+        # Should silently no-op, not raise
+        await reject_token(conn, token)
+        # Status remains consumed
+        async with conn.execute(
+            "SELECT status FROM tokens WHERE token=?", (token,)
+        ) as cur:
+            row = await cur.fetchone()
+        assert row[0] == "consumed"

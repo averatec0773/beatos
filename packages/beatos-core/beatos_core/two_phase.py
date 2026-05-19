@@ -109,3 +109,16 @@ async def consume_token_with_result(
     )
     if cur.rowcount != 1:
         raise TokenError(f"token not in pending state: {token}")
+
+
+async def reject_token(conn: aiosqlite.Connection, token: str) -> None:
+    """User-initiated rejection. Marks pending token as rejected.
+    No-op on already-terminal tokens — handles Approve/Reject race
+    gracefully (one side wins, other is silent)."""
+    now = time.time()
+    await conn.execute(
+        "UPDATE tokens SET status='rejected', consumed_at=? "
+        "WHERE token=? AND status='pending'",
+        (now, token),
+    )
+    await conn.commit()
