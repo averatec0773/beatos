@@ -6,7 +6,7 @@ connect via the beatos-mcp launcher -> mcp-proxy bridge.
 """
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
@@ -49,10 +49,10 @@ async def list_tracks(
     bpm_min: Annotated[float | None, Field(description="Inclusive lower bound on BPM.")] = None,
     bpm_max: Annotated[float | None, Field(description="Inclusive upper bound on BPM.")] = None,
     has_audio: Annotated[bool | None, Field(description="true = only tracks with audio attached.")] = None,
-    sort_by: Annotated[str | None, Field(description="One of: created_at, updated_at, bpm, name. Default: created_at.")] = None,
-    sort_dir: Annotated[str | None, Field(description="asc or desc. Default: desc.")] = None,
-    limit: Annotated[int | None, Field(description="Default 50, max 500.")] = None,
-    offset: Annotated[int | None, Field(description="Default 0.")] = None,
+    sort_by: Annotated[Literal["created_at", "updated_at", "bpm", "name"] | None, Field(description="Default: created_at.")] = None,
+    sort_dir: Annotated[Literal["asc", "desc"] | None, Field(description="Default: desc.")] = None,
+    limit: Annotated[int | None, Field(ge=1, le=500, description="Default 50, max 500.")] = None,
+    offset: Annotated[int | None, Field(ge=0, description="Default 0.")] = None,
 ) -> dict:
     """List tracks in the BeatOS library with rich filtering. Default sort: created_at desc.
     Default limit: 50 (max 500). Returns {items, total, returned, limit, offset, hint?}.
@@ -91,7 +91,7 @@ async def list_lists() -> dict:
 
 @mcp.tool(annotations=_READ_ANNOTATIONS)
 async def list_distinct_values(
-    field: Annotated[str, Field(description="One of: producer, genre, mood, key.")],
+    field: Annotated[Literal["producer", "genre", "mood", "key"], Field(description="One of: producer, genre, mood, key.")],
 ) -> dict:
     """Enumerate distinct values + counts for one of producer/genre/mood/key.
     Call this before filtering list_tracks so you use the user's actual spelling."""

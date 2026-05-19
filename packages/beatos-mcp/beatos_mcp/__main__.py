@@ -14,6 +14,7 @@ from beatos_mcp.server import mcp
 
 async def _amain() -> None:
     async with stdio_server() as (read_stream, write_stream):
+        # Transitional: Task 5 replaces this whole module with the mcp-proxy launcher.
         await mcp._mcp_server.run(
             read_stream, write_stream, mcp._mcp_server.create_initialization_options()
         )
