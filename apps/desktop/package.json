@@ -3,9 +3,9 @@
   "version": "0.0.25",
   "description": "BeatOS — Electron desktop renderer for the local-first beat producer toolkit.",
   "main": "./out/main/index.js",
-  "author": "averatec",
+  "author": "Scott Huang (averatec0773)",
   "homepage": "https://github.com/averatec0773/beatos",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",

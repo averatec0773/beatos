@@ -1,0 +1,40 @@
+BeatOS
+Copyright 2026 Scott Huang (averatec0773)
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full license text.
+
+---
+
+This product bundles third-party components under their own licenses.
+A condensed attribution list follows; the authoritative license texts
+ship inside each dependency in node_modules/ and the Python virtual
+environment.
+
+Renderer (npm):
+  - Electron — MIT
+  - React, React-DOM — MIT
+  - Vite, electron-vite — MIT
+  - Tailwind CSS — MIT
+  - Radix UI primitives — MIT
+  - Zustand — MIT
+  - TanStack Virtual — MIT
+  - dnd-kit — MIT
+  - Tone.js — MIT
+  - lucide-react — ISC
+
+Sidecar (Python):
+  - FastAPI — MIT
+  - aiosqlite — MIT
+  - structlog — MIT / Apache-2.0 (dual)
+  - mcp (Anthropic) — MIT
+  - mcp-proxy — MIT
+  - librosa — ISC
+  - pydantic — MIT
+  - uvicorn — BSD-3-Clause
+
+Tooling:
+  - Playwright — Apache-2.0
+  - vitest — MIT
+  - pytest — MIT
+  - uv — Apache-2.0 / MIT (dual)

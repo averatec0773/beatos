@@ -10,7 +10,7 @@ A local-first desktop library that holds every beat on your hard drive — catal
 
 [![version](https://img.shields.io/badge/version-0.0.25-7c5cff?style=flat-square)](CHANGELOG.md)
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-1f1f1f?style=flat-square)](#install)
-[![license](https://img.shields.io/badge/license-MIT-1f1f1f?style=flat-square)](LICENSE)
+[![license](https://img.shields.io/badge/license-Apache--2.0-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
 [![MCP](https://img.shields.io/badge/MCP-Claude%20Code%20%E2%80%A2%20Claude%20Desktop-7c5cff?style=flat-square)](#ai-integration)
 
@@ -210,7 +210,9 @@ Full plan: [`ROADMAP.md`](ROADMAP.md) · Shipped history: [`CHANGELOG.md`](CHANG
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+Apache License 2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+
+Copyright 2026 Scott Huang ([averatec0773](https://github.com/averatec0773)).
 
 ---
 
