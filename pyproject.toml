@@ -1,6 +1,6 @@
 [project]
 name = "beatos-workspace"
-version = "0.0.24.2"
+version = "0.0.25"
 description = "BeatOS workspace root — three Python packages under uv."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"

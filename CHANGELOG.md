@@ -4,6 +4,57 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.25] — 2026-05-19 — UI/UX dogfood baseline
+
+The first dogfood-driven polish cycle. This line will absorb continuous UX fixes
+as `0.0.25.1`, `0.0.25.2`, ... while the underlying feature set stays stable.
+Use this version as the floor for daily-use feedback against the new sidebar
+layout, drop-import flow, and AI agent surface.
+
+### UI/UX
+
+- **Drop-import dialog** — dragging audio onto the library now prompts for
+  destination (new track / attach to selected) + role (tagged / untagged),
+  rather than silently creating tracks. Single-file drops onto a focused
+  track can replace its audio asset in one flow.
+- **Sidebar layout reworked** — All Beats / Trash / Approvals on top, Lists
+  in the middle, `@averatec0773` + Settings pinned at the bottom. Settings
+  moved off the TopBar (Claude-style pinning).
+- **Approvals badge** — yellow circular pill (replaces the previously broken
+  `text-warning` no-op class).
+- **Track row selection** — `bg-accent-soft` background + full-height accent
+  bar; right-click context-menu adds a `ring-accent` outline so it's obvious
+  which row the menu is acting on.
+- **Now Focused panel** — License/Price replaced with Genre; Credits block
+  added (Producer, Tags, Added, Updated) plus a conditional Description.
+- **Chip multi-select global delete** — popover closes immediately + toast
+  confirms; the previous "popover stays open after delete" UX was unclear.
+- **Drag-track-to-list** — emits success / partial / error toast.
+- **macOS traffic-light vertical alignment** — `trafficLightPosition` set so
+  the dots line up with the topbar title (requires Electron restart to apply).
+
+### Fixes
+
+- Add long-missing `--bg-row-active` and `--warning` CSS tokens — three
+  classes (`bg-bg-row-active` on sidebar active route, `text-warning` on
+  Approvals badge + AnalyzeResultDialog warnings) had been silently no-op
+  for multiple versions.
+- `audio_analysis/service.py` — wrap synchronous `analyze()` in
+  `asyncio.to_thread`. The librosa pipeline no longer blocks the sidecar
+  event loop, so concurrent track-list / asset fetches no longer stall
+  during analysis (root cause of "info disappears during analyze").
+- Auto-analyze on drop is now **disabled by default**. The librosa pipeline
+  is slow and accuracy is mediocre; running it implicitly on every imported
+  file produced more confusion than value. The manual *Analyze audio* button
+  in TrackEditor still works. A library swap (essentia is the candidate)
+  is queued for the next major version.
+
+### README
+
+- Reframed around the producer workflow (multi-platform re-publishing as the
+  driver) and the AI-agent surface as a first-class feature, not a footnote.
+- First real screenshot in place of the placeholder.
+
 ## [0.0.24.2] — 2026-05-19 — Batch asset attach/detach
 
 ### Added

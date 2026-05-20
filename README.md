@@ -6,12 +6,13 @@
 
 **The operating system for beat producers.**
 
-A local-first desktop library for the beats on your hard drive — catalog, play, tag, and (soon) publish without anything leaving your machine.
+A local-first desktop library that holds every beat on your hard drive — catalog it once, then ship it to every platform with an AI co-pilot doing the metadata grind for you.
 
-[![version](https://img.shields.io/badge/version-0.0.24.2-7c5cff?style=flat-square)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.0.25-7c5cff?style=flat-square)](CHANGELOG.md)
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-1f1f1f?style=flat-square)](#install)
 [![license](https://img.shields.io/badge/license-MIT-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
+[![MCP](https://img.shields.io/badge/MCP-Claude%20Code%20%E2%80%A2%20Claude%20Desktop-7c5cff?style=flat-square)](#ai-integration)
 
 </div>
 
@@ -24,46 +25,92 @@ A local-first desktop library for the beats on your hard drive — catalog, play
   <br/>
 </div>
 
+## The problem
+
+A working beat producer ends up with hundreds of WAV/MP3 files on disk, two versions of each (tagged + untagged), cover art that isn't always next to the file, and a different metadata vocabulary for every platform:
+
+- **NetEase / QQ Music / Suno / BeatStars / YouTube** — different genre trees, different mood tags, different description lengths, different price models.
+- A track that's "Trap" on one site is "Hip Hop · 暗黑" on another, "Aggressive Lo-Fi" on a third, "未分类" on a fourth.
+- **Every release means re-typing the same data in a different costume.** Multiply by 50 unfinished beats and 4 platforms — that's 200 metadata blocks to maintain by hand. Which is why most producers just don't publish.
+
+BeatOS fixes this by keeping **one canonical catalog** locally, then letting **either you or an AI agent** translate it into the per-platform metadata block on demand.
+
 ## What it does today
 
 <table>
 <tr>
 <td width="33%" valign="top">
 
-### Catalog
+### 1. Local catalog
 
-A real database for your beats. Sources watch your existing folders, Tracks carry the metadata, Lists curate selections. Multi-value Producer / Genre / Mood with rename + merge in one click. Soft-delete trash with restore.
-
-</td>
-<td width="33%" valign="top">
-
-### Play
-
-Spotify-style bottom bar powered by Tone.js + Web Audio. Four audio roles per track (tagged / untagged × WAV / MP3), instant role-switch, queue follows the visible filter, shuffle + repeat, byte-budgeted LRU cache. Plays the FLOAT-32 WAVs your DAW actually exports.
+A real SQLite database for every beat: title, BPM, key, genre (multi-value), mood (multi-value), producer credits, tags, license type, price, description, audio assets (WAV/MP3 × tagged/untagged), cover art. Soft-delete trash with restore. Lists for curation. Rename + merge a producer across every track in one click.
 
 </td>
 <td width="33%" valign="top">
 
-### Analyze on demand
+### 2. AI co-pilot (MCP)
 
-Click *Analyze audio* on any track → BeatOS extracts BPM and Key via a librosa pipeline (HPSS → beat tracking + Krumhansl-Schmuckler) running off the event loop. Per-field confidence scores; you stay in control of what gets written.
+A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client. 20 tools: read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Approvals panel.
+
+</td>
+<td width="33%" valign="top">
+
+### 3. Player + analysis
+
+Spotify-style bottom bar (Tone.js + Web Audio). Plays the FLOAT-32 WAVs your DAW actually exports. Four audio roles per track with instant switch; queue follows the visible filter; shuffle + repeat. On-demand BPM/key analysis via librosa (HPSS → beat-tracking + Krumhansl-Schmuckler) with per-field confidence scores.
 
 </td>
 </tr>
 </table>
 
-## Built for AI agents
+## AI integration
 
-A separate MCP (Model Context Protocol) stdio server exposes the library to AI assistants like Claude. 20 tools ship today: 5 read tools + 15 write tools covering tracks, lists, trash, assets, and metadata. Every write goes through a two-phase `token → await_approval` commit pattern — the AI proposes, you review in the Approvals panel, you confirm. The agent can never silently mutate your catalog.
+> **BeatOS is the first beat library built for the AI-agent era.** The MCP surface is not a side feature — it's how publishing is going to scale to 10 platforms without manual labor.
+
+**Verified clients:** Claude Code CLI · Claude Desktop · any MCP client speaking stdio JSON-RPC.
+
+**Tools shipping today (20 total):**
+
+| Surface | Tools |
+|---|---|
+| **Read** | `list_tracks`, `get_track`, `list_lists`, `list_distinct_values`, `ping` |
+| **Lifecycle** | `create_tracks`, `trash_tracks`, `restore_tracks`, `purge_tracks` |
+| **Lists** | `create_list`, `update_list`, `delete_list`, `add_tracks_to_list`, `remove_tracks_from_list`, `reorder_list` |
+| **Metadata** | `update_tracks`, `merge_metadata` |
+| **Assets** | `attach_assets`, `detach_assets` |
+| **Flow control** | `await_approval` |
+
+**Why two-phase commit?** Every write tool returns a `token` (preview only) — nothing touches the database. The token surfaces in the **Approvals panel** in BeatOS; you review the diff, then confirm. The agent calls `await_approval` to learn the outcome. **An AI can never silently mutate your catalog**, batch-edit your producer credits, or trash a track without you signing off.
+
+**Why batches?** A folder-import of 50 tracks × 2 audio assets would otherwise be 100 approval clicks. `create_tracks` (≤100), `attach_assets` (≤500), `detach_assets` (≤500) all batch — one token, one click, atomic rollback if any file vanishes mid-approve.
+
+**Example flow** (driven by Claude Code from your terminal):
+
+```text
+You:    "Tag every beat above 140 BPM that has no genre with 'Trap' or 'Drill'
+         based on the cover art and title. Show me the diff before applying."
+
+Claude: [calls list_tracks(bpm_min=140) → 12 tracks]
+        [reads metadata, drafts a patch]
+        [calls update_tracks(items=[...]) → returns token abc123]
+
+You:    [opens BeatOS Approvals panel, sees 12 proposed edits with rationale]
+        [reviews 3, rejects 1, approves the batch]
+
+Claude: [await_approval → status=approved, applies, reports back]
+```
+
+The same pattern will drive per-platform description generation, NetEase publish drafts (v0.1), and self-corpus RAG drafts (v0.2).
 
 ## Local-first, by design
 
 | | |
 |---|---|
-| **No server.** | The sidecar binds `127.0.0.1` on an ephemeral port. Nothing leaves the machine. |
+| **No server.** | The sidecar binds `127.0.0.1` on an ephemeral port. Nothing leaves the machine — including conversations with the MCP agent. |
 | **No account.** | Single-user. No login, no sync, no cloud. |
-| **No telemetry.** | Zero outbound calls. |
-| **Your files stay put.** | Sources reference paths; BeatOS doesn't move or rename anything by default. |
+| **No telemetry.** | Zero outbound calls from the app itself. |
+| **Your files stay put.** | BeatOS references paths; nothing is moved or renamed unless you ask. |
+| **Your data is yours.** | One SQLite file under `~/Library/Application Support/BeatOS/` (macOS). Open it with any tool. |
 
 ## Install
 
@@ -93,6 +140,23 @@ npm run dev:fresh                      # kill orphans + launch Electron + sideca
 npm run logs:tail                      # follow main.log + sidecar.jsonl
 ```
 
+**Wire up the MCP server (Claude Desktop / Claude Code)**
+
+The MCP server lives at `packages/beatos-mcp` and speaks stdio. Add to your MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "beatos": {
+      "command": "uv",
+      "args": ["run", "--directory", "/absolute/path/to/beatos", "beatos-mcp"]
+    }
+  }
+}
+```
+
+Then `list_tracks` and friends will be available as tools inside Claude.
+
 **Test**
 
 ```bash
@@ -104,7 +168,7 @@ npm run build && npm run smoke         # Playwright _electron end-to-end
 ## Stack
 
 `Electron 39` · `React 19` · `Vite` · `Tailwind` · `Radix UI` · `Zustand` · `TanStack Virtual` · `dnd-kit` · `Tone.js`
-`Python 3.11` · `FastAPI` · `aiosqlite` · `structlog` · `mcp` · `librosa` · `Playwright`
+`Python 3.11` · `FastAPI` · `aiosqlite` · `structlog` · `mcp` (FastMCP) · `librosa` · `Playwright`
 `SQLite` · `Pydantic v2`
 
 ## Repository
@@ -117,16 +181,19 @@ packages/
   beatos-mcp/              stdio MCP server for AI agents
   beatos-platforms/        Per-platform vocab maps (v0.1+ adapters)
 conventions/               Architecture and design references
+screenshots/               README assets
 ```
 
 Full architecture notes live in [`conventions/architecture.md`](conventions/architecture.md).
 
 ## Roadmap
 
-Shipping `v0.0.X` polish releases through the rest of the foundation. Next major milestones:
+`v0.0.25` is the **dogfood baseline** — UI/UX iterations land here as `0.0.25.1`, `0.0.25.2`, ... while the feature surface stays stable. Then:
 
-- **`v0.1.0`** — First publish adapter (NetEase Cloudmusic). Two-phase commit, browser-automation in your own Chrome.
-- **`v0.2.0`** — Self-corpus RAG. Draft descriptions in your voice from your own back catalog.
+- **`v0.0.26`** — Replace librosa with [essentia](https://essentia.upf.edu/) for fast + accurate BPM/Key. Re-enable auto-analyze on import.
+- **`v0.0.27`** — Smart search syntax (`bpm:>140 genre:trap producer:smoke`) over existing filter primitives.
+- **`v0.1.0`** — First publish adapter (NetEase Cloudmusic). Browser automation in your own Chrome with manual confirm at submission.
+- **`v0.2.0`** — Self-corpus RAG. Generate platform-tailored descriptions in your voice from your own back catalog.
 - **`v0.3.0`** — Audio-content RAG. `find_similar` over CLAP embeddings, locally.
 - **`v0.4.0`** — DAW export integration (FL Studio / Ableton / Logic).
 

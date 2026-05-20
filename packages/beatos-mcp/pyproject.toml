@@ -1,6 +1,6 @@
 [project]
 name = "beatos-mcp"
-version = "0.0.24.2"
+version = "0.0.25"
 description = "BeatOS MCP facade — FastMCP server (mounted by beatos-http) + stdio bridge launcher."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
