@@ -87,7 +87,7 @@ MCP servers (template in `.claude/settings.local.json.example`):
 - [ROADMAP](ROADMAP.md) — pending v0.0.X + v0.1.0 + future v0.2+
 
 ### Skills (`.claude/skills/`)
-- [setup](.claude/skills/setup/SKILL.md) · [memory](.claude/skills/memory/SKILL.md) · [harness](.claude/skills/harness/SKILL.md) · [skill-creator](.claude/skills/skill-creator/SKILL.md)
+- [harness](.claude/skills/harness/SKILL.md) · [audit](.claude/skills/audit/SKILL.md) · [skill-creator](.claude/skills/skill-creator/SKILL.md)
 
 ### Memory
 - [rules](memory/rules.md) · [notes](memory/notes.md)
