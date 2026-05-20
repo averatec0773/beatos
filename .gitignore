@@ -1,3 +1,6 @@
+# macOS metadata — recursive (root `.DS_Store` alone misses nested dirs)
+**/.DS_Store
+
 # Personal — untrack to keep local: `git rm --cached TODO.md`
 TODO.md
 
