@@ -69,6 +69,15 @@ Spotify-style bottom bar (Tone.js + Web Audio). Plays the FLOAT-32 WAVs your DAW
 
 **Verified clients:** Claude Code CLI · Claude Desktop · any MCP client speaking stdio JSON-RPC.
 
+<div align="center">
+  <br/>
+  <img src="screenshots/mcp-claude-desktop.png" alt="BeatOS surfaced as a Desktop connector in Claude Desktop, with all 20 tools listed under read-only and write/delete permission groups" width="900" />
+  <br/>
+  <em>BeatOS registered as a Desktop MCP connector in Claude Desktop — read-only tools auto-allowed, writes gated behind approval.</em>
+  <br/>
+  <br/>
+</div>
+
 **Tools shipping today (20 total):**
 
 | Surface | Tools |
