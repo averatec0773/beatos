@@ -92,6 +92,14 @@ License tiers: one-to-many `license_tier` table replaces `track.license_type` + 
 
 Compact one-row tier layout, FX reference hints, custom name/notes moved behind ⋮ expand. See [CHANGELOG.md](CHANGELOG.md#00261---2026-05-24--compact-tier-rows--fx-hints).
 
+### v0.0.26.2 — SHIPPED 2026-05-24
+
+License editor dogfood fixes: empty tier name accepted, per-currency price memory so currency-peek doesn't wipe value, end-to-end duplicate-deliverables block. See [CHANGELOG.md](CHANGELOG.md#00262---2026-05-24--license-editor-dogfood-fixes).
+
+### v0.0.26.3 — SHIPPED 2026-05-24
+
+License editor redesigned to mirror the FILES section (MP3/WAV/STEMS as fixed preset slots with dashed empty state; "+ Add tier" opens inline custom-row draft). Back-arrow style upgraded. Title-column resizer click no longer collapses the column (3 px movement threshold). Mood/Producer chip rows pinned to `leading-5` so CJK + Latin glyphs align. See [CHANGELOG.md](CHANGELOG.md#00263---2026-05-24--files-style-license-tiers--small-ux-patches).
+
 #### License v2 candidates (deferred — pending dogfood signal)
 
 - **Multi-currency prices per tier**: schema move from `price + currency` to a `prices` JSON array so a tier can carry both `¥300` and `$50` (user-rounded after conversion). Reach for this if "the gray hint isn't enough — I want both numbers to be canonical" comes up in real use.

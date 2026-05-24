@@ -4,6 +4,45 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.26.3] — 2026-05-24 — FILES-style license tiers + small UX patches
+
+Bundle of four dogfood findings.
+
+### Changed
+
+- **License tier editor redesigned to mirror the FILES section.** MP3,
+  WAV, and STEMS are now three fixed preset slots — empty rows render
+  with a dashed border (matching the empty asset rows above); typing a
+  price into a dashed slot creates the tier after a 600 ms debounce.
+  Custom tiers (e.g. MIDI) are added via the unchanged top-right
+  "+ Add tier" button, which now opens an inline name+price+currency
+  draft instead of immediately creating an empty row. Multi-deliverable
+  legacy bundles (`["wav","stem"]`) still load but render in a separate
+  area below the customs — they were never produceable by the new
+  picker but stored data is preserved. The standalone `DeliverablesPicker`
+  popover was removed. MCP `set_license_tiers` docstring updated to
+  prefer one-deliverable-per-tier so agent output lands cleanly in the
+  preset slots; multi-deliverable tiers are still accepted.
+- **Back-arrow style in the top bar** — was `text-text-tertiary` 16 px
+  next to two `font-medium` neighbors, reading as a half-rendered glyph.
+  Now `text-text-secondary` 18 px with a `hover:bg-bg-row-hover` chip,
+  matching the toggle-preview button on the right.
+
+### Fixed
+
+- **Clicking the Title column resizer collapsed the column.** The
+  `1fr`-default Title track flipped to a fixed pixel width on every
+  click (any synthetic micro-move past 0 px wrote `setWidth`). Added a
+  3 px movement threshold in `ColumnResizer` — pure clicks no longer
+  commit a width.
+- **Mood and Producer chip rows drifted out of alignment.** Latin chips
+  ("AVERATEC") and CJK chips ("可爱 (Cute)") had subtly different
+  line-heights, and the "+ Add" button's 1 px border put it on a
+  different baseline than the borderless chips. Pinned both to `h-7
+  leading-none` so the chip height is decoupled from glyph script and
+  border presence — Mood and Producer columns now wrap at identical
+  vertical positions.
+
 ## [0.0.26.2] — 2026-05-24 — License editor dogfood fixes
 
 Three bugs found while exercising the new tier editor — all in one
