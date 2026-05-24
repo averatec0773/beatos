@@ -19,7 +19,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from beatos_core.db import resolve_db_path, run_migrations
 from beatos_core.two_phase import cleanup_terminal_tokens
-from beatos_http.routes import analysis, assets, lists, producers, sweep, tokens, tracks
+from beatos_http.routes import (
+    analysis,
+    assets,
+    licenses,
+    lists,
+    producers,
+    sweep,
+    tokens,
+    tracks,
+)
 from beatos_mcp.server import app as mcp_asgi_app, mcp
 
 log = logging.getLogger(__name__)
@@ -134,6 +143,7 @@ def create_app() -> FastAPI:
     app.include_router(tracks.router)
     app.include_router(assets.router)
     app.include_router(lists.router)
+    app.include_router(licenses.router)
     app.include_router(sweep.router)
     app.include_router(analysis.router)
     app.include_router(producers.router)

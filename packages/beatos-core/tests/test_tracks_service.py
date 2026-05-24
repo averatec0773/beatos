@@ -57,7 +57,6 @@ async def test_create_returns_track_with_id():
     t = await create_track("Untitled")
     assert t.id > 0
     assert t.title == "Untitled"
-    assert t.license_type == "lease_basic"
 
 
 @pytest.mark.asyncio

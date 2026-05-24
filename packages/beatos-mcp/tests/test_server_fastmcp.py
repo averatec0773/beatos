@@ -32,6 +32,7 @@ async def test_registered_tool_names() -> None:
         "create_tracks",
         "attach_assets",
         "detach_assets",
+        "set_license_tiers",
     }
     assert names == expected
 

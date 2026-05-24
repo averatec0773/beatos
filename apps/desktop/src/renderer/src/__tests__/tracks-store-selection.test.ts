@@ -12,8 +12,6 @@ function track(id: number, title = `T${id}`): Track {
     mood: null,
     tags: null,
     description: null,
-    license_type: "exclusive",
-    price: null,
     producer: null,
     has_audio: false,
     cover_asset_id: null,

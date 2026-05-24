@@ -16,8 +16,6 @@ class Track(BaseModel):
     mood: Optional[list[str]] = None
     tags: Optional[list[str]] = None
     description: Optional[str] = None
-    license_type: str = "lease_basic"
-    price: Optional[float] = None
     producer: Optional[list[str]] = None
     cover_asset_id: Optional[int] = Field(
         default=None,
@@ -55,6 +53,4 @@ class TrackUpdate(BaseModel):
     mood: Optional[list[str]] = None
     tags: Optional[list[str]] = None
     description: Optional[str] = None
-    license_type: Optional[str] = None
-    price: Optional[float] = None
     producer: Optional[list[str]] = None

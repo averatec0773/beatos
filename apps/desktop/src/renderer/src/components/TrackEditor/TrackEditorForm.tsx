@@ -10,8 +10,8 @@ import { KeyPicker } from "@/components/KeyPicker";
 import { ChipMultiSelect } from "@/components/ChipMultiSelect";
 import { BEATOS_GENRES, genreLabel } from "@/data/genres";
 import { BEATOS_MOODS } from "@/data/moods";
-import { LICENSE_TYPES } from "@/lib/track-editor-helpers";
 import { SaveIndicator } from "@/components/TrackEditor/SaveIndicator";
+import { LicenseTiersSection } from "@/components/TrackEditor/LicenseTiersSection";
 import type { TrackEditorState } from "@/hooks/use-track-editor-state";
 
 export interface TrackEditorFormProps {
@@ -120,7 +120,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div data-field="mood">
                 <label className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1">
                   Mood
@@ -177,26 +177,6 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                   }}
                 />
               </div>
-              <div>
-                <label
-                  htmlFor="track-license"
-                  className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-                >
-                  License
-                </label>
-                <select
-                  id="track-license"
-                  value={track.license_type}
-                  onChange={(e) => patch("license_type", e.target.value)}
-                  className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
-                >
-                  {LICENSE_TYPES.map((l) => (
-                    <option key={l} value={l}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div>
@@ -242,6 +222,8 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
         </div>
 
         <FileRowsSection trackId={track.id} />
+
+        <LicenseTiersSection trackId={track.id} />
 
         <div className="flex items-center gap-3">
           <button

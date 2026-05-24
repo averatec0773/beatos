@@ -4,6 +4,121 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.26.2] — 2026-05-24 — License editor dogfood fixes
+
+Three bugs found while exercising the new tier editor — all in one
+patch.
+
+### Fixed
+
+- **"Add tier" failed with 400 "name must be non-empty"** — the renderer
+  intentionally sends `name: ""` for non-first tiers so the row label
+  can auto-derive from `deliverables`, but the backend rejected blank
+  names. Relaxed `create_tier` / `update_tier` / `replace_tiers_for_track`
+  + the MCP `_validate_tier`: empty name is now accepted everywhere,
+  with the renderer's auto-derived display label (`MP3 + WAV`) as the
+  user-visible label and `"Untitled tier"` as the persisted fallback.
+  The two tests that previously asserted "non-empty rejected" are
+  inverted to "empty accepted."
+- **Switching currency away then back lost the original price** — the
+  v0.0.26.1 design fired a debounced PUT on every currency change,
+  silently overwriting `{price: 700, currency: CNY}` with
+  `{price: null, currency: USD}` the moment the user clicked USD to
+  peek at the conversion. Now each tier carries a per-currency
+  `priceMemory` (renderer-only): switching back to a currency where a
+  value was previously typed restores that value; switching to a
+  currency with no memory clears the field for the placeholder hint
+  AND skips the autosave so the server's state stays put until the
+  user actively commits.
+- **Two tiers with the same deliverables coexisting** — a track could
+  carry duplicate `["mp3"]` tiers, which is confusing for publish
+  adapters and produces identical row labels (auto-derived from
+  deliverables). Now blocked end-to-end: comparison is order- and
+  case-insensitive (`["mp3","wav"]` and `["WAV","MP3"]` collide);
+  empty `deliverables` are exempt (multiple mid-edit rows are fine);
+  `update_tier` excludes self (a tier never dupes against itself);
+  add-tier's MP3 seed falls back to empty when `["mp3"]` already
+  exists. Renderer pre-flights the check in `updateLocal` so a
+  conflicting toggle reverts immediately with a warning toast instead
+  of round-tripping a 400.
+
+### Tests
+
+6 new core tests (dedup with order/case insensitivity,
+multiple-empty allowed, update-self allowed, batch internal-dedup).
+Two existing tests inverted (empty name now accepted in core +
+MCP validator).
+
+## [0.0.26.1] — 2026-05-24 — Compact tier rows + FX hints
+
+Dogfood follow-up on `0.0.26`. The original layout used a 4-row card per
+tier (name + deliverables + price/currency + notes); for a producer who
+typically lists 2-4 tiers per beat the vertical space cost was high.
+
+### Changed
+
+- **Each tier is now one row**: `[Deliverables ▾]  [Price]  [Currency]
+  ≈ $14 · €13  [⋮ expand]  [🗑]`. The deliverables trigger is a compact
+  popover with the `mp3 / wav / stem` presets plus a custom-add input.
+- **Name + notes moved behind a `⋮` expand** — tier display label is
+  auto-derived from deliverables (`MP3 + WAV`). When the user customizes
+  the name, it sticks; the auto-sync only fires while the name still
+  matches the deliverables join, so power-users keep their wording.
+
+### Added
+
+- **FX reference inside the price input** (`lib/fx-rates.ts`) — when the
+  user switches currency (e.g. ¥700 → USD), the price input clears and
+  the converted amount (`≈ 97`) shows as the `<input placeholder>`.
+  Disappears the moment the user types — so it never competes with a
+  real value and never lingers as ambient gray noise. Computed from a
+  hardcoded mid-market snapshot (CNY / USD / EUR / JPY / GBP, dated
+  `FX_SNAPSHOT_DATE`). No network call, no auto-refresh; "spot the
+  typo" reference only. Bump the table when ranges drift >10%.
+
+### Internal
+
+- New `TrackEditor/DeliverablesPicker.tsx` — purpose-built compact
+  multi-select; `ChipMultiSelect` was kept for the existing chip-cluster
+  surfaces (Producer / Genre / Mood) where the inline chip look is the
+  right pattern.
+
+## [0.0.26] — 2026-05-23 — License tiers
+
+Replaces the long-placeholder `track.license_type` + `track.price` fields
+(both removed from the UI in v0.0.25 already) with a proper one-to-many
+`license_tier` table. Each track now carries 0..N tiers, each with a freeform
+name, a list of deliverable tokens, a price, a currency, and notes. Generic
+enough to map to NetEase / BeatStars / Airbit / etc. when those adapters
+land; producers can also use it as an in-app price sheet.
+
+### Added
+
+- **`license_tier` table** (migration `013_license_tiers.sql`) — track-scoped,
+  positioned. `deliverables` stored as a JSON array of free string tokens
+  (recommended values: `mp3` / `wav` / `stem`, but custom values are
+  accepted so platform adapters can map their own vocab). Backfills a
+  default tier on any pre-existing track that carried a non-default
+  `license_type` or a `price`; everything else gets no tiers. The old
+  `track.license_type` and `track.price` columns are then dropped.
+- **HTTP**: `GET/POST /api/tracks/{id}/license_tiers`,
+  `POST /api/tracks/{id}/license_tiers/reorder`,
+  `PUT/DELETE /api/license_tiers/{tier_id}`.
+- **MCP**: `set_license_tiers(track_id, tiers[])` — whole-list replace via
+  the same 2PC token flow as `update_tracks`. Tool count: 20 → 21.
+- **TrackEditor**: new "License Tiers" section between Files and the bottom
+  action row. Per-tier card lets the user edit name, deliverables (chip
+  multi-select with `mp3` / `wav` / `stem` as defaults + custom add),
+  price + currency, and notes. Local edits autosave at 600ms; tier add /
+  delete are immediate.
+
+### Removed
+
+- `track.license_type` (TEXT) and `track.price` (REAL) columns — replaced
+  by the per-tier model. Renderer `Track` interface, all editor helpers,
+  and test fixtures updated accordingly. The retired `LICENSE_TYPES`
+  constant (`lease_basic` / `lease_premium` / `exclusive`) is gone.
+
 ## [0.0.25.1] — 2026-05-23 — Bulk actions + UX patches
 
 First batch of dogfood patches on top of the `0.0.25` baseline.
