@@ -4,6 +4,41 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.27.1] — 2026-05-24 — Producers section: chip cluster + add-from-Settings
+
+Settings → Producers was a row-per-name list with no add affordance — long
+and low-density, and the only way to introduce a producer name to the
+catalog was to attach it to a track first.
+
+### Added
+
+- **`known_producers` app_setting** — Settings can now pre-register
+  producer names without a track. The TrackEditor Producer dropdown
+  union-merges this list with the existing distinct-from-tracks values,
+  so a name added in Settings appears in the picker immediately.
+- **Inline "+ Add producer" affordance** in the chip cluster — Enter to
+  commit, Esc / blur-with-empty-name to cancel. Duplicate names raise a
+  warning toast and re-focus the input.
+
+### Changed
+
+- **Producers section rebuilt as a chip cluster.** Each name is a chip
+  with an X button; ~8–10 chips fit per row vs 1 per row previously.
+  Solid `bg-accent/20` chips = in use on at least one track; dashed
+  outline = registered in Settings only (no tracks reference it yet).
+  Removing a used chip clears the name from every track (existing
+  `producers.rewrite([name], null)` path); removing a dashed chip just
+  unlinks from `known_producers`. Both flows confirm via `confirm()`.
+- `use-track-editor-state.ts` `refreshProducerOptions` switched to the
+  union helper `loadAllProducerNames()`.
+
+### Tests
+
+`SettingsPanel.test.tsx` updated for the chip layout (assertions on
+`producer-chip` testid count + per-chip remove aria-labels) and a default
+mock for `appSettings.get` so the new known-producer load path resolves
+cleanly under the test fetch shim.
+
 ## [0.0.27.0] — 2026-05-24 — Multi-currency license tiers + default-tier presets
 
 A producer's pricing strategy travels with the catalog: every tier can now

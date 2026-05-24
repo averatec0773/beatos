@@ -104,6 +104,10 @@ License editor redesigned to mirror the FILES section (MP3/WAV/STEMS as fixed pr
 
 Multi-currency license tiers (`price + currency` → `prices` dict) + catalog-level default tier templates auto-applied to new tracks. New `app_setting` key/value table. MCP `set_license_tiers` payload reshaped to use `prices: dict`. See [CHANGELOG.md](CHANGELOG.md#00270---2026-05-24--multi-currency-license-tiers--default-tier-presets).
 
+### v0.0.27.1 — SHIPPED 2026-05-24
+
+Settings → Producers rebuilt as a chip cluster with an inline "+ Add producer" affordance. `known_producers` app_setting lets users pre-register names without a track; the TrackEditor dropdown union-merges this list with distinct-from-tracks values. See [CHANGELOG.md](CHANGELOG.md#00271---2026-05-24--producers-section-chip-cluster--add-from-settings).
+
 #### License v3 candidates (deferred — pending dogfood signal)
 
 - **FX rate refresh**: opt-in network fetch (e.g. `exchangerate.host`) with a manual refresh button, so the snapshot doesn't go stale. Only worth doing if hints feel materially wrong during dogfood.
@@ -115,6 +119,19 @@ Multi-currency license tiers (`price + currency` → `prices` dict) + catalog-le
 - GitHub Actions workflow: PR sanity gate — `npm run build` + `vitest`, plus `uv run pytest` for all backend packages.
 - Two parallel jobs (macOS for frontend, Ubuntu for backend); npm + uv caches.
 - Defer release-build automation (electron-builder matrix + signing) to v0.1.0 when external users start receiving installers.
+
+---
+
+### Producer-name canonicalization (dogfood finding — unscheduled)
+
+Observed: an MCP `create_tracks` call ended up with `"AVERATEC"` and `"averatec"` coexisting as separate distinct producers (visible in Settings → Producers list). The renderer's `ChipMultiSelect` `allowCustomAdd` lowercases custom input, but agent-side calls bypass that path and store whatever casing the agent wrote. Same risk for genre/mood multi-value fields.
+
+Decision points before implementing:
+- **Where to canonicalize**: write-side (normalize at HTTP/MCP boundary so DB never holds two casings) vs read-side (case-insensitive merge in `list_distinct_values` + chip rendering). Write-side is cleaner but needs a one-shot migration to collapse existing duplicates.
+- **Canonical form**: lowercase (matches renderer's `allowCustomAdd` path) vs first-seen casing (preserves the user's intent, but ambiguous when two are introduced at once) vs Title Case (display-friendly).
+- **Scope**: producer only, or also genre/mood/key? The same multi-value-text drift applies to all three; one fix should probably cover all of them.
+
+Tie this to the Settings Producers UI work — that section is the natural place to show "Merge duplicates" affordance during the transition.
 
 ---
 

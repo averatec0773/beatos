@@ -4,8 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { tracks } from "@/api/tracks";
 import type { Track } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
-import { distinct } from "@/api/distinct";
 import { analysis } from "@/api/analysis";
+import { loadAllProducerNames } from "@/lib/known-producers";
 import type { AudioAnalysisResult } from "@/api/analysis";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
@@ -65,8 +65,11 @@ export function useTrackEditorState(): TrackEditorState {
 
   const refreshProducerOptions = useCallback(async () => {
     try {
-      const vals = await distinct.values("producer");
-      setProducerOptions(vals.map((p) => ({ value: p, label: p })));
+      // Union of used-on-tracks ∪ Settings-registered names so producers
+      // the user pre-added in Settings show up in the dropdown even
+      // before any track references them.
+      const { all } = await loadAllProducerNames();
+      setProducerOptions(all.map((p) => ({ value: p, label: p })));
     } catch {
       /* non-fatal */
     }

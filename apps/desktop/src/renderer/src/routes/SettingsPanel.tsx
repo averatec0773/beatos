@@ -1,10 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
-import { useTrackStore } from "@/stores/tracks";
-import { distinct } from "@/api/distinct";
-import { producers as producersApi } from "@/api/producers";
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
 import { DefaultLicenseTiersSection } from "@/components/Settings/DefaultLicenseTiersSection";
+import { ProducersSection } from "@/components/Settings/ProducersSection";
 
 function StorageSection(): React.JSX.Element {
   const [dbPath, setDbPath] = useState<string>("");
@@ -51,74 +49,6 @@ function StorageSection(): React.JSX.Element {
           A restart is required after changing this path.
         </p>
       </div>
-    </section>
-  );
-}
-
-function ProducersSection(): React.JSX.Element {
-  const [items, setItems] = useState<string[] | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const trackRefresh = useTrackStore((s) => s.refresh);
-
-  const refresh = useCallback(async () => {
-    const list = await distinct.values("producer");
-    setItems(list);
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  async function onRemove(name: string): Promise<void> {
-    setBusy(name);
-    try {
-      await producersApi.rewrite([name], null);
-      await refresh();
-      await trackRefresh();
-    } catch (e) {
-      alert(`Failed to remove "${name}": ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  return (
-    <section className="mb-10">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Producers</h2>
-      </div>
-      <div className="divide-y divide-border-subtle border border-border-subtle rounded-md overflow-hidden">
-        {items === null ? (
-          <div className="px-4 py-3 text-text-tertiary text-sm">Loading…</div>
-        ) : items.length === 0 ? (
-          <div className="px-4 py-3 text-text-tertiary text-sm">No producers yet.</div>
-        ) : (
-          items.map((name) => (
-            <div
-              key={name}
-              className="px-4 py-3 flex items-center gap-3 bg-bg-elevated"
-              data-testid="producer-row"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="text-sm text-text-primary truncate">{name}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => void onRemove(name)}
-                disabled={busy !== null}
-                className="text-danger text-xs hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-                data-testid={`producer-remove-${name}`}
-              >
-                {busy === name ? "Removing…" : "Remove"}
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-      <p className="mt-2 text-xs text-text-tertiary">
-        Removes the producer from every track. To rename or merge, use the ⋯ menu in
-        a track's Producer field.
-      </p>
     </section>
   );
 }
