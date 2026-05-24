@@ -80,7 +80,25 @@ MCP write surface expansion: 12 new tools (lifecycle / curation / metadata / ing
 
 ---
 
-### v0.0.25+ — Search upgrade (candidate)
+### v0.0.25.1 — SHIPPED 2026-05-23
+
+Bulk actions + UX patches: `BulkActionBar`, Cmd+A select-all, TopBar back arrow, Trash multi-select / Empty trash, drag-to-list already-in feedback, text-selection fix. See [CHANGELOG.md](CHANGELOG.md#00251---2026-05-23--bulk-actions--ux-patches).
+
+### v0.0.26 — SHIPPED 2026-05-23
+
+License tiers: one-to-many `license_tier` table replaces `track.license_type` + `track.price`. New TrackEditor section, MCP `set_license_tiers` (whole-list replace, 2PC). See [CHANGELOG.md](CHANGELOG.md#0026---2026-05-23--license-tiers).
+
+---
+
+### v0.0.27 — CI/CD
+
+- GitHub Actions workflow: PR sanity gate — `npm run build` + `vitest`, plus `uv run pytest` for all backend packages.
+- Two parallel jobs (macOS for frontend, Ubuntu for backend); npm + uv caches.
+- Defer release-build automation (electron-builder matrix + signing) to v0.1.0 when external users start receiving installers.
+
+---
+
+### Search upgrade (candidate, unscheduled)
 
 - Smart query syntax: `bpm:>140 genre:trap producer:smoke`
 - `/api/tracks` already has filter primitives; need parser + chip↔query round-trip.

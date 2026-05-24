@@ -22,8 +22,6 @@ _WRITABLE_FIELDS = {
     "mood",
     "tags",
     "description",
-    "license_type",
-    "price",
     "producer",
 }
 
@@ -59,7 +57,7 @@ def _sort_expr(sort_by: str) -> str:
 
 _SELECT_COLS = (
     "id, title, bpm, key_signature, genre, mood, "
-    "tags, description, license_type, price, "
+    "tags, description, "
     "producer, "
     "created_at, updated_at, deleted_at"
 )
@@ -111,13 +109,13 @@ def _parse_json_list(raw: Any) -> Optional[list[str]]:
 
 
 def _deserialize(row: tuple) -> Track:
-    # Row layout (0-based):
+    # Row layout (0-based) — v0.0.26 dropped license_type + price:
     # 0:id, 1:title, 2:bpm, 3:key_signature, 4:genre, 5:mood,
-    # 6:tags, 7:description, 8:license_type, 9:price,
-    # 10:producer, 11:created_at, 12:updated_at, 13:deleted_at,
-    # 14:cover_asset_id (optional), 15:has_audio (optional)
+    # 6:tags, 7:description,
+    # 8:producer, 9:created_at, 10:updated_at, 11:deleted_at,
+    # 12:cover_asset_id (optional), 13:has_audio (optional)
     tags = json.loads(row[6]) if row[6] else None
-    deleted_at_raw = row[13] if len(row) > 13 else None
+    deleted_at_raw = row[11] if len(row) > 11 else None
     return Track(
         id=row[0],
         title=row[1],
@@ -127,14 +125,12 @@ def _deserialize(row: tuple) -> Track:
         mood=_parse_json_list(row[5]),
         tags=tags,
         description=row[7],
-        license_type=row[8],
-        price=row[9],
-        producer=_parse_json_list(row[10]),
-        created_at=_dt.datetime.fromisoformat(row[11]),
-        updated_at=_dt.datetime.fromisoformat(row[12]),
+        producer=_parse_json_list(row[8]),
+        created_at=_dt.datetime.fromisoformat(row[9]),
+        updated_at=_dt.datetime.fromisoformat(row[10]),
         deleted_at=_dt.datetime.fromisoformat(deleted_at_raw) if deleted_at_raw else None,
-        cover_asset_id=row[14] if len(row) > 14 else None,
-        has_audio=bool(row[15]) if len(row) > 15 else False,
+        cover_asset_id=row[12] if len(row) > 12 else None,
+        has_audio=bool(row[13]) if len(row) > 13 else False,
     )
 
 
@@ -143,8 +139,7 @@ async def create_track(title: str) -> Track:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            "INSERT INTO track (title, license_type, created_at, updated_at) "
-            "VALUES (?, 'lease_basic', ?, ?)",
+            "INSERT INTO track (title, created_at, updated_at) VALUES (?, ?, ?)",
             (title, now, now),
         ) as cur:
             track_id = cur.lastrowid

@@ -4,6 +4,42 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.26] — 2026-05-23 — License tiers
+
+Replaces the long-placeholder `track.license_type` + `track.price` fields
+(both removed from the UI in v0.0.25 already) with a proper one-to-many
+`license_tier` table. Each track now carries 0..N tiers, each with a freeform
+name, a list of deliverable tokens, a price, a currency, and notes. Generic
+enough to map to NetEase / BeatStars / Airbit / etc. when those adapters
+land; producers can also use it as an in-app price sheet.
+
+### Added
+
+- **`license_tier` table** (migration `013_license_tiers.sql`) — track-scoped,
+  positioned. `deliverables` stored as a JSON array of free string tokens
+  (recommended values: `mp3` / `wav` / `stem`, but custom values are
+  accepted so platform adapters can map their own vocab). Backfills a
+  default tier on any pre-existing track that carried a non-default
+  `license_type` or a `price`; everything else gets no tiers. The old
+  `track.license_type` and `track.price` columns are then dropped.
+- **HTTP**: `GET/POST /api/tracks/{id}/license_tiers`,
+  `POST /api/tracks/{id}/license_tiers/reorder`,
+  `PUT/DELETE /api/license_tiers/{tier_id}`.
+- **MCP**: `set_license_tiers(track_id, tiers[])` — whole-list replace via
+  the same 2PC token flow as `update_tracks`. Tool count: 20 → 21.
+- **TrackEditor**: new "License Tiers" section between Files and the bottom
+  action row. Per-tier card lets the user edit name, deliverables (chip
+  multi-select with `mp3` / `wav` / `stem` as defaults + custom add),
+  price + currency, and notes. Local edits autosave at 600ms; tier add /
+  delete are immediate.
+
+### Removed
+
+- `track.license_type` (TEXT) and `track.price` (REAL) columns — replaced
+  by the per-tier model. Renderer `Track` interface, all editor helpers,
+  and test fixtures updated accordingly. The retired `LICENSE_TYPES`
+  constant (`lease_basic` / `lease_premium` / `exclusive`) is gone.
+
 ## [0.0.25.1] — 2026-05-23 — Bulk actions + UX patches
 
 First batch of dogfood patches on top of the `0.0.25` baseline.

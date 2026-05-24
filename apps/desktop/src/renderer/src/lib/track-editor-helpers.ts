@@ -1,6 +1,5 @@
 import type { Track, TrackUpdate } from "@/api/tracks";
 
-export const LICENSE_TYPES = ["lease_basic", "lease_premium", "exclusive"] as const;
 export const AUTOSAVE_DEBOUNCE_MS = 800;
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
@@ -14,8 +13,6 @@ export function buildPayload(t: Track): TrackUpdate {
     mood: t.mood,
     tags: t.tags,
     description: t.description,
-    license_type: t.license_type,
-    price: t.price,
     producer: t.producer,
   };
 }

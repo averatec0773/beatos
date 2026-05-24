@@ -21,8 +21,6 @@ function makeTrack(overrides: Partial<Track> = {}): Track {
     mood: null,
     tags: null,
     description: null,
-    license_type: "exclusive",
-    price: null,
     producer: null,
     has_audio: true,
     cover_asset_id: null,

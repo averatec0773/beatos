@@ -34,8 +34,8 @@ async def test_migration_idempotent_does_not_double_wrap():
         import datetime as _dt
         now = _dt.datetime.now(_dt.timezone.utc).isoformat()
         await conn.execute(
-            "INSERT INTO track (title, producer, license_type, created_at, updated_at) "
-            "VALUES (?, ?, 'lease_basic', ?, ?)",
+            "INSERT INTO track (title, producer, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?)",
             ("Legacy", "oldprod", now, now),
         )
         await conn.commit()

@@ -29,6 +29,7 @@ from beatos_mcp.tools.list_curation import (
     update_list as _update_list_impl,
 )
 from beatos_mcp.tools.distinct import list_distinct_values as _list_distinct_impl
+from beatos_mcp.tools.licenses import set_license_tiers as _set_license_tiers_impl
 from beatos_mcp.tools.lifecycle import (
     purge_tracks as _purge_tracks_impl,
     restore_tracks as _restore_tracks_impl,
@@ -248,6 +249,28 @@ async def update_tracks(
 ) -> dict:
     """Bulk-update tracks. Returns a 2PC token."""
     return await _update_tracks_impl(ids=ids, patch=patch)
+
+
+@mcp.tool(annotations=ToolAnnotations(destructiveHint=True, idempotentHint=True, openWorldHint=False))
+async def set_license_tiers(
+    track_id: Annotated[int, Field(gt=0, description="Target track id.")],
+    tiers: Annotated[
+        list[dict],
+        Field(
+            max_length=20,
+            description=(
+                "Full replacement list of license tiers. Each item: "
+                "{name (1-200 chars), deliverables?: list[str] (recommended "
+                "tokens: 'mp3','wav','stem'; any string accepted), "
+                "price?: number >=0, currency?: str (default 'CNY'), "
+                "notes?: str <=2000 chars}. Passing an empty list clears all "
+                "tiers. Existing tiers are replaced wholesale."
+            ),
+        ),
+    ],
+) -> dict:
+    """Replace the full license-tier list on a track. Returns a 2PC token."""
+    return await _set_license_tiers_impl(track_id=track_id, tiers=tiers)
 
 
 @mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))

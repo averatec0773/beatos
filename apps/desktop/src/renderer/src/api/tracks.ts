@@ -9,8 +9,6 @@ export interface Track {
   mood: string[] | null;
   tags: string[] | null;
   description: string | null;
-  license_type: string;
-  price: number | null;
   producer: string[] | null;
   has_audio: boolean;
   cover_asset_id: number | null;

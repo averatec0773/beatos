@@ -9,8 +9,6 @@ type EditableFields = {
   mood: string[] | null;
   tags: string[] | null;
   description: string | null;
-  license_type: string;
-  price: number | null;
   producer: string[] | null;
 };
 
@@ -23,8 +21,6 @@ function base(): EditableFields {
     mood: ["Dark"],
     tags: ["a", "b"],
     description: "A test beat",
-    license_type: "lease_basic",
-    price: 29.99,
     producer: ["averatec"],
   };
 }

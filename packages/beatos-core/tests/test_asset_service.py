@@ -42,8 +42,8 @@ async def _create_track(title: str = "TestTrack") -> int:
     now = _dt.datetime.now(_dt.timezone.utc).isoformat()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            "INSERT INTO track (title, license_type, created_at, updated_at) "
-            "VALUES (?, 'lease_basic', ?, ?)",
+            "INSERT INTO track (title, created_at, updated_at) "
+            "VALUES (?, ?, ?)",
             (title, now, now),
         ) as cur:
             track_id = cur.lastrowid
