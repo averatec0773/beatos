@@ -22,11 +22,14 @@ typically lists 2-4 tiers per beat the vertical space cost was high.
 
 ### Added
 
-- **FX reference hints** (`lib/fx-rates.ts`) — gray `≈ $14 · €13` next
-  to the currency column, computed from a hardcoded mid-market snapshot
-  (CNY / USD / EUR / JPY / GBP, dated `FX_SNAPSHOT_DATE`). No network
-  call, no auto-refresh; this is a "spot the typo" hint, not bookkeeping.
-  Bump the table when ranges drift >10%.
+- **FX reference inside the price input** (`lib/fx-rates.ts`) — when the
+  user switches currency (e.g. ¥700 → USD), the price input clears and
+  the converted amount (`≈ 97`) shows as the `<input placeholder>`.
+  Disappears the moment the user types — so it never competes with a
+  real value and never lingers as ambient gray noise. Computed from a
+  hardcoded mid-market snapshot (CNY / USD / EUR / JPY / GBP, dated
+  `FX_SNAPSHOT_DATE`). No network call, no auto-refresh; "spot the
+  typo" reference only. Bump the table when ranges drift >10%.
 
 ### Internal
 

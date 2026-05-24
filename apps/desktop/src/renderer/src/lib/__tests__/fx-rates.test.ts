@@ -4,6 +4,7 @@ import {
   buildFxHint,
   convertFx,
   currencySymbol,
+  fxConvertedString,
   pickHintCurrencies,
 } from "../fx-rates";
 
@@ -76,5 +77,31 @@ describe("currencySymbol", () => {
   it("falls back to the ISO code for unknown currencies", () => {
     expect(currencySymbol("USD")).toBe("$");
     expect(currencySymbol("ZZZ")).toBe("ZZZ");
+  });
+});
+
+describe("fxConvertedString", () => {
+  it("returns a bare number, no '≈' / symbol / alternates", () => {
+    const s = fxConvertedString(100, "USD", "CNY");
+    // ≈ 719 CNY; bare digits only
+    expect(s).toMatch(/^\d+(\.\d+)?$/);
+  });
+
+  it("JPY result is integer", () => {
+    const s = fxConvertedString(10, "USD", "JPY");
+    expect(s).toMatch(/^\d+$/);
+  });
+
+  it("returns empty string for unknown currency", () => {
+    expect(fxConvertedString(100, "USD", "ZZZ")).toBe("");
+  });
+
+  it("returns empty string for non-finite input", () => {
+    expect(fxConvertedString(NaN, "USD", "CNY")).toBe("");
+    expect(fxConvertedString(Infinity, "USD", "CNY")).toBe("");
+  });
+
+  it("identity conversion preserves the amount as a clean string", () => {
+    expect(fxConvertedString(50, "USD", "USD")).toBe("50");
   });
 });

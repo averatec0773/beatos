@@ -8,7 +8,7 @@ import {
 } from "@/api/license-tiers";
 import { useToastStore } from "@/stores/toast";
 import { DeliverablesPicker } from "@/components/TrackEditor/DeliverablesPicker";
-import { buildFxHint, SUPPORTED_CURRENCIES } from "@/lib/fx-rates";
+import { fxConvertedString, SUPPORTED_CURRENCIES } from "@/lib/fx-rates";
 
 interface Props {
   trackId: number;
@@ -31,6 +31,13 @@ interface DraftTier {
   price: string; // string for input control; parsed to number on save
   currency: string;
   notes: string;
+  // UX-only (not persisted): the last numeric price + the currency it was
+  // in, captured the instant the user changes currency. Drives the
+  // `placeholder` hint on the cleared price input ("you had ¥700, that's
+  // ≈ $97 in USD"). Updates again whenever the user types a new number
+  // and then switches currency once more.
+  hintFromAmount: number | null;
+  hintFromCurrency: string | null;
 }
 
 function toDraft(t: LicenseTier): DraftTier {
@@ -41,6 +48,8 @@ function toDraft(t: LicenseTier): DraftTier {
     price: t.price == null ? "" : String(t.price),
     currency: t.currency || "CNY",
     notes: t.notes ?? "",
+    hintFromAmount: null,
+    hintFromCurrency: null,
   };
 }
 
@@ -146,6 +155,36 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     });
   }
 
+  /**
+   * Currency switch is special: we snapshot the current numeric price (if any)
+   * so the cleared input can show "what that price would be in the new
+   * currency" as a placeholder. The user can then type a rounded version
+   * (e.g. ¥700 → "≈ 97" hint → user types 100 USD). Snapshot is
+   * UX-only — never sent to the server, never persisted.
+   */
+  function onCurrencyChange(tierId: number, nextCurrency: string): void {
+    setTiers((prev) => {
+      const next = prev.map((t) => {
+        if (t.id !== tierId) return t;
+        if (nextCurrency === t.currency) return t;
+        const trimmed = t.price.trim();
+        const parsed = trimmed === "" ? NaN : Number(trimmed);
+        const hasNumber = Number.isFinite(parsed) && parsed > 0;
+        const merged: DraftTier = {
+          ...t,
+          currency: nextCurrency,
+          price: "", // clear so the placeholder hint shows
+          hintFromAmount: hasNumber ? parsed : t.hintFromAmount,
+          hintFromCurrency: hasNumber ? t.currency : t.hintFromCurrency,
+        };
+        return merged;
+      });
+      const target = next.find((t) => t.id === tierId);
+      if (target) scheduleSave(tierId, target);
+      return next;
+    });
+  }
+
   async function onAdd(): Promise<void> {
     const isFirst = tiers.length === 0;
     try {
@@ -215,11 +254,21 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
         <div className="space-y-1">
           {tiers.map((tier) => {
             const expanded = expandedId === tier.id;
-            const priceNum = tier.price.trim() === "" ? null : Number(tier.price);
-            const hint = buildFxHint(
-              priceNum != null && Number.isFinite(priceNum) ? priceNum : null,
-              tier.currency,
-            );
+            // Placeholder hint: when the user has switched currency and the
+            // input is currently empty, project the captured price into the
+            // new currency. Disappears as soon as the user types (native
+            // <input> behavior) so it doesn't compete with real values.
+            const placeholderHint =
+              tier.price === "" &&
+              tier.hintFromAmount != null &&
+              tier.hintFromCurrency &&
+              tier.hintFromCurrency !== tier.currency
+                ? fxConvertedString(
+                    tier.hintFromAmount,
+                    tier.hintFromCurrency,
+                    tier.currency,
+                  )
+                : "";
             return (
               <div
                 key={tier.id}
@@ -251,14 +300,20 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
                     step="0.01"
                     value={tier.price}
                     onChange={(e) => updateLocal(tier.id, { price: e.target.value })}
-                    placeholder="0"
+                    placeholder={placeholderHint || "0"}
+                    title={
+                      placeholderHint
+                        ? `≈ ${placeholderHint} ${tier.currency} (converted from ${tier.hintFromAmount} ${tier.hintFromCurrency})`
+                        : undefined
+                    }
                     className="w-24 bg-bg-base border border-border-subtle rounded-md px-2 py-1.5 text-sm tabular-nums"
                     aria-label="Price"
+                    data-fx-placeholder={placeholderHint || undefined}
                   />
 
                   <select
                     value={tier.currency}
-                    onChange={(e) => updateLocal(tier.id, { currency: e.target.value })}
+                    onChange={(e) => onCurrencyChange(tier.id, e.target.value)}
                     className="w-20 bg-bg-base border border-border-subtle rounded-md px-2 py-1.5 text-sm"
                     aria-label="Currency"
                   >
@@ -269,15 +324,7 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
                     ))}
                   </select>
 
-                  <span
-                    className="text-xs text-text-tertiary tabular-nums truncate hidden sm:inline"
-                    title={hint || "Enter a price to see conversions"}
-                    data-fx-hint
-                  >
-                    {hint}
-                  </span>
-
-                  <div className="flex-1 sm:hidden" />
+                  <div className="flex-1" />
 
                   <button
                     type="button"

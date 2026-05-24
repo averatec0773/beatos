@@ -49,6 +49,26 @@ export function convertFx(amount: number, from: string, to: string): number | nu
 }
 
 /**
+ * Bare numeric string for a single conversion — meant for `<input placeholder>`
+ * use (no "≈" prefix, no symbol, no alternates). Same rounding policy as
+ * `buildFxHint`: JPY snaps to whole yen, everything else keeps up to 2 decimals
+ * with trailing zeros stripped. Returns "" when conversion fails, so callers
+ * can drop it into a placeholder without conditional logic.
+ */
+export function fxConvertedString(
+  amount: number,
+  from: string,
+  to: string,
+): string {
+  if (!Number.isFinite(amount)) return "";
+  const converted = convertFx(amount, from, to);
+  if (converted == null) return "";
+  if (to === "JPY") return String(Math.round(converted));
+  const rounded = Math.round(converted * 100) / 100;
+  return rounded.toFixed(2).replace(/\.?0+$/, "");
+}
+
+/**
  * Pick up to 2 alternate currencies for hint display, prioritized by the
  * markets most beat producers actually quote in. The primary currency is
  * always excluded.
