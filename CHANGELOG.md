@@ -4,6 +4,37 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.26.1] — 2026-05-24 — Compact tier rows + FX hints
+
+Dogfood follow-up on `0.0.26`. The original layout used a 4-row card per
+tier (name + deliverables + price/currency + notes); for a producer who
+typically lists 2-4 tiers per beat the vertical space cost was high.
+
+### Changed
+
+- **Each tier is now one row**: `[Deliverables ▾]  [Price]  [Currency]
+  ≈ $14 · €13  [⋮ expand]  [🗑]`. The deliverables trigger is a compact
+  popover with the `mp3 / wav / stem` presets plus a custom-add input.
+- **Name + notes moved behind a `⋮` expand** — tier display label is
+  auto-derived from deliverables (`MP3 + WAV`). When the user customizes
+  the name, it sticks; the auto-sync only fires while the name still
+  matches the deliverables join, so power-users keep their wording.
+
+### Added
+
+- **FX reference hints** (`lib/fx-rates.ts`) — gray `≈ $14 · €13` next
+  to the currency column, computed from a hardcoded mid-market snapshot
+  (CNY / USD / EUR / JPY / GBP, dated `FX_SNAPSHOT_DATE`). No network
+  call, no auto-refresh; this is a "spot the typo" hint, not bookkeeping.
+  Bump the table when ranges drift >10%.
+
+### Internal
+
+- New `TrackEditor/DeliverablesPicker.tsx` — purpose-built compact
+  multi-select; `ChipMultiSelect` was kept for the existing chip-cluster
+  surfaces (Producer / Genre / Mood) where the inline chip look is the
+  right pattern.
+
 ## [0.0.26] — 2026-05-23 — License tiers
 
 Replaces the long-placeholder `track.license_type` + `track.price` fields

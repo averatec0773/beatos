@@ -88,6 +88,15 @@ Bulk actions + UX patches: `BulkActionBar`, Cmd+A select-all, TopBar back arrow,
 
 License tiers: one-to-many `license_tier` table replaces `track.license_type` + `track.price`. New TrackEditor section, MCP `set_license_tiers` (whole-list replace, 2PC). See [CHANGELOG.md](CHANGELOG.md#0026---2026-05-23--license-tiers).
 
+### v0.0.26.1 — SHIPPED 2026-05-24
+
+Compact one-row tier layout, FX reference hints, custom name/notes moved behind ⋮ expand. See [CHANGELOG.md](CHANGELOG.md#00261---2026-05-24--compact-tier-rows--fx-hints).
+
+#### License v2 candidates (deferred — pending dogfood signal)
+
+- **Multi-currency prices per tier**: schema move from `price + currency` to a `prices` JSON array so a tier can carry both `¥300` and `$50` (user-rounded after conversion). Reach for this if "the gray hint isn't enough — I want both numbers to be canonical" comes up in real use.
+- **FX rate refresh**: opt-in network fetch (e.g. `exchangerate.host`) with a manual refresh button, so the snapshot doesn't go stale. Only worth doing if hints feel materially wrong during dogfood.
+
 ---
 
 ### v0.0.27 — CI/CD
