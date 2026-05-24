@@ -52,13 +52,13 @@ export function TopBar(): React.JSX.Element {
         <button
           type="button"
           onClick={handleBack}
-          className="text-text-tertiary hover:text-text-primary p-1 -ml-1 rounded"
+          className="text-text-secondary hover:text-text-primary hover:bg-bg-row-hover p-1.5 -ml-1 rounded-md transition-colors"
           aria-label="Back"
           title="Back"
           data-topbar-back
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={18} strokeWidth={2.25} />
         </button>
       )}
       <TopBarRouteTitle />

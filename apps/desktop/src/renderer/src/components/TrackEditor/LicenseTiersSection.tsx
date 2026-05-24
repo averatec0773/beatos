@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, Plus, Trash2, X } from "lucide-react";
 
 import {
   licenseTiers as api,
@@ -7,38 +7,49 @@ import {
   type LicenseTierUpdate,
 } from "@/api/license-tiers";
 import { useToastStore } from "@/stores/toast";
-import { DeliverablesPicker } from "@/components/TrackEditor/DeliverablesPicker";
 import { fxConvertedString, SUPPORTED_CURRENCIES } from "@/lib/fx-rates";
 
 interface Props {
   trackId: number;
 }
 
-const DEFAULT_DELIVERABLES = [
-  { value: "mp3", label: "MP3" },
-  { value: "wav", label: "WAV" },
-  { value: "stem", label: "Stems" },
-];
+/**
+ * Fixed preset slots — always rendered, even when no DB row exists yet.
+ * Matches the FILES section pattern (5 fixed asset roles): empty slots show
+ * a dashed border placeholder; the user "fills" the slot by typing a price.
+ * The slot key matches the deliverable token stored in the DB (lowercased).
+ */
+const PRESET_SLOTS = [
+  { key: "mp3", label: "MP3" },
+  { key: "wav", label: "WAV" },
+  { key: "stem", label: "STEMS" },
+] as const;
+type PresetKey = (typeof PRESET_SLOTS)[number]["key"];
+const PRESET_KEYS = new Set<string>(PRESET_SLOTS.map((p) => p.key));
 
 const AUTOSAVE_MS = 600;
 
 interface DraftTier {
   id: number;
-  // Local form state — synced to server via debounced PUT. Each row owns
-  // its own draft so editing one tier never bumps a sibling's input.
   name: string;
   deliverables: string[];
-  price: string; // string for input control; parsed to number on save
+  price: string;
   currency: string;
   notes: string;
-  // Per-currency memory of values the user typed in *this* editing session.
-  // Switching currency away then back restores the prior value (instead of
-  // showing 0). Reset on tier reload — never persisted to backend.
   priceMemory: Record<string, string>;
-  // The most recent numeric (amount, currency) the user typed. Drives the
-  // <input placeholder> hint when the active currency has no memorized
-  // value yet (e.g. first switch CNY → USD).
   lastNumeric: { amount: number; currency: string } | null;
+}
+
+interface EmptyPresetState {
+  currency: string;
+  price: string;
+  creating: boolean;
+}
+
+interface PendingCustom {
+  name: string;
+  price: string;
+  currency: string;
 }
 
 function toDraft(t: LicenseTier): DraftTier {
@@ -64,27 +75,6 @@ function deriveAutoName(deliverables: string[]): string {
   return deliverables.map((d) => d.toUpperCase()).join(" + ");
 }
 
-function deliverablesKey(deliverables: string[]): string {
-  // Order- and case-insensitive canonical key. Must match the backend's
-  // _deliverables_key (sorted, lower-cased, deduped) so the renderer's
-  // pre-flight check and the API's enforcement agree.
-  return JSON.stringify(
-    Array.from(new Set(deliverables.map((d) => d.toLowerCase()))).sort(),
-  );
-}
-
-/**
- * The "name" column is gone from the row UI; only the optional ⋮ expand
- * exposes it. When the user has not set a custom name, we silently keep
- * `name` in sync with the deliverables join so the row's display label
- * (and any future MCP / adapter consumer) reads sensibly. Custom names
- * are preserved verbatim.
- */
-function nameIsAuto(draft: DraftTier): boolean {
-  if (draft.name.trim() === "") return true;
-  return draft.name === deriveAutoName(draft.deliverables);
-}
-
 function draftToUpdate(d: DraftTier): LicenseTierUpdate {
   const trimmedPrice = d.price.trim();
   const parsedPrice =
@@ -103,11 +93,24 @@ function draftToUpdate(d: DraftTier): LicenseTierUpdate {
   };
 }
 
+function emptyPresetDefaults(): Record<PresetKey, EmptyPresetState> {
+  return {
+    mp3: { currency: "CNY", price: "", creating: false },
+    wav: { currency: "CNY", price: "", creating: false },
+    stem: { currency: "CNY", price: "", creating: false },
+  };
+}
+
 export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
   const [tiers, setTiers] = useState<DraftTier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [emptySlots, setEmptySlots] = useState<Record<PresetKey, EmptyPresetState>>(
+    emptyPresetDefaults(),
+  );
+  const [pendingCustom, setPendingCustom] = useState<PendingCustom | null>(null);
   const savingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  const createTimers = useRef<Map<PresetKey, ReturnType<typeof setTimeout>>>(new Map());
+  const pendingNameRef = useRef<HTMLInputElement | null>(null);
 
   const reload = useCallback(async (): Promise<void> => {
     try {
@@ -120,18 +123,51 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     }
   }, [trackId]);
 
+  // Reset all local UI state when the track changes — otherwise an in-flight
+  // create or a pending custom row would leak from one track to the next
+  // (SPA route reuse, per CLAUDE.md rule #6).
   useEffect(() => {
     setLoading(true);
+    setEmptySlots(emptyPresetDefaults());
+    setPendingCustom(null);
     void reload();
-  }, [reload]);
+  }, [trackId, reload]);
 
   useEffect(() => {
-    const timers = savingTimers.current;
+    const save = savingTimers.current;
+    const create = createTimers.current;
     return () => {
-      for (const t of timers.values()) clearTimeout(t);
-      timers.clear();
+      for (const t of save.values()) clearTimeout(t);
+      save.clear();
+      for (const t of create.values()) clearTimeout(t);
+      create.clear();
     };
   }, []);
+
+  // Categorize server tiers into preset slots vs custom vs legacy bundles.
+  // Memoized so each render derives a stable view from the same `tiers`.
+  const categorized = useMemo(() => {
+    const presetById: Partial<Record<PresetKey, DraftTier>> = {};
+    const customs: DraftTier[] = [];
+    const legacy: DraftTier[] = [];
+    for (const t of tiers) {
+      if (t.deliverables.length === 1) {
+        const d = t.deliverables[0].toLowerCase();
+        if (PRESET_KEYS.has(d)) {
+          presetById[d as PresetKey] = t;
+        } else {
+          customs.push(t);
+        }
+      } else if (t.deliverables.length === 0) {
+        // Pending mid-edit empty row from the legacy schema; surface as a
+        // legacy bundle so the user can either fill or delete it.
+        legacy.push(t);
+      } else {
+        legacy.push(t);
+      }
+    }
+    return { presetById, customs, legacy };
+  }, [tiers]);
 
   function scheduleSave(tierId: number, next: DraftTier): void {
     const existing = savingTimers.current.get(tierId);
@@ -152,39 +188,10 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
   }
 
   function updateLocal(tierId: number, patch: Partial<DraftTier>): void {
-    // Pre-flight: changing deliverables to match another tier's set is
-    // blocked (server would reject with 400 anyway; this gives the user
-    // an immediate revert + toast instead of a flashing toggle followed
-    // by a delayed error). Empty deliverables are never considered a
-    // duplicate — multiple mid-edit empty rows are fine.
-    if (patch.deliverables !== undefined && patch.deliverables.length > 0) {
-      const newKey = deliverablesKey(patch.deliverables);
-      const conflict = tiers.find(
-        (t) =>
-          t.id !== tierId &&
-          t.deliverables.length > 0 &&
-          deliverablesKey(t.deliverables) === newKey,
-      );
-      if (conflict) {
-        useToastStore.getState().show(
-          "warning",
-          `A tier with the same deliverables already exists (${
-            deriveAutoName(conflict.deliverables) || `#${conflict.id}`
-          })`,
-        );
-        return;
-      }
-    }
-
     setTiers((prev) => {
       const next = prev.map((t) => {
         if (t.id !== tierId) return t;
         const merged = { ...t, ...patch };
-        // Auto-sync the name when the user has never customized it.
-        if (patch.deliverables !== undefined && nameIsAuto(t)) {
-          merged.name = deriveAutoName(merged.deliverables);
-        }
-        // Price change: update per-currency memory + lastNumeric snapshot.
         if (patch.price !== undefined) {
           const newPrice = patch.price;
           merged.priceMemory = { ...t.priceMemory };
@@ -206,22 +213,10 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     });
   }
 
-  /**
-   * Currency switch is intentionally NOT auto-saved when the destination
-   * currency has no memorized value:
-   *
-   *   1. Without this carve-out, a CNY 700 tier would be silently wiped
-   *      to {price: null, currency: USD} the moment the user clicked USD
-   *      to "peek" at the conversion (bug found right after v0.0.26.1
-   *      shipped).
-   *   2. Switching to a currency that DOES have memorized value (user
-   *      had typed something there earlier in this session) restores
-   *      that value and saves it — equivalent to the user re-typing.
-   *
-   * Net effect: server state stays put until the user actively commits a
-   * (price, currency) pair by typing or by round-tripping. Exploratory
-   * currency switches are session-local until then.
-   */
+  /** Currency switch on a persisted tier — see v0.0.26.2 carve-out: only
+   *  save if the destination currency has a memorized price; otherwise the
+   *  switch is exploratory (lets the user peek at the placeholder hint
+   *  without overwriting backend state with `price=null`). */
   function onCurrencyChange(tierId: number, nextCurrency: string): void {
     setTiers((prev) => {
       let shouldSave = false;
@@ -245,47 +240,9 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     });
   }
 
-  async function onAdd(): Promise<void> {
-    const isFirst = tiers.length === 0;
-    // The first-tier MP3 default would collide with an existing ["mp3"]
-    // tier on a re-add scenario (rare, but possible if the user
-    // deleted-and-re-added or imported a track that already has MP3).
-    // Fall back to an empty new row in that case so the user can pick
-    // something different.
-    const seed: { name: string; deliverables: string[] } = isFirst
-      ? { name: "MP3", deliverables: ["mp3"] }
-      : { name: "", deliverables: [] };
-    if (
-      seed.deliverables.length > 0 &&
-      tiers.some(
-        (t) =>
-          t.deliverables.length > 0 &&
-          deliverablesKey(t.deliverables) === deliverablesKey(seed.deliverables),
-      )
-    ) {
-      seed.name = "";
-      seed.deliverables = [];
-    }
-    try {
-      const created = await api.create(trackId, {
-        name: seed.name,
-        deliverables: seed.deliverables,
-        currency: "CNY",
-      });
-      setTiers((prev) => [...prev, toDraft(created)]);
-    } catch (e) {
-      useToastStore.getState().show(
-        "error",
-        `Add tier failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
-  }
-
   async function onDelete(tierId: number): Promise<void> {
     const tier = tiers.find((t) => t.id === tierId);
     if (!tier) return;
-    const label = tier.name.trim() || deriveAutoName(tier.deliverables) || `tier #${tierId}`;
-    if (!confirm(`Delete tier "${label}"?`)) return;
     const pending = savingTimers.current.get(tierId);
     if (pending) {
       clearTimeout(pending);
@@ -294,7 +251,6 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     try {
       await api.remove(tierId);
       setTiers((prev) => prev.filter((t) => t.id !== tierId));
-      if (expandedId === tierId) setExpandedId(null);
     } catch (e) {
       useToastStore.getState().show(
         "error",
@@ -303,16 +259,127 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     }
   }
 
+  /** Empty-preset price input. Updates local state; debounces a CREATE
+   *  request once the user has typed a non-empty value. Once created, the
+   *  new DraftTier replaces the empty slot on the next render. */
+  function onEmptyPresetPriceChange(preset: PresetKey, raw: string): void {
+    setEmptySlots((prev) => ({
+      ...prev,
+      [preset]: { ...prev[preset], price: raw },
+    }));
+    const existing = createTimers.current.get(preset);
+    if (existing) clearTimeout(existing);
+    if (raw.trim() === "") return;
+    const handle = setTimeout(() => {
+      void createPresetTier(preset);
+    }, AUTOSAVE_MS);
+    createTimers.current.set(preset, handle);
+  }
+
+  async function createPresetTier(preset: PresetKey): Promise<void> {
+    const slot = emptySlots[preset];
+    if (!slot || slot.creating || slot.price.trim() === "") return;
+    setEmptySlots((prev) => ({
+      ...prev,
+      [preset]: { ...prev[preset], creating: true },
+    }));
+    try {
+      const created = await api.create(trackId, {
+        name: preset.toUpperCase(),
+        deliverables: [preset],
+        price: Number(slot.price),
+        currency: slot.currency,
+      });
+      setTiers((prev) => [...prev, toDraft(created)]);
+      setEmptySlots((prev) => ({
+        ...prev,
+        [preset]: { currency: slot.currency, price: "", creating: false },
+      }));
+    } catch (e) {
+      setEmptySlots((prev) => ({
+        ...prev,
+        [preset]: { ...prev[preset], creating: false },
+      }));
+      useToastStore.getState().show(
+        "error",
+        `Add ${preset.toUpperCase()} tier failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  function onEmptyPresetCurrencyChange(preset: PresetKey, currency: string): void {
+    setEmptySlots((prev) => ({
+      ...prev,
+      [preset]: { ...prev[preset], currency },
+    }));
+  }
+
+  function openPendingCustom(): void {
+    if (pendingCustom) return;
+    setPendingCustom({ name: "", price: "", currency: "CNY" });
+    // Focus the name input on the next paint.
+    setTimeout(() => pendingNameRef.current?.focus(), 0);
+  }
+
+  function cancelPendingCustom(): void {
+    setPendingCustom(null);
+  }
+
+  /** Returns null if name passes validation, otherwise a user-facing reason. */
+  function validateCustomName(rawName: string): string | null {
+    const name = rawName.trim().toLowerCase();
+    if (name === "") return "Tier name is required.";
+    if (PRESET_KEYS.has(name))
+      return `"${name.toUpperCase()}" is a preset — fill the row above instead.`;
+    const dupe = tiers.find(
+      (t) =>
+        t.deliverables.length === 1 && t.deliverables[0].toLowerCase() === name,
+    );
+    if (dupe) return `A "${name.toUpperCase()}" tier already exists.`;
+    return null;
+  }
+
+  async function commitPendingCustom(): Promise<void> {
+    if (!pendingCustom) return;
+    const reason = validateCustomName(pendingCustom.name);
+    if (reason) {
+      useToastStore.getState().show("warning", reason);
+      pendingNameRef.current?.focus();
+      return;
+    }
+    const name = pendingCustom.name.trim();
+    const deliverable = name.toLowerCase();
+    const priceRaw = pendingCustom.price.trim();
+    const parsedPrice =
+      priceRaw === "" ? null : Number.isFinite(Number(priceRaw)) ? Number(priceRaw) : null;
+    try {
+      const created = await api.create(trackId, {
+        name,
+        deliverables: [deliverable],
+        price: parsedPrice,
+        currency: pendingCustom.currency,
+      });
+      setTiers((prev) => [...prev, toDraft(created)]);
+      setPendingCustom(null);
+    } catch (e) {
+      useToastStore.getState().show(
+        "error",
+        `Add tier failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
   return (
-    <section data-license-tiers className="space-y-3">
+    <section data-license-tiers className="space-y-2">
       <header className="flex items-center justify-between">
-        <h2 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
+        <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
           License Tiers
-        </h2>
+        </h3>
         <button
           type="button"
-          onClick={() => void onAdd()}
-          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border border-border-subtle hover:bg-bg-row-hover"
+          onClick={openPendingCustom}
+          disabled={pendingCustom !== null}
+          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border border-border-subtle hover:bg-bg-row-hover disabled:opacity-50 disabled:cursor-not-allowed"
           data-license-add-tier
         >
           <Plus size={12} />
@@ -322,131 +389,291 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
 
       {loading ? (
         <div className="text-xs text-text-tertiary py-4">Loading…</div>
-      ) : tiers.length === 0 ? (
-        <div className="text-xs text-text-tertiary py-4 px-3 rounded border border-dashed border-border-subtle">
-          No tiers yet. Add one to define a sellable variant (e.g. MP3 lease,
-          WAV+stems exclusive).
-        </div>
       ) : (
-        <div className="space-y-1">
-          {tiers.map((tier) => {
-            const expanded = expandedId === tier.id;
-            // Placeholder hint: shown only when the input is currently empty
-            // AND we have a numeric value typed earlier in a different
-            // currency to convert from. Disappears as soon as the user
-            // types (native <input> behavior) so it never competes with a
-            // real value or lingers as ambient gray noise.
-            const placeholderHint =
-              tier.price === "" &&
-              tier.lastNumeric &&
-              tier.lastNumeric.currency !== tier.currency
-                ? fxConvertedString(
-                    tier.lastNumeric.amount,
-                    tier.lastNumeric.currency,
-                    tier.currency,
-                  )
-                : "";
+        <div className="flex flex-col gap-1.5">
+          {PRESET_SLOTS.map((slot) => {
+            const tier = categorized.presetById[slot.key];
+            if (tier) {
+              return (
+                <FilledTierRow
+                  key={`preset-${slot.key}`}
+                  label={slot.label}
+                  tier={tier}
+                  onPriceChange={(v) => updateLocal(tier.id, { price: v })}
+                  onCurrencyChange={(c) => onCurrencyChange(tier.id, c)}
+                  onDelete={() => void onDelete(tier.id)}
+                />
+              );
+            }
+            const empty = emptySlots[slot.key];
             return (
-              <div
-                key={tier.id}
-                data-license-tier
-                className="rounded-md border border-border-subtle bg-bg-elevated"
-              >
-                <div className="flex items-center gap-2 px-2 py-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(expanded ? null : tier.id)}
-                    className="text-text-tertiary hover:text-text-primary p-1 rounded shrink-0"
-                    aria-label={expanded ? "Collapse advanced fields" : "Expand advanced fields"}
-                    title="Name / notes"
-                  >
-                    {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  </button>
-
-                  <DeliverablesPicker
-                    value={tier.deliverables}
-                    onChange={(v) => updateLocal(tier.id, { deliverables: v })}
-                    presetOptions={DEFAULT_DELIVERABLES}
-                    placeholder="Select mp3, wav, stem…"
-                    className="flex-1 min-w-[140px]"
-                  />
-
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={tier.price}
-                    onChange={(e) => updateLocal(tier.id, { price: e.target.value })}
-                    placeholder={placeholderHint || "0"}
-                    title={
-                      placeholderHint && tier.lastNumeric
-                        ? `≈ ${placeholderHint} ${tier.currency} (converted from ${tier.lastNumeric.amount} ${tier.lastNumeric.currency})`
-                        : undefined
-                    }
-                    className="w-24 bg-bg-base border border-border-subtle rounded-md px-2 py-1.5 text-sm tabular-nums"
-                    aria-label="Price"
-                    data-fx-placeholder={placeholderHint || undefined}
-                  />
-
-                  <select
-                    value={tier.currency}
-                    onChange={(e) => onCurrencyChange(tier.id, e.target.value)}
-                    className="w-20 bg-bg-base border border-border-subtle rounded-md px-2 py-1.5 text-sm"
-                    aria-label="Currency"
-                  >
-                    {SUPPORTED_CURRENCIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="flex-1" />
-
-                  <button
-                    type="button"
-                    onClick={() => void onDelete(tier.id)}
-                    className="text-text-tertiary hover:text-danger p-1.5 rounded shrink-0"
-                    aria-label="Delete tier"
-                    title="Delete tier"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-
-                {expanded && (
-                  <div className="border-t border-border-subtle px-3 py-3 space-y-3 bg-bg-base">
-                    <div>
-                      <label className="block text-[11px] text-text-tertiary mb-1">
-                        Custom name (optional — defaults to deliverables)
-                      </label>
-                      <input
-                        type="text"
-                        value={tier.name}
-                        onChange={(e) => updateLocal(tier.id, { name: e.target.value })}
-                        placeholder={deriveAutoName(tier.deliverables) || "Tier name"}
-                        className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-1.5 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-text-tertiary mb-1">
-                        Notes
-                      </label>
-                      <textarea
-                        value={tier.notes}
-                        onChange={(e) => updateLocal(tier.id, { notes: e.target.value })}
-                        placeholder="Restrictions, terms, etc."
-                        rows={2}
-                        className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-1.5 text-sm resize-y"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <EmptyTierRow
+                key={`preset-${slot.key}`}
+                label={slot.label}
+                price={empty.price}
+                currency={empty.currency}
+                creating={empty.creating}
+                onPriceChange={(v) => onEmptyPresetPriceChange(slot.key, v)}
+                onCurrencyChange={(c) => onEmptyPresetCurrencyChange(slot.key, c)}
+              />
             );
           })}
+
+          {categorized.customs.map((tier) => (
+            <FilledTierRow
+              key={`custom-${tier.id}`}
+              label={tier.name.trim() || deriveAutoName(tier.deliverables)}
+              tier={tier}
+              onPriceChange={(v) => updateLocal(tier.id, { price: v })}
+              onCurrencyChange={(c) => onCurrencyChange(tier.id, c)}
+              onDelete={() => void onDelete(tier.id)}
+            />
+          ))}
+
+          {categorized.legacy.map((tier) => (
+            <FilledTierRow
+              key={`legacy-${tier.id}`}
+              label={deriveAutoName(tier.deliverables) || "(empty)"}
+              tier={tier}
+              onPriceChange={(v) => updateLocal(tier.id, { price: v })}
+              onCurrencyChange={(c) => onCurrencyChange(tier.id, c)}
+              onDelete={() => void onDelete(tier.id)}
+            />
+          ))}
+
+          {pendingCustom && (
+            <PendingCustomRow
+              nameInputRef={pendingNameRef}
+              value={pendingCustom}
+              onChange={(patch) =>
+                setPendingCustom((prev) => (prev ? { ...prev, ...patch } : prev))
+              }
+              onCommit={() => void commitPendingCustom()}
+              onCancel={cancelPendingCustom}
+            />
+          )}
         </div>
       )}
     </section>
+  );
+}
+
+/** Shared label-column width — matches the FILES section's 140px label
+ *  column so LICENSE and FILES rows visually align on the same x-axis. */
+const LABEL_WIDTH = "w-[140px]";
+
+interface FilledTierRowProps {
+  label: string;
+  tier: DraftTier;
+  onPriceChange: (raw: string) => void;
+  onCurrencyChange: (currency: string) => void;
+  onDelete: () => void;
+}
+
+function FilledTierRow({
+  label,
+  tier,
+  onPriceChange,
+  onCurrencyChange,
+  onDelete,
+}: FilledTierRowProps): React.JSX.Element {
+  const placeholderHint =
+    tier.price === "" &&
+    tier.lastNumeric &&
+    tier.lastNumeric.currency !== tier.currency
+      ? fxConvertedString(tier.lastNumeric.amount, tier.lastNumeric.currency, tier.currency)
+      : "";
+  return (
+    <div
+      data-license-tier
+      data-tier-id={tier.id}
+      className="group flex items-center gap-3 px-3 py-2 rounded-md border border-border-subtle bg-bg-elevated"
+    >
+      <span
+        className={`${LABEL_WIDTH} shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary truncate`}
+        title={label}
+      >
+        {label}
+      </span>
+      <input
+        type="number"
+        min={0}
+        step="0.01"
+        value={tier.price}
+        onChange={(e) => onPriceChange(e.target.value)}
+        placeholder={placeholderHint || "0"}
+        title={
+          placeholderHint && tier.lastNumeric
+            ? `≈ ${placeholderHint} ${tier.currency} (converted from ${tier.lastNumeric.amount} ${tier.lastNumeric.currency})`
+            : undefined
+        }
+        className="flex-1 min-w-0 bg-bg-base border border-border-subtle rounded-md px-3 py-1.5 text-sm tabular-nums"
+        aria-label="Price"
+        data-fx-placeholder={placeholderHint || undefined}
+      />
+      <select
+        value={tier.currency}
+        onChange={(e) => onCurrencyChange(e.target.value)}
+        className="w-20 shrink-0 bg-bg-base border border-border-subtle rounded-md px-2 py-1.5 text-sm"
+        aria-label="Currency"
+      >
+        {SUPPORTED_CURRENCIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="w-7 h-7 flex items-center justify-center rounded text-text-tertiary hover:text-danger hover:bg-bg-row-hover shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100"
+        aria-label="Delete tier"
+        title="Delete tier"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+}
+
+interface EmptyTierRowProps {
+  label: string;
+  price: string;
+  currency: string;
+  creating: boolean;
+  onPriceChange: (raw: string) => void;
+  onCurrencyChange: (currency: string) => void;
+}
+
+function EmptyTierRow({
+  label,
+  price,
+  currency,
+  creating,
+  onPriceChange,
+  onCurrencyChange,
+}: EmptyTierRowProps): React.JSX.Element {
+  return (
+    <div
+      data-license-tier
+      data-empty="true"
+      className="group flex items-center gap-3 px-3 py-2 rounded-md border border-dashed border-border-subtle"
+    >
+      <span
+        className={`${LABEL_WIDTH} shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary truncate`}
+      >
+        {label}
+      </span>
+      <input
+        type="number"
+        min={0}
+        step="0.01"
+        value={price}
+        onChange={(e) => onPriceChange(e.target.value)}
+        placeholder="—"
+        disabled={creating}
+        className="flex-1 min-w-0 bg-transparent border border-border-subtle rounded-md px-3 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary disabled:opacity-50"
+        aria-label={`${label} price`}
+      />
+      <select
+        value={currency}
+        onChange={(e) => onCurrencyChange(e.target.value)}
+        disabled={creating}
+        className="w-20 shrink-0 bg-transparent border border-border-subtle rounded-md px-2 py-1.5 text-sm disabled:opacity-50"
+        aria-label={`${label} currency`}
+      >
+        {SUPPORTED_CURRENCIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+      <div className="w-7 shrink-0" aria-hidden />
+    </div>
+  );
+}
+
+interface PendingCustomRowProps {
+  value: PendingCustom;
+  nameInputRef: React.RefObject<HTMLInputElement | null>;
+  onChange: (patch: Partial<PendingCustom>) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+}
+
+function PendingCustomRow({
+  value,
+  nameInputRef,
+  onChange,
+  onCommit,
+  onCancel,
+}: PendingCustomRowProps): React.JSX.Element {
+  function onKeyDown(e: React.KeyboardEvent): void {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onCommit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onCancel();
+    }
+  }
+  return (
+    <div
+      data-license-tier
+      data-pending="true"
+      className="flex items-center gap-3 px-3 py-2 rounded-md border border-accent/50 bg-bg-elevated"
+    >
+      <input
+        ref={nameInputRef}
+        type="text"
+        value={value.name}
+        onChange={(e) => onChange({ name: e.target.value })}
+        onKeyDown={onKeyDown}
+        placeholder="Tier name (e.g. MIDI)"
+        className={`${LABEL_WIDTH} shrink-0 bg-bg-base border border-border-subtle rounded-md px-2 py-1 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-primary placeholder:text-text-tertiary placeholder:normal-case placeholder:tracking-normal placeholder:font-normal`}
+        aria-label="Tier name"
+      />
+      <input
+        type="number"
+        min={0}
+        step="0.01"
+        value={value.price}
+        onChange={(e) => onChange({ price: e.target.value })}
+        onKeyDown={onKeyDown}
+        placeholder="0"
+        className="flex-1 min-w-0 bg-bg-base border border-border-subtle rounded-md px-3 py-1.5 text-sm tabular-nums"
+        aria-label="Price"
+      />
+      <select
+        value={value.currency}
+        onChange={(e) => onChange({ currency: e.target.value })}
+        className="w-20 shrink-0 bg-bg-base border border-border-subtle rounded-md px-2 py-1.5 text-sm"
+        aria-label="Currency"
+      >
+        {SUPPORTED_CURRENCIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={onCommit}
+        className="w-7 h-7 flex items-center justify-center rounded text-accent hover:bg-bg-row-hover shrink-0"
+        aria-label="Save tier"
+        title="Save (Enter)"
+      >
+        <Check size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="w-7 h-7 flex items-center justify-center rounded text-text-tertiary hover:text-text-primary hover:bg-bg-row-hover shrink-0"
+        aria-label="Cancel"
+        title="Cancel (Esc)"
+      >
+        <X size={14} />
+      </button>
+    </div>
   );
 }

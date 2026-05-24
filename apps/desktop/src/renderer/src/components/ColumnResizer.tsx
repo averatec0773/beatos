@@ -7,10 +7,17 @@ interface Props {
   getCurrentRenderedWidth?: () => number;
 }
 
+// Pixel threshold a pointer must travel before a drag is considered real.
+// Below this, the event is treated as a click and no width is written, which
+// keeps a default `1fr` column (widths.title === 0) from collapsing to a fixed
+// pixel value the instant the user accidentally clicks the resizer overlay.
+const DRAG_THRESHOLD_PX = 3;
+
 export function ColumnResizer({ columnKey, currentWidth, getCurrentRenderedWidth }: Props): React.JSX.Element {
   const startX = useRef(0);
   const startW = useRef(0);
   const dragging = useRef(false);
+  const committed = useRef(false);
 
   function onPointerDown(e: React.PointerEvent) {
     e.preventDefault();
@@ -19,6 +26,7 @@ export function ColumnResizer({ columnKey, currentWidth, getCurrentRenderedWidth
       ? getCurrentRenderedWidth()
       : currentWidth;
     dragging.current = true;
+    committed.current = false;
     e.currentTarget.setPointerCapture(e.pointerId);
   }
 
@@ -32,6 +40,12 @@ export function ColumnResizer({ columnKey, currentWidth, getCurrentRenderedWidth
     }
     if (!dragging.current) return;
     const delta = e.clientX - startX.current;
+    // Until the user has actually moved past the threshold, don't write —
+    // that prevents a click-without-drag from flipping a `1fr` flex column
+    // into a fixed-pixel width (visible as a sudden shrink of the Title
+    // column after clicking the divider).
+    if (!committed.current && Math.abs(delta) < DRAG_THRESHOLD_PX) return;
+    committed.current = true;
     useColumnWidthStore.getState().setWidth(columnKey, startW.current + delta);
   }
 

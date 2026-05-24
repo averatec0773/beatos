@@ -109,7 +109,15 @@ def _format_tier(tier: dict[str, Any]) -> str:
 
 async def set_license_tiers(track_id: int, tiers: list[dict[str, Any]]) -> dict:
     """Replace the full license tier list for a track. tiers may be empty
-    to clear all existing tiers. Returns a 2PC token."""
+    to clear all existing tiers. Returns a 2PC token.
+
+    Idiom (v0.0.26.3): the renderer organizes tiers as one row per
+    deliverable — MP3, WAV, STEMS are fixed preset slots plus optional
+    custom rows (e.g. MIDI). Prefer one deliverable per tier
+    (e.g. ``[{"deliverables": ["mp3"], "price": 128}, {"deliverables": ["wav"], "price": 400}]``)
+    so the result lands cleanly in the preset slots. Multi-deliverable
+    tiers (e.g. ``["wav", "stem"]``) are still accepted but display in a
+    "legacy bundle" area below the presets."""
     if not isinstance(track_id, int) or isinstance(track_id, bool) or track_id <= 0:
         raise ValueError("track_id must be a positive integer")
     if not isinstance(tiers, list):
