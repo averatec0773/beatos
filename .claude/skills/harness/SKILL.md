@@ -43,15 +43,15 @@ Each row is independent. "Skip" is the right answer most of the time — these d
 1. Run `git status` + `git diff` to cover both staged and working tree.
 2. For each row in the table, decide update or skip. Bias toward skip when in doubt.
 3. Make any needed edits — small, on-topic, no rewrites for polish.
-4. Report one line per file, e.g. `CHANGELOG: + auto-save bullet · architecture: unchanged · design-direction: unchanged · CLAUDE: unchanged · README: unchanged`.
-5. Proceed with the commit.
+4. **Version-consistency read-only check**: confirm `apps/desktop/package.json` and the four `pyproject.toml` files (root + three under `packages/`) all carry the same version string. If they disagree, surface the drift to the user and suggest `node scripts/bump-version.mjs <version>` — do NOT bump yourself.
+5. Report one line per file, e.g. `CHANGELOG: + auto-save bullet · architecture: unchanged · design-direction: unchanged · CLAUDE: unchanged · README: unchanged · versions: aligned`.
+6. Proceed with the commit.
 
 ## DO NOT
 
 - Don't rewrite anything for polish; this is sync, not editorial.
 - Don't pad files to feel productive — "all unchanged" is a fine result.
 - Don't loop on every micro-commit; respect the skip rules above.
-- Don't touch version numbers, ROADMAP, or tags here — those live outside this skill.
 
 ## Acceptance criteria
 

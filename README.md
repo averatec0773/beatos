@@ -8,7 +8,7 @@
 
 A local-first desktop library that holds every beat on your hard drive — catalog it once, then ship it to every platform with an AI co-pilot doing the metadata grind for you.
 
-[![version](https://img.shields.io/badge/version-0.0.25-7c5cff?style=flat-square)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/averatec0773/beatos/main/apps/desktop/package.json&query=$.version&label=version&prefix=v&color=7c5cff&style=flat-square)](CHANGELOG.md)
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-1f1f1f?style=flat-square)](#install)
 [![license](https://img.shields.io/badge/license-Apache--2.0-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
@@ -197,14 +197,7 @@ Full architecture notes live in [`conventions/architecture.md`](conventions/arch
 
 ## Roadmap
 
-`v0.0.25` is the **dogfood baseline** — UI/UX iterations land here as `0.0.25.1`, `0.0.25.2`, ... while the feature surface stays stable. Then:
-
-- **`v0.0.26`** — Replace librosa with [essentia](https://essentia.upf.edu/) for fast + accurate BPM/Key. Re-enable auto-analyze on import.
-- **`v0.0.27`** — Smart search syntax (`bpm:>140 genre:trap producer:smoke`) over existing filter primitives.
-- **`v0.1.0`** — First publish adapter (NetEase Cloudmusic). Browser automation in your own Chrome with manual confirm at submission.
-- **`v0.2.0`** — Self-corpus RAG. Generate platform-tailored descriptions in your voice from your own back catalog.
-- **`v0.3.0`** — Audio-content RAG. `find_similar` over CLAP embeddings, locally.
-- **`v0.4.0`** — DAW export integration (FL Studio / Ableton / Logic).
+Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases, with `v0.1.0` reserved for the first publish adapter (NetEase Cloudmusic).
 
 Full plan: [`ROADMAP.md`](ROADMAP.md) · Shipped history: [`CHANGELOG.md`](CHANGELOG.md).
 
