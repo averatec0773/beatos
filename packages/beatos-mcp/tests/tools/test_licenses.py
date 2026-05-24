@@ -72,9 +72,11 @@ async def test_unknown_track_raises(db_path):
 
 
 @pytest.mark.asyncio
-async def test_rejects_empty_tier_name(db_path):
-    with pytest.raises(ValueError, match="name"):
-        await set_license_tiers(track_id=1, tiers=[{"name": "  "}])
+async def test_accepts_empty_tier_name(db_path):
+    """Empty name is allowed — renderer derives display label from
+    deliverables. See packages/beatos-core/.../licenses/service.py docstring."""
+    r = await set_license_tiers(track_id=1, tiers=[{"name": ""}])
+    assert "token" in r
 
 
 @pytest.mark.asyncio

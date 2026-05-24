@@ -63,10 +63,13 @@ async def test_create_rejects_unknown_track():
 
 
 @pytest.mark.asyncio
-async def test_create_rejects_empty_name():
+async def test_create_accepts_empty_name():
+    """v0.0.26.2: empty name is allowed; renderer auto-derives a display
+    label from deliverables. The non-empty rule was an over-zealous guard."""
     track = await create_track("Beat")
-    with pytest.raises(ValueError, match="name"):
-        await create_tier(track.id, name="   ")
+    tier = await create_tier(track.id, name="")
+    assert tier.id > 0
+    assert tier.name == ""
 
 
 @pytest.mark.asyncio
@@ -156,6 +159,70 @@ async def test_replace_with_empty_clears_all():
     result = await replace_tiers_for_track(track.id, [])
     assert result == []
     assert await list_tiers_for_track(track.id) == []
+
+
+@pytest.mark.asyncio
+async def test_create_rejects_duplicate_deliverables():
+    """Two tiers with the same deliverables set are not allowed —
+    duplicates are confusing in publish-adapter output and the renderer
+    auto-derives display labels from deliverables (so duplicates would
+    share the same label)."""
+    track = await create_track("Beat")
+    await create_tier(track.id, name="", deliverables=["mp3"])
+    with pytest.raises(ValueError, match="already exists"):
+        await create_tier(track.id, name="other", deliverables=["mp3"])
+
+
+@pytest.mark.asyncio
+async def test_create_dedup_is_order_insensitive_and_case_insensitive():
+    track = await create_track("Beat")
+    await create_tier(track.id, name="", deliverables=["mp3", "wav"])
+    with pytest.raises(ValueError, match="already exists"):
+        await create_tier(track.id, name="", deliverables=["WAV", "MP3"])
+
+
+@pytest.mark.asyncio
+async def test_create_allows_multiple_empty_deliverables():
+    """Empty deliverables = mid-edit state; coexisting empty rows are OK."""
+    track = await create_track("Beat")
+    a = await create_tier(track.id, name="", deliverables=[])
+    b = await create_tier(track.id, name="", deliverables=[])
+    assert a.id != b.id
+
+
+@pytest.mark.asyncio
+async def test_update_to_existing_deliverables_rejected():
+    track = await create_track("Beat")
+    a = await create_tier(track.id, name="", deliverables=["mp3"])
+    b = await create_tier(track.id, name="", deliverables=["wav"])
+    with pytest.raises(ValueError, match="already exists"):
+        await update_tier(b.id, {"deliverables": ["mp3"]})
+    # original survives
+    refreshed = await get_tier(a.id)
+    assert refreshed and refreshed.deliverables == ["mp3"]
+
+
+@pytest.mark.asyncio
+async def test_update_same_deliverables_on_self_allowed():
+    """A no-op (or unrelated-field) update on a tier must not see its own
+    row as a duplicate."""
+    track = await create_track("Beat")
+    a = await create_tier(track.id, name="", deliverables=["mp3"])
+    updated = await update_tier(a.id, {"deliverables": ["mp3"], "price": 99.0})
+    assert updated.price == 99.0
+
+
+@pytest.mark.asyncio
+async def test_replace_rejects_duplicate_within_batch():
+    track = await create_track("Beat")
+    with pytest.raises(ValueError, match="Duplicate deliverables"):
+        await replace_tiers_for_track(
+            track.id,
+            [
+                {"name": "A", "deliverables": ["mp3"]},
+                {"name": "B", "deliverables": ["MP3"]},
+            ],
+        )
 
 
 @pytest.mark.asyncio

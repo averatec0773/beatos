@@ -31,31 +31,46 @@ interface DraftTier {
   price: string; // string for input control; parsed to number on save
   currency: string;
   notes: string;
-  // UX-only (not persisted): the last numeric price + the currency it was
-  // in, captured the instant the user changes currency. Drives the
-  // `placeholder` hint on the cleared price input ("you had ¥700, that's
-  // ≈ $97 in USD"). Updates again whenever the user types a new number
-  // and then switches currency once more.
-  hintFromAmount: number | null;
-  hintFromCurrency: string | null;
+  // Per-currency memory of values the user typed in *this* editing session.
+  // Switching currency away then back restores the prior value (instead of
+  // showing 0). Reset on tier reload — never persisted to backend.
+  priceMemory: Record<string, string>;
+  // The most recent numeric (amount, currency) the user typed. Drives the
+  // <input placeholder> hint when the active currency has no memorized
+  // value yet (e.g. first switch CNY → USD).
+  lastNumeric: { amount: number; currency: string } | null;
 }
 
 function toDraft(t: LicenseTier): DraftTier {
+  const currency = t.currency || "CNY";
+  const priceStr = t.price == null ? "" : String(t.price);
   return {
     id: t.id,
     name: t.name,
     deliverables: t.deliverables ?? [],
-    price: t.price == null ? "" : String(t.price),
-    currency: t.currency || "CNY",
+    price: priceStr,
+    currency,
     notes: t.notes ?? "",
-    hintFromAmount: null,
-    hintFromCurrency: null,
+    priceMemory: priceStr === "" ? {} : { [currency]: priceStr },
+    lastNumeric:
+      t.price != null && Number.isFinite(t.price) && t.price > 0
+        ? { amount: t.price, currency }
+        : null,
   };
 }
 
 function deriveAutoName(deliverables: string[]): string {
   if (deliverables.length === 0) return "";
   return deliverables.map((d) => d.toUpperCase()).join(" + ");
+}
+
+function deliverablesKey(deliverables: string[]): string {
+  // Order- and case-insensitive canonical key. Must match the backend's
+  // _deliverables_key (sorted, lower-cased, deduped) so the renderer's
+  // pre-flight check and the API's enforcement agree.
+  return JSON.stringify(
+    Array.from(new Set(deliverables.map((d) => d.toLowerCase()))).sort(),
+  );
 }
 
 /**
@@ -137,15 +152,51 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
   }
 
   function updateLocal(tierId: number, patch: Partial<DraftTier>): void {
+    // Pre-flight: changing deliverables to match another tier's set is
+    // blocked (server would reject with 400 anyway; this gives the user
+    // an immediate revert + toast instead of a flashing toggle followed
+    // by a delayed error). Empty deliverables are never considered a
+    // duplicate — multiple mid-edit empty rows are fine.
+    if (patch.deliverables !== undefined && patch.deliverables.length > 0) {
+      const newKey = deliverablesKey(patch.deliverables);
+      const conflict = tiers.find(
+        (t) =>
+          t.id !== tierId &&
+          t.deliverables.length > 0 &&
+          deliverablesKey(t.deliverables) === newKey,
+      );
+      if (conflict) {
+        useToastStore.getState().show(
+          "warning",
+          `A tier with the same deliverables already exists (${
+            deriveAutoName(conflict.deliverables) || `#${conflict.id}`
+          })`,
+        );
+        return;
+      }
+    }
+
     setTiers((prev) => {
       const next = prev.map((t) => {
         if (t.id !== tierId) return t;
         const merged = { ...t, ...patch };
-        // Auto-sync the name when the user has never customized it (or the
-        // current name still matches the auto-derived one). Touching
-        // deliverables then updates the row label without forcing a rename.
+        // Auto-sync the name when the user has never customized it.
         if (patch.deliverables !== undefined && nameIsAuto(t)) {
           merged.name = deriveAutoName(merged.deliverables);
+        }
+        // Price change: update per-currency memory + lastNumeric snapshot.
+        if (patch.price !== undefined) {
+          const newPrice = patch.price;
+          merged.priceMemory = { ...t.priceMemory };
+          if (newPrice === "") {
+            delete merged.priceMemory[t.currency];
+          } else {
+            merged.priceMemory[t.currency] = newPrice;
+            const parsed = Number(newPrice);
+            if (Number.isFinite(parsed) && parsed > 0) {
+              merged.lastNumeric = { amount: parsed, currency: t.currency };
+            }
+          }
         }
         return merged;
       });
@@ -156,43 +207,69 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
   }
 
   /**
-   * Currency switch is special: we snapshot the current numeric price (if any)
-   * so the cleared input can show "what that price would be in the new
-   * currency" as a placeholder. The user can then type a rounded version
-   * (e.g. ¥700 → "≈ 97" hint → user types 100 USD). Snapshot is
-   * UX-only — never sent to the server, never persisted.
+   * Currency switch is intentionally NOT auto-saved when the destination
+   * currency has no memorized value:
+   *
+   *   1. Without this carve-out, a CNY 700 tier would be silently wiped
+   *      to {price: null, currency: USD} the moment the user clicked USD
+   *      to "peek" at the conversion (bug found right after v0.0.26.1
+   *      shipped).
+   *   2. Switching to a currency that DOES have memorized value (user
+   *      had typed something there earlier in this session) restores
+   *      that value and saves it — equivalent to the user re-typing.
+   *
+   * Net effect: server state stays put until the user actively commits a
+   * (price, currency) pair by typing or by round-tripping. Exploratory
+   * currency switches are session-local until then.
    */
   function onCurrencyChange(tierId: number, nextCurrency: string): void {
     setTiers((prev) => {
+      let shouldSave = false;
       const next = prev.map((t) => {
         if (t.id !== tierId) return t;
         if (nextCurrency === t.currency) return t;
-        const trimmed = t.price.trim();
-        const parsed = trimmed === "" ? NaN : Number(trimmed);
-        const hasNumber = Number.isFinite(parsed) && parsed > 0;
+        const memorized = t.priceMemory[nextCurrency];
         const merged: DraftTier = {
           ...t,
           currency: nextCurrency,
-          price: "", // clear so the placeholder hint shows
-          hintFromAmount: hasNumber ? parsed : t.hintFromAmount,
-          hintFromCurrency: hasNumber ? t.currency : t.hintFromCurrency,
+          price: memorized ?? "",
         };
+        if (memorized !== undefined) shouldSave = true;
         return merged;
       });
-      const target = next.find((t) => t.id === tierId);
-      if (target) scheduleSave(tierId, target);
+      if (shouldSave) {
+        const target = next.find((t) => t.id === tierId);
+        if (target) scheduleSave(tierId, target);
+      }
       return next;
     });
   }
 
   async function onAdd(): Promise<void> {
     const isFirst = tiers.length === 0;
+    // The first-tier MP3 default would collide with an existing ["mp3"]
+    // tier on a re-add scenario (rare, but possible if the user
+    // deleted-and-re-added or imported a track that already has MP3).
+    // Fall back to an empty new row in that case so the user can pick
+    // something different.
+    const seed: { name: string; deliverables: string[] } = isFirst
+      ? { name: "MP3", deliverables: ["mp3"] }
+      : { name: "", deliverables: [] };
+    if (
+      seed.deliverables.length > 0 &&
+      tiers.some(
+        (t) =>
+          t.deliverables.length > 0 &&
+          deliverablesKey(t.deliverables) === deliverablesKey(seed.deliverables),
+      )
+    ) {
+      seed.name = "";
+      seed.deliverables = [];
+    }
     try {
       const created = await api.create(trackId, {
-        // Auto-name follows from deliverables so the row label reads sensibly
-        // without forcing the user through a Name input.
-        name: isFirst ? "MP3" : "",
-        deliverables: isFirst ? ["mp3"] : [],
+        name: seed.name,
+        deliverables: seed.deliverables,
         currency: "CNY",
       });
       setTiers((prev) => [...prev, toDraft(created)]);
@@ -254,18 +331,18 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
         <div className="space-y-1">
           {tiers.map((tier) => {
             const expanded = expandedId === tier.id;
-            // Placeholder hint: when the user has switched currency and the
-            // input is currently empty, project the captured price into the
-            // new currency. Disappears as soon as the user types (native
-            // <input> behavior) so it doesn't compete with real values.
+            // Placeholder hint: shown only when the input is currently empty
+            // AND we have a numeric value typed earlier in a different
+            // currency to convert from. Disappears as soon as the user
+            // types (native <input> behavior) so it never competes with a
+            // real value or lingers as ambient gray noise.
             const placeholderHint =
               tier.price === "" &&
-              tier.hintFromAmount != null &&
-              tier.hintFromCurrency &&
-              tier.hintFromCurrency !== tier.currency
+              tier.lastNumeric &&
+              tier.lastNumeric.currency !== tier.currency
                 ? fxConvertedString(
-                    tier.hintFromAmount,
-                    tier.hintFromCurrency,
+                    tier.lastNumeric.amount,
+                    tier.lastNumeric.currency,
                     tier.currency,
                   )
                 : "";
@@ -302,8 +379,8 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
                     onChange={(e) => updateLocal(tier.id, { price: e.target.value })}
                     placeholder={placeholderHint || "0"}
                     title={
-                      placeholderHint
-                        ? `≈ ${placeholderHint} ${tier.currency} (converted from ${tier.hintFromAmount} ${tier.hintFromCurrency})`
+                      placeholderHint && tier.lastNumeric
+                        ? `≈ ${placeholderHint} ${tier.currency} (converted from ${tier.lastNumeric.amount} ${tier.lastNumeric.currency})`
                         : undefined
                     }
                     className="w-24 bg-bg-base border border-border-subtle rounded-md px-2 py-1.5 text-sm tabular-nums"

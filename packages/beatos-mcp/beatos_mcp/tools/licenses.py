@@ -25,9 +25,12 @@ _MAX_NOTES = 2000
 def _validate_tier(tier: Any, index: int) -> None:
     if not isinstance(tier, dict):
         raise ValueError(f"tiers[{index}] must be an object")
-    name = tier.get("name")
-    if not isinstance(name, str) or not name.strip():
-        raise ValueError(f"tiers[{index}].name must be a non-empty string")
+    # name is optional — the renderer auto-derives a display label from
+    # deliverables when blank. Agents may still set it for canonical
+    # tier-naming (e.g. "Premium Lease"); just require it to be a string.
+    name = tier.get("name", "")
+    if not isinstance(name, str):
+        raise ValueError(f"tiers[{index}].name must be a string")
     if len(name) > _MAX_NAME:
         raise ValueError(f"tiers[{index}].name too long (>{_MAX_NAME} chars)")
     deliverables = tier.get("deliverables", [])
@@ -82,7 +85,7 @@ def _validate_tier(tier: Any, index: int) -> None:
 def _normalize_tier(tier: dict[str, Any]) -> dict[str, Any]:
     """Whitelist + default the fields stored in the token payload."""
     return {
-        "name": tier["name"],
+        "name": tier.get("name", "") or "",
         "deliverables": list(tier.get("deliverables") or []),
         "price": tier.get("price"),
         "currency": tier.get("currency") or "CNY",
@@ -91,14 +94,17 @@ def _normalize_tier(tier: dict[str, Any]) -> dict[str, Any]:
 
 
 def _format_tier(tier: dict[str, Any]) -> str:
-    parts: list[str] = [tier["name"]]
+    parts: list[str] = []
+    name = tier.get("name") or ""
+    if name.strip():
+        parts.append(name)
     deliverables = tier.get("deliverables") or []
     if deliverables:
         parts.append("/".join(deliverables))
     price = tier.get("price")
     if price is not None:
         parts.append(f"{tier.get('currency') or 'CNY'} {price}")
-    return " · ".join(parts)
+    return " · ".join(parts) if parts else "(untitled)"
 
 
 async def set_license_tiers(track_id: int, tiers: list[dict[str, Any]]) -> dict:

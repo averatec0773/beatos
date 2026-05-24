@@ -4,6 +4,51 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.26.2] — 2026-05-24 — License editor dogfood fixes
+
+Three bugs found while exercising the new tier editor — all in one
+patch.
+
+### Fixed
+
+- **"Add tier" failed with 400 "name must be non-empty"** — the renderer
+  intentionally sends `name: ""` for non-first tiers so the row label
+  can auto-derive from `deliverables`, but the backend rejected blank
+  names. Relaxed `create_tier` / `update_tier` / `replace_tiers_for_track`
+  + the MCP `_validate_tier`: empty name is now accepted everywhere,
+  with the renderer's auto-derived display label (`MP3 + WAV`) as the
+  user-visible label and `"Untitled tier"` as the persisted fallback.
+  The two tests that previously asserted "non-empty rejected" are
+  inverted to "empty accepted."
+- **Switching currency away then back lost the original price** — the
+  v0.0.26.1 design fired a debounced PUT on every currency change,
+  silently overwriting `{price: 700, currency: CNY}` with
+  `{price: null, currency: USD}` the moment the user clicked USD to
+  peek at the conversion. Now each tier carries a per-currency
+  `priceMemory` (renderer-only): switching back to a currency where a
+  value was previously typed restores that value; switching to a
+  currency with no memory clears the field for the placeholder hint
+  AND skips the autosave so the server's state stays put until the
+  user actively commits.
+- **Two tiers with the same deliverables coexisting** — a track could
+  carry duplicate `["mp3"]` tiers, which is confusing for publish
+  adapters and produces identical row labels (auto-derived from
+  deliverables). Now blocked end-to-end: comparison is order- and
+  case-insensitive (`["mp3","wav"]` and `["WAV","MP3"]` collide);
+  empty `deliverables` are exempt (multiple mid-edit rows are fine);
+  `update_tier` excludes self (a tier never dupes against itself);
+  add-tier's MP3 seed falls back to empty when `["mp3"]` already
+  exists. Renderer pre-flights the check in `updateLocal` so a
+  conflicting toggle reverts immediately with a warning toast instead
+  of round-tripping a 400.
+
+### Tests
+
+6 new core tests (dedup with order/case insensitivity,
+multiple-empty allowed, update-self allowed, batch internal-dedup).
+Two existing tests inverted (empty name now accepted in core +
+MCP validator).
+
 ## [0.0.26.1] — 2026-05-24 — Compact tier rows + FX hints
 
 Dogfood follow-up on `0.0.26`. The original layout used a 4-row card per

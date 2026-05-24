@@ -30,6 +30,45 @@ def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
 
 
+def _deliverables_key(deliverables: list[str]) -> str:
+    """Canonical (sorted, deduped) key for deliverables-set comparison —
+    used to enforce per-track uniqueness. Order-insensitive: ['mp3','wav']
+    and ['wav','mp3'] collide. Case-folded so 'MP3' and 'mp3' also
+    collide (renderer lowercases custom inputs already)."""
+    return json.dumps(sorted({d.lower() for d in deliverables}))
+
+
+async def _find_duplicate_tier(
+    conn: aiosqlite.Connection,
+    track_id: int,
+    deliverables: list[str],
+    exclude_tier_id: Optional[int] = None,
+) -> Optional[int]:
+    """Return the id of an existing tier on `track_id` whose deliverables set
+    matches `deliverables` (canonical), or None. Empty `deliverables` is
+    never considered a duplicate — newly-added rows start empty by design.
+    `exclude_tier_id` skips one row (used during update_tier so a tier
+    doesn't conflict with itself)."""
+    if not deliverables:
+        return None
+    target_key = _deliverables_key(deliverables)
+    sql = "SELECT id, deliverables FROM license_tier WHERE track_id = ?"
+    params: list[Any] = [track_id]
+    if exclude_tier_id is not None:
+        sql += " AND id != ?"
+        params.append(exclude_tier_id)
+    async with conn.execute(sql, tuple(params)) as cur:
+        rows = await cur.fetchall()
+    for tid, raw in rows:
+        try:
+            existing = json.loads(raw) if raw else []
+        except (json.JSONDecodeError, TypeError):
+            existing = []
+        if isinstance(existing, list) and existing and _deliverables_key(existing) == target_key:
+            return tid
+    return None
+
+
 def _row_to_tier(row: tuple) -> LicenseTier:
     deliverables_raw = row[4]
     try:
@@ -95,19 +134,28 @@ async def _track_exists(conn: aiosqlite.Connection, track_id: int) -> bool:
 async def create_tier(
     track_id: int,
     *,
-    name: str,
+    name: str = "",
     deliverables: Optional[list[str]] = None,
     price: Optional[float] = None,
     currency: str = "CNY",
     notes: Optional[str] = None,
 ) -> LicenseTier:
-    if not name or not name.strip():
-        raise ValueError("name must be non-empty")
+    # name is intentionally allowed empty: the renderer auto-derives a
+    # display label from `deliverables` when name is blank, so forcing a
+    # name on insert was a UX trap (the editor row layout has no Name
+    # field by default — name lives behind the ⋮ expand).
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
     now = _now()
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
         if not await _track_exists(conn, track_id):
             raise ValueError(f"Track {track_id} not found.")
+        dupe = await _find_duplicate_tier(conn, track_id, deliverables or [])
+        if dupe is not None:
+            raise ValueError(
+                f"A tier with the same deliverables already exists (id={dupe})"
+            )
         position = await _next_position(conn, track_id)
         async with conn.execute(
             "INSERT INTO license_tier "
@@ -153,8 +201,11 @@ async def update_tier(tier_id: int, updates: dict[str, Any]) -> LicenseTier:
             sets.append("deliverables = ?")
             values.append(json.dumps(value if value is not None else []))
             continue
-        if field == "name" and (value is None or not str(value).strip()):
-            raise ValueError("name must be non-empty")
+        if field == "name":
+            if value is None:
+                raise ValueError("name must be a string")
+            # Empty / whitespace-only names are accepted — the renderer
+            # auto-derives a display label from deliverables in that case.
         sets.append(f"{field} = ?")
         values.append(value)
     sets.append("updated_at = ?")
@@ -163,6 +214,21 @@ async def update_tier(tier_id: int, updates: dict[str, Any]) -> LicenseTier:
 
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
+        # If the caller is changing deliverables, enforce per-track
+        # uniqueness against the *other* tiers (self excluded).
+        if "deliverables" in updates:
+            new_deliverables = updates.get("deliverables") or []
+            if isinstance(new_deliverables, list):
+                dupe = await _find_duplicate_tier(
+                    conn,
+                    existing.track_id,
+                    new_deliverables,
+                    exclude_tier_id=tier_id,
+                )
+                if dupe is not None:
+                    raise ValueError(
+                        f"A tier with the same deliverables already exists (id={dupe})"
+                    )
         await conn.execute(
             f"UPDATE license_tier SET {', '.join(sets)} WHERE id = ?",
             tuple(values),
@@ -224,13 +290,21 @@ async def replace_tiers_for_track(
     async with aiosqlite.connect(db_path) as conn:
         if not await _track_exists(conn, track_id):
             raise ValueError(f"Track {track_id} not found.")
+        seen_keys: set[str] = set()
         for tier in tiers:
-            name = tier.get("name")
-            if not isinstance(name, str) or not name.strip():
-                raise ValueError("Each tier requires a non-empty name")
+            name = tier.get("name", "")
+            if not isinstance(name, str):
+                raise ValueError("Each tier name must be a string")
             deliverables = tier.get("deliverables", [])
             if not isinstance(deliverables, list):
                 raise ValueError("deliverables must be a list of strings")
+            if deliverables:
+                key = _deliverables_key(deliverables)
+                if key in seen_keys:
+                    raise ValueError(
+                        f"Duplicate deliverables in batch: {sorted(set(deliverables))}"
+                    )
+                seen_keys.add(key)
         await conn.execute("DELETE FROM license_tier WHERE track_id = ?", (track_id,))
         for position, tier in enumerate(tiers):
             await conn.execute(
@@ -241,7 +315,7 @@ async def replace_tiers_for_track(
                 (
                     track_id,
                     position,
-                    tier["name"],
+                    tier.get("name", ""),
                     json.dumps(tier.get("deliverables", [])),
                     tier.get("price"),
                     tier.get("currency") or "CNY",
