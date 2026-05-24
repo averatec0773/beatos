@@ -29,7 +29,7 @@ async def test_run_migrations_is_idempotent(tmp_path):
         ) as cur:
             (count,) = await cur.fetchone()
 
-    assert count == 13
+    assert count == 15
 
 
 @pytest.mark.asyncio
@@ -44,7 +44,7 @@ async def test_run_migrations_records_applied_version(tmp_path):
         ) as cur:
             rows = await cur.fetchall()
 
-    assert [r[0] for r in rows] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    assert [r[0] for r in rows] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 
 @pytest.mark.asyncio

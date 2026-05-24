@@ -42,8 +42,7 @@ async def create(track_id: int, payload: LicenseTierCreate) -> LicenseTier:
             track_id,
             name=payload.name,
             deliverables=payload.deliverables,
-            price=payload.price,
-            currency=payload.currency,
+            prices=payload.prices,
             notes=payload.notes,
         )
     except ValueError as e:

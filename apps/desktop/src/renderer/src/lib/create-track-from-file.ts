@@ -1,6 +1,7 @@
 import { tracks } from "@/api/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { useTrackStore } from "@/stores/tracks";
+import { applyDefaultLicenseTiers } from "@/lib/default-license-tiers";
 
 export type AudioTag = "tagged" | "untagged";
 
@@ -70,6 +71,9 @@ export async function importAsNewTracks(
       result.errors.push(`${f.name}: create failed - ${e instanceof Error ? e.message : String(e)}`);
       continue;
     }
+    // Best-effort: copy the user's default license tiers onto the new
+    // track in the background. Failures never block the import flow.
+    void applyDefaultLicenseTiers(created.id);
     try {
       await useAssetStore.getState().attach(created.id, role as any, f.absPath);
       result.created++;

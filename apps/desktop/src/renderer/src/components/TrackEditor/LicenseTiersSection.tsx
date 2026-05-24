@@ -27,47 +27,83 @@ const PRESET_SLOTS = [
 type PresetKey = (typeof PRESET_SLOTS)[number]["key"];
 const PRESET_KEYS = new Set<string>(PRESET_SLOTS.map((p) => p.key));
 
+/** The two currencies that always have a fixed input slot. */
+const FIXED_CURRENCIES = ["CNY", "USD"] as const;
+const FIXED_CURRENCY_SET = new Set<string>(FIXED_CURRENCIES);
+/** Currencies available in the optional third-slot dropdown. */
+const OTHER_CURRENCIES = SUPPORTED_CURRENCIES.filter(
+  (c) => !FIXED_CURRENCY_SET.has(c),
+);
+
 const AUTOSAVE_MS = 600;
 
 interface DraftTier {
   id: number;
   name: string;
   deliverables: string[];
-  price: string;
-  currency: string;
+  /** Per-currency string-form input state. Empty string = currency cleared
+   *  (will not be sent in the save payload). */
+  priceInputs: Record<string, string>;
+  /** Currency code chosen for the optional third slot. null = no third
+   *  currency selected. Defaults to the currency present in the tier's
+   *  prices map that isn't CNY/USD, when one exists. */
+  otherCurrency: string | null;
   notes: string;
-  priceMemory: Record<string, string>;
-  lastNumeric: { amount: number; currency: string } | null;
 }
 
 interface EmptyPresetState {
-  currency: string;
-  price: string;
+  priceInputs: Record<string, string>;
+  otherCurrency: string | null;
   creating: boolean;
 }
 
 interface PendingCustom {
   name: string;
-  price: string;
-  currency: string;
+  priceInputs: Record<string, string>;
+  otherCurrency: string | null;
+}
+
+function pickOtherCurrency(prices: Record<string, number>): string | null {
+  for (const code of Object.keys(prices)) {
+    if (!FIXED_CURRENCY_SET.has(code)) return code;
+  }
+  return null;
 }
 
 function toDraft(t: LicenseTier): DraftTier {
-  const currency = t.currency || "CNY";
-  const priceStr = t.price == null ? "" : String(t.price);
+  const priceInputs: Record<string, string> = {};
+  for (const [code, amount] of Object.entries(t.prices)) {
+    priceInputs[code] = String(amount);
+  }
   return {
     id: t.id,
     name: t.name,
     deliverables: t.deliverables ?? [],
-    price: priceStr,
-    currency,
+    priceInputs,
+    otherCurrency: pickOtherCurrency(t.prices),
     notes: t.notes ?? "",
-    priceMemory: priceStr === "" ? {} : { [currency]: priceStr },
-    lastNumeric:
-      t.price != null && Number.isFinite(t.price) && t.price > 0
-        ? { amount: t.price, currency }
-        : null,
   };
+}
+
+function inputsToPrices(
+  inputs: Record<string, string>,
+  otherCurrency: string | null,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const code of FIXED_CURRENCIES) {
+    const v = inputs[code]?.trim() ?? "";
+    if (v === "") continue;
+    const n = Number(v);
+    if (Number.isFinite(n) && n >= 0) out[code] = n;
+  }
+  if (otherCurrency) {
+    const v = inputs[otherCurrency]?.trim() ?? "";
+    if (v !== "") {
+      const n = Number(v);
+      if (Number.isFinite(n) && n >= 0) out[otherCurrency] = n;
+    }
+  }
+  return out;
 }
 
 function deriveAutoName(deliverables: string[]): string {
@@ -75,29 +111,28 @@ function deriveAutoName(deliverables: string[]): string {
   return deliverables.map((d) => d.toUpperCase()).join(" + ");
 }
 
+function deliverablesKey(deliverables: string[]): string {
+  return JSON.stringify(
+    Array.from(new Set(deliverables.map((d) => d.toLowerCase()))).sort(),
+  );
+}
+
 function draftToUpdate(d: DraftTier): LicenseTierUpdate {
-  const trimmedPrice = d.price.trim();
-  const parsedPrice =
-    trimmedPrice === ""
-      ? null
-      : Number.isFinite(Number(trimmedPrice))
-        ? Number(trimmedPrice)
-        : null;
+  const prices = inputsToPrices(d.priceInputs, d.otherCurrency);
   const effectiveName = d.name.trim() === "" ? deriveAutoName(d.deliverables) : d.name;
   return {
     name: effectiveName || "Untitled tier",
     deliverables: d.deliverables,
-    price: parsedPrice,
-    currency: d.currency || "CNY",
+    prices,
     notes: d.notes.trim() === "" ? null : d.notes,
   };
 }
 
 function emptyPresetDefaults(): Record<PresetKey, EmptyPresetState> {
   return {
-    mp3: { currency: "CNY", price: "", creating: false },
-    wav: { currency: "CNY", price: "", creating: false },
-    stem: { currency: "CNY", price: "", creating: false },
+    mp3: { priceInputs: {}, otherCurrency: null, creating: false },
+    wav: { priceInputs: {}, otherCurrency: null, creating: false },
+    stem: { priceInputs: {}, otherCurrency: null, creating: false },
   };
 }
 
@@ -123,9 +158,6 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     }
   }, [trackId]);
 
-  // Reset all local UI state when the track changes — otherwise an in-flight
-  // create or a pending custom row would leak from one track to the next
-  // (SPA route reuse, per CLAUDE.md rule #6).
   useEffect(() => {
     setLoading(true);
     setEmptySlots(emptyPresetDefaults());
@@ -144,8 +176,6 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     };
   }, []);
 
-  // Categorize server tiers into preset slots vs custom vs legacy bundles.
-  // Memoized so each render derives a stable view from the same `tiers`.
   const categorized = useMemo(() => {
     const presetById: Partial<Record<PresetKey, DraftTier>> = {};
     const customs: DraftTier[] = [];
@@ -159,8 +189,6 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
           customs.push(t);
         }
       } else if (t.deliverables.length === 0) {
-        // Pending mid-edit empty row from the legacy schema; surface as a
-        // legacy bundle so the user can either fill or delete it.
         legacy.push(t);
       } else {
         legacy.push(t);
@@ -187,56 +215,31 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     savingTimers.current.set(tierId, handle);
   }
 
-  function updateLocal(tierId: number, patch: Partial<DraftTier>): void {
+  function updateLocal(tierId: number, mutator: (t: DraftTier) => DraftTier): void {
     setTiers((prev) => {
-      const next = prev.map((t) => {
-        if (t.id !== tierId) return t;
-        const merged = { ...t, ...patch };
-        if (patch.price !== undefined) {
-          const newPrice = patch.price;
-          merged.priceMemory = { ...t.priceMemory };
-          if (newPrice === "") {
-            delete merged.priceMemory[t.currency];
-          } else {
-            merged.priceMemory[t.currency] = newPrice;
-            const parsed = Number(newPrice);
-            if (Number.isFinite(parsed) && parsed > 0) {
-              merged.lastNumeric = { amount: parsed, currency: t.currency };
-            }
-          }
-        }
-        return merged;
-      });
+      const next = prev.map((t) => (t.id === tierId ? mutator(t) : t));
       const target = next.find((t) => t.id === tierId);
       if (target) scheduleSave(tierId, target);
       return next;
     });
   }
 
-  /** Currency switch on a persisted tier — see v0.0.26.2 carve-out: only
-   *  save if the destination currency has a memorized price; otherwise the
-   *  switch is exploratory (lets the user peek at the placeholder hint
-   *  without overwriting backend state with `price=null`). */
-  function onCurrencyChange(tierId: number, nextCurrency: string): void {
-    setTiers((prev) => {
-      let shouldSave = false;
-      const next = prev.map((t) => {
-        if (t.id !== tierId) return t;
-        if (nextCurrency === t.currency) return t;
-        const memorized = t.priceMemory[nextCurrency];
-        const merged: DraftTier = {
-          ...t,
-          currency: nextCurrency,
-          price: memorized ?? "",
-        };
-        if (memorized !== undefined) shouldSave = true;
-        return merged;
-      });
-      if (shouldSave) {
-        const target = next.find((t) => t.id === tierId);
-        if (target) scheduleSave(tierId, target);
+  function onTierPriceChange(tierId: number, currency: string, raw: string): void {
+    updateLocal(tierId, (t) => ({
+      ...t,
+      priceInputs: { ...t.priceInputs, [currency]: raw },
+    }));
+  }
+
+  function onTierOtherCurrencyChange(tierId: number, nextCurrency: string | null): void {
+    updateLocal(tierId, (t) => {
+      // Switching away clears the previous third-slot value so the server
+      // never holds a stale entry for a currency the user can no longer see.
+      const nextInputs = { ...t.priceInputs };
+      if (t.otherCurrency && t.otherCurrency !== nextCurrency) {
+        delete nextInputs[t.otherCurrency];
       }
-      return next;
+      return { ...t, otherCurrency: nextCurrency, priceInputs: nextInputs };
     });
   }
 
@@ -259,26 +262,50 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     }
   }
 
-  /** Empty-preset price input. Updates local state; debounces a CREATE
-   *  request once the user has typed a non-empty value. Once created, the
-   *  new DraftTier replaces the empty slot on the next render. */
-  function onEmptyPresetPriceChange(preset: PresetKey, raw: string): void {
+  /** Empty-preset price input handler. Buffers local state and debounces a
+   *  CREATE once at least one currency has a non-empty value. */
+  function onEmptyPresetPriceChange(
+    preset: PresetKey,
+    currency: string,
+    raw: string,
+  ): void {
     setEmptySlots((prev) => ({
       ...prev,
-      [preset]: { ...prev[preset], price: raw },
+      [preset]: {
+        ...prev[preset],
+        priceInputs: { ...prev[preset].priceInputs, [currency]: raw },
+      },
     }));
     const existing = createTimers.current.get(preset);
     if (existing) clearTimeout(existing);
-    if (raw.trim() === "") return;
     const handle = setTimeout(() => {
-      void createPresetTier(preset);
+      void maybeCreatePresetTier(preset);
     }, AUTOSAVE_MS);
     createTimers.current.set(preset, handle);
   }
 
-  async function createPresetTier(preset: PresetKey): Promise<void> {
+  function onEmptyPresetOtherCurrencyChange(
+    preset: PresetKey,
+    next: string | null,
+  ): void {
+    setEmptySlots((prev) => {
+      const slot = prev[preset];
+      const nextInputs = { ...slot.priceInputs };
+      if (slot.otherCurrency && slot.otherCurrency !== next) {
+        delete nextInputs[slot.otherCurrency];
+      }
+      return {
+        ...prev,
+        [preset]: { ...slot, otherCurrency: next, priceInputs: nextInputs },
+      };
+    });
+  }
+
+  async function maybeCreatePresetTier(preset: PresetKey): Promise<void> {
     const slot = emptySlots[preset];
-    if (!slot || slot.creating || slot.price.trim() === "") return;
+    if (!slot || slot.creating) return;
+    const prices = inputsToPrices(slot.priceInputs, slot.otherCurrency);
+    if (Object.keys(prices).length === 0) return;
     setEmptySlots((prev) => ({
       ...prev,
       [preset]: { ...prev[preset], creating: true },
@@ -287,13 +314,12 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
       const created = await api.create(trackId, {
         name: preset.toUpperCase(),
         deliverables: [preset],
-        price: Number(slot.price),
-        currency: slot.currency,
+        prices,
       });
       setTiers((prev) => [...prev, toDraft(created)]);
       setEmptySlots((prev) => ({
         ...prev,
-        [preset]: { currency: slot.currency, price: "", creating: false },
+        [preset]: { priceInputs: {}, otherCurrency: null, creating: false },
       }));
     } catch (e) {
       setEmptySlots((prev) => ({
@@ -307,17 +333,9 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     }
   }
 
-  function onEmptyPresetCurrencyChange(preset: PresetKey, currency: string): void {
-    setEmptySlots((prev) => ({
-      ...prev,
-      [preset]: { ...prev[preset], currency },
-    }));
-  }
-
   function openPendingCustom(): void {
     if (pendingCustom) return;
-    setPendingCustom({ name: "", price: "", currency: "CNY" });
-    // Focus the name input on the next paint.
+    setPendingCustom({ name: "", priceInputs: {}, otherCurrency: null });
     setTimeout(() => pendingNameRef.current?.focus(), 0);
   }
 
@@ -325,7 +343,6 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     setPendingCustom(null);
   }
 
-  /** Returns null if name passes validation, otherwise a user-facing reason. */
   function validateCustomName(rawName: string): string | null {
     const name = rawName.trim().toLowerCase();
     if (name === "") return "Tier name is required.";
@@ -349,15 +366,12 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     }
     const name = pendingCustom.name.trim();
     const deliverable = name.toLowerCase();
-    const priceRaw = pendingCustom.price.trim();
-    const parsedPrice =
-      priceRaw === "" ? null : Number.isFinite(Number(priceRaw)) ? Number(priceRaw) : null;
+    const prices = inputsToPrices(pendingCustom.priceInputs, pendingCustom.otherCurrency);
     try {
       const created = await api.create(trackId, {
         name,
         deliverables: [deliverable],
-        price: parsedPrice,
-        currency: pendingCustom.currency,
+        prices,
       });
       setTiers((prev) => [...prev, toDraft(created)]);
       setPendingCustom(null);
@@ -368,6 +382,8 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
       );
     }
   }
+
+  void deliverablesKey; // reserved for future client-side dedup pre-flight
 
   return (
     <section data-license-tiers className="space-y-2">
@@ -399,8 +415,8 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
                   key={`preset-${slot.key}`}
                   label={slot.label}
                   tier={tier}
-                  onPriceChange={(v) => updateLocal(tier.id, { price: v })}
-                  onCurrencyChange={(c) => onCurrencyChange(tier.id, c)}
+                  onPriceChange={(c, v) => onTierPriceChange(tier.id, c, v)}
+                  onOtherCurrencyChange={(c) => onTierOtherCurrencyChange(tier.id, c)}
                   onDelete={() => void onDelete(tier.id)}
                 />
               );
@@ -410,11 +426,13 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
               <EmptyTierRow
                 key={`preset-${slot.key}`}
                 label={slot.label}
-                price={empty.price}
-                currency={empty.currency}
+                priceInputs={empty.priceInputs}
+                otherCurrency={empty.otherCurrency}
                 creating={empty.creating}
-                onPriceChange={(v) => onEmptyPresetPriceChange(slot.key, v)}
-                onCurrencyChange={(c) => onEmptyPresetCurrencyChange(slot.key, c)}
+                onPriceChange={(c, v) => onEmptyPresetPriceChange(slot.key, c, v)}
+                onOtherCurrencyChange={(c) =>
+                  onEmptyPresetOtherCurrencyChange(slot.key, c)
+                }
               />
             );
           })}
@@ -424,8 +442,8 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
               key={`custom-${tier.id}`}
               label={tier.name.trim() || deriveAutoName(tier.deliverables)}
               tier={tier}
-              onPriceChange={(v) => updateLocal(tier.id, { price: v })}
-              onCurrencyChange={(c) => onCurrencyChange(tier.id, c)}
+              onPriceChange={(c, v) => onTierPriceChange(tier.id, c, v)}
+              onOtherCurrencyChange={(c) => onTierOtherCurrencyChange(tier.id, c)}
               onDelete={() => void onDelete(tier.id)}
             />
           ))}
@@ -435,8 +453,8 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
               key={`legacy-${tier.id}`}
               label={deriveAutoName(tier.deliverables) || "(empty)"}
               tier={tier}
-              onPriceChange={(v) => updateLocal(tier.id, { price: v })}
-              onCurrencyChange={(c) => onCurrencyChange(tier.id, c)}
+              onPriceChange={(c, v) => onTierPriceChange(tier.id, c, v)}
+              onOtherCurrencyChange={(c) => onTierOtherCurrencyChange(tier.id, c)}
               onDelete={() => void onDelete(tier.id)}
             />
           ))}
@@ -458,15 +476,131 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
   );
 }
 
-/** Shared label-column width — matches the FILES section's 140px label
- *  column so LICENSE and FILES rows visually align on the same x-axis. */
-const LABEL_WIDTH = "w-[140px]";
+const LABEL_WIDTH = "w-[100px]";
+
+interface PriceTrioProps {
+  priceInputs: Record<string, string>;
+  otherCurrency: string | null;
+  disabled?: boolean;
+  /** When true, inputs use a transparent background to indicate the row is
+   *  not yet persisted to the DB (matches the dashed empty-row styling). */
+  ghost?: boolean;
+  onPriceChange: (currency: string, raw: string) => void;
+  onOtherCurrencyChange: (currency: string | null) => void;
+}
+
+/** Pick the first slot in (CNY, USD, Other) order that has a positive
+ *  numeric value, and return `[currency, amount]` for use as the FX source
+ *  for any empty slot's placeholder. Returns null when no slot has a
+ *  usable value. Zero values are excluded — 0 in USD would convert to 0
+ *  in every currency, which is a useless placeholder. */
+function pickFxSource(
+  priceInputs: Record<string, string>,
+  otherCurrency: string | null,
+): [string, number] | null {
+  const order = [...FIXED_CURRENCIES, ...(otherCurrency ? [otherCurrency] : [])];
+  for (const code of order) {
+    const raw = priceInputs[code]?.trim();
+    if (!raw) continue;
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return [code, n];
+  }
+  return null;
+}
+
+function fxPlaceholderFor(
+  target: string,
+  source: [string, number] | null,
+): string {
+  if (!source) return "—";
+  const [from, amount] = source;
+  if (from === target) return "—";
+  // Bare numeric — the grayed placeholder color already signals "this is
+  // a hint, not committed." An "≈ " prefix would push 4-digit conversions
+  // past the 80 px input's text capacity and clip the rightmost digit.
+  const hint = fxConvertedString(amount, from, target);
+  return hint || "—";
+}
+
+function PriceTrio({
+  priceInputs,
+  otherCurrency,
+  disabled = false,
+  ghost = false,
+  onPriceChange,
+  onOtherCurrencyChange,
+}: PriceTrioProps): React.JSX.Element {
+  const inputBg = ghost ? "bg-transparent" : "bg-bg-base";
+  const fxSource = pickFxSource(priceInputs, otherCurrency);
+  return (
+    <>
+      {FIXED_CURRENCIES.map((code) => {
+        const value = priceInputs[code] ?? "";
+        const placeholder = value === "" ? fxPlaceholderFor(code, fxSource) : "—";
+        return (
+          <label
+            key={code}
+            className={`inline-flex items-center min-w-0 rounded-md border border-border-subtle ${inputBg} pl-2 pr-1 focus-within:border-accent`}
+          >
+            <span className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary shrink-0">
+              {code}
+            </span>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={value}
+              onChange={(e) => onPriceChange(code, e.target.value)}
+              disabled={disabled}
+              placeholder={placeholder}
+              className="w-20 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none disabled:opacity-50"
+              aria-label={`${code} price`}
+            />
+          </label>
+        );
+      })}
+      <div className={`inline-flex items-center min-w-0 rounded-md border border-border-subtle ${inputBg} focus-within:border-accent`}>
+        <select
+          value={otherCurrency ?? ""}
+          onChange={(e) => onOtherCurrencyChange(e.target.value || null)}
+          disabled={disabled}
+          className="bg-transparent pl-2 pr-1 py-1.5 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary focus:outline-none disabled:opacity-50"
+          aria-label="Third currency"
+        >
+          <option value="">—</option>
+          {OTHER_CURRENCIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          value={otherCurrency ? (priceInputs[otherCurrency] ?? "") : ""}
+          onChange={(e) =>
+            otherCurrency && onPriceChange(otherCurrency, e.target.value)
+          }
+          disabled={disabled || !otherCurrency}
+          placeholder={
+            otherCurrency && (priceInputs[otherCurrency] ?? "") === ""
+              ? fxPlaceholderFor(otherCurrency, fxSource)
+              : "—"
+          }
+          className="w-20 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none disabled:opacity-50"
+          aria-label="Other currency price"
+        />
+      </div>
+    </>
+  );
+}
 
 interface FilledTierRowProps {
   label: string;
   tier: DraftTier;
-  onPriceChange: (raw: string) => void;
-  onCurrencyChange: (currency: string) => void;
+  onPriceChange: (currency: string, raw: string) => void;
+  onOtherCurrencyChange: (currency: string | null) => void;
   onDelete: () => void;
 }
 
@@ -474,20 +608,14 @@ function FilledTierRow({
   label,
   tier,
   onPriceChange,
-  onCurrencyChange,
+  onOtherCurrencyChange,
   onDelete,
 }: FilledTierRowProps): React.JSX.Element {
-  const placeholderHint =
-    tier.price === "" &&
-    tier.lastNumeric &&
-    tier.lastNumeric.currency !== tier.currency
-      ? fxConvertedString(tier.lastNumeric.amount, tier.lastNumeric.currency, tier.currency)
-      : "";
   return (
     <div
       data-license-tier
       data-tier-id={tier.id}
-      className="group flex items-center gap-3 px-3 py-2 rounded-md border border-border-subtle bg-bg-elevated"
+      className="group flex items-center gap-2 px-3 py-2 rounded-md border border-border-subtle bg-bg-elevated"
     >
       <span
         className={`${LABEL_WIDTH} shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary truncate`}
@@ -495,34 +623,13 @@ function FilledTierRow({
       >
         {label}
       </span>
-      <input
-        type="number"
-        min={0}
-        step="0.01"
-        value={tier.price}
-        onChange={(e) => onPriceChange(e.target.value)}
-        placeholder={placeholderHint || "0"}
-        title={
-          placeholderHint && tier.lastNumeric
-            ? `≈ ${placeholderHint} ${tier.currency} (converted from ${tier.lastNumeric.amount} ${tier.lastNumeric.currency})`
-            : undefined
-        }
-        className="flex-1 min-w-0 bg-bg-base border border-border-subtle rounded-md px-3 py-1.5 text-sm tabular-nums"
-        aria-label="Price"
-        data-fx-placeholder={placeholderHint || undefined}
+      <PriceTrio
+        priceInputs={tier.priceInputs}
+        otherCurrency={tier.otherCurrency}
+        onPriceChange={onPriceChange}
+        onOtherCurrencyChange={onOtherCurrencyChange}
       />
-      <select
-        value={tier.currency}
-        onChange={(e) => onCurrencyChange(e.target.value)}
-        className="w-20 shrink-0 bg-bg-base border border-border-subtle rounded-md px-2 py-1.5 text-sm"
-        aria-label="Currency"
-      >
-        {SUPPORTED_CURRENCIES.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
+      <div className="flex-1" />
       <button
         type="button"
         onClick={onDelete}
@@ -538,56 +645,41 @@ function FilledTierRow({
 
 interface EmptyTierRowProps {
   label: string;
-  price: string;
-  currency: string;
+  priceInputs: Record<string, string>;
+  otherCurrency: string | null;
   creating: boolean;
-  onPriceChange: (raw: string) => void;
-  onCurrencyChange: (currency: string) => void;
+  onPriceChange: (currency: string, raw: string) => void;
+  onOtherCurrencyChange: (currency: string | null) => void;
 }
 
 function EmptyTierRow({
   label,
-  price,
-  currency,
+  priceInputs,
+  otherCurrency,
   creating,
   onPriceChange,
-  onCurrencyChange,
+  onOtherCurrencyChange,
 }: EmptyTierRowProps): React.JSX.Element {
   return (
     <div
       data-license-tier
       data-empty="true"
-      className="group flex items-center gap-3 px-3 py-2 rounded-md border border-dashed border-border-subtle"
+      className="flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-border-subtle"
     >
       <span
         className={`${LABEL_WIDTH} shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary truncate`}
       >
         {label}
       </span>
-      <input
-        type="number"
-        min={0}
-        step="0.01"
-        value={price}
-        onChange={(e) => onPriceChange(e.target.value)}
-        placeholder="—"
+      <PriceTrio
+        ghost
+        priceInputs={priceInputs}
+        otherCurrency={otherCurrency}
         disabled={creating}
-        className="flex-1 min-w-0 bg-transparent border border-border-subtle rounded-md px-3 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary disabled:opacity-50"
-        aria-label={`${label} price`}
+        onPriceChange={onPriceChange}
+        onOtherCurrencyChange={onOtherCurrencyChange}
       />
-      <select
-        value={currency}
-        onChange={(e) => onCurrencyChange(e.target.value)}
-        disabled={creating}
-        className="w-20 shrink-0 bg-transparent border border-border-subtle rounded-md px-2 py-1.5 text-sm disabled:opacity-50"
-        aria-label={`${label} currency`}
-      >
-        {SUPPORTED_CURRENCIES.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
+      <div className="flex-1" />
       <div className="w-7 shrink-0" aria-hidden />
     </div>
   );
@@ -621,7 +713,7 @@ function PendingCustomRow({
     <div
       data-license-tier
       data-pending="true"
-      className="flex items-center gap-3 px-3 py-2 rounded-md border border-accent/50 bg-bg-elevated"
+      className="flex items-center gap-2 px-3 py-2 rounded-md border border-accent/50 bg-bg-elevated"
     >
       <input
         ref={nameInputRef}
@@ -633,29 +725,23 @@ function PendingCustomRow({
         className={`${LABEL_WIDTH} shrink-0 bg-bg-base border border-border-subtle rounded-md px-2 py-1 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-primary placeholder:text-text-tertiary placeholder:normal-case placeholder:tracking-normal placeholder:font-normal`}
         aria-label="Tier name"
       />
-      <input
-        type="number"
-        min={0}
-        step="0.01"
-        value={value.price}
-        onChange={(e) => onChange({ price: e.target.value })}
-        onKeyDown={onKeyDown}
-        placeholder="0"
-        className="flex-1 min-w-0 bg-bg-base border border-border-subtle rounded-md px-3 py-1.5 text-sm tabular-nums"
-        aria-label="Price"
+      <PriceTrio
+        priceInputs={value.priceInputs}
+        otherCurrency={value.otherCurrency}
+        onPriceChange={(currency, raw) =>
+          onChange({
+            priceInputs: { ...value.priceInputs, [currency]: raw },
+          })
+        }
+        onOtherCurrencyChange={(c) => {
+          const nextInputs = { ...value.priceInputs };
+          if (value.otherCurrency && value.otherCurrency !== c) {
+            delete nextInputs[value.otherCurrency];
+          }
+          onChange({ otherCurrency: c, priceInputs: nextInputs });
+        }}
       />
-      <select
-        value={value.currency}
-        onChange={(e) => onChange({ currency: e.target.value })}
-        className="w-20 shrink-0 bg-bg-base border border-border-subtle rounded-md px-2 py-1.5 text-sm"
-        aria-label="Currency"
-      >
-        {SUPPORTED_CURRENCIES.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
+      <div className="flex-1" />
       <button
         type="button"
         onClick={onCommit}

@@ -6,18 +6,19 @@ export interface LicenseTier {
   position: number;
   name: string;
   deliverables: string[];
-  price: number | null;
-  currency: string;
+  /** Map of currency code (uppercase) → price amount. Empty {} when the
+   *  tier exists but has no price set yet. v0.0.27 replaces the old
+   *  `price + currency` pair. */
+  prices: Record<string, number>;
   notes: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface LicenseTierCreate {
-  name: string;
+  name?: string;
   deliverables?: string[];
-  price?: number | null;
-  currency?: string;
+  prices?: Record<string, number>;
   notes?: string | null;
 }
 

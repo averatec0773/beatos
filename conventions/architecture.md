@@ -275,17 +275,24 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Reject endpoint | `POST /api/tokens/{token}/reject` | Race-tolerant rejection. No-op on already-terminal tokens (handles Approve/Reject race). 404 if token doesn't exist. |
 | First write tool | `packages/beatos-mcp/beatos_mcp/tools/create_list.py` | Phase 1 (`create_list`) issues token only. User clicks Approve in BeatOS Settings; handler writes list table. Phase 2 is `await_approval(token)` — tool-agnostic, returns `{token, tool_name, status, result?}`. |
 
-### v0.0.26 — License Tiers
+### v0.0.27 — Multi-currency License Tiers + Default Templates
 
 | Capability | Location | Purpose |
 |---|---|---|
-| `license_tier` table | `packages/beatos-core/beatos_core/migrations/013_license_tiers.sql` | One-to-many per track (positioned). `deliverables` stored as JSON-array TEXT; recommended tokens `mp3` / `wav` / `stem` but free strings accepted so platform adapters can map their own vocab. Backfilled from the dropped `track.license_type` + `track.price` only for rows where the user had set a non-default value. |
-| Core service | `packages/beatos-core/beatos_core/licenses/service.py` | CRUD + `reorder_tiers(track_id, ids[])` + `replace_tiers_for_track(track_id, tiers[])`. Replace path is atomic in a single connection so the track is never observed mid-replace — used by the 2PC handler. |
-| HTTP routes | `packages/beatos-http/beatos_http/routes/licenses.py` | `GET/POST /api/tracks/{id}/license_tiers`, `POST .../reorder`, `PUT/DELETE /api/license_tiers/{tier_id}`. `LicenseTierCreate` / `LicenseTierUpdate` use Pydantic `extra='forbid'`. |
-| MCP `set_license_tiers` | `packages/beatos-mcp/beatos_mcp/tools/licenses.py` + handler `packages/beatos-http/beatos_http/handlers/licenses.py` | Whole-list replace via 2PC. The tool normalizes (validates name/price/currency/deliverables and defaults `currency='CNY'`) before stashing the payload; the approve handler trusts the payload (mirrors `update_tracks` boundary). Tool count: 20 → 21. |
-| Editor UI | `apps/desktop/src/renderer/src/components/TrackEditor/LicenseTiersSection.tsx` | Per-tier card list, debounced 600 ms autosave per-tier with timer pre-cancel on delete to avoid 404s. First tier seeds `{name:"MP3", deliverables:["mp3"]}`; subsequent tiers come blank. `ChipMultiSelect` with `allowCustomAdd` for deliverables. |
+| `license_tier.prices_json` | `packages/beatos-core/beatos_core/migrations/015_license_tier_multi_currency.sql` | Replaces the old `price + currency` pair. JSON object `{"CNY": 300, "USD": 50}`; empty `{}` = tier exists but is unpriced. Backfilled from the dropped columns via `json_object(currency, price)`. Migration also clears any in-flight `set_license_tiers` tokens because their payload shape changed. |
+| `app_setting` table | `packages/beatos-core/beatos_core/migrations/014_app_setting.sql` | Generic catalog-level key/value JSON store. First consumer: `default_license_tiers` — the templates auto-applied to every renderer-created track (`stores/tracks.ts::create` + `lib/create-track-from-file.ts`). MCP `create_tracks` intentionally does NOT pull these defaults (agents typically want full control over the tier set they're importing). |
+| Core service | `packages/beatos-core/beatos_core/licenses/service.py` + `packages/beatos-core/beatos_core/app_settings/service.py` | License CRUD shape now uses `prices: dict[str, float]` (whole-replace on update, not per-key merge). `_normalize_prices` uppercases keys, rejects negatives, raises ValueError for non-dict input. App-settings is a thin upsert (`ON CONFLICT(key) DO UPDATE`). |
+| HTTP routes | `packages/beatos-http/beatos_http/routes/licenses.py` + `routes/app_settings.py` | License endpoints unchanged in shape, just propagate the new `prices` field. App-settings: `GET/PUT/DELETE /api/app_settings/{key}`; PUT body is `{"value": <json>}`. |
+| MCP `set_license_tiers` | `packages/beatos-mcp/beatos_mcp/tools/licenses.py` | Tier shape: `{name?, deliverables?, prices?: {currency: amount}, notes?}`. Old `price + currency` top-level fields are now rejected as unknown. Tool description rewrites the example to use the dict form and recommends one deliverable per tier so the renderer's preset slots fill cleanly. Tool count unchanged at 21. |
+| Editor UI | `apps/desktop/src/renderer/src/components/TrackEditor/LicenseTiersSection.tsx` + `components/Settings/DefaultLicenseTiersSection.tsx` | Three input slots per row: CNY + USD always visible, third slot is a currency picker (EUR/JPY/GBP/none). Settings page exposes the same layout for default-tier templates. |
 
-`track.license_type` (TEXT) and `track.price` (REAL) were dropped by this migration. The renderer `Track` interface no longer carries them; any code referring to them is a pre-v0.0.26 leftover and should be removed.
+### v0.0.26 — License Tiers (history)
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `license_tier` table | `packages/beatos-core/beatos_core/migrations/013_license_tiers.sql` | One-to-many per track (positioned). `deliverables` stored as JSON-array TEXT; recommended tokens `mp3` / `wav` / `stem` but free strings accepted so platform adapters can map their own vocab. Backfilled from the dropped `track.license_type` + `track.price` only for rows where the user had set a non-default value. Superseded in v0.0.27 by migration 015 which dropped `price`/`currency` columns in favour of `prices_json`. |
+
+`track.license_type` (TEXT) and `track.price` (REAL) were dropped by migration 013. The renderer `Track` interface no longer carries them; any code referring to them is a pre-v0.0.26 leftover and should be removed.
 
 ### v0.0.23 — MCP Transport Migration
 

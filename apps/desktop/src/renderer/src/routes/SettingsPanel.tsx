@@ -4,6 +4,7 @@ import { useTrackStore } from "@/stores/tracks";
 import { distinct } from "@/api/distinct";
 import { producers as producersApi } from "@/api/producers";
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
+import { DefaultLicenseTiersSection } from "@/components/Settings/DefaultLicenseTiersSection";
 
 function StorageSection(): React.JSX.Element {
   const [dbPath, setDbPath] = useState<string>("");
@@ -175,6 +176,7 @@ export function SettingsPanel(): React.JSX.Element {
           Storage location and library management.
         </p>
         <StorageSection />
+        <DefaultLicenseTiersSection />
         <ProducersSection />
         <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
         <AboutSection />

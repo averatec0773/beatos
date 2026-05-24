@@ -47,15 +47,13 @@ async def test_approve_inserts_tiers(client, db_path):
                     {
                         "name": "MP3",
                         "deliverables": ["mp3"],
-                        "price": 50.0,
-                        "currency": "CNY",
+                        "prices": {"CNY": 50.0},
                         "notes": None,
                     },
                     {
                         "name": "WAV+Stems",
                         "deliverables": ["mp3", "wav", "stem"],
-                        "price": 500.0,
-                        "currency": "USD",
+                        "prices": {"CNY": 3500.0, "USD": 500.0},
                         "notes": "exclusive",
                     },
                 ],
@@ -67,18 +65,17 @@ async def test_approve_inserts_tiers(client, db_path):
 
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            "SELECT position, name, deliverables, price, currency, notes "
+            "SELECT position, name, deliverables, prices_json, notes "
             "FROM license_tier WHERE track_id=1 ORDER BY position"
         ) as cur:
             rows = await cur.fetchall()
     assert len(rows) == 2
     assert rows[0][1] == "MP3"
     assert json.loads(rows[0][2]) == ["mp3"]
-    assert rows[0][3] == 50.0
-    assert rows[0][4] == "CNY"
+    assert json.loads(rows[0][3]) == {"CNY": 50.0}
     assert rows[1][1] == "WAV+Stems"
-    assert rows[1][4] == "USD"
-    assert rows[1][5] == "exclusive"
+    assert json.loads(rows[1][3]) == {"CNY": 3500.0, "USD": 500.0}
+    assert rows[1][4] == "exclusive"
 
 
 @pytest.mark.asyncio
@@ -88,8 +85,8 @@ async def test_approve_replaces_existing_tiers(client, db_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "INSERT INTO license_tier "
-            "(track_id, position, name, deliverables, currency, created_at, updated_at) "
-            "VALUES (1, 0, 'OldTier', '[]', 'CNY', ?, ?)",
+            "(track_id, position, name, deliverables, prices_json, created_at, updated_at) "
+            "VALUES (1, 0, 'OldTier', '[]', '{}', ?, ?)",
             (now, now),
         )
         await conn.commit()
@@ -98,7 +95,7 @@ async def test_approve_replaces_existing_tiers(client, db_path):
             "set_license_tiers",
             {
                 "track_id": 1,
-                "tiers": [{"name": "NewOnly", "deliverables": [], "currency": "CNY"}],
+                "tiers": [{"name": "NewOnly", "deliverables": [], "prices": {}}],
             },
         )
 
@@ -119,8 +116,8 @@ async def test_approve_empty_clears_all(client, db_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "INSERT INTO license_tier "
-            "(track_id, position, name, deliverables, currency, created_at, updated_at) "
-            "VALUES (1, 0, 'Old', '[]', 'CNY', ?, ?)",
+            "(track_id, position, name, deliverables, prices_json, created_at, updated_at) "
+            "VALUES (1, 0, 'Old', '[]', '{}', ?, ?)",
             (now, now),
         )
         await conn.commit()
@@ -148,7 +145,7 @@ async def test_approve_404_when_track_vanished(client, db_path):
         tok = await create_token(
             conn,
             "set_license_tiers",
-            {"track_id": 1, "tiers": [{"name": "MP3", "deliverables": [], "currency": "CNY"}]},
+            {"track_id": 1, "tiers": [{"name": "MP3", "deliverables": [], "prices": {}}]},
         )
         await conn.execute("DELETE FROM track WHERE id=1")
         await conn.commit()

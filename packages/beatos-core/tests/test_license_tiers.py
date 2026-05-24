@@ -31,7 +31,7 @@ async def test_create_then_list_round_trips():
         track.id,
         name="MP3 Lease",
         deliverables=["mp3"],
-        price=50.0,
+        prices={"CNY": 50.0, "USD": 8.0},
         notes="Up to 5000 streams",
     )
     assert tier.id > 0
@@ -39,8 +39,7 @@ async def test_create_then_list_round_trips():
     assert tier.position == 0
     assert tier.name == "MP3 Lease"
     assert tier.deliverables == ["mp3"]
-    assert tier.price == 50.0
-    assert tier.currency == "CNY"
+    assert tier.prices == {"CNY": 50.0, "USD": 8.0}
     assert tier.notes == "Up to 5000 streams"
 
     listed = await list_tiers_for_track(track.id)
@@ -75,9 +74,11 @@ async def test_create_accepts_empty_name():
 @pytest.mark.asyncio
 async def test_update_partial_only_touches_given_fields():
     track = await create_track("Beat")
-    tier = await create_tier(track.id, name="MP3", price=50.0, notes="orig")
-    updated = await update_tier(tier.id, {"price": 75.0})
-    assert updated.price == 75.0
+    tier = await create_tier(
+        track.id, name="MP3", prices={"CNY": 50.0}, notes="orig"
+    )
+    updated = await update_tier(tier.id, {"prices": {"CNY": 75.0}})
+    assert updated.prices == {"CNY": 75.0}
     assert updated.notes == "orig"
     assert updated.name == "MP3"
 
@@ -144,12 +145,17 @@ async def test_replace_tiers_is_atomic():
     new = await replace_tiers_for_track(
         track.id,
         [
-            {"name": "MP3", "deliverables": ["mp3"], "price": 50.0},
-            {"name": "WAV", "deliverables": ["mp3", "wav"], "price": 150.0},
+            {"name": "MP3", "deliverables": ["mp3"], "prices": {"CNY": 50.0}},
+            {
+                "name": "WAV",
+                "deliverables": ["mp3", "wav"],
+                "prices": {"CNY": 150.0, "USD": 25.0},
+            },
         ],
     )
     assert [t.name for t in new] == ["MP3", "WAV"]
     assert [t.position for t in new] == [0, 1]
+    assert new[1].prices == {"CNY": 150.0, "USD": 25.0}
 
 
 @pytest.mark.asyncio
@@ -208,8 +214,10 @@ async def test_update_same_deliverables_on_self_allowed():
     row as a duplicate."""
     track = await create_track("Beat")
     a = await create_tier(track.id, name="", deliverables=["mp3"])
-    updated = await update_tier(a.id, {"deliverables": ["mp3"], "price": 99.0})
-    assert updated.price == 99.0
+    updated = await update_tier(
+        a.id, {"deliverables": ["mp3"], "prices": {"CNY": 99.0}}
+    )
+    assert updated.prices == {"CNY": 99.0}
 
 
 @pytest.mark.asyncio
@@ -223,6 +231,52 @@ async def test_replace_rejects_duplicate_within_batch():
                 {"name": "B", "deliverables": ["MP3"]},
             ],
         )
+
+
+@pytest.mark.asyncio
+async def test_create_with_empty_prices():
+    """Empty `prices` map = tier exists but is unpriced (e.g. fresh row
+    the user hasn't filled yet). Must not raise."""
+    track = await create_track("Beat")
+    tier = await create_tier(track.id, deliverables=["mp3"])
+    assert tier.prices == {}
+
+
+@pytest.mark.asyncio
+async def test_prices_keys_are_uppercased():
+    """Currency codes round-trip in canonical uppercase regardless of input."""
+    track = await create_track("Beat")
+    tier = await create_tier(
+        track.id, deliverables=["mp3"], prices={"cny": 100, "usd": 15}
+    )
+    assert tier.prices == {"CNY": 100.0, "USD": 15.0}
+
+
+@pytest.mark.asyncio
+async def test_prices_rejects_negative_amount():
+    track = await create_track("Beat")
+    with pytest.raises(ValueError, match=">= 0"):
+        await create_tier(track.id, deliverables=["mp3"], prices={"CNY": -10})
+
+
+@pytest.mark.asyncio
+async def test_prices_rejects_non_dict():
+    track = await create_track("Beat")
+    with pytest.raises(ValueError, match="object mapping"):
+        await create_tier(track.id, deliverables=["mp3"], prices=[("CNY", 10)])  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_update_prices_is_whole_replace():
+    """The `prices` field is whole-replace, not per-key merge: a partial
+    update with one currency wipes the others. Renderer is expected to
+    pass the complete map every time."""
+    track = await create_track("Beat")
+    tier = await create_tier(
+        track.id, deliverables=["mp3"], prices={"CNY": 300, "USD": 50}
+    )
+    updated = await update_tier(tier.id, {"prices": {"CNY": 400}})
+    assert updated.prices == {"CNY": 400.0}
 
 
 @pytest.mark.asyncio

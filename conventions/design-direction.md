@@ -164,6 +164,18 @@ Start from Spotify's dark palette, then nudge toward BeatOS personality. **These
   - Filtered view with no matches → "No tracks match your filters"
 - Empty-state typography: H2 + 13px body + a single ghost button.
 
+### Fixed-slot rows with dashed empty state
+
+When a section has a known, finite set of slots (FILES, LICENSE TIERS,
+default-tier templates in Settings), render every slot every time —
+filled slots show a solid border, unfilled slots show a dashed border.
+Each row uses the same shape: a fixed-width left label (`w-[100px]` or
+`w-[140px]`), the editable content in the middle, an action affordance
+on the right (`+ Add file` / trash / nothing). The shared visual
+language tells the user "this slot exists by design; you just haven't
+filled it yet" — a producer-of-MP3-only doesn't see WAV as a feature
+gap, they see it as an unused option.
+
 ---
 
 ## 6. Filtering, sorting, and pickers

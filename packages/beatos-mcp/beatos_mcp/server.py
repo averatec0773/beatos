@@ -260,11 +260,16 @@ async def set_license_tiers(
             max_length=20,
             description=(
                 "Full replacement list of license tiers. Each item: "
-                "{name (1-200 chars), deliverables?: list[str] (recommended "
-                "tokens: 'mp3','wav','stem'; any string accepted), "
-                "price?: number >=0, currency?: str (default 'CNY'), "
-                "notes?: str <=2000 chars}. Passing an empty list clears all "
-                "tiers. Existing tiers are replaced wholesale."
+                "{name?: str (0-200 chars; blank = renderer derives a label "
+                "from deliverables), deliverables?: list[str] (recommended "
+                "one token per tier: 'mp3','wav','stem'; any string accepted "
+                "for adapter-specific tokens), "
+                "prices?: object mapping currency code → amount (e.g. "
+                "{\"CNY\": 300, \"USD\": 50}; supported codes: CNY, USD, EUR, "
+                "JPY, GBP; any string accepted but the renderer only displays "
+                "the five supported codes; empty {} = tier exists but is "
+                "unpriced), notes?: str <=2000 chars}. Passing an empty list "
+                "clears all tiers. Existing tiers are replaced wholesale."
             ),
         ),
     ],

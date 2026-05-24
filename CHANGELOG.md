@@ -4,6 +4,63 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.27.0] — 2026-05-24 — Multi-currency license tiers + default-tier presets
+
+A producer's pricing strategy travels with the catalog: every tier can now
+hold prices in multiple currencies at once, and new tracks pick up
+user-configured default tiers automatically.
+
+### Added
+
+- **`license_tier.prices` is now a currency-keyed map**
+  (`{"CNY": 300, "USD": 50}`) replacing the old `price + currency` pair.
+  Renderer shows three input slots per tier: CNY and USD are always
+  visible; the third slot is a currency picker (EUR / JPY / GBP / none).
+  Schema lift in migration `015_license_tier_multi_currency.sql`:
+  `prices_json TEXT NOT NULL DEFAULT '{}'` with a `json_object(currency,
+  price)` backfill, followed by drop of the old columns. The migration
+  also clears in-flight `set_license_tiers` tokens because their payload
+  shape changed.
+- **FX-converted placeholder hints** in every empty price slot. When one
+  slot has a value, the empty slots show the bare converted number in
+  gray placeholder text (e.g. `17.79`) computed from the hardcoded FX
+  snapshot — the producer sees both currencies at a glance without
+  committing to a number. No "≈" prefix because the grayed placeholder
+  color already signals "this is a hint, not committed" and the extra
+  glyph would clip 4-digit conversions in the 80 px input. Works in
+  both the per-track editor and the Settings default-tier templates.
+- **Default license tier templates in Settings.** Producers configure
+  CNY / USD / third-currency prices for MP3, WAV, STEMS, and any custom
+  tier; the template is auto-applied to every newly-created track. Empty
+  rows are skipped (no tier is auto-added for that deliverable). Existing
+  tracks are not touched when defaults change. Templates persist in the
+  new `app_setting` key/value table (migration
+  `014_app_setting.sql`) so the configuration travels with the catalog,
+  not the machine.
+- **`/api/app_settings/{key}` endpoints** — GET / PUT / DELETE for the
+  new key/value JSON store. First consumer: `default_license_tiers`.
+
+### Changed
+
+- **MCP `set_license_tiers` tool now takes `prices: dict` per tier.** Old
+  shape (`{price: 50, currency: "CNY"}`) is rejected — agents should send
+  `{prices: {"CNY": 50}}`. Tool description rewritten to reflect the new
+  shape and recommend one deliverable per tier. The 2PC payload schema
+  changed in lockstep; migration 015 clears any pending tokens so the
+  approve handler never receives a payload it can't interpret.
+- Renderer `LicenseTier` API type drops `price`/`currency`; gains
+  `prices: Record<string, number>`. The DeliverablesPicker was already
+  removed in 0.0.26.3 — preset slots and custom rows are the only paths
+  in the v0.0.27 layout.
+
+### Migration notes
+
+- Existing single-currency tiers backfill cleanly: `price + currency` →
+  `{currency: price}`.
+- Any external 2PC consumer that approved a `set_license_tiers` token
+  issued before upgrading should re-issue the call; the approve handler
+  expects the new payload shape.
+
 ## [0.0.26.3] — 2026-05-24 — FILES-style license tiers + small UX patches
 
 Bundle of four dogfood findings.

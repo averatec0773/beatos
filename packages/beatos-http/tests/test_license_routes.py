@@ -31,15 +31,18 @@ def test_create_returns_tier():
     tid = _new_track(client)
     res = client.post(
         f"/api/tracks/{tid}/license_tiers",
-        json={"name": "MP3", "deliverables": ["mp3"], "price": 50.0},
+        json={
+            "name": "MP3",
+            "deliverables": ["mp3"],
+            "prices": {"CNY": 50.0, "USD": 8.0},
+        },
     )
     assert res.status_code == 200
     body = res.json()
     assert body["track_id"] == tid
     assert body["name"] == "MP3"
     assert body["deliverables"] == ["mp3"]
-    assert body["price"] == 50.0
-    assert body["currency"] == "CNY"
+    assert body["prices"] == {"CNY": 50.0, "USD": 8.0}
 
 
 def test_create_unknown_track_400():
@@ -56,11 +59,13 @@ def test_update_partial():
     tid = _new_track(client)
     tier = client.post(
         f"/api/tracks/{tid}/license_tiers",
-        json={"name": "MP3", "price": 50.0},
+        json={"name": "MP3", "prices": {"CNY": 50.0}},
     ).json()
-    res = client.put(f"/api/license_tiers/{tier['id']}", json={"price": 75.0})
+    res = client.put(
+        f"/api/license_tiers/{tier['id']}", json={"prices": {"CNY": 75.0}}
+    )
     assert res.status_code == 200
-    assert res.json()["price"] == 75.0
+    assert res.json()["prices"] == {"CNY": 75.0}
     # name preserved
     assert res.json()["name"] == "MP3"
 

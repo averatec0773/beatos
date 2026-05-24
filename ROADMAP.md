@@ -100,14 +100,17 @@ License editor dogfood fixes: empty tier name accepted, per-currency price memor
 
 License editor redesigned to mirror the FILES section (MP3/WAV/STEMS as fixed preset slots with dashed empty state; "+ Add tier" opens inline custom-row draft). Back-arrow style upgraded. Title-column resizer click no longer collapses the column (3 px movement threshold). Mood/Producer chip rows pinned to `leading-5` so CJK + Latin glyphs align. See [CHANGELOG.md](CHANGELOG.md#00263---2026-05-24--files-style-license-tiers--small-ux-patches).
 
-#### License v2 candidates (deferred — pending dogfood signal)
+### v0.0.27.0 — SHIPPED 2026-05-24
 
-- **Multi-currency prices per tier**: schema move from `price + currency` to a `prices` JSON array so a tier can carry both `¥300` and `$50` (user-rounded after conversion). Reach for this if "the gray hint isn't enough — I want both numbers to be canonical" comes up in real use.
+Multi-currency license tiers (`price + currency` → `prices` dict) + catalog-level default tier templates auto-applied to new tracks. New `app_setting` key/value table. MCP `set_license_tiers` payload reshaped to use `prices: dict`. See [CHANGELOG.md](CHANGELOG.md#00270---2026-05-24--multi-currency-license-tiers--default-tier-presets).
+
+#### License v3 candidates (deferred — pending dogfood signal)
+
 - **FX rate refresh**: opt-in network fetch (e.g. `exchangerate.host`) with a manual refresh button, so the snapshot doesn't go stale. Only worth doing if hints feel materially wrong during dogfood.
 
 ---
 
-### v0.0.27 — CI/CD
+### v0.0.28 — CI/CD
 
 - GitHub Actions workflow: PR sanity gate — `npm run build` + `vitest`, plus `uv run pytest` for all backend packages.
 - Two parallel jobs (macOS for frontend, Ubuntu for backend); npm + uv caches.

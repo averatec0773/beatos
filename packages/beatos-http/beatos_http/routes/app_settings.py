@@ -1,0 +1,43 @@
+"""/api/app_settings — catalog-level key/value JSON store.
+
+Single-user, single-key-per-request endpoints. Schema is set by the caller
+(renderer); this layer just round-trips JSON.
+"""
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Body, Response
+
+from beatos_core.app_settings.service import (
+    delete_setting,
+    get_setting,
+    set_setting,
+)
+
+
+router = APIRouter(prefix="/api/app_settings", tags=["app-settings"])
+
+
+@router.get("/{key}")
+async def get(key: str) -> dict:
+    """Return `{key, value}` where value is the decoded JSON (or null when
+    unset). Always 200 — absence is signaled by value=null, not 404 —
+    so the renderer doesn't need separate error branches for "never set"."""
+    value = await get_setting(key)
+    return {"key": key, "value": value}
+
+
+@router.put("/{key}")
+async def put(key: str, body: dict[str, Any] = Body(...)) -> dict:
+    """Upsert. Body shape: `{"value": <json>}`. The value may be any
+    JSON-serializable shape (array, object, scalar)."""
+    value = body.get("value")
+    await set_setting(key, value)
+    return {"key": key, "value": value}
+
+
+@router.delete("/{key}", status_code=204)
+async def remove(key: str) -> Response:
+    await delete_setting(key)
+    return Response(status_code=204)

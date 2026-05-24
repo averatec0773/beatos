@@ -21,6 +21,7 @@ from beatos_core.db import resolve_db_path, run_migrations
 from beatos_core.two_phase import cleanup_terminal_tokens
 from beatos_http.routes import (
     analysis,
+    app_settings,
     assets,
     licenses,
     lists,
@@ -147,6 +148,7 @@ def create_app() -> FastAPI:
     app.include_router(sweep.router)
     app.include_router(analysis.router)
     app.include_router(producers.router)
+    app.include_router(app_settings.router)
     app.include_router(tokens.router)
 
     app.mount("/mcp", mcp_asgi_app)

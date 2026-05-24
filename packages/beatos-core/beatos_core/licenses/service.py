@@ -2,9 +2,10 @@
 
 v0.0.26 — replaces the placeholder track.license_type + track.price fields.
 A track owns 0..N tiers; each tier carries name, deliverables (JSON array
-of free string tokens), price, currency, and notes. The 2PC MCP write tool
-uses set_license_tiers (whole-list replace), but the HTTP layer also
-exposes per-tier mutation for the renderer's inline edits.
+of free string tokens), and (v0.0.27+) a `prices` map from currency code
+to amount. The 2PC MCP write tool uses set_license_tiers (whole-list
+replace), but the HTTP layer also exposes per-tier mutation for the
+renderer's inline edits.
 """
 from __future__ import annotations
 
@@ -19,11 +20,13 @@ from beatos_core.models import LicenseTier
 
 
 _SELECT_COLS = (
-    "id, track_id, position, name, deliverables, price, currency, notes, "
+    "id, track_id, position, name, deliverables, prices_json, notes, "
     "created_at, updated_at"
 )
 
-_WRITABLE_FIELDS = {"name", "deliverables", "price", "currency", "notes"}
+_WRITABLE_FIELDS = {"name", "deliverables", "prices", "notes"}
+
+_MAX_CURRENCY_CODE_LEN = 8
 
 
 def _now() -> str:
@@ -36,6 +39,31 @@ def _deliverables_key(deliverables: list[str]) -> str:
     and ['wav','mp3'] collide. Case-folded so 'MP3' and 'mp3' also
     collide (renderer lowercases custom inputs already)."""
     return json.dumps(sorted({d.lower() for d in deliverables}))
+
+
+def _normalize_prices(raw: Any) -> dict[str, float]:
+    """Validate + normalize a `prices` payload from any boundary (HTTP /
+    MCP / direct call). Returns a fresh dict with uppercase currency keys
+    and float values. Raises ValueError on any shape problem so the caller
+    can surface a 400 / agent-readable error."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError("prices must be an object mapping currency → amount")
+    out: dict[str, float] = {}
+    for code, amount in raw.items():
+        if not isinstance(code, str) or not code.strip():
+            raise ValueError("prices keys must be non-empty currency codes")
+        if len(code) > _MAX_CURRENCY_CODE_LEN:
+            raise ValueError(
+                f"prices currency code too long (>{_MAX_CURRENCY_CODE_LEN}): {code!r}"
+            )
+        if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+            raise ValueError(f"prices[{code!r}] must be a number")
+        if amount < 0:
+            raise ValueError(f"prices[{code!r}] must be >= 0")
+        out[code.upper().strip()] = float(amount)
+    return out
 
 
 async def _find_duplicate_tier(
@@ -77,17 +105,30 @@ def _row_to_tier(row: tuple) -> LicenseTier:
             deliverables = []
     except (json.JSONDecodeError, TypeError):
         deliverables = []
+    prices_raw = row[5]
+    try:
+        prices = json.loads(prices_raw) if prices_raw else {}
+        if not isinstance(prices, dict):
+            prices = {}
+        # Defensive: discard malformed entries rather than raising — old
+        # rows shouldn't exist at this point but a corrupted backup might.
+        prices = {
+            k: float(v)
+            for k, v in prices.items()
+            if isinstance(k, str) and isinstance(v, (int, float)) and not isinstance(v, bool)
+        }
+    except (json.JSONDecodeError, TypeError):
+        prices = {}
     return LicenseTier(
         id=row[0],
         track_id=row[1],
         position=row[2],
         name=row[3],
         deliverables=deliverables,
-        price=row[5],
-        currency=row[6] or "CNY",
-        notes=row[7],
-        created_at=_dt.datetime.fromisoformat(row[8]),
-        updated_at=_dt.datetime.fromisoformat(row[9]),
+        prices=prices,
+        notes=row[6],
+        created_at=_dt.datetime.fromisoformat(row[7]),
+        updated_at=_dt.datetime.fromisoformat(row[8]),
     )
 
 
@@ -136,16 +177,14 @@ async def create_tier(
     *,
     name: str = "",
     deliverables: Optional[list[str]] = None,
-    price: Optional[float] = None,
-    currency: str = "CNY",
+    prices: Optional[dict[str, float]] = None,
     notes: Optional[str] = None,
 ) -> LicenseTier:
     # name is intentionally allowed empty: the renderer auto-derives a
-    # display label from `deliverables` when name is blank, so forcing a
-    # name on insert was a UX trap (the editor row layout has no Name
-    # field by default — name lives behind the ⋮ expand).
+    # display label from `deliverables` when name is blank.
     if not isinstance(name, str):
         raise ValueError("name must be a string")
+    normalized_prices = _normalize_prices(prices)
     now = _now()
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
@@ -159,16 +198,15 @@ async def create_tier(
         position = await _next_position(conn, track_id)
         async with conn.execute(
             "INSERT INTO license_tier "
-            "(track_id, position, name, deliverables, price, currency, notes, "
+            "(track_id, position, name, deliverables, prices_json, notes, "
             " created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 track_id,
                 position,
                 name,
                 json.dumps(deliverables or []),
-                price,
-                currency,
+                json.dumps(normalized_prices),
                 notes,
                 now,
                 now,
@@ -201,11 +239,14 @@ async def update_tier(tier_id: int, updates: dict[str, Any]) -> LicenseTier:
             sets.append("deliverables = ?")
             values.append(json.dumps(value if value is not None else []))
             continue
+        if field == "prices":
+            normalized = _normalize_prices(value)
+            sets.append("prices_json = ?")
+            values.append(json.dumps(normalized))
+            continue
         if field == "name":
             if value is None:
                 raise ValueError("name must be a string")
-            # Empty / whitespace-only names are accepted — the renderer
-            # auto-derives a display label from deliverables in that case.
         sets.append(f"{field} = ?")
         values.append(value)
     sets.append("updated_at = ?")
@@ -214,8 +255,6 @@ async def update_tier(tier_id: int, updates: dict[str, Any]) -> LicenseTier:
 
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
-        # If the caller is changing deliverables, enforce per-track
-        # uniqueness against the *other* tiers (self excluded).
         if "deliverables" in updates:
             new_deliverables = updates.get("deliverables") or []
             if isinstance(new_deliverables, list):
@@ -291,6 +330,7 @@ async def replace_tiers_for_track(
         if not await _track_exists(conn, track_id):
             raise ValueError(f"Track {track_id} not found.")
         seen_keys: set[str] = set()
+        normalized_batch: list[tuple[str, list[str], dict[str, float], Optional[str]]] = []
         for tier in tiers:
             name = tier.get("name", "")
             if not isinstance(name, str):
@@ -305,21 +345,23 @@ async def replace_tiers_for_track(
                         f"Duplicate deliverables in batch: {sorted(set(deliverables))}"
                     )
                 seen_keys.add(key)
+            normalized_prices = _normalize_prices(tier.get("prices"))
+            notes = tier.get("notes")
+            normalized_batch.append((name, deliverables, normalized_prices, notes))
         await conn.execute("DELETE FROM license_tier WHERE track_id = ?", (track_id,))
-        for position, tier in enumerate(tiers):
+        for position, (name, deliverables, prices, notes) in enumerate(normalized_batch):
             await conn.execute(
                 "INSERT INTO license_tier "
-                "(track_id, position, name, deliverables, price, currency, notes, "
+                "(track_id, position, name, deliverables, prices_json, notes, "
                 " created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     track_id,
                     position,
-                    tier.get("name", ""),
-                    json.dumps(tier.get("deliverables", [])),
-                    tier.get("price"),
-                    tier.get("currency") or "CNY",
-                    tier.get("notes"),
+                    name,
+                    json.dumps(deliverables),
+                    json.dumps(prices),
+                    notes,
                     now,
                     now,
                 ),

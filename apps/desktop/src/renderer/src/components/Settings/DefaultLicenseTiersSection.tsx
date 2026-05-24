@@ -1,0 +1,447 @@
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+
+import {
+  loadDefaultLicenseTiers,
+  saveDefaultLicenseTiers,
+  type DefaultLicenseTierTemplate,
+} from "@/lib/default-license-tiers";
+import { useToastStore } from "@/stores/toast";
+import { fxConvertedString, SUPPORTED_CURRENCIES } from "@/lib/fx-rates";
+
+/**
+ * Default license tier templates applied to every newly-created track.
+ * Mirrors the per-track LicenseTiersSection layout: three fixed preset
+ * slots (MP3/WAV/STEMS) where the user types prices, plus optional custom
+ * rows. Empty slots are not persisted — they simply mean "do not auto-add
+ * this tier on new tracks."
+ */
+
+const PRESET_SLOTS = [
+  { key: "mp3", label: "MP3" },
+  { key: "wav", label: "WAV" },
+  { key: "stem", label: "STEMS" },
+] as const;
+type PresetKey = (typeof PRESET_SLOTS)[number]["key"];
+const PRESET_KEYS = new Set<string>(PRESET_SLOTS.map((p) => p.key));
+
+const FIXED_CURRENCIES = ["CNY", "USD"] as const;
+const FIXED_CURRENCY_SET = new Set<string>(FIXED_CURRENCIES);
+const OTHER_CURRENCIES = SUPPORTED_CURRENCIES.filter(
+  (c) => !FIXED_CURRENCY_SET.has(c),
+);
+
+const SAVE_DEBOUNCE_MS = 600;
+
+interface DraftRow {
+  /** Tier name. For presets this is the preset label; for customs the user
+   *  types it. Always uppercase by convention. */
+  name: string;
+  deliverable: string;
+  /** Per-currency string-form input state. */
+  priceInputs: Record<string, string>;
+  otherCurrency: string | null;
+  /** Internal id used as a React key — not persisted. */
+  uid: number;
+}
+
+function inputsToPrices(
+  inputs: Record<string, string>,
+  otherCurrency: string | null,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const code of FIXED_CURRENCIES) {
+    const v = inputs[code]?.trim() ?? "";
+    if (v === "") continue;
+    const n = Number(v);
+    if (Number.isFinite(n) && n >= 0) out[code] = n;
+  }
+  if (otherCurrency) {
+    const v = inputs[otherCurrency]?.trim() ?? "";
+    if (v !== "") {
+      const n = Number(v);
+      if (Number.isFinite(n) && n >= 0) out[otherCurrency] = n;
+    }
+  }
+  return out;
+}
+
+function templateToDraft(t: DefaultLicenseTierTemplate, uid: number): DraftRow {
+  const deliverable = (t.deliverables ?? [])[0]?.toLowerCase() ?? "";
+  const priceInputs: Record<string, string> = {};
+  for (const [code, amount] of Object.entries(t.prices ?? {})) {
+    priceInputs[code] = String(amount);
+  }
+  let other: string | null = null;
+  for (const code of Object.keys(t.prices ?? {})) {
+    if (!FIXED_CURRENCY_SET.has(code)) {
+      other = code;
+      break;
+    }
+  }
+  return {
+    name: t.name?.trim() || deliverable.toUpperCase(),
+    deliverable,
+    priceInputs,
+    otherCurrency: other,
+    uid,
+  };
+}
+
+function draftToTemplate(d: DraftRow): DefaultLicenseTierTemplate | null {
+  const prices = inputsToPrices(d.priceInputs, d.otherCurrency);
+  if (Object.keys(prices).length === 0) return null;
+  return {
+    name: d.name,
+    deliverables: [d.deliverable],
+    prices,
+  };
+}
+
+export function DefaultLicenseTiersSection(): React.JSX.Element {
+  const [presets, setPresets] = useState<Record<PresetKey, DraftRow>>(() => ({
+    mp3: { name: "MP3", deliverable: "mp3", priceInputs: {}, otherCurrency: null, uid: 1 },
+    wav: { name: "WAV", deliverable: "wav", priceInputs: {}, otherCurrency: null, uid: 2 },
+    stem: { name: "STEMS", deliverable: "stem", priceInputs: {}, otherCurrency: null, uid: 3 },
+  }));
+  const [customs, setCustoms] = useState<DraftRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const uidCounter = React.useRef(10);
+
+  useEffect(() => {
+    void (async () => {
+      const list = await loadDefaultLicenseTiers();
+      const presetMap: Record<PresetKey, DraftRow> = {
+        mp3: { name: "MP3", deliverable: "mp3", priceInputs: {}, otherCurrency: null, uid: 1 },
+        wav: { name: "WAV", deliverable: "wav", priceInputs: {}, otherCurrency: null, uid: 2 },
+        stem: { name: "STEMS", deliverable: "stem", priceInputs: {}, otherCurrency: null, uid: 3 },
+      };
+      const customList: DraftRow[] = [];
+      for (const t of list) {
+        const d = (t.deliverables ?? [])[0]?.toLowerCase() ?? "";
+        if (PRESET_KEYS.has(d)) {
+          presetMap[d as PresetKey] = templateToDraft(t, presetMap[d as PresetKey].uid);
+        } else if (d !== "") {
+          customList.push(templateToDraft(t, uidCounter.current++));
+        }
+      }
+      setPresets(presetMap);
+      setCustoms(customList);
+      setLoading(false);
+    })();
+  }, []);
+
+  const scheduleSave = useCallback(
+    (nextPresets: Record<PresetKey, DraftRow>, nextCustoms: DraftRow[]) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(async () => {
+        setSaving(true);
+        try {
+          const templates: DefaultLicenseTierTemplate[] = [];
+          for (const slot of PRESET_SLOTS) {
+            const tpl = draftToTemplate(nextPresets[slot.key]);
+            if (tpl) templates.push(tpl);
+          }
+          for (const c of nextCustoms) {
+            if (c.deliverable === "") continue;
+            const tpl = draftToTemplate(c);
+            if (tpl) templates.push(tpl);
+          }
+          await saveDefaultLicenseTiers(templates);
+          setSavedAt(new Date());
+        } catch (e) {
+          useToastStore.getState().show(
+            "error",
+            `Save defaults failed: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        } finally {
+          setSaving(false);
+        }
+      }, SAVE_DEBOUNCE_MS);
+    },
+    [],
+  );
+
+  function updatePreset(preset: PresetKey, mutator: (row: DraftRow) => DraftRow): void {
+    setPresets((prev) => {
+      const next = { ...prev, [preset]: mutator(prev[preset]) };
+      scheduleSave(next, customs);
+      return next;
+    });
+  }
+
+  function updateCustom(uid: number, mutator: (row: DraftRow) => DraftRow): void {
+    setCustoms((prev) => {
+      const next = prev.map((r) => (r.uid === uid ? mutator(r) : r));
+      scheduleSave(presets, next);
+      return next;
+    });
+  }
+
+  function addCustom(): void {
+    setCustoms((prev) => [
+      ...prev,
+      {
+        name: "",
+        deliverable: "",
+        priceInputs: {},
+        otherCurrency: null,
+        uid: uidCounter.current++,
+      },
+    ]);
+  }
+
+  function removeCustom(uid: number): void {
+    setCustoms((prev) => {
+      const next = prev.filter((r) => r.uid !== uid);
+      scheduleSave(presets, next);
+      return next;
+    });
+  }
+
+  const status = useMemo(() => {
+    if (loading) return "Loading…";
+    if (saving) return "Saving…";
+    if (savedAt) return `Saved ${savedAt.toLocaleTimeString()}`;
+    return "";
+  }, [loading, saving, savedAt]);
+
+  return (
+    <section className="mb-10">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold">Default license tiers</h2>
+        <span className="text-xs text-text-tertiary">{status}</span>
+      </div>
+      <p className="text-xs text-text-tertiary mb-3">
+        Applied to every newly-created track. Empty rows are skipped. Existing
+        tracks are not touched when you change these.
+      </p>
+
+      {loading ? (
+        <div className="text-xs text-text-tertiary py-4">Loading…</div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {PRESET_SLOTS.map((slot) => {
+            const row = presets[slot.key];
+            const filled = Object.keys(inputsToPrices(row.priceInputs, row.otherCurrency)).length > 0;
+            return (
+              <RowEditor
+                key={slot.key}
+                label={slot.label}
+                row={row}
+                emptyStyle={!filled}
+                onPriceChange={(c, v) =>
+                  updatePreset(slot.key, (r) => ({
+                    ...r,
+                    priceInputs: { ...r.priceInputs, [c]: v },
+                  }))
+                }
+                onOtherCurrencyChange={(c) =>
+                  updatePreset(slot.key, (r) => {
+                    const next = { ...r.priceInputs };
+                    if (r.otherCurrency && r.otherCurrency !== c) {
+                      delete next[r.otherCurrency];
+                    }
+                    return { ...r, otherCurrency: c, priceInputs: next };
+                  })
+                }
+              />
+            );
+          })}
+
+          {customs.map((row) => (
+            <RowEditor
+              key={row.uid}
+              row={row}
+              editableName
+              onNameChange={(name) =>
+                updateCustom(row.uid, (r) => ({
+                  ...r,
+                  name: name.toUpperCase(),
+                  deliverable: name.trim().toLowerCase(),
+                }))
+              }
+              onPriceChange={(c, v) =>
+                updateCustom(row.uid, (r) => ({
+                  ...r,
+                  priceInputs: { ...r.priceInputs, [c]: v },
+                }))
+              }
+              onOtherCurrencyChange={(c) =>
+                updateCustom(row.uid, (r) => {
+                  const next = { ...r.priceInputs };
+                  if (r.otherCurrency && r.otherCurrency !== c) {
+                    delete next[r.otherCurrency];
+                  }
+                  return { ...r, otherCurrency: c, priceInputs: next };
+                })
+              }
+              onDelete={() => removeCustom(row.uid)}
+            />
+          ))}
+
+          <button
+            type="button"
+            onClick={addCustom}
+            className="self-start inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border border-border-subtle hover:bg-bg-row-hover"
+          >
+            <Plus size={12} />
+            Add custom tier
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+const LABEL_WIDTH = "w-[100px]";
+
+interface RowEditorProps {
+  label?: string;
+  row: DraftRow;
+  emptyStyle?: boolean;
+  editableName?: boolean;
+  onNameChange?: (name: string) => void;
+  onPriceChange: (currency: string, raw: string) => void;
+  onOtherCurrencyChange: (currency: string | null) => void;
+  onDelete?: () => void;
+}
+
+/** See LicenseTiersSection — same FX-source picking rule. */
+function pickFxSource(
+  priceInputs: Record<string, string>,
+  otherCurrency: string | null,
+): [string, number] | null {
+  const order = [...FIXED_CURRENCIES, ...(otherCurrency ? [otherCurrency] : [])];
+  for (const code of order) {
+    const raw = priceInputs[code]?.trim();
+    if (!raw) continue;
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return [code, n];
+  }
+  return null;
+}
+
+function fxPlaceholderFor(
+  target: string,
+  source: [string, number] | null,
+): string {
+  if (!source) return "—";
+  const [from, amount] = source;
+  if (from === target) return "—";
+  // Bare numeric — see LicenseTiersSection for the width rationale.
+  const hint = fxConvertedString(amount, from, target);
+  return hint || "—";
+}
+
+function RowEditor({
+  label,
+  row,
+  emptyStyle = false,
+  editableName = false,
+  onNameChange,
+  onPriceChange,
+  onOtherCurrencyChange,
+  onDelete,
+}: RowEditorProps): React.JSX.Element {
+  const borderClass = emptyStyle
+    ? "border-dashed border-border-subtle"
+    : "border-border-subtle bg-bg-elevated";
+  const inputBg = emptyStyle ? "bg-transparent" : "bg-bg-base";
+  const fxSource = pickFxSource(row.priceInputs, row.otherCurrency);
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-md border ${borderClass}`}>
+      {editableName ? (
+        <input
+          type="text"
+          value={row.name}
+          onChange={(e) => onNameChange?.(e.target.value)}
+          placeholder="Tier name (e.g. MIDI)"
+          className={`${LABEL_WIDTH} shrink-0 ${inputBg} border border-border-subtle rounded-md px-2 py-1 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-primary placeholder:text-text-tertiary placeholder:normal-case placeholder:tracking-normal placeholder:font-normal`}
+          aria-label="Tier name"
+        />
+      ) : (
+        <span
+          className={`${LABEL_WIDTH} shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary truncate`}
+          title={label ?? ""}
+        >
+          {label}
+        </span>
+      )}
+
+      {FIXED_CURRENCIES.map((code) => {
+        const value = row.priceInputs[code] ?? "";
+        const placeholder = value === "" ? fxPlaceholderFor(code, fxSource) : "—";
+        return (
+          <label
+            key={code}
+            className={`inline-flex items-center min-w-0 rounded-md border border-border-subtle ${inputBg} pl-2 pr-1 focus-within:border-accent`}
+          >
+            <span className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary shrink-0">
+              {code}
+            </span>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={value}
+              onChange={(e) => onPriceChange(code, e.target.value)}
+              placeholder={placeholder}
+              className="w-20 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
+              aria-label={`${code} price`}
+            />
+          </label>
+        );
+      })}
+      <div
+        className={`inline-flex items-center min-w-0 rounded-md border border-border-subtle ${inputBg} focus-within:border-accent`}
+      >
+        <select
+          value={row.otherCurrency ?? ""}
+          onChange={(e) => onOtherCurrencyChange(e.target.value || null)}
+          className="bg-transparent pl-2 pr-1 py-1.5 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary focus:outline-none"
+          aria-label="Third currency"
+        >
+          <option value="">—</option>
+          {OTHER_CURRENCIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          value={row.otherCurrency ? (row.priceInputs[row.otherCurrency] ?? "") : ""}
+          onChange={(e) =>
+            row.otherCurrency && onPriceChange(row.otherCurrency, e.target.value)
+          }
+          disabled={!row.otherCurrency}
+          placeholder={
+            row.otherCurrency && (row.priceInputs[row.otherCurrency] ?? "") === ""
+              ? fxPlaceholderFor(row.otherCurrency, fxSource)
+              : "—"
+          }
+          className="w-20 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none disabled:opacity-50"
+          aria-label="Other currency price"
+        />
+      </div>
+      <div className="flex-1" />
+      {onDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="w-7 h-7 flex items-center justify-center rounded text-text-tertiary hover:text-danger hover:bg-bg-row-hover shrink-0"
+          aria-label="Remove default tier"
+          title="Remove"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
+    </div>
+  );
+}

@@ -41,19 +41,33 @@ async def test_emits_token_with_normalized_payload(db_path):
             {
                 "name": "MP3",
                 "deliverables": ["mp3"],
-                "price": 50,
+                "prices": {"CNY": 50},
                 "notes": "Up to 5000 streams",
             },
-            {"name": "WAV+Stems", "deliverables": ["mp3", "wav", "stem"], "price": 500},
+            {
+                "name": "WAV+Stems",
+                "deliverables": ["mp3", "wav", "stem"],
+                "prices": {"CNY": 3500, "USD": 500},
+            },
         ],
     )
     assert "token" in r and r["token"]
     p = await _payload(db_path, r["token"])
     assert p["track_id"] == 1
     assert len(p["tiers"]) == 2
-    # currency defaulted
-    assert p["tiers"][0]["currency"] == "CNY"
-    assert p["tiers"][1]["currency"] == "CNY"
+    # prices preserved as dicts; numbers normalized to float
+    assert p["tiers"][0]["prices"] == {"CNY": 50.0}
+    assert p["tiers"][1]["prices"] == {"CNY": 3500.0, "USD": 500.0}
+
+
+@pytest.mark.asyncio
+async def test_prices_keys_uppercased(db_path):
+    r = await set_license_tiers(
+        track_id=1,
+        tiers=[{"name": "MP3", "deliverables": ["mp3"], "prices": {"cny": 50, "usd": 8}}],
+    )
+    p = await _payload(db_path, r["token"])
+    assert p["tiers"][0]["prices"] == {"CNY": 50.0, "USD": 8.0}
 
 
 @pytest.mark.asyncio
@@ -81,14 +95,34 @@ async def test_accepts_empty_tier_name(db_path):
 
 @pytest.mark.asyncio
 async def test_rejects_negative_price(db_path):
-    with pytest.raises(ValueError, match="price"):
-        await set_license_tiers(track_id=1, tiers=[{"name": "X", "price": -1}])
+    with pytest.raises(ValueError, match=">= 0"):
+        await set_license_tiers(
+            track_id=1, tiers=[{"name": "X", "prices": {"CNY": -1}}]
+        )
+
+
+@pytest.mark.asyncio
+async def test_rejects_non_dict_prices(db_path):
+    with pytest.raises(ValueError, match="object mapping"):
+        await set_license_tiers(
+            track_id=1, tiers=[{"name": "X", "prices": [["CNY", 100]]}]
+        )
 
 
 @pytest.mark.asyncio
 async def test_rejects_unknown_tier_field(db_path):
     with pytest.raises(ValueError, match="unknown fields"):
         await set_license_tiers(track_id=1, tiers=[{"name": "X", "foo": "bar"}])
+
+
+@pytest.mark.asyncio
+async def test_rejects_legacy_price_currency_fields(db_path):
+    """Old shape (price + currency at top level of tier) is now rejected —
+    agents must use the `prices` dict instead. v0.0.27 boundary."""
+    with pytest.raises(ValueError, match="unknown fields"):
+        await set_license_tiers(
+            track_id=1, tiers=[{"name": "X", "price": 50, "currency": "CNY"}]
+        )
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,9 @@
 """License-tier tool: set_license_tiers (whole-list replace).
 
+v0.0.27 — multi-currency. Each tier carries `prices: {CNY: 300, USD: 50}`
+instead of the old `price + currency` pair, so an agent can quote multiple
+currencies on the same tier in a single call.
+
 Pattern follows reorder_list / update_tracks (v0.0.23-v0.0.24): the tool
 validates the payload, looks up track context for the preview, and
 hands a 2PC token back to the user. The HTTP handler applies the actual
@@ -18,8 +22,42 @@ _MAX_TIERS = 20
 _MAX_NAME = 200
 _MAX_DELIVERABLES = 20
 _MAX_DELIVERABLE_TOKEN = 64
-_MAX_CURRENCY = 8
+_MAX_CURRENCY_CODE = 8
+_MAX_PRICES = 16
 _MAX_NOTES = 2000
+
+
+def _validate_prices(prices: Any, *, index: int) -> dict[str, float]:
+    if prices is None:
+        return {}
+    if not isinstance(prices, dict):
+        raise ValueError(
+            f"tiers[{index}].prices must be an object mapping currency → amount"
+        )
+    if len(prices) > _MAX_PRICES:
+        raise ValueError(
+            f"tiers[{index}].prices has too many currencies (>{_MAX_PRICES})"
+        )
+    normalized: dict[str, float] = {}
+    for code, amount in prices.items():
+        if not isinstance(code, str) or not code.strip():
+            raise ValueError(
+                f"tiers[{index}].prices keys must be non-empty currency codes"
+            )
+        if len(code) > _MAX_CURRENCY_CODE:
+            raise ValueError(
+                f"tiers[{index}].prices currency code too long (>{_MAX_CURRENCY_CODE}): {code!r}"
+            )
+        if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+            raise ValueError(
+                f"tiers[{index}].prices[{code!r}] must be a number"
+            )
+        if amount < 0:
+            raise ValueError(
+                f"tiers[{index}].prices[{code!r}] must be >= 0"
+            )
+        normalized[code.upper().strip()] = float(amount)
+    return normalized
 
 
 def _validate_tier(tier: Any, index: int) -> None:
@@ -49,22 +87,7 @@ def _validate_tier(tier: Any, index: int) -> None:
             raise ValueError(
                 f"tiers[{index}].deliverables[{j}] too long (>{_MAX_DELIVERABLE_TOKEN} chars)"
             )
-    price = tier.get("price")
-    if price is not None:
-        if isinstance(price, bool) or not isinstance(price, (int, float)):
-            raise ValueError(f"tiers[{index}].price must be a number or null")
-        if price < 0:
-            raise ValueError(f"tiers[{index}].price must be >= 0")
-    currency = tier.get("currency")
-    if currency is not None:
-        if not isinstance(currency, str) or not currency.strip():
-            raise ValueError(
-                f"tiers[{index}].currency must be a non-empty string when present"
-            )
-        if len(currency) > _MAX_CURRENCY:
-            raise ValueError(
-                f"tiers[{index}].currency too long (>{_MAX_CURRENCY} chars)"
-            )
+    _validate_prices(tier.get("prices"), index=index)
     notes = tier.get("notes")
     if notes is not None:
         if not isinstance(notes, str):
@@ -74,8 +97,7 @@ def _validate_tier(tier: Any, index: int) -> None:
     unknown = set(tier.keys()) - {
         "name",
         "deliverables",
-        "price",
-        "currency",
+        "prices",
         "notes",
     }
     if unknown:
@@ -87,10 +109,17 @@ def _normalize_tier(tier: dict[str, Any]) -> dict[str, Any]:
     return {
         "name": tier.get("name", "") or "",
         "deliverables": list(tier.get("deliverables") or []),
-        "price": tier.get("price"),
-        "currency": tier.get("currency") or "CNY",
+        "prices": _validate_prices(tier.get("prices"), index=0),
         "notes": tier.get("notes"),
     }
+
+
+def _format_prices(prices: dict[str, float]) -> str:
+    if not prices:
+        return "no price"
+    # Stable order so the approval card preview reads the same on every render.
+    items = sorted(prices.items())
+    return " / ".join(f"{code} {amount:g}" for code, amount in items)
 
 
 def _format_tier(tier: dict[str, Any]) -> str:
@@ -101,9 +130,8 @@ def _format_tier(tier: dict[str, Any]) -> str:
     deliverables = tier.get("deliverables") or []
     if deliverables:
         parts.append("/".join(deliverables))
-    price = tier.get("price")
-    if price is not None:
-        parts.append(f"{tier.get('currency') or 'CNY'} {price}")
+    prices = tier.get("prices") or {}
+    parts.append(_format_prices(prices))
     return " · ".join(parts) if parts else "(untitled)"
 
 
@@ -111,13 +139,12 @@ async def set_license_tiers(track_id: int, tiers: list[dict[str, Any]]) -> dict:
     """Replace the full license tier list for a track. tiers may be empty
     to clear all existing tiers. Returns a 2PC token.
 
-    Idiom (v0.0.26.3): the renderer organizes tiers as one row per
+    Idiom (v0.0.27+): the renderer organizes tiers as one row per
     deliverable — MP3, WAV, STEMS are fixed preset slots plus optional
-    custom rows (e.g. MIDI). Prefer one deliverable per tier
-    (e.g. ``[{"deliverables": ["mp3"], "price": 128}, {"deliverables": ["wav"], "price": 400}]``)
-    so the result lands cleanly in the preset slots. Multi-deliverable
-    tiers (e.g. ``["wav", "stem"]``) are still accepted but display in a
-    "legacy bundle" area below the presets."""
+    custom rows (e.g. MIDI). Prices are a dict from currency code to
+    amount, supporting multiple currencies per tier (e.g.
+    ``{"prices": {"CNY": 300, "USD": 50}}``). Prefer one deliverable per
+    tier so the result lands cleanly in the preset slots."""
     if not isinstance(track_id, int) or isinstance(track_id, bool) or track_id <= 0:
         raise ValueError("track_id must be a positive integer")
     if not isinstance(tiers, list):

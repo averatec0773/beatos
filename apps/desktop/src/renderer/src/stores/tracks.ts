@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import { Track, TrackUpdate, tracks as api } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
+import { applyDefaultLicenseTiers } from "@/lib/default-license-tiers";
 import { useAssetStore } from "./assets";
 import { useTrackQueryStore } from "./track-query";
 import { useTrashStore } from "./trash";
@@ -121,6 +122,12 @@ export const useTrackStore = create<TrackState>((set, get) => ({
   async create(title) {
     const t = await api.create(title);
     set({ list: [...get().list, t] });
+    // Apply user-configured default license tiers in the background. This
+    // never blocks track creation — applyDefaultLicenseTiers swallows its
+    // own errors and logs them. Renderer-only flow; MCP create_tracks
+    // intentionally does NOT pull defaults (agents typically want full
+    // control over the tier set they're importing).
+    void applyDefaultLicenseTiers(t.id);
     void get().refreshTotal();
     return t;
   },
