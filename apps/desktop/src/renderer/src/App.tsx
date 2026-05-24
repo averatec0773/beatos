@@ -14,8 +14,7 @@ import { SidecarCrashToast } from "@/components/SidecarCrashToast";
 import { DragOverlayPreview } from "@/components/DragOverlayPreview";
 import { useTrackStore } from "@/stores/tracks";
 import { useListStore } from "@/stores/lists";
-import { useToastStore } from "@/stores/toast";
-import { lists as listsApi } from "@/api/lists";
+import { addTracksToList } from "@/lib/add-tracks-to-list";
 
 interface ActiveDrag {
   trackId: number;
@@ -102,33 +101,7 @@ export default function App(): React.JSX.Element {
           let trackIds = Array.from(state.selectedIds);
           if (trackIds.length === 0) trackIds = [sourceTrackId];
 
-          const results = await Promise.allSettled(
-            trackIds.map((tid) => listsApi.addTrack(listId, tid))
-          );
-          const failed = results.filter((r) => r.status === "rejected").length;
-          const ok = trackIds.length - failed;
-          if (failed > 0) {
-            console.warn(`[dnd] ${failed}/${trackIds.length} adds failed to list ${listId}`);
-          }
-          const listName =
-            useListStore.getState().all.find((l) => l.id === listId)?.name ?? `#${listId}`;
-          const toast = useToastStore.getState();
-          if (ok > 0 && failed === 0) {
-            toast.show(
-              "success",
-              ok === 1
-                ? `Added 1 track to "${listName}"`
-                : `Added ${ok} tracks to "${listName}"`,
-            );
-          } else if (ok > 0 && failed > 0) {
-            toast.show(
-              "warning",
-              `Added ${ok}/${trackIds.length} to "${listName}" — ${failed} failed`,
-            );
-          } else if (failed > 0) {
-            toast.show("error", `Failed to add to "${listName}"`);
-          }
-          await useListStore.getState().refresh();
+          await addTracksToList(listId, trackIds);
         }}
         onDragCancel={() => setActiveDrag(null)}
       >

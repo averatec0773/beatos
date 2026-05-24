@@ -26,11 +26,6 @@ TrackEditor refactor. See [CHANGELOG.md](CHANGELOG.md#0018---2026-05-18--tracked
 
 smoke.mjs split. See [CHANGELOG.md](CHANGELOG.md#0019---2026-05-18--smokemjs-split).
 
-### Audio engine follow-ups (deferred from v0.0.16)
-
-- **`navigator.mediaDevices.ondevicechange`** handler for headphone plug/unplug — the RAF tick already catches outright AudioContext suspends, but a silent route change without state transition is invisible. Wire up `Tone.getContext().rawContext.addEventListener("statechange", ...)` for redundancy.
-- **`window.__beatos.engine()`** gating: currently always-on in production. Either gate behind `import.meta.env.DEV` (and update smoke to drive playback through the store instead) or document it as a stable debug surface.
-
 ### v0.0.20 — SHIPPED 2026-05-18
 
 MCP read-only framework. See [CHANGELOG.md](CHANGELOG.md#0020---2026-05-18--stable-mcp-framework).

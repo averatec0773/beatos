@@ -17,6 +17,7 @@ from beatos_core.tracks.service import (
     list_tracks,
     list_distinct_values,
     list_trash,
+    purge_all_trash,
     purge_track,
     restore_track,
     update_track,
@@ -89,6 +90,12 @@ async def distinct_values(field: str) -> list[str]:
 @router.get("/trash", response_model=list[Track])
 async def list_trashed() -> list[Track]:
     return await list_trash()
+
+
+@router.post("/trash/purge_all")
+async def purge_all_trashed() -> dict[str, int]:
+    """Hard-delete every track currently in trash. Returns count purged."""
+    return {"purged": await purge_all_trash()}
 
 
 @router.get("/count")

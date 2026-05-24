@@ -10,6 +10,7 @@ from beatos_core.tracks.service import (
     trash_track,
     restore_track,
     purge_track,
+    purge_all_trash,
     list_distinct_values,
 )
 from beatos_core.lists.membership import tracks_in_list
@@ -153,3 +154,27 @@ async def test_list_distinct_values_excludes_trashed():
     producers = await list_distinct_values("producer")
     assert "Alice" in producers
     assert "Bob" not in producers
+
+
+@pytest.mark.asyncio
+async def test_purge_all_trash_deletes_only_trashed():
+    active = await create_track("Active")
+    t1 = await create_track("Trashed 1")
+    t2 = await create_track("Trashed 2")
+    await trash_track(t1.id)
+    await trash_track(t2.id)
+
+    n = await purge_all_trash()
+    assert n == 2
+
+    # active row survives, trashed rows hard-deleted
+    assert await get_track(active.id) is not None
+    assert await get_track(t1.id) is None
+    assert await get_track(t2.id) is None
+    assert await list_trash() == []
+
+
+@pytest.mark.asyncio
+async def test_purge_all_trash_returns_zero_when_empty():
+    await create_track("Active only")
+    assert await purge_all_trash() == 0

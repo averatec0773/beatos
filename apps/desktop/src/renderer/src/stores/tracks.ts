@@ -17,6 +17,7 @@ interface TrackState {
   refreshTotal(): Promise<void>;
   select(id: number | null): void;
   selectOne(id: number, mode: "replace" | "toggle" | "range"): void;
+  selectAll(): void;
   clearSelection(): void;
   create(title: string): Promise<Track>;
   update(id: number, updates: TrackUpdate): Promise<Track>;
@@ -105,6 +106,14 @@ export const useTrackStore = create<TrackState>((set, get) => ({
     const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
     set({ selectedIds: new Set(ids.slice(lo, hi + 1)) });
     // anchorId stays unchanged for range
+  },
+  selectAll() {
+    const ids = get().list.map((t) => t.id);
+    if (ids.length === 0) return;
+    set({
+      selectedIds: new Set(ids),
+      anchorId: ids[0] ?? null,
+    });
   },
   clearSelection() {
     set({ selectedIds: new Set(), anchorId: null });

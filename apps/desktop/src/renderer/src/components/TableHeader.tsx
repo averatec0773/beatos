@@ -47,7 +47,7 @@ export function TableHeader(): React.JSX.Element {
     // taking its own grid track.
     <div
       role="row"
-      className="h-9 px-4 grid items-center text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-b border-border-subtle bg-bg-base flex-shrink-0"
+      className="h-9 px-4 grid items-center text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-b border-border-subtle bg-bg-base flex-shrink-0 select-none"
       style={{ gridTemplateColumns: gridCols, columnGap: TABLE_COL_GAP, minWidth: "min-content" }}
     >
       {/* Cover-thumbnail slot — kept as an inert button so the grid track is

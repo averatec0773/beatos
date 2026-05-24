@@ -17,7 +17,7 @@ export const lists = {
   rename: (id: number, name: string) => apiPut<List>(`/api/lists/${id}`, { name }),
   remove: (id: number) => apiDelete(`/api/lists/${id}`),
   addTrack: (listId: number, trackId: number) =>
-    apiPost<void>(`/api/lists/${listId}/tracks`, { track_id: trackId }),
+    apiPost<{ added: boolean }>(`/api/lists/${listId}/tracks`, { track_id: trackId }),
   removeTrack: (listId: number, trackId: number) =>
     apiDelete(`/api/lists/${listId}/tracks/${trackId}`),
   reorder: async (ids: number[]): Promise<void> => {

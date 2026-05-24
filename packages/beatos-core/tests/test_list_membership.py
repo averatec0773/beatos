@@ -64,8 +64,10 @@ async def test_add_track_twice_is_idempotent():
     track = await create_track("T1")
     lst = await create_list(name="Trap", kind="user")
 
-    await add_track_to_list(track.id, lst.id)
-    await add_track_to_list(track.id, lst.id)  # second call must not error
+    first = await add_track_to_list(track.id, lst.id)
+    second = await add_track_to_list(track.id, lst.id)  # second call must not error
+    assert first is True  # actually inserted
+    assert second is False  # already present — caller can show "already in list"
 
     items = await tracks_in_list(lst.id)
     assert len(items) == 1

@@ -352,6 +352,17 @@ async def purge_track(track_id: int) -> None:
         await conn.commit()
 
 
+async def purge_all_trash() -> int:
+    """Permanently delete every soft-deleted track. Returns count purged."""
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        cursor = await conn.execute(
+            "DELETE FROM track WHERE deleted_at IS NOT NULL",
+        )
+        await conn.commit()
+        return cursor.rowcount
+
+
 async def list_trash() -> list[Track]:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:

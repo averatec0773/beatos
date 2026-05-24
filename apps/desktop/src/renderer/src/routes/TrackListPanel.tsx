@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -19,6 +19,9 @@ import { VirtualTrackList } from "@/components/VirtualTrackList";
 import { TableHeader } from "@/components/TableHeader";
 import { FilterChipBar } from "@/components/FilterChipBar";
 import { ImportAudioDialog } from "@/components/ImportAudioDialog";
+import { BulkActionBar, type BulkAction } from "@/components/BulkActionBar";
+import { AddToListPopover } from "@/components/AddToListPopover";
+import { tracks as tracksApi } from "@/api/tracks";
 
 export function TrackListPanel(): React.JSX.Element {
   const list = useTrackStore((s) => s.list);
@@ -27,6 +30,8 @@ export function TrackListPanel(): React.JSX.Element {
   const select = useTrackStore((s) => s.select);
   const selectedIds = useTrackStore((s) => s.selectedIds);
   const selectOne = useTrackStore((s) => s.selectOne);
+  const selectAll = useTrackStore((s) => s.selectAll);
+  const clearSelection = useTrackStore((s) => s.clearSelection);
   const remove = useTrackStore((s) => s.remove);
   const createTrack = useTrackStore((s) => s.create);
   const filterFn = useSearchStore((s) => s.filter);
@@ -42,6 +47,40 @@ export function TrackListPanel(): React.JSX.Element {
   useEffect(() => {
     refresh(listId != null ? { list_id: listId } : undefined);
   }, [refresh, listId]);
+
+  // Defensive: if the underlying list goes empty (e.g. all selected tracks
+  // were trashed via MCP, or the user emptied a list) while a multi-select
+  // is in flight, drop the selection so the BulkActionBar can't reappear
+  // with stale IDs when content returns.
+  useEffect(() => {
+    if (list.length === 0 && selectedIds.size > 0) clearSelection();
+  }, [list.length, selectedIds.size, clearSelection]);
+
+  // Cmd/Ctrl+A → select all visible rows; Esc → clear selection.
+  // Skip when the user is typing in a text field (search box, inputs in
+  // dialogs / TrackEditor, contenteditable nodes), otherwise we'd hijack
+  // browser-native select-all in those fields.
+  useEffect(() => {
+    function isTextTarget(el: EventTarget | null): boolean {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      return el.isContentEditable;
+    }
+    function onKeyDown(e: KeyboardEvent): void {
+      if (isTextTarget(e.target)) return;
+      if ((e.metaKey || e.ctrlKey) && (e.key === "a" || e.key === "A")) {
+        e.preventDefault();
+        selectAll();
+        return;
+      }
+      if (e.key === "Escape") {
+        clearSelection();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectAll, clearSelection]);
 
   const visible = useMemo(() => filterFn(list), [list, filterFn]);
 
@@ -145,6 +184,59 @@ export function TrackListPanel(): React.JSX.Element {
     // Use relatedTarget check to avoid flicker from child elements
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false);
   }
+
+  const bulkActions = useMemo<BulkAction[]>(
+    () => [
+      {
+        key: "add",
+        label: "Add to list",
+        onClick: () => {},
+        render: () => (
+          <AddToListPopover
+            trackIds={Array.from(selectedIds)}
+            excludeListId={listId}
+            onDone={clearSelection}
+          />
+        ),
+      },
+      {
+        key: "trash",
+        label: "Move to trash",
+        variant: "danger",
+        icon: <Trash2 size={14} />,
+        onClick: async () => {
+          const ids = Array.from(selectedIds);
+          if (
+            !confirm(
+              ids.length === 1
+                ? "Move 1 track to trash?"
+                : `Move ${ids.length} tracks to trash?`,
+            )
+          )
+            return;
+          for (const id of ids) {
+            try {
+              await tracksApi.remove(id);
+            } catch (e) {
+              console.warn("[bulk-trash] failed for", id, e);
+            }
+          }
+          clearSelection();
+          await refresh(listId != null ? { list_id: listId } : undefined);
+          void useTrackStore.getState().refreshTotal();
+          useToastStore
+            .getState()
+            .show(
+              "success",
+              ids.length === 1
+                ? "Moved 1 track to trash"
+                : `Moved ${ids.length} tracks to trash`,
+            );
+        },
+      },
+    ],
+    [selectedIds, listId, refresh, clearSelection],
+  );
 
   async function onAddTrack(): Promise<void> {
     // Eager creation: POST the row immediately so the editor has a real
@@ -288,6 +380,11 @@ export function TrackListPanel(): React.JSX.Element {
               </div>
             </TrackContextMenu>
           )}
+          />
+          <BulkActionBar
+            count={selectedIds.size}
+            onClear={clearSelection}
+            actions={bulkActions}
           />
         </div>
       </section>

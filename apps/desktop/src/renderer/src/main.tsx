@@ -4,9 +4,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 
-// Expose store snapshots on window for ad-hoc dev debugging from DevTools.
-// `window.__beatos.player()` / `window.__beatos.tracks()` etc. return the
-// current state object. Lazy require avoids circular deps.
+// Stable debug surface — kept in production builds on purpose.
+// `scripts/smoke/player.mjs` and `scripts/diagnose-playback.mjs` read
+// `window.__beatos.engine()` to assert playback health against the built
+// app, so this must NOT be gated behind `import.meta.env.DEV`. Also serves
+// as the ad-hoc DevTools inspection surface (`__beatos.player()` / `.tracks()`
+// / etc. return live store snapshots). Lazy require avoids circular deps.
 if (typeof window !== "undefined") {
   void (async () => {
     const { usePlayerStore } = await import("@/stores/player");

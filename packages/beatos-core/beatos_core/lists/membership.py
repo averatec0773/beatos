@@ -24,16 +24,21 @@ def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
 
 
-async def add_track_to_list(track_id: int, list_id: int) -> None:
-    """Idempotent: adding the same track twice is a no-op."""
+async def add_track_to_list(track_id: int, list_id: int) -> bool:
+    """Idempotent insert. Returns True if a row was actually added, False if
+    the track was already a member of the list (so callers can distinguish
+    "added" from "already in" — silent no-op success used to look like a
+    failure in the UI).
+    """
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
-        await conn.execute(
+        cursor = await conn.execute(
             "INSERT OR IGNORE INTO track_list (track_id, list_id, position, added_at) "
             "VALUES (?, ?, 0, ?)",
             (track_id, list_id, _now()),
         )
         await conn.commit()
+        return cursor.rowcount > 0
 
 
 async def remove_track_from_list(track_id: int, list_id: int) -> None:

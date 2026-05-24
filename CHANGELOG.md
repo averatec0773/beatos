@@ -4,6 +4,50 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.25.1] — 2026-05-23 — Bulk actions + UX patches
+
+First batch of dogfood patches on top of the `0.0.25` baseline.
+
+### Added
+
+- **`BulkActionBar`** — floating bar that surfaces when ≥2 rows are selected.
+  Mounted in the library view (Add to list / Move to trash) and Trash view
+  (Restore / Delete forever). Previously multi-select existed but had no
+  visible affordance — most users never discovered it.
+- **`AddToListPopover`** — list picker for the bulk "Add to list" action,
+  filters out the currently-open list to avoid the obvious no-op.
+- **Cmd/Ctrl+A** — select all visible rows in the library and Trash. Esc
+  clears selection. Skipped when focus is in a text field.
+- **Back arrow in TopBar** — visible on non-root routes (Editor / Settings /
+  Approvals / Trash). Uses `history.state.idx` with a NaN guard for the
+  known HashRouter quirk (remix-run/react-router#10964); falls back to `/`
+  when there is no prior entry (deep-link reload).
+- **Trash — Empty trash button** — header-level red action that hard-deletes
+  every trashed row in one round-trip via the new
+  `POST /api/tracks/trash/purge_all` endpoint (`{purged: N}` response).
+- **Trash multi-select** — shift / cmd click, range select, plus the same
+  Cmd+A / Esc bindings as the library view.
+
+### Fixed
+
+- **Drag-track-to-list "Added 1" was misleading for duplicates** —
+  `add_track_to_list` was idempotent at the SQL level (`INSERT OR IGNORE`)
+  but the caller could not tell insert from no-op. Backend now returns
+  `{added: bool}` per call; renderer toast distinguishes
+  *added* / *already in list* / *failed*. Logic centralized in
+  `lib/add-tracks-to-list.ts` so the dnd path and the new BulkActionBar
+  share one source of truth.
+- **Text-selection bleed in the table** — Cmd+A and click-drag selected the
+  text in `TrackRow` / `TableHeader` cells instead of rows. Both surfaces
+  now carry `select-none`; Cmd+A is captured at panel level and routed to
+  the row-selection action.
+
+### Internal
+
+- Defensive selection cleanup — when the underlying track list goes empty
+  (MCP-driven deletion, etc.), `selectedIds` is dropped so the BulkActionBar
+  cannot reappear with stale IDs once content returns.
+
 ## [0.0.25] — 2026-05-19 — UI/UX dogfood baseline
 
 The first dogfood-driven polish cycle. This line will absorb continuous UX fixes

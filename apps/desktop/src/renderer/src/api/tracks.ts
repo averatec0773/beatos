@@ -58,6 +58,7 @@ export const tracks = {
   remove: (id: number) => apiDelete(`/api/tracks/${id}`),
   restore: (id: number) => apiPost<Track>(`/api/tracks/${id}/restore`),
   purge: (id: number) => apiDelete(`/api/tracks/${id}?purge=true`),
+  purgeAllTrash: () => apiPost<{ purged: number }>("/api/tracks/trash/purge_all"),
   listTrash: () => apiGet<Track[]>("/api/tracks/trash"),
   count: async (): Promise<number> => {
     const res = await apiGet<{ total: number }>("/api/tracks/count");

@@ -66,9 +66,9 @@ async def reorder_endpoint(payload: ReorderPayload) -> Response:
 
 
 @router.post("/{list_id}/tracks")
-async def add_track(list_id: int, payload: AddTrackPayload) -> Response:
-    await add_track_to_list(payload.track_id, list_id)
-    return Response(status_code=200)
+async def add_track(list_id: int, payload: AddTrackPayload) -> dict:
+    added = await add_track_to_list(payload.track_id, list_id)
+    return {"added": added}
 
 
 @router.delete("/{list_id}/tracks/{track_id}", status_code=204)

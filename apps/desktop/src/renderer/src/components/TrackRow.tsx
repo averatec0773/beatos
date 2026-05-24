@@ -57,7 +57,7 @@ export function TrackRow({
         if (e.key === "Enter") onOpen();
       }}
       style={{ gridTemplateColumns: gridCols, columnGap: TABLE_COL_GAP, minWidth: "min-content" }}
-      className={`h-16 px-4 grid items-center cursor-grab active:cursor-grabbing cursor-pointer relative
+      className={`h-16 px-4 grid items-center cursor-grab active:cursor-grabbing cursor-pointer relative select-none
         ${isDragging ? "opacity-50" : ""}
         ${highlighted ? "bg-accent-soft text-text-primary" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}
     >
