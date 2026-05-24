@@ -58,6 +58,10 @@ Logs (dev): `apps/desktop/logs/main.log` (Electron + `[sidecar]`-tagged stderr) 
 
 Before any non-trivial `git commit`, invoke the [harness](.claude/skills/harness/SKILL.md) skill proactively. It reads the working tree, then for each of `CHANGELOG.md`, `conventions/`, `CLAUDE.md`, `README.md` decides whether a small targeted edit is needed. The user may also invoke it explicitly ("harness", "doc check", "check before commit", or equivalent). Skip for typo / comment / formatting / test-only diffs and for diffs that only touch `.claude/` or `memory/`. No enforcement hook, no version bump, no tag pipeline. "All unchanged" is a valid outcome.
 
+## Fix bundling
+
+Bug fixes / small tweaks from the same dogfood round = **ask first, then one commit, one patch bump**. Don't auto-ship each fix as its own `0.0.X.Y → 0.0.X.Y+1` step — pause, confirm scope with the user, then bundle.
+
 ## Subagent model
 
 When dispatching via the `Agent` tool, pick by task weight: current top-tier for judgment-heavy work (planning, deep review, hard debugging); next tier down for routine analysis. Cheap parallel lookups where stale conventions won't bite are fine on older tiers. Omitting `model` inherits the parent's.
