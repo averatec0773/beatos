@@ -35,6 +35,11 @@ DISTINCT_FIELDS = frozenset({"producer", "genre", "mood", "key_signature"})
 # Fields stored as JSON arrays in the DB.
 MULTI_VALUE_FIELDS = frozenset({"producer", "genre", "mood"})
 
+_TEXT_SEARCH_COLS = (
+    "track.title", "track.description", "track.tags",
+    "track.producer", "track.genre", "track.mood", "track.key_signature",
+)
+
 
 def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
@@ -161,6 +166,7 @@ def _build_where(
     bpm_min: int | None,
     bpm_max: int | None,
     has_audio: bool | None,
+    text: list[str] | None = None,
 ) -> tuple[str, list]:
     clauses: list[str] = []
     params: list = []
@@ -195,6 +201,12 @@ def _build_where(
             "WHERE ax3.track_id = track.id AND ax3.missing = 0 "
             "AND ax3.role IN ('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav'))"
         )
+    if text:
+        for term in text:
+            like = f"%{term}%"
+            ors = " OR ".join(f"{col} LIKE ?" for col in _TEXT_SEARCH_COLS)
+            clauses.append(f"({ors})")
+            params.extend([like] * len(_TEXT_SEARCH_COLS))
     return (" AND ".join(clauses), params)
 
 
@@ -209,6 +221,7 @@ async def list_tracks(
     bpm_min: int | None = None,
     bpm_max: int | None = None,
     has_audio: bool | None = None,
+    q: str | None = None,
 ) -> list[Track]:
     if sort_by not in SORTABLE_FIELDS:
         raise ValueError(f"sort_by must be one of {sorted(SORTABLE_FIELDS)}; got {sort_by!r}")
@@ -218,6 +231,7 @@ async def list_tracks(
     where, params = _build_where(
         producers=producers, genres=genres, moods=moods, keys=keys,
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
+        text=[t for t in q.split() if t] if q else None,
     )
     sort_expr = _sort_expr(sort_by)
     base_where = "track.deleted_at IS NULL"
