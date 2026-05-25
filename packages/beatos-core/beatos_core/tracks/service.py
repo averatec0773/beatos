@@ -35,6 +35,12 @@ DISTINCT_FIELDS = frozenset({"producer", "genre", "mood", "key_signature"})
 # Fields stored as JSON arrays in the DB.
 MULTI_VALUE_FIELDS = frozenset({"producer", "genre", "mood"})
 
+# Free-text search columns for list_tracks(q=...). Two known limitations:
+#  - SQLite LIKE is case-insensitive for ASCII only; non-ASCII text matches
+#    case-sensitively.
+#  - producer/genre/mood are JSON-array TEXT columns, so LIKE matches the raw
+#    JSON substring (e.g. "rap" matches ["trap"]). Acceptable for discovery-style
+#    free text; precise per-value matching uses the structured filters instead.
 _TEXT_SEARCH_COLS = (
     "track.title", "track.description", "track.tags",
     "track.producer", "track.genre", "track.mood", "track.key_signature",
