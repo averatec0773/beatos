@@ -114,11 +114,16 @@ Settings → Producers rebuilt as a chip cluster with an inline "+ Add producer"
 
 ---
 
-### v0.0.28 — CI/CD
+## Unscheduled — someday, no committed version
 
-- GitHub Actions workflow: PR sanity gate — `npm run build` + `vitest`, plus `uv run pytest` for all backend packages.
-- Two parallel jobs (macOS for frontend, Ubuntu for backend); npm + uv caches.
-- Defer release-build automation (electron-builder matrix + signing) to v0.1.0 when external users start receiving installers.
+Features we want but haven't tied to a release. Promote to a numbered version when a dogfood signal or product decision makes one urgent.
+
+### CI/CD (was v0.0.28)
+
+Deferred — solo project, and the agent runs `build` + tests before every commit/push, so the test-gate value is already covered locally. The one gap CI would close is **clean-checkout reproducibility** (the v0.0.20.2 / v0.0.26.2 class of "works locally, broken from a fresh clone" bug). Cheaper stopgap: run `npm ci && npm run build && npm test` + `uv sync && uv run pytest` from a fresh clone before each minor release. Revisit full CI when distributing installers to others or adding collaborators.
+
+- Planned shape (when revived): GitHub Actions PR gate — `npm run build` + `vitest` (ubuntu — typecheck/bundle/vitest don't need macOS) + `uv run pytest` for backend packages; npm + uv caches.
+- Release-build automation (electron-builder matrix + signing) belongs with the first installer distribution, not the gate.
 
 ---
 
@@ -142,7 +147,19 @@ Tie this to the Settings Producers UI work — that section is the natural place
 
 ---
 
-## v0.1.0 — First publish adapter (NetEase Cloudmusic)
+## v0.1.0 — Catalog → publish-ready
+
+Make the catalog actually usable for publishing — without browser automation yet. Three mutually reinforcing, mostly read-side features; the NetEase *automation* adapter that previously held this slot moved to v0.2.0 and will reuse the vocab-translation layer built here. Suggested build order: search → analysis → export (each independently shippable; numbering decided at implementation).
+
+- **Smart / structured search** — promote search from the client-side title/genre/tag filter (`stores/search.ts`, `SearchInput.tsx`) to the server's existing structured filters (`routes/tracks.py`), plus `bpm:>140 genre:trap producer:smoke` query syntax (parser + chip↔query round-trip). Surface as MCP `search_tracks`.
+- **essentia audio analysis** — replace/augment the librosa pipeline (`beatos_core/audio_analysis/`) with essentia (named in CHANGELOG v0.0.25), re-enable auto-analyze on import + a "Analyze all unanalyzed" batch action. Fills the mostly-empty BPM/Key fields that search and export both consume. Watch the PyInstaller sidecar bundle size.
+- **Export / metadata packs** — per-track + bulk export of the canonical catalog into platform-shaped metadata (copyable text block + CSV/JSON), using `packages/beatos-platforms/<platform>/{genre,mood}-map.json` vocab maps and license-tier `prices_json`. New `beatos_core/export/` service + HTTP route + MCP read tool `export_metadata(track_id, platform)`. This is the direct precursor to the v0.2.0 NetEase automation adapter.
+
+> Not selected for this milestone: **metadata canonicalization (#3)** stays in Unscheduled. Heads-up — dirty multi-value metadata (the `AVERATEC`/`averatec` drift) will surface in the export packs above; promote canonicalization in if it bites during the export work.
+
+---
+
+## v0.2.0 — First publish adapter (NetEase Cloudmusic)
 
 - Adapter abstraction in `packages/beatos-core/beatos_core/adapters/` (currently empty stub).
 - NetEase Cloudmusic Beat-upload adapter. Vocab maps already exist at `packages/beatos-platforms/netease/{genre,mood}-map.json` (identity stubs).
@@ -153,27 +170,27 @@ Tie this to the Settings Producers UI work — that section is the natural place
 
 ---
 
-## v0.2+ — Future (deferred until v0.1.0 ships)
+## v0.3+ — Future (deferred until the publish adapter ships)
 
-### v0.2 — Self-corpus RAG (writing assistance)
+### v0.3 — Self-corpus RAG (writing assistance)
 
 - Embed each track's user-authored `description` with a small local model (`bge-small-en` or `mxbai-embed-large` via Ollama).
 - Store vectors in `sqlite-vec` extension on the same SQLite file.
 - MCP tool `draft_description(track_id) → token`: k-NN over existing descriptions + few-shot LLM to produce a draft in the user's voice. Token approved in `/approvals` (the 2PC review is the staging gate; no separate draft column).
 
-### v0.3 — Audio-content RAG
+### v0.4 — Audio-content RAG
 
 - CLAP (LAION) embeddings per track audio.
 - `find_similar(track_id, k=5)` MCP tool: surface library tracks most like a given one.
 - `suggest_tags(track_id)` via k-NN over already-tagged tracks.
 
-### v0.4 — DAW export integration
+### v0.5 — DAW export integration
 
 - Watch FL Studio / Ableton / Logic render output directories.
 - Auto-create draft tracks on render completion.
 - Pre-fill BPM / key from project metadata when available.
 
-### v0.5+ — More adapters
+### v0.6+ — More adapters
 
 - Airbit, Tracklib, SoundCloud, Bandcamp, BeatStars.
 - Adapter contribution guide.
