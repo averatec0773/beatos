@@ -59,6 +59,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
         bpm_min: filters.bpm_min,
         bpm_max: filters.bpm_max,
         has_audio: filters.has_audio,
+        q: queryState.q || undefined,
       });
       set({ list, loading: false, selectedIds: new Set(), anchorId: null });
     } catch {

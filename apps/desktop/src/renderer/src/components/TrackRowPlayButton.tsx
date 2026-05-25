@@ -2,7 +2,6 @@ import { Play, Pause } from "lucide-react";
 
 import { usePlayerStore } from "@/stores/player";
 import { useTrackStore } from "@/stores/tracks";
-import { useSearchStore } from "@/stores/search";
 
 export function TrackRowPlayButton({
   trackId,
@@ -22,15 +21,10 @@ export function TrackRowPlayButton({
       usePlayerStore.getState().togglePlay();
       return;
     }
-    // Queue from the CURRENT visible (search-filtered) tracks, not the raw
-    // list — so prev/next behave like "previous/next visible row". Without
-    // this filter pass, clicking a row in a 1-track filtered view would
-    // queue the entire underlying list and next() would jump to a track the
-    // user can't even see.
-    const list = useTrackStore.getState().list;
-    const filterFn = useSearchStore.getState().filter;
-    const visible = filterFn(list);
-    const ids = visible.map((t) => t.id);
+    // Queue from the loaded list — which is already server-filtered (the
+    // track-query store's q + filters are forwarded to api.list). So
+    // prev/next step through exactly the rows visible to the user.
+    const ids = useTrackStore.getState().list.map((t) => t.id);
     const startIndex = ids.indexOf(trackId);
     if (startIndex < 0) return;
     usePlayerStore.getState().playFromQueue({ trackIds: ids, startIndex, origin: { kind: "all" } });

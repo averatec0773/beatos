@@ -27,6 +27,7 @@ interface TrackQueryState {
   sortBy: SortBy;
   sortDir: SortDir;
   filters: TrackFilters;
+  q: string;
   toggleSort(field: SortBy): void;
   setProducerFilter(values: string[]): void;
   setGenreFilter(values: string[]): void;
@@ -36,12 +37,14 @@ interface TrackQueryState {
   setHasAudio(value: boolean | null): void;
   removeFilter(field: keyof TrackFilters, value?: string): void;
   clearAllFilters(): void;
+  setText(value: string): void;
 }
 
 export const useTrackQueryStore = create<TrackQueryState>((set, get) => ({
   sortBy: "updated_at",
   sortDir: "desc",
   filters: { ...DEFAULT_FILTERS },
+  q: "",
 
   toggleSort(field) {
     const { sortBy, sortDir } = get();
@@ -88,6 +91,10 @@ export const useTrackQueryStore = create<TrackQueryState>((set, get) => ({
   },
 
   clearAllFilters() {
-    set({ filters: { ...DEFAULT_FILTERS } });
+    set({ filters: { ...DEFAULT_FILTERS }, q: "" });
+  },
+
+  setText(value) {
+    set({ q: value });
   },
 }));

@@ -8,7 +8,7 @@ import {
 } from "@/lib/create-track-from-file";
 
 import { useTrackStore } from "@/stores/tracks";
-import { useSearchStore } from "@/stores/search";
+import { useTrackQueryStore } from "@/stores/track-query";
 import { useListStore } from "@/stores/lists";
 import { useToastStore } from "@/stores/toast";
 import { TrackRow } from "@/components/TrackRow";
@@ -34,8 +34,7 @@ export function TrackListPanel(): React.JSX.Element {
   const clearSelection = useTrackStore((s) => s.clearSelection);
   const remove = useTrackStore((s) => s.remove);
   const createTrack = useTrackStore((s) => s.create);
-  const filterFn = useSearchStore((s) => s.filter);
-  const searchQuery = useSearchStore((s) => s.query);
+  const searchQuery = useTrackQueryStore((s) => s.q);
   const allLists = useListStore((s) => s.all);
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -82,7 +81,7 @@ export function TrackListPanel(): React.JSX.Element {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectAll, clearSelection]);
 
-  const visible = useMemo(() => filterFn(list), [list, filterFn]);
+  const visible = list;
 
   // Auto-select first row on mount when nothing is selected and list is non-empty
   useEffect(() => {
@@ -255,7 +254,7 @@ export function TrackListPanel(): React.JSX.Element {
         <EmptyState
           variant="no-search-results"
           query={searchQuery}
-          onClear={() => useSearchStore.getState().setQuery("")}
+          onClear={() => useTrackQueryStore.getState().setText("")}
         />
       );
     } else {

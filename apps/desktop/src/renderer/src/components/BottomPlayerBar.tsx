@@ -13,7 +13,6 @@ import {
 
 import { usePlayerStore } from "@/stores/player";
 import { useTrackStore } from "@/stores/tracks";
-import { useSearchStore } from "@/stores/search";
 import { useToastStore } from "@/stores/toast";
 import { audioEngine } from "@/lib/audio-engine";
 import { CoverImage } from "./CoverImage";
@@ -65,9 +64,7 @@ export function BottomPlayerBar() {
   const errored = status === "error";
 
   function getVisibleIds(): number[] {
-    const list = useTrackStore.getState().list;
-    const filterFn = useSearchStore.getState().filter;
-    return filterFn(list).map((t) => t.id);
+    return useTrackStore.getState().list.map((t) => t.id);
   }
 
   function handleTogglePlay(): void {

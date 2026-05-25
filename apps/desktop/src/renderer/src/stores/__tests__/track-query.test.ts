@@ -16,6 +16,7 @@ beforeEach(() => {
     sortBy: "updated_at",
     sortDir: "desc",
     filters: { ...DEFAULT_FILTERS },
+    q: "",
   });
 });
 
@@ -175,5 +176,18 @@ describe("clearAllFilters", () => {
     expect(s.filters).toEqual(DEFAULT_FILTERS);
     // sort is NOT reset by clearAllFilters
     expect(s.sortBy).toBe("title");
+  });
+});
+
+describe("track-query q", () => {
+  beforeEach(() => useTrackQueryStore.getState().clearAllFilters());
+  it("setText updates q", () => {
+    useTrackQueryStore.getState().setText("dark");
+    expect(useTrackQueryStore.getState().q).toBe("dark");
+  });
+  it("clearAllFilters resets q", () => {
+    useTrackQueryStore.getState().setText("dark");
+    useTrackQueryStore.getState().clearAllFilters();
+    expect(useTrackQueryStore.getState().q).toBe("");
   });
 });

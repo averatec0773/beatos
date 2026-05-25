@@ -1,32 +1,29 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 
-import { useSearchStore } from "@/stores/search";
+import { useTrackQueryStore } from "@/stores/track-query";
 
 export function SearchInput(): React.JSX.Element {
-  const query = useSearchStore((s) => s.query);
-  const setQuery = useSearchStore((s) => s.setQuery);
-  const clear = useSearchStore((s) => s.clear);
+  const q = useTrackQueryStore((s) => s.q);
+  const setText = useTrackQueryStore((s) => s.setText);
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
-      // Cmd+F (mac) or Ctrl+F (others) opens
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
         e.preventDefault();
         setOpen(true);
         setTimeout(() => inputRef.current?.focus(), 0);
       }
-      // ESC closes (when input is focused)
       if (e.key === "Escape" && open) {
-        clear();
+        setText("");
         setOpen(false);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, clear]);
+  }, [open, setText]);
 
   if (!open) {
     return (
@@ -50,15 +47,15 @@ export function SearchInput(): React.JSX.Element {
       <Search size={14} className="text-text-tertiary" />
       <input
         ref={inputRef}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        value={q}
+        onChange={(e) => setText(e.target.value)}
         placeholder="Search title / tags / genre"
         className="flex-1 bg-transparent text-sm text-text-primary focus:outline-none"
       />
       <button
         type="button"
         onClick={() => {
-          clear();
+          setText("");
           setOpen(false);
         }}
         className="text-text-tertiary hover:text-text-primary"
