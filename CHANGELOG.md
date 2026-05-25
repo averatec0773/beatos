@@ -4,6 +4,12 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [Unreleased] — v0.0.28
+
+### Added
+
+- `GET /api/tracks?query=` accepts a free-text query string parsed by `beatos_core.tracks.query_parser.parse_query`; structured tokens (`genre:trap`, `bpm:>=140`, `producer:X`) are merged with discrete params (discrete wins), and remaining free text + `tag:` tokens are forwarded as a LIKE search. Works for both the library view and `?list_id=` (list) view.
+
 ## [0.0.27.1] — 2026-05-24 — Producers section: chip cluster + add-from-Settings
 
 Settings → Producers was a row-per-name list with no add affordance — long

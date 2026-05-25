@@ -63,6 +63,7 @@ async def tracks_in_list(
     bpm_min: int | None = None,
     bpm_max: int | None = None,
     has_audio: bool | None = None,
+    q: str | None = None,
 ) -> list[Track]:
     """Return tracks in a list with optional sort + filter.
 
@@ -84,6 +85,7 @@ async def tracks_in_list(
     filter_where, filter_params = _build_where(
         producers=producers, genres=genres, moods=moods, keys=keys,
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
+        text=[t for t in q.split() if t] if q else None,
     )
 
     where_clause = "track_list.list_id = ? AND track.deleted_at IS NULL"

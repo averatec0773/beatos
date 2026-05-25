@@ -360,3 +360,29 @@ def test_get_trash_returns_only_trashed(tmp_path):
     ids = [t["id"] for t in trash_res.json()]
     assert t2["id"] in ids
     assert t1["id"] not in ids
+
+
+# ---------------------------------------------------------------------------
+# query= parameter tests
+# ---------------------------------------------------------------------------
+
+
+def test_query_param_parity_with_discrete():
+    client = TestClient(create_app())
+    a = client.post("/api/tracks", json={"title": "Midnight Drive"}).json()["id"]
+    client.put(f"/api/tracks/{a}", json={"genre": ["trap"], "bpm": 140})
+    b = client.post("/api/tracks", json={"title": "Sunrise"}).json()["id"]
+    client.put(f"/api/tracks/{b}", json={"genre": ["drill"], "bpm": 150})
+    via_query = client.get("/api/tracks", params={"query": "genre:trap bpm:>=140"}).json()
+    via_params = client.get("/api/tracks", params=[("genres", "trap"), ("bpm_min", 140)]).json()
+    assert [t["id"] for t in via_query] == [t["id"] for t in via_params]
+    assert [t["title"] for t in via_query] == ["Midnight Drive"]
+
+
+def test_query_free_text_matches_producer():
+    client = TestClient(create_app())
+    a = client.post("/api/tracks", json={"title": "Midnight Drive"}).json()["id"]
+    client.put(f"/api/tracks/{a}", json={"producer": ["AVERATEC"]})
+    client.post("/api/tracks", json={"title": "Sunrise"})
+    rows = client.get("/api/tracks", params={"query": "averatec"}).json()
+    assert [t["title"] for t in rows] == ["Midnight Drive"]
