@@ -13,6 +13,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - `GET /api/tracks/facets?field=<producer|genre|mood|key>&limit=N` — returns top values with counts for search dropdown chips.
 - `GET /api/tracks/recent-searches` and `POST /api/tracks/recent-searches` — capped (8), deduped, most-recent-first list of recent search strings, persisted via `app_setting`.
 - Renderer `facetsApi` (`api/facets.ts`) — typed client for `/api/tracks/facets`, `/api/tracks/recent-searches` (GET + POST). `ListParams.q` serialized as `?query=` in `tracks.list`.
+- Search box (`SearchInput`) full rewrite + new `SearchDropdown`: typing a completed `genre:`/`mood:`/`producer:`/`key:` token (on trailing space or Enter) absorbs it into the corresponding chip filter; remaining free text drives a debounced live filter of the main list (`bpm:`/`has:` tokens stay in the box and reach the backend parser). When the box is open, focused, and empty, a dropdown surfaces recent searches, top producer/genre/key quick-picks, and the 5 most recently added tracks. Enter pushes the query to recent searches.
 
 ## [0.0.27.1] — 2026-05-24 — Producers section: chip cluster + add-from-Settings
 
