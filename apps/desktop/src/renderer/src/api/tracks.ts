@@ -32,6 +32,7 @@ export interface ListParams {
   bpm_min?: number | null;
   bpm_max?: number | null;
   has_audio?: boolean | null;
+  q?: string;
 }
 
 export const tracks = {
@@ -47,6 +48,7 @@ export const tracks = {
     if (params.bpm_min != null) sp.set("bpm_min", String(params.bpm_min));
     if (params.bpm_max != null) sp.set("bpm_max", String(params.bpm_max));
     if (params.has_audio != null) sp.set("has_audio", String(params.has_audio));
+    if (params.q) sp.set("query", params.q);
     const qs = sp.toString();
     return apiGet<Track[]>(`/api/tracks${qs ? `?${qs}` : ""}`);
   },

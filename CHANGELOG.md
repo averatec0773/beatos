@@ -12,6 +12,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - MCP read tool `search_tracks(query, limit)` — parses the query with the same `parse_query` used by the HTTP route so agent search and in-app search return identical results. Field tokens, BPM operators, `has:audio`, quoted phrases, and bare-word LIKE search are all supported.
 - `GET /api/tracks/facets?field=<producer|genre|mood|key>&limit=N` — returns top values with counts for search dropdown chips.
 - `GET /api/tracks/recent-searches` and `POST /api/tracks/recent-searches` — capped (8), deduped, most-recent-first list of recent search strings, persisted via `app_setting`.
+- Renderer `facetsApi` (`api/facets.ts`) — typed client for `/api/tracks/facets`, `/api/tracks/recent-searches` (GET + POST). `ListParams.q` serialized as `?query=` in `tracks.list`.
 
 ## [0.0.27.1] — 2026-05-24 — Producers section: chip cluster + add-from-Settings
 
