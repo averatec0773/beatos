@@ -4,7 +4,9 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
-## [Unreleased] — v0.0.28
+## [0.0.28] — 2026-05-25 — Search overhaul
+
+Search was weak: a client-side substring filter over only the loaded rows (title/genre/tags), so producer/key/description queries returned nothing. v0.0.28 moves search server-side across the whole catalog, adds a shared query-syntax parser (used by both the HTTP route and a new MCP `search_tracks` tool, so agent search == in-app search), and gives the box an empty-state recommendation dropdown.
 
 ### Fixed
 

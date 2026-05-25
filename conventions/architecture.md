@@ -307,7 +307,7 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 
 ## MCP surface (aspirational)
 
-`packages/beatos-mcp/` ships 6 read tools as of v0.0.20, plus the first write tool as of v0.0.21. Any write tool requires two-phase commit:
+`packages/beatos-mcp/` ships 6 read tools as of v0.0.20 (7 with `search_tracks`, v0.0.28), plus the first write tool as of v0.0.21. Any write tool requires two-phase commit:
 
 | Tool | Type | Status |
 |---|---|---|
@@ -316,7 +316,7 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | `list_lists` / `list_distinct_values` | read | Shipped v0.0.20. (`list_sources` shipped v0.0.20, removed v0.0.22.) |
 | `create_list(name)` | write | Shipped v0.0.21. Two-phase: phase 1 issues token; user approves in BeatOS Settings; phase 2 (`await_approval(token)`) is read-only. |
 | `await_approval(token)` | read | Shipped v0.0.23. Unified 2PC status-check across all write tools. |
-| `search_tracks(query)` | read | Deferred → v0.0.25 (RAG). |
+| `search_tracks(query)` | read | Shipped v0.0.28. Parses the query via `beatos_core.tracks.query_parser.parse_query` — the SAME parser the HTTP `GET /api/tracks?query=` route uses, so agent search and in-app search return identical results. |
 | `list_platforms()` | read | Once adapters exist. |
 | `inject_to_platform(track_id, platform)` | write | Returns `confirm_token`; agent must call `confirm_inject(token)` separately. |
 | `suggest_tags(track_id)` / `find_similar(track_id)` | read | v0.2 / v0.3 (audio + text RAG). |

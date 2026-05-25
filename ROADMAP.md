@@ -114,14 +114,9 @@ Settings → Producers rebuilt as a chip cluster with an inline "+ Add producer"
 
 ---
 
-### v0.0.28 — Search overhaul
+### v0.0.28 — SHIPPED 2026-05-25
 
-Current search is too weak (confirmed in dogfood): `stores/search.ts` does a client-side substring `.filter()` over only the already-loaded rows, matching only title/genre/tags — so producer/key/BPM/description queries return nothing, and matches in unloaded rows are missed. `SearchInput.tsx` is a bare text box with no dropdown.
-
-- **Server-side search** — hit the existing structured filters in `routes/tracks.py` so the whole catalog is searched, not just loaded rows. Broaden matched fields to title + producer + genre + mood + tags + key + BPM + description.
-- **Query syntax** — `bpm:>140 genre:trap producer:smoke` parser with chip↔query round-trip.
-- **Empty-input recommendations / preselect** — when the box is focused with no query, show a dropdown: recent searches + quick-pick chips for top producers / genres / keys + recently added tracks. (Dogfood ask — the box currently shows nothing until you type.)
-- **Live results dropdown** — show matches as you type; surface as MCP `search_tracks` (long-deferred read tool).
+Search overhaul: server-side full-catalog search, shared `beatos_core.tracks.query_parser` (HTTP `?query=` + MCP `search_tracks` → agent==human), `field:value` syntax with chip absorption, empty-state dropdown (recent searches / top facet chips / recently added). See [CHANGELOG.md](CHANGELOG.md#0028---2026-05-25--search-overhaul).
 
 ---
 
