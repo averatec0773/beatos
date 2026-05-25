@@ -386,3 +386,40 @@ def test_query_free_text_matches_producer():
     client.post("/api/tracks", json={"title": "Sunrise"})
     rows = client.get("/api/tracks", params={"query": "averatec"}).json()
     assert [t["title"] for t in rows] == ["Midnight Drive"]
+
+
+# ---------------------------------------------------------------------------
+# Facets + recent-searches route tests
+# ---------------------------------------------------------------------------
+
+
+def test_facets_returns_counts():
+    client = TestClient(create_app())
+    a = client.post("/api/tracks", json={"title": "A"}).json()["id"]
+    client.put(f"/api/tracks/{a}", json={"genre": ["trap"]})
+    b = client.post("/api/tracks", json={"title": "B"}).json()["id"]
+    client.put(f"/api/tracks/{b}", json={"genre": ["trap"]})
+    res = client.get("/api/tracks/facets", params={"field": "genre", "limit": 5}).json()
+    assert res["items"][0] == {"value": "trap", "count": 2}
+
+
+def test_facets_bad_field_400():
+    client = TestClient(create_app())
+    assert client.get("/api/tracks/facets", params={"field": "nope"}).status_code == 400
+
+
+def test_recent_searches_roundtrip_dedupe_and_cap():
+    client = TestClient(create_app())
+    client.post("/api/tracks/recent-searches", json={"query": "genre:trap"})
+    client.post("/api/tracks/recent-searches", json={"query": "bpm:>140"})
+    client.post("/api/tracks/recent-searches", json={"query": "genre:trap"})  # dedupe -> front
+    items = client.get("/api/tracks/recent-searches").json()["items"]
+    assert items[0] == "genre:trap"
+    assert items.count("genre:trap") == 1
+    assert items == ["genre:trap", "bpm:>140"]
+
+
+def test_recent_searches_empty_query_ignored():
+    client = TestClient(create_app())
+    client.post("/api/tracks/recent-searches", json={"query": "  "})
+    assert client.get("/api/tracks/recent-searches").json()["items"] == []

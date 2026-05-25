@@ -17,14 +17,19 @@ from beatos_core.tracks.service import (
     get_track,
     list_tracks,
     list_distinct_values,
+    list_top_values,
     list_trash,
     purge_all_trash,
     purge_track,
     restore_track,
     update_track,
 )
+from beatos_core.app_settings.service import get_setting, set_setting
 
 router = APIRouter(prefix="/api/tracks", tags=["tracks"])
+
+_RECENT_KEY = "recent_searches"
+_RECENT_CAP = 8
 
 
 @router.post("", response_model=Track)
@@ -121,6 +126,34 @@ async def purge_all_trashed() -> dict[str, int]:
 async def get_track_count() -> dict[str, int]:
     """Total count of non-trashed tracks. Used by the sidebar All Beats badge."""
     return {"total": await count_tracks()}
+
+
+@router.get("/facets")
+async def facets(field: str = Query(...), limit: int = Query(default=8)) -> dict:
+    try:
+        return {"items": await list_top_values(field, limit)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/recent-searches")
+async def get_recent_searches() -> dict:
+    items = await get_setting(_RECENT_KEY)
+    return {"items": items if isinstance(items, list) else []}
+
+
+@router.post("/recent-searches")
+async def add_recent_search(payload: dict) -> dict:
+    q = (payload.get("query") or "").strip()
+    if not q:
+        items = await get_setting(_RECENT_KEY)
+        return {"items": items if isinstance(items, list) else []}
+    items = await get_setting(_RECENT_KEY)
+    items = items if isinstance(items, list) else []
+    items = [q] + [x for x in items if x != q]
+    items = items[:_RECENT_CAP]
+    await set_setting(_RECENT_KEY, items)
+    return {"items": items}
 
 
 @router.get("/{track_id}", response_model=Track)

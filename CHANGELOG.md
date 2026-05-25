@@ -9,6 +9,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 ### Added
 
 - `GET /api/tracks?query=` accepts a free-text query string parsed by `beatos_core.tracks.query_parser.parse_query`; structured tokens (`genre:trap`, `bpm:>=140`, `producer:X`) are merged with discrete params (discrete wins), and remaining free text + `tag:` tokens are forwarded as a LIKE search. Works for both the library view and `?list_id=` (list) view.
+- `GET /api/tracks/facets?field=<producer|genre|mood|key>&limit=N` — returns top values with counts for search dropdown chips.
+- `GET /api/tracks/recent-searches` and `POST /api/tracks/recent-searches` — capped (8), deduped, most-recent-first list of recent search strings, persisted via `app_setting`.
 
 ## [0.0.27.1] — 2026-05-24 — Producers section: chip cluster + add-from-Settings
 
