@@ -118,4 +118,34 @@ describe("SearchInput", () => {
     await user.click(recentBtn);
     expect(useTrackQueryStore.getState().q).toBe("dark trap 808");
   });
+
+  it("pending debounce does not clobber an explicit recent-search pick", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
+    renderInput();
+
+    // Open search box.
+    await user.click(screen.getByLabelText(/Search/i));
+    const input = screen.getByPlaceholderText(/Search title/i) as HTMLInputElement;
+
+    // Type some text — schedules a debounced setText("stale") after 250 ms.
+    await user.type(input, "stale");
+
+    // Clear the box — schedules a debounced setText("") after 250 ms.
+    // The timer from "stale" is superseded, but there is now a pending timer
+    // for the empty string. We do NOT advance timers yet so both the "stale"
+    // (cancelled) and the empty-string debounce are still pending.
+    await user.clear(input);
+
+    // The dropdown should now be visible (box is empty + focused).
+    const recentBtn = await screen.findByText("dark trap 808");
+
+    // Click the recent search item — this is the explicit pick.
+    await user.click(recentBtn);
+
+    // Advance past the debounce window. Without the fix the pending
+    // setText("") would fire here and clobber the picked value.
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(useTrackQueryStore.getState().q).toBe("dark trap 808");
+  });
 });

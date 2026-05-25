@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased] — v0.0.28
 
+### Fixed
+
+- `SearchInput`: a pending debounce timer could clobber an explicit dropdown pick (recent search or facet chip) if the user typed then quickly picked within the 250 ms window. Pending timer is now cancelled at the top of `onPickQuery` and `onPickChip`.
+
 ### Added
 
 - `GET /api/tracks?query=` accepts a free-text query string parsed by `beatos_core.tracks.query_parser.parse_query`; structured tokens (`genre:trap`, `bpm:>=140`, `producer:X`) are merged with discrete params (discrete wins), and remaining free text + `tag:` tokens are forwarded as a LIKE search. Works for both the library view and `?list_id=` (list) view.

@@ -218,12 +218,20 @@ export function SearchInput(): React.JSX.Element {
           topKeys={topKeys}
           recentlyAdded={recentlyAdded}
           onPickQuery={(query) => {
+            if (debounceRef.current != null) {
+              window.clearTimeout(debounceRef.current);
+              debounceRef.current = null;
+            }
             setBox(query);
             setText(query);
             setFocused(false);
             inputRef.current?.focus();
           }}
           onPickChip={(field, value) => {
+            if (debounceRef.current != null) {
+              window.clearTimeout(debounceRef.current);
+              debounceRef.current = null;
+            }
             appendChip(field, value);
             setFocused(false);
           }}
