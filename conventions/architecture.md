@@ -57,7 +57,7 @@ packages/beatos-core/        ← business logic
     migrations/              ← versioned .sql files (append-only)
     models/                  ← Pydantic models (one file per entity)
     library/                 ← library lifecycle service
-    tracks/                  ← track CRUD + queries
+    tracks/                  ← track CRUD + queries; query_parser.py = pure FilterSpec parser (shared by HTTP route + MCP tool, no IO)
     assets/                  ← reference / managed mode, relocate
     lists/                   ← user-list CRUD + membership
     audio_analysis/          ← v0.0.13 librosa BPM + Key pipeline
