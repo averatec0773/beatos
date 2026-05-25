@@ -114,11 +114,22 @@ Settings → Producers rebuilt as a chip cluster with an inline "+ Add producer"
 
 ---
 
+### v0.0.28 — Search overhaul
+
+Current search is too weak (confirmed in dogfood): `stores/search.ts` does a client-side substring `.filter()` over only the already-loaded rows, matching only title/genre/tags — so producer/key/BPM/description queries return nothing, and matches in unloaded rows are missed. `SearchInput.tsx` is a bare text box with no dropdown.
+
+- **Server-side search** — hit the existing structured filters in `routes/tracks.py` so the whole catalog is searched, not just loaded rows. Broaden matched fields to title + producer + genre + mood + tags + key + BPM + description.
+- **Query syntax** — `bpm:>140 genre:trap producer:smoke` parser with chip↔query round-trip.
+- **Empty-input recommendations / preselect** — when the box is focused with no query, show a dropdown: recent searches + quick-pick chips for top producers / genres / keys + recently added tracks. (Dogfood ask — the box currently shows nothing until you type.)
+- **Live results dropdown** — show matches as you type; surface as MCP `search_tracks` (long-deferred read tool).
+
+---
+
 ## Unscheduled — someday, no committed version
 
 Features we want but haven't tied to a release. Promote to a numbered version when a dogfood signal or product decision makes one urgent.
 
-### CI/CD (was v0.0.28)
+### CI/CD (deferred)
 
 Deferred — solo project, and the agent runs `build` + tests before every commit/push, so the test-gate value is already covered locally. The one gap CI would close is **clean-checkout reproducibility** (the v0.0.20.2 / v0.0.26.2 class of "works locally, broken from a fresh clone" bug). Cheaper stopgap: run `npm ci && npm run build && npm test` + `uv sync && uv run pytest` from a fresh clone before each minor release. Revisit full CI when distributing installers to others or adding collaborators.
 
@@ -140,18 +151,10 @@ Tie this to the Settings Producers UI work — that section is the natural place
 
 ---
 
-### Search upgrade (candidate, unscheduled)
-
-- Smart query syntax: `bpm:>140 genre:trap producer:smoke`
-- `/api/tracks` already has filter primitives; need parser + chip↔query round-trip.
-
----
-
 ## v0.1.0 — Catalog → publish-ready
 
-Make the catalog actually usable for publishing — without browser automation yet. Three mutually reinforcing, mostly read-side features; the NetEase *automation* adapter that previously held this slot moved to v0.2.0 and will reuse the vocab-translation layer built here. Suggested build order: search → analysis → export (each independently shippable; numbering decided at implementation).
+Make the catalog actually usable for publishing — without browser automation yet. Two mutually reinforcing, mostly read-side features; the NetEase *automation* adapter that previously held this slot moved to v0.2.0 and will reuse the vocab-translation layer built here. (Search was pulled forward to its own v0.0.28.) Suggested build order: analysis → export (each independently shippable; numbering decided at implementation).
 
-- **Smart / structured search** — promote search from the client-side title/genre/tag filter (`stores/search.ts`, `SearchInput.tsx`) to the server's existing structured filters (`routes/tracks.py`), plus `bpm:>140 genre:trap producer:smoke` query syntax (parser + chip↔query round-trip). Surface as MCP `search_tracks`.
 - **essentia audio analysis** — replace/augment the librosa pipeline (`beatos_core/audio_analysis/`) with essentia (named in CHANGELOG v0.0.25), re-enable auto-analyze on import + a "Analyze all unanalyzed" batch action. Fills the mostly-empty BPM/Key fields that search and export both consume. Watch the PyInstaller sidecar bundle size.
 - **Export / metadata packs** — per-track + bulk export of the canonical catalog into platform-shaped metadata (copyable text block + CSV/JSON), using `packages/beatos-platforms/<platform>/{genre,mood}-map.json` vocab maps and license-tier `prices_json`. New `beatos_core/export/` service + HTTP route + MCP read tool `export_metadata(track_id, platform)`. This is the direct precursor to the v0.2.0 NetEase automation adapter.
 
