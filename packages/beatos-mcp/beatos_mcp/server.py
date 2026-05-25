@@ -29,6 +29,7 @@ from beatos_mcp.tools.list_curation import (
     update_list as _update_list_impl,
 )
 from beatos_mcp.tools.distinct import list_distinct_values as _list_distinct_impl
+from beatos_mcp.tools.search import search_tracks as _search_tracks_impl
 from beatos_mcp.tools.licenses import set_license_tiers as _set_license_tiers_impl
 from beatos_mcp.tools.lifecycle import (
     purge_tracks as _purge_tracks_impl,
@@ -117,6 +118,16 @@ async def list_distinct_values(
     """Enumerate distinct values + counts for one of producer/genre/mood/key.
     Call this before filtering list_tracks so you use the user's actual spelling."""
     return await _list_distinct_impl(field)
+
+
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def search_tracks(
+    query: Annotated[str, Field(description="Search string. Supports field tokens (genre:, mood:, producer:, key:, tag:), bpm:>140 / bpm:140-160, has:audio, quoted \"two words\", and bare words matched across title/description/producer/genre/mood/key.")],
+    limit: Annotated[int | None, Field(ge=1, le=500, description="Default 50, max 500.")] = None,
+) -> dict:
+    """Search tracks with the same query syntax humans use in the BeatOS search box.
+    Returns identical results to the in-app search. Returns {items, total, returned, limit, offset, hint?}."""
+    return await _search_tracks_impl(query=query, limit=limit if limit is not None else 50)
 
 
 # --- Write tools ---

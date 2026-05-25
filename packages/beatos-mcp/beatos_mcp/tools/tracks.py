@@ -103,6 +103,7 @@ def _build_filter_clauses(
     bpm_min: float | None,
     bpm_max: float | None,
     has_audio: bool | None,
+    text: list[str] | None = None,
 ) -> tuple[list[str], list]:
     clauses: list[str] = ["track.deleted_at IS NULL"]
     params: list = []
@@ -133,6 +134,13 @@ def _build_filter_clauses(
             "AND ax.missing=0 AND ax.role IN "
             "('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav'))"
         )
+    if text:
+        cols = ("track.title", "track.description", "track.tags",
+                "track.producer", "track.genre", "track.mood", "track.key_signature")
+        for term in text:
+            ors = " OR ".join(f"{c} LIKE ?" for c in cols)
+            clauses.append(f"({ors})")
+            params.extend([f"%{term}%"] * len(cols))
     return clauses, params
 
 
@@ -146,6 +154,7 @@ async def list_tracks(
     bpm_min: float | None = None,
     bpm_max: float | None = None,
     has_audio: bool | None = None,
+    text: list[str] | None = None,
     sort_by: str = "created_at",
     sort_dir: str = "desc",
     limit: int = DEFAULT_LIMIT,
@@ -161,7 +170,7 @@ async def list_tracks(
 
     clauses, params = _build_filter_clauses(
         producers=producers, genres=genres, moods=moods, keys=keys,
-        bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
+        bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio, text=text,
     )
 
     join = ""
