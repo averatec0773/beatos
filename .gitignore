@@ -80,3 +80,6 @@ apps/desktop/logs/*
 
 # Note: uv.lock and package-lock.json are intentionally committed
 #   (BeatOS is an application, not a library — lockfiles must be reproducible)
+
+# superpowers brainstorming companion
+.superpowers/
