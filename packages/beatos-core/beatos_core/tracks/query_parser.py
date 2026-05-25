@@ -38,7 +38,11 @@ _BPM_OP = re.compile(r"^(>=|<=|>|<)(\d+)$")
 def _apply_bpm(spec: FilterSpec, value: str) -> None:
     m = _BPM_RANGE.match(value)
     if m:
-        spec.bpm_min, spec.bpm_max = int(m.group(1)), int(m.group(2))
+        lo, hi = int(m.group(1)), int(m.group(2))
+        if lo > hi:
+            spec.text.append(f"bpm:{value}")
+            return
+        spec.bpm_min, spec.bpm_max = lo, hi
         return
     m = _BPM_OP.match(value)
     if m:

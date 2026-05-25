@@ -55,3 +55,17 @@ def test_mixed_query():
     assert spec.bpm_min == 141
     assert spec.producers == ["young chop"]
     assert spec.text == ["dark"]
+
+
+def test_inverted_bpm_range_falls_back_to_text():
+    assert parse_query("bpm:200-100").text == ["bpm:200-100"]
+    assert parse_query("bpm:200-100").bpm_min is None
+
+
+def test_bpm_empty_value_falls_back_to_text():
+    assert parse_query("bpm:").text == ["bpm:"]
+
+
+def test_has_non_audio_falls_back_to_text():
+    assert parse_query("has:video").text == ["has:video"]
+    assert parse_query("has:video").has_audio is None
