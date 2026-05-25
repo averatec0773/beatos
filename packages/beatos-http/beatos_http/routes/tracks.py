@@ -52,20 +52,20 @@ async def list_all(
     query: str | None = Query(default=None),
 ) -> list[Track]:
     try:
-        q_text: str | None = None
+        q_terms: list[str] | None = None
         if query:
             spec = parse_query(query)
-            producers = producers or spec.producers
-            genres = genres or spec.genres
-            moods = moods or spec.moods
-            keys = keys or spec.keys
+            producers = list(dict.fromkeys([*producers, *spec.producers]))
+            genres = list(dict.fromkeys([*genres, *spec.genres]))
+            moods = list(dict.fromkeys([*moods, *spec.moods]))
+            keys = list(dict.fromkeys([*keys, *spec.keys]))
             if bpm_min is None:
                 bpm_min = spec.bpm_min
             if bpm_max is None:
                 bpm_max = spec.bpm_max
             if has_audio is None:
                 has_audio = spec.has_audio
-            q_text = " ".join(spec.text + spec.tags) or None
+            q_terms = (spec.text + spec.tags) or None
 
         if list_id is not None:
             # When sort_by is absent, tracks_in_list defaults to position order.
@@ -81,7 +81,7 @@ async def list_all(
                 bpm_min=bpm_min,
                 bpm_max=bpm_max,
                 has_audio=has_audio,
-                q=q_text,
+                text=q_terms,
             )
 
         # For the library view, default to updated_at DESC when not specified.
@@ -97,7 +97,7 @@ async def list_all(
             bpm_min=bpm_min,
             bpm_max=bpm_max,
             has_audio=has_audio,
-            q=q_text,
+            text=q_terms,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

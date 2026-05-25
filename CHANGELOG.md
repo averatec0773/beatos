@@ -11,6 +11,8 @@ Search was weak: a client-side substring filter over only the loaded rows (title
 ### Fixed
 
 - `SearchInput`: a pending debounce timer could clobber an explicit dropdown pick (recent search or facet chip) if the user typed then quickly picked within the 250 ms window. Pending timer is now cancelled at the top of `onPickQuery` and `onPickChip`.
+- `GET /api/tracks?query=`: quoted phrases (e.g. `"young chop"`) were being re-split on whitespace before reaching SQLite LIKE, so `"young chop"` matched tracks with `young` OR `chop` anywhere instead of the contiguous phrase. The HTTP route now passes the pre-parsed term list directly to `list_tracks`/`tracks_in_list`, matching exactly what the MCP `search_tracks` tool does (human == agent guarantee).
+- `GET /api/tracks?query=&genres=`: discrete query params and parsed structured tokens were merged with `or` (discrete silently dropped parsed values when non-empty). Now unioned with order-preserving dedup, so `?genres=trap&query=genre:drill` returns both tracks.
 
 ### Added
 

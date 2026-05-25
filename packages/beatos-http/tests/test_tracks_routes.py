@@ -423,3 +423,25 @@ def test_recent_searches_empty_query_ignored(tmp_path):
     client = TestClient(create_app())
     client.post("/api/tracks/recent-searches", json={"query": "  "})
     assert client.get("/api/tracks/recent-searches").json()["items"] == []
+
+
+def test_query_quoted_phrase_is_single_term(tmp_path):
+    client = TestClient(create_app())
+    a = client.post("/api/tracks", json={"title": "A"}).json()["id"]
+    client.put(f"/api/tracks/{a}", json={"producer": ["young chop"]})
+    b = client.post("/api/tracks", json={"title": "B"}).json()["id"]
+    client.put(f"/api/tracks/{b}", json={"producer": ["young"], "description": "chop suey"})
+    # quoted phrase must match only the contiguous "young chop", not young AND chop separately
+    rows = client.get("/api/tracks", params={"query": '"young chop"'}).json()
+    assert [t["title"] for t in rows] == ["A"]
+
+
+def test_query_unions_with_discrete_filter(tmp_path):
+    client = TestClient(create_app())
+    a = client.post("/api/tracks", json={"title": "A"}).json()["id"]
+    client.put(f"/api/tracks/{a}", json={"genre": ["trap"]})
+    b = client.post("/api/tracks", json={"title": "B"}).json()["id"]
+    client.put(f"/api/tracks/{b}", json={"genre": ["drill"]})
+    # discrete genres=trap UNION query genre:drill -> both returned
+    rows = client.get("/api/tracks", params=[("genres", "trap"), ("query", "genre:drill")]).json()
+    assert sorted(t["title"] for t in rows) == ["A", "B"]

@@ -228,6 +228,7 @@ async def list_tracks(
     bpm_max: int | None = None,
     has_audio: bool | None = None,
     q: str | None = None,
+    text: list[str] | None = None,
 ) -> list[Track]:
     if sort_by not in SORTABLE_FIELDS:
         raise ValueError(f"sort_by must be one of {sorted(SORTABLE_FIELDS)}; got {sort_by!r}")
@@ -237,7 +238,7 @@ async def list_tracks(
     where, params = _build_where(
         producers=producers, genres=genres, moods=moods, keys=keys,
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
-        text=[t for t in q.split() if t] if q else None,
+        text=text if text is not None else ([t for t in q.split() if t] if q else None),
     )
     sort_expr = _sort_expr(sort_by)
     base_where = "track.deleted_at IS NULL"
