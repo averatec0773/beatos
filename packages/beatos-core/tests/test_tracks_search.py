@@ -89,3 +89,13 @@ async def test_top_values_orders_by_count_desc():
     rows = await list_top_values("genre", limit=10)
     assert rows[0] == {"value": "trap", "count": 2}
     assert {"value": "drill", "count": 1} in rows
+
+
+@pytest.mark.asyncio
+async def test_top_values_tie_break_alphabetical():
+    from beatos_core.tracks.service import list_top_values
+    t1 = await create_track("A"); await update_track(t1.id, {"genre": ["drill"]})
+    t2 = await create_track("B"); await update_track(t2.id, {"genre": ["afro"]})
+    rows = await list_top_values("genre", limit=10)
+    # equal counts (1 each) -> alphabetical: afro before drill
+    assert [r["value"] for r in rows] == ["afro", "drill"]
