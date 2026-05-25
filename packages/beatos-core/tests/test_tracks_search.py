@@ -78,3 +78,14 @@ async def test_q_combined_with_genre_match(seeded_tracks):
 async def test_q_combined_with_genre_no_match(seeded_tracks):
     rows = await list_tracks(q="beat", genres=["drill"])
     assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_top_values_orders_by_count_desc():
+    from beatos_core.tracks.service import list_top_values
+    t1 = await create_track("A"); await update_track(t1.id, {"genre": ["trap"]})
+    t2 = await create_track("B"); await update_track(t2.id, {"genre": ["drill"]})
+    t3 = await create_track("C"); await update_track(t3.id, {"genre": ["trap"]})
+    rows = await list_top_values("genre", limit=10)
+    assert rows[0] == {"value": "trap", "count": 2}
+    assert {"value": "drill", "count": 1} in rows

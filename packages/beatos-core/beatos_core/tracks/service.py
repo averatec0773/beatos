@@ -275,6 +275,39 @@ async def list_distinct_values(field: str) -> list[str]:
     return [r[0] for r in rows]
 
 
+_TOP_FIELD_MAP = {
+    "producer": ("producer", True),
+    "genre": ("genre", True),
+    "mood": ("mood", True),
+    "key": ("key_signature", False),
+}
+
+
+async def list_top_values(field: str, limit: int = 8) -> list[dict]:
+    if field not in _TOP_FIELD_MAP:
+        raise ValueError(f"field must be one of {sorted(_TOP_FIELD_MAP)}; got {field!r}")
+    column, is_json = _TOP_FIELD_MAP[field]
+    limit = max(1, min(int(limit), 50))
+    if is_json:
+        sql = (
+            f"SELECT je.value, COUNT(*) AS c "
+            f"FROM track, json_each(track.{column}) je "
+            f"WHERE track.{column} IS NOT NULL AND track.deleted_at IS NULL "
+            f"GROUP BY je.value ORDER BY c DESC, je.value ASC LIMIT ?"
+        )
+    else:
+        sql = (
+            f"SELECT {column}, COUNT(*) AS c FROM track "
+            f"WHERE {column} IS NOT NULL AND deleted_at IS NULL "
+            f"GROUP BY {column} ORDER BY c DESC, {column} ASC LIMIT ?"
+        )
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(sql, (limit,)) as cur:
+            rows = await cur.fetchall()
+    return [{"value": r[0], "count": r[1]} for r in rows]
+
+
 async def count_tracks() -> int:
     """Return total count of non-trashed tracks."""
     db_path = resolve_db_path()
