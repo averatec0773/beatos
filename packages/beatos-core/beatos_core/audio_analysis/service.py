@@ -18,6 +18,19 @@ AUDIO_ROLES = frozenset({
 })
 
 
+def _has_result(bpm: float | None, key: str | None) -> bool:
+    """A result is usable if it carries at least one real value.
+
+    A total failure (no bpm AND no key) must NOT be cached and a cached total
+    failure must be treated as a miss — otherwise a transient or stale-engine
+    failure (e.g. an old librosa run choking on a float32 WAV) gets cached as
+    `bpm=0/NULL, key=NULL/''` and short-circuits all future re-analysis. `bool`
+    treats None / 0.0 / "" as absent, covering both new (NULL) and legacy (0.0/'')
+    failure rows.
+    """
+    return bool(bpm) or bool(key)
+
+
 async def analyze_asset(asset_id: int) -> AudioAnalysisResult:
     asset = await get_asset(asset_id)
     if asset is None:
@@ -38,7 +51,7 @@ async def analyze_asset(asset_id: int) -> AudioAnalysisResult:
             (asset_id, sha),
         ) as cur:
             row = await cur.fetchone()
-        if row:
+        if row and _has_result(row[0], row[2]):
             return AudioAnalysisResult(
                 asset_id=asset_id,
                 sha256=sha,
@@ -56,15 +69,18 @@ async def analyze_asset(asset_id: int) -> AudioAnalysisResult:
     raw = await asyncio.to_thread(analyze, asset.abs_path)
     now = _dt.datetime.now(_dt.timezone.utc)
 
-    async with aiosqlite.connect(db_path) as conn:
-        await conn.execute(
-            "INSERT OR REPLACE INTO analysis_cache "
-            "(asset_id, sha256, bpm, bpm_confidence, key_signature, key_confidence, duration_seconds, analyzed_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (asset_id, sha, raw.bpm, raw.bpm_confidence, raw.key, raw.key_confidence,
-             raw.duration_seconds, now.isoformat()),
-        )
-        await conn.commit()
+    # Don't cache a total failure — leave the slot empty so the next request
+    # retries (e.g. after an engine fix) instead of being stuck on the failure.
+    if _has_result(raw.bpm, raw.key):
+        async with aiosqlite.connect(db_path) as conn:
+            await conn.execute(
+                "INSERT OR REPLACE INTO analysis_cache "
+                "(asset_id, sha256, bpm, bpm_confidence, key_signature, key_confidence, duration_seconds, analyzed_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (asset_id, sha, raw.bpm, raw.bpm_confidence, raw.key, raw.key_confidence,
+                 raw.duration_seconds, now.isoformat()),
+            )
+            await conn.commit()
 
     return AudioAnalysisResult(
         asset_id=asset_id,

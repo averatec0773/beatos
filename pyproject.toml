@@ -1,6 +1,6 @@
 [project]
 name = "beatos-workspace"
-version = "0.0.29"
+version = "0.0.30"
 description = "BeatOS workspace root — three Python packages under uv."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
@@ -10,6 +10,12 @@ dependencies = [
     "beatos-http",
     "beatos-mcp",
 ]
+
+# `uv sync --extra essentia` enables the optional Essentia analysis engine
+# (AGPL — personal/dev only). Plain `uv sync` uses the permissive librosa
+# fallback, which is what distributed builds ship.
+[project.optional-dependencies]
+essentia = ["beatos-core[essentia]"]
 
 [tool.uv.workspace]
 members = [

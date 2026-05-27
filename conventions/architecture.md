@@ -60,7 +60,7 @@ packages/beatos-core/        ← business logic
     tracks/                  ← track CRUD + queries; query_parser.py = pure FilterSpec parser (shared by HTTP route + MCP tool, no IO)
     assets/                  ← reference / managed mode, relocate
     lists/                   ← user-list CRUD + membership
-    audio_analysis/          ← Essentia BPM + Key pipeline (was librosa pre-v0.0.29)
+    audio_analysis/          ← BPM + Key pipeline; pluggable backends/ (essentia | librosa)
 
 packages/beatos-http/        ← FastAPI facade for the renderer
   beatos_http/
@@ -213,7 +213,7 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 
 | Capability | Location | Purpose |
 |---|---|---|
-| Audio analysis pipeline | `packages/beatos-core/beatos_core/audio_analysis/` (`bpm.py`, `key.py`, `pipeline.py`, `service.py`, `models.py`) | Essentia `RhythmExtractor2013` (multifeature) for BPM; `KeyExtractor` "bgate" profile for Key; duration via mutagen. The bpm/key funcs are a clean `(value, confidence)` swap seam — see NOTICE copyleft note re: AGPL + distribution. |
+| Audio analysis pipeline | `packages/beatos-core/beatos_core/audio_analysis/` — `bpm.py`/`key.py` are thin dispatchers over `backends/` (`essentia_backend.py`, `librosa_backend.py`); `backends/__init__.get_backend()` picks Essentia if installed else librosa (`BEATOS_ANALYSIS_ENGINE` forces). `service.py` caches per `(asset, sha256)` but never caches a total failure (`_has_result`). Duration via mutagen. Essentia is optional/AGPL — see NOTICE. |
 | `POST /api/tracks/{id}/analyze` | `packages/beatos-http/beatos_http/routes/analysis.py` | Returns `{bpm, bpm_conf, key, key_conf}`; sync (5–15s on real tracks). |
 | `analysis_cache` table | `migrations/007_analysis_cache.sql` | Keyed `(asset_id, sha256)`; CASCADE on asset delete. One analysis per content hash. |
 | Renderer API client | `renderer/api/analysis.ts` + `lib/audio-analysis-constants.ts` | Confidence thresholds (BPM ≥ 0.7, Key ≥ 0.6) in constants module. |

@@ -29,7 +29,8 @@ Sidecar (Python):
   - structlog — MIT / Apache-2.0 (dual)
   - mcp (Anthropic) — MIT
   - mcp-proxy — MIT
-  - essentia — AGPL-3.0 (dev/personal use; see note below)
+  - librosa — ISC (default analysis engine, always bundled)
+  - essentia — AGPL-3.0 (OPTIONAL analysis engine; not bundled by default — see note below)
   - mutagen — GPL-2.0-or-later
   - pydantic — MIT
   - uvicorn — BSD-3-Clause
@@ -41,10 +42,11 @@ Tooling:
   - uv — Apache-2.0 / MIT (dual)
 
 Copyleft note (distribution):
-  The sidecar bundles essentia (AGPL-3.0) and mutagen (GPL-2.0). These impose
-  no obligations for personal/dev use. If BeatOS binaries are ever distributed,
-  the combined work's copyleft obligations apply — at that point essentia must
-  become an optional dependency with a permissive fallback engine (the
-  audio_analysis bpm/key functions are a clean swap seam), or a commercial
-  Essentia license obtained. Decided 2026-05-26: ship Essentia now for accuracy
-  + speed; revisit before any distribution.
+  The analysis engine is pluggable (see audio_analysis/backends/). The DEFAULT
+  build bundles only librosa (ISC) — permissive, safe to distribute. Essentia
+  (AGPL-3.0) is an OPTIONAL extra (`uv sync --extra essentia`) for personal/dev
+  use, giving better accuracy + speed; it is NOT in a default/distributed build,
+  so its copyleft does not attach. Keep it that way when wiring up distribution:
+  the distributed sidecar must install base deps only.
+  Caveat still open: mutagen (GPL-2.0, used for tag/duration reading) IS always
+  bundled — a fully permissive distributable would still need to address it.

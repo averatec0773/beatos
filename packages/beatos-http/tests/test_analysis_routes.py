@@ -104,3 +104,34 @@ def test_analyze_second_call_uses_cache(tmp_path):
     assert res2.status_code == 200
     mock_analyze.assert_not_called()
     assert res2.json()["bpm"] == res1.json()["bpm"]
+
+
+def test_failed_analysis_is_not_cached_and_retries(tmp_path):
+    """A total-failure result (no bpm AND no key) must not poison the cache.
+
+    Regression: a transient/old-engine failure once cached `bpm=0/None, key=''`,
+    and the cache short-circuited all future re-analysis — so even after the
+    engine was fixed the track was stuck showing 0. A total failure must be
+    treated as a cache miss and re-analyzed on the next call.
+    """
+    from unittest.mock import patch
+    from beatos_core.audio_analysis.models import AnalysisRaw
+
+    client = _client()
+    track_id = _create_track(client)
+    _attach_fixture_wav(client, tmp_path, track_id)
+
+    fail = AnalysisRaw(bpm=None, bpm_confidence=0.0, key=None, key_confidence=0.0, duration_seconds=None)
+    ok = AnalysisRaw(bpm=140.0, bpm_confidence=0.9, key="A minor", key_confidence=0.8, duration_seconds=10.0)
+
+    with patch("beatos_core.audio_analysis.service.analyze", return_value=fail):
+        r1 = client.post(f"/api/tracks/{track_id}/analyze")
+    assert r1.status_code == 200
+    assert r1.json()["bpm"] is None
+
+    # Second call must RE-ANALYZE rather than serve the cached failure.
+    with patch("beatos_core.audio_analysis.service.analyze", return_value=ok) as m2:
+        r2 = client.post(f"/api/tracks/{track_id}/analyze")
+        m2.assert_called_once()
+    assert r2.json()["bpm"] == 140.0
+    assert r2.json()["key"] == "A minor"

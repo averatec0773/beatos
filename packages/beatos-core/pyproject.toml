@@ -1,6 +1,6 @@
 [project]
 name = "beatos-core"
-version = "0.0.29"
+version = "0.0.30"
 description = "BeatOS business logic — no web / RPC / Electron dependencies."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
@@ -10,8 +10,14 @@ dependencies = [
     "pydantic>=2.9",
     "mutagen>=1.47",
     "watchdog>=5.0",
-    "essentia>=2.1b6.dev1110",
+    "librosa>=0.10,<0.11",
 ]
+
+# Optional, higher-accuracy + faster analysis engine. AGPL-3.0 — install for
+# personal/dev use (`uv sync --extra essentia`); EXCLUDE from distributed builds,
+# which fall back to the permissive librosa engine. See NOTICE + backends/.
+[project.optional-dependencies]
+essentia = ["essentia>=2.1b6.dev1110"]
 
 [build-system]
 requires = ["hatchling>=1.25"]

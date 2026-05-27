@@ -4,6 +4,19 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.30] — 2026-05-27 — Pluggable analysis engine + cache fix
+
+Makes the analysis engine a build-time switch instead of a hard dependency, so the AGPL exposure from v0.0.29 is opt-in rather than baked in. Also fixes a cache bug where a failed analysis stuck permanently.
+
+### Added
+
+- Pluggable analysis backends under `audio_analysis/backends/`: `essentia_backend` (AGPL, best accuracy + speed) and `librosa_backend` (ISC, permissive fallback). `bpm.py`/`key.py` are thin dispatchers; `get_backend()` auto-selects Essentia when its package is importable, else librosa. `BEATOS_ANALYSIS_ENGINE=librosa|essentia` forces a choice.
+- Essentia is now an OPTIONAL extra: `uv sync --extra essentia` (personal/dev). A plain `uv sync` installs only the permissive librosa engine — what distributed builds ship, so AGPL copyleft does not attach by default. See `NOTICE`.
+
+### Fixed
+
+- `analyze_asset` no longer caches a total-failure result (no bpm AND no key), and treats an existing total-failure cache row (incl. legacy `0.0`/`''`) as a miss. Previously a transient/old-engine failure was cached and short-circuited all future re-analysis, leaving a track stuck showing BPM 0 even after the engine was fixed.
+
 ## [0.0.29] — 2026-05-26 — Audio analysis engine: librosa → Essentia
 
 BPM/key analysis was the weak spot: librosa's confidence metric scored beat-grid *regularity*, not correctness, so a halftime/triplet octave error (a perfectly regular wrong grid) could be auto-filled with high confidence — wrong BPM, confidently. It was also slow (~10–14 s/track). A benchmark over a real catalog picked Essentia: BPM 8/8 vs librosa 7/8 (fixes the octave errors), key tied, and ~6× faster (~2 s/track).
