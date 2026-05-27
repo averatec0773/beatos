@@ -57,7 +57,7 @@ A first-class **MCP (Model Context Protocol)** server exposes the library to Cla
 
 ### 3. Player + analysis
 
-Spotify-style bottom bar (Tone.js + Web Audio). Plays the FLOAT-32 WAVs your DAW actually exports. Four audio roles per track with instant switch; queue follows the visible filter; shuffle + repeat. On-demand BPM/key analysis via librosa (HPSS → beat-tracking + Krumhansl-Schmuckler) with per-field confidence scores.
+Spotify-style bottom bar (Tone.js + Web Audio). Plays the FLOAT-32 WAVs your DAW actually exports. Four audio roles per track with instant switch; queue follows the visible filter; shuffle + repeat. On-demand BPM/key analysis via Essentia (RhythmExtractor2013 for BPM, KeyExtractor "bgate" profile for key) with per-field confidence scores.
 
 </td>
 </tr>
@@ -177,7 +177,7 @@ npm run build && npm run smoke         # Playwright _electron end-to-end
 ## Stack
 
 `Electron 39` · `React 19` · `Vite` · `Tailwind` · `Radix UI` · `Zustand` · `TanStack Virtual` · `dnd-kit` · `Tone.js`
-`Python 3.11` · `FastAPI` · `aiosqlite` · `structlog` · `mcp` (FastMCP) · `librosa` · `Playwright`
+`Python 3.11` · `FastAPI` · `aiosqlite` · `structlog` · `mcp` (FastMCP) · `essentia` · `Playwright`
 `SQLite` · `Pydantic v2`
 
 ## Repository

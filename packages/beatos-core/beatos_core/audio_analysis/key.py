@@ -1,59 +1,33 @@
-import numpy as np
-import librosa
+import essentia.standard as es
 
-from ._constants import (
-    KRUMHANSL_MAJOR,
-    KRUMHANSL_MINOR,
-    NOTES_SHARP,
-    NOTES_FLAT,
-    MAX_DURATION_SECONDS,
-    DEFAULT_SAMPLE_RATE,
-)
+from ._constants import ANALYSIS_SAMPLE_RATE, MAX_DURATION_SECONDS, KEY_PROFILE
 
 
 def analyze_key(audio_path: str) -> tuple[str | None, float]:
-    """Returns (key, confidence) — confidence in [0, 1]. Returns (None, 0.0) on failure."""
+    """Returns (key, confidence) — confidence in [0, 1]. Returns (None, 0.0) on failure.
+
+    Uses Essentia's KeyExtractor with the "bgate" profile (see _constants), which
+    won the catalog benchmark over the Krumhansl-template approach we shipped before.
+    Key is formatted as e.g. "F# minor" / "Ab major" using Essentia's own spelling.
+    """
     try:
-        y, sr = librosa.load(
-            audio_path,
-            sr=DEFAULT_SAMPLE_RATE,
-            mono=True,
-            duration=MAX_DURATION_SECONDS,
-        )
+        audio = es.MonoLoader(filename=audio_path, sampleRate=ANALYSIS_SAMPLE_RATE)()
     except Exception:
         return None, 0.0
 
-    if len(y) == 0:
+    if len(audio) == 0:
         return None, 0.0
 
+    audio = audio[: int(ANALYSIS_SAMPLE_RATE * MAX_DURATION_SECONDS)]
+
     try:
-        harmonic, _ = librosa.effects.hpss(y)
-        chroma = librosa.feature.chroma_cqt(y=harmonic, sr=sr)
+        key, scale, strength = es.KeyExtractor(
+            profileType=KEY_PROFILE, sampleRate=ANALYSIS_SAMPLE_RATE
+        )(audio)
     except Exception:
         return None, 0.0
 
-    chroma_mean = chroma.mean(axis=1)
-
-    if chroma_mean.sum() == 0:
+    if not key or not scale:
         return None, 0.0
 
-    chroma_mean = chroma_mean / chroma_mean.sum()
-
-    best_score = -1.0
-    best_tonic = 0
-    best_mode = "major"
-
-    for tonic in range(12):
-        for mode_name, profile in [("major", KRUMHANSL_MAJOR), ("minor", KRUMHANSL_MINOR)]:
-            rotated = np.roll(profile, tonic)
-            rotated = rotated / rotated.sum()
-            score = np.corrcoef(chroma_mean, rotated)[0, 1]
-            if score > best_score:
-                best_score = score
-                best_tonic = tonic
-                best_mode = mode_name
-
-    notes = NOTES_FLAT if best_mode == "minor" else NOTES_SHARP
-    key_str = f"{notes[best_tonic]} {best_mode}"
-    confidence = max(0.0, min(1.0, float(best_score)))
-    return key_str, confidence
+    return f"{key} {scale}", max(0.0, min(1.0, float(strength)))

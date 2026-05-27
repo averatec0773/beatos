@@ -4,6 +4,24 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.29] — 2026-05-26 — Audio analysis engine: librosa → Essentia
+
+BPM/key analysis was the weak spot: librosa's confidence metric scored beat-grid *regularity*, not correctness, so a halftime/triplet octave error (a perfectly regular wrong grid) could be auto-filled with high confidence — wrong BPM, confidently. It was also slow (~10–14 s/track). A benchmark over a real catalog picked Essentia: BPM 8/8 vs librosa 7/8 (fixes the octave errors), key tied, and ~6× faster (~2 s/track).
+
+### Changed
+
+- BPM detection now uses Essentia `RhythmExtractor2013` (multifeature), which resists the half/double/triplet-time octave errors librosa's `beat_track` made on halftime-feel beats. Confidence is normalised against Essentia's documented "good" band so reliable detections clear the autofill bar and shaky ones route to manual review.
+- Key detection now uses Essentia `KeyExtractor` with the `bgate` profile, which won the catalog benchmark over the previous Krumhansl-Schmuckler template (notably avoiding relative-major confusion). Track duration now read via `mutagen` instead of librosa.
+- Dependency: `librosa` (ISC) replaced by `essentia` (**AGPL-3.0**). No obligations for personal/dev use; see `NOTICE` for the distribution caveat (Essentia must become an optional dependency with a permissive fallback before any binary distribution — the bpm/key functions are a clean swap seam).
+
+### Fixed
+
+- `analyze_bpm` now returns `(None, 0.0)` instead of `(0.0, 0.0)` on a decode/analysis failure, so a corrupt file is never cached as a valid 0 BPM (mirrors `analyze_key`).
+
+### Migrations
+
+- `016_reset_analysis_cache.sql` — clears `analysis_cache` so every asset re-analyzes under the new engine on next request (lazy, re-cached).
+
 ## [0.0.28] — 2026-05-25 — Search overhaul
 
 Search was weak: a client-side substring filter over only the loaded rows (title/genre/tags), so producer/key/description queries returned nothing. v0.0.28 moves search server-side across the whole catalog, adds a shared query-syntax parser (used by both the HTTP route and a new MCP `search_tracks` tool, so agent search == in-app search), and gives the box an empty-state recommendation dropdown.

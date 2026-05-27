@@ -60,7 +60,7 @@ packages/beatos-core/        ← business logic
     tracks/                  ← track CRUD + queries; query_parser.py = pure FilterSpec parser (shared by HTTP route + MCP tool, no IO)
     assets/                  ← reference / managed mode, relocate
     lists/                   ← user-list CRUD + membership
-    audio_analysis/          ← v0.0.13 librosa BPM + Key pipeline
+    audio_analysis/          ← Essentia BPM + Key pipeline (was librosa pre-v0.0.29)
 
 packages/beatos-http/        ← FastAPI facade for the renderer
   beatos_http/
@@ -88,7 +88,7 @@ packages/beatos-platforms/   ← v0.0.12 per-platform vocab maps
 | Handshake writer | `packages/beatos-http/beatos_http/handshake.py` | Writes `{"port", "pid", "started_at"}` JSON before uvicorn accepts. `pid` used by the `beatos-mcp` launcher for staleness detection. |
 | Handshake reader | `apps/desktop/electron/main.ts` | Polls handshake file (5s timeout), then creates `BrowserWindow`. |
 | Adapter registry | `packages/beatos-core/beatos_core/adapters/registry.py` | Maps platform name → adapter class. |
-| Audio analysis cache | `packages/beatos-core/beatos_core/audio_analysis/service.py` + migration `007` | librosa BPM+Key; keyed `(asset_id, sha256)` — once per content hash. |
+| Audio analysis cache | `packages/beatos-core/beatos_core/audio_analysis/service.py` + migration `007` (reset by `016` on engine switch) | Essentia BPM+Key; keyed `(asset_id, sha256)` — once per content hash. |
 | Audio engine | `apps/desktop/src/renderer/src/lib/audio-engine.ts` | Tone.js singleton; `Tone.Player` + `ToneAudioBuffer` + byte-budgeted LRU cache (256 MB). RAF tick detects natural end + AudioContext suspend (sleep/wake) — no setTimeout-based scheduling. (v0.0.16) |
 | Player store | `apps/desktop/src/renderer/src/stores/player.ts` | Zustand singleton; delegates transport to `audioEngine`. Module-level `audioEngine.on(...)` subscriptions bridge engine events → store. No HTMLAudioElement. (v0.0.16) |
 | Role-priority resolver | `apps/desktop/src/renderer/src/lib/audio-resolve.ts` | Picks asset via `tagged_wav > untagged_wav > tagged_mp3 > untagged_mp3`. |
@@ -213,7 +213,7 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 
 | Capability | Location | Purpose |
 |---|---|---|
-| Audio analysis pipeline | `packages/beatos-core/beatos_core/audio_analysis/` (`bpm.py`, `key.py`, `pipeline.py`, `service.py`, `models.py`) | HPSS→percussive→`beat_track` for BPM (hop_length=256); HPSS→harmonic→`chroma_cqt`→Krumhansl-Schmuckler for Key. librosa dep. |
+| Audio analysis pipeline | `packages/beatos-core/beatos_core/audio_analysis/` (`bpm.py`, `key.py`, `pipeline.py`, `service.py`, `models.py`) | Essentia `RhythmExtractor2013` (multifeature) for BPM; `KeyExtractor` "bgate" profile for Key; duration via mutagen. The bpm/key funcs are a clean `(value, confidence)` swap seam — see NOTICE copyleft note re: AGPL + distribution. |
 | `POST /api/tracks/{id}/analyze` | `packages/beatos-http/beatos_http/routes/analysis.py` | Returns `{bpm, bpm_conf, key, key_conf}`; sync (5–15s on real tracks). |
 | `analysis_cache` table | `migrations/007_analysis_cache.sql` | Keyed `(asset_id, sha256)`; CASCADE on asset delete. One analysis per content hash. |
 | Renderer API client | `renderer/api/analysis.ts` + `lib/audio-analysis-constants.ts` | Confidence thresholds (BPM ≥ 0.7, Key ≥ 0.6) in constants module. |
