@@ -4,6 +4,12 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.34] — 2026-05-29 — Player: Prev/Next buttons wrap around the queue
+
+### Fixed
+
+- The bottom-bar **Prev/Next buttons now cycle the queue**: Prev on the first track jumps to the last, Next on the last track jumps to the first — regardless of repeat mode. Previously wrap-around only happened with `repeat="all"`, so at a queue boundary the buttons did nothing useful (Next paused, Prev just restarted the current track). Auto-advance at track-end is unchanged: `repeat="off"` still stops at the end of the queue rather than looping forever (the manual buttons now pass an explicit `wrap` flag that the track-end path does not).
+
 ## [0.0.33] — 2026-05-29 — Audit batch 3: boot race fix + dedup refactors
 
 Closes the remaining audit code items: one real fix plus two behavior-preserving refactors that kill duplicated logic. (The fourth item — Python ruff/mypy + Electron smoke in CI — is parked in ROADMAP as TBD.)

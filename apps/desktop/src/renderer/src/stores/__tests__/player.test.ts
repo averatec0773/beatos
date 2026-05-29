@@ -240,6 +240,43 @@ describe("next/prev with repeat", () => {
     await usePlayerStore.getState().prev();
     expect(usePlayerStore.getState().queueIndex).toBe(0);
   });
+
+  it("next({wrap:true}) at end wraps to first even with repeat=off (manual button)", async () => {
+    usePlayerStore.setState({
+      queueTrackIds: [1, 2],
+      queueIndex: 1,
+      currentTrackId: 2,
+      repeat: "off",
+    });
+    await usePlayerStore.getState().next({ wrap: true });
+    expect(usePlayerStore.getState().queueIndex).toBe(0);
+    expect(usePlayerStore.getState().currentTrackId).toBe(1);
+  });
+
+  it("prev({wrap:true}) at first wraps to last even with repeat=off (manual button)", async () => {
+    usePlayerStore.setState({
+      queueTrackIds: [1, 2],
+      queueIndex: 0,
+      currentTrackId: 1,
+      repeat: "off",
+      position: 0,
+    });
+    await usePlayerStore.getState().prev({ wrap: true });
+    expect(usePlayerStore.getState().queueIndex).toBe(1);
+    expect(usePlayerStore.getState().currentTrackId).toBe(2);
+  });
+
+  it("_onEnded at end with repeat=off still stops (auto-advance does not wrap)", async () => {
+    usePlayerStore.setState({
+      queueTrackIds: [1, 2],
+      queueIndex: 1,
+      currentTrackId: 2,
+      repeat: "off",
+    });
+    await usePlayerStore.getState()._onEnded();
+    expect(usePlayerStore.getState().status).toBe("paused");
+    expect(usePlayerStore.getState().queueIndex).toBe(1);
+  });
 });
 
 describe("togglePlay recovery", () => {

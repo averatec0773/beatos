@@ -55,8 +55,8 @@ interface PlayerState {
    * queue aligned with the current visible filter.
    */
   syncQueue(trackIds: number[], anchorTrackId: number | null): void;
-  next(): Promise<void>;
-  prev(): Promise<void>;
+  next(opts?: { wrap?: boolean }): Promise<void>;
+  prev(opts?: { wrap?: boolean }): Promise<void>;
   setPreferredRole(role: AudioRole): Promise<void>;
   _onEnded(): Promise<void>;
 }
@@ -253,13 +253,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       await loadAndPlay(trackIds[startIndex], get().preferredRole);
     },
 
-    async next() {
+    async next(opts) {
       const s = get();
       if (s.queueTrackIds.length === 0) return;
       const { order, cur } = effectiveOrder(s);
       let nextPos = cur + 1;
       if (nextPos >= order.length) {
-        if (s.repeat === "all") {
+        // Manual Next (opts.wrap) always cycles to the first track. Auto-advance
+        // on track-end only wraps under repeat="all"; repeat="off" stops here.
+        if (s.repeat === "all" || opts?.wrap) {
           nextPos = 0;
         } else {
           audioEngine.pause();
@@ -271,7 +273,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       await loadAndPlay(s.queueTrackIds[queueIndex], get().preferredRole, "preserve");
     },
 
-    async prev() {
+    async prev(opts) {
       const s = get();
       if (s.queueTrackIds.length === 0) return;
       if (s.position > 3) {
@@ -281,7 +283,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const { order, cur } = effectiveOrder(s);
       let prevPos = cur - 1;
       if (prevPos < 0) {
-        if (s.repeat === "all") {
+        // Manual Prev (opts.wrap) always cycles to the last track; otherwise
+        // only repeat="all" wraps, and repeat="off" just restarts the track.
+        if (s.repeat === "all" || opts?.wrap) {
           prevPos = order.length - 1;
         } else {
           audioEngine.seek(0);

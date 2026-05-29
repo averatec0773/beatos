@@ -104,12 +104,12 @@ export function BottomPlayerBar() {
 
   function handlePrev(): void {
     syncQueueFromVisible();
-    void usePlayerStore.getState().prev();
+    void usePlayerStore.getState().prev({ wrap: true });
   }
 
   function handleNext(): void {
     syncQueueFromVisible();
-    void usePlayerStore.getState().next();
+    void usePlayerStore.getState().next({ wrap: true });
   }
 
   return (
