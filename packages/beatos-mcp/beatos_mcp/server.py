@@ -29,6 +29,8 @@ from beatos_mcp.tools.list_curation import (
     update_list as _update_list_impl,
 )
 from beatos_mcp.tools.distinct import list_distinct_values as _list_distinct_impl
+from beatos_mcp.tools.export import export_metadata as _export_metadata_impl
+from beatos_mcp.tools.export import list_export_platforms as _list_export_platforms_impl
 from beatos_mcp.tools.search import search_tracks as _search_tracks_impl
 from beatos_mcp.tools.licenses import set_license_tiers as _set_license_tiers_impl
 from beatos_mcp.tools.lifecycle import (
@@ -128,6 +130,26 @@ async def search_tracks(
     """Search tracks with the same query syntax humans use in the BeatOS search box.
     Returns identical results to the in-app search. Returns {items, total, returned, limit, offset, hint?}."""
     return await _search_tracks_impl(query=query, limit=limit if limit is not None else 50)
+
+
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def list_export_platforms() -> dict:
+    """List platforms BeatOS can export metadata for (e.g. "netease")."""
+    return await _list_export_platforms_impl()
+
+
+@mcp.tool(annotations=_READ_ANNOTATIONS)
+async def export_metadata(
+    track_id: Annotated[int, Field(description="Track id to export. Use list_tracks/get_track to discover ids.")],
+    platform: Annotated[str, Field(description="Platform key from list_export_platforms (e.g. 'netease').")],
+) -> dict:
+    """Export one track's metadata shaped for a platform's upload form.
+
+    Returns {platform, fields:[{key,label,value,options,note}]}. Genre/mood are
+    translated to the platform's vocabulary; multi-genre returns `options` (the
+    platform is single-select). Identical output to the in-app export panel.
+    """
+    return await _export_metadata_impl(track_id, platform)
 
 
 # --- Write tools ---
