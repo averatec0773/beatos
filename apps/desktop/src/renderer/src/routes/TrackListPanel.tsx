@@ -18,7 +18,10 @@ import { FilterChipBar } from "@/components/FilterChipBar";
 import { ImportAudioDialog } from "@/components/ImportAudioDialog";
 import { BulkActionBar, type BulkAction } from "@/components/BulkActionBar";
 import { AddToListPopover } from "@/components/AddToListPopover";
+import { BulkEditDialog } from "@/components/BulkEditDialog";
 import { tracks as tracksApi } from "@/api/tracks";
+import { analysis } from "@/api/analysis";
+import { useAnalysisJobStore } from "@/stores/analysis-job";
 
 export function TrackListPanel(): React.JSX.Element {
   const list = useTrackStore((s) => s.list);
@@ -87,9 +90,16 @@ export function TrackListPanel(): React.JSX.Element {
     }
   }, [visible.length, current, select, visible]);
 
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [unanalyzed, setUnanalyzed] = useState(0);
   const [dropping, setDropping] = useState(false);
   const [importFiles, setImportFiles] = useState<File[]>([]);
   const importDialogOpen = importFiles.length > 0;
+
+  useEffect(() => {
+    if (listId != null) return;
+    analysis.unanalyzedCount().then((r) => setUnanalyzed(r.count)).catch(() => {});
+  }, [listId]);
 
   // Single source of X-scroll: the body. The header sits in its own div with
   // an *invisible* native X-scroll (so `scrollLeft` is programmable) and we
@@ -200,6 +210,21 @@ export function TrackListPanel(): React.JSX.Element {
             onDone={clearSelection}
           />
         ),
+      },
+      {
+        key: "edit-meta",
+        label: "编辑元数据",
+        onClick: () => setBulkEditOpen(true),
+      },
+      {
+        key: "analyze",
+        label: "分析选中",
+        onClick: async () => {
+          const ids = Array.from(selectedIds);
+          const { job_id, total } = await analysis.startBatch("selected", ids);
+          useAnalysisJobStore.getState().start(job_id, total);
+          clearSelection();
+        },
       },
       {
         key: "trash",
@@ -320,6 +345,18 @@ export function TrackListPanel(): React.JSX.Element {
             <Plus size={14} />
             Add Track
           </button>
+          {listId == null && unanalyzed > 0 && (
+            <button
+              type="button"
+              onClick={async () => {
+                const { job_id, total } = await analysis.startBatch("unanalyzed");
+                useAnalysisJobStore.getState().start(job_id, total);
+              }}
+              className="rounded-md border border-border-subtle px-2 py-1 text-xs hover:bg-bg-row-hover"
+            >
+              分析全部未分析 ({unanalyzed})
+            </button>
+          )}
           <span className="text-text-tertiary text-sm ml-auto">
             {currentList ? `${currentList.name} · ` : ""}
             {visible.length} track{visible.length === 1 ? "" : "s"}
@@ -378,6 +415,12 @@ export function TrackListPanel(): React.JSX.Element {
             )}
           />
           <BulkActionBar count={selectedIds.size} onClear={clearSelection} actions={bulkActions} />
+          <BulkEditDialog
+            open={bulkEditOpen}
+            ids={Array.from(selectedIds)}
+            onClose={() => setBulkEditOpen(false)}
+            onDone={() => { setBulkEditOpen(false); clearSelection(); }}
+          />
         </div>
       </section>
       <TrackDetailPanel />
