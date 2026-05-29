@@ -18,7 +18,7 @@
 
 1. **Migrations are append-only.** Never edit an applied `migrations/*.sql`; add `00N+1_*.sql`. (Single exception in v0.0.4 — never repeat.)
 2. **`beatos-core` has no web / RPC / Electron deps.** If you reach for `fastapi` / `mcp` / Electron-side imports in core, you are in the wrong layer.
-3. **MCP / inject is human-in-the-loop.** Two-phase commit (`token` → `confirm_*`) on any write tool. Never programmatically submit a platform upload form.
+3. **MCP / inject is human-in-the-loop.** Two-phase commit (`token` → `await_approval`) on any write tool. Never programmatically submit a platform upload form.
 4. **Zustand v5 stable selectors** — never `.filter` / `.map` / `.find` inside a selector (infinite re-render → black screen). Select the list, derive in `useMemo`.
 5. **Always `preventDefault` in `dragover`** — including when `dataTransfer.types.includes("Files")` is false. Otherwise `drop` never fires (lesson re-applied across v0.0.13.2 / v0.0.14).
 6. **SPA route reuse** — when a route stays mounted across param changes (`/track/1` → `/track/2` keeps `<TrackEditor>` mounted with new `params`), `useEffect([])` does NOT re-run. Per-track effects must depend on `params.id` (caught at v0.0.14.1: producer distinct went stale across tracks).

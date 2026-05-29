@@ -4,6 +4,10 @@ stdio MCP server exposing the BeatOS library to AI clients (Claude Desktop, Curs
 
 ## What this gives you
 
+22 tools — **7 read** + **15 write** (verify with `grep -c '@mcp.tool' beatos_mcp/server.py`).
+
+### Read tools
+
 | Tool | Purpose |
 |---|---|
 | `ping` | Liveness check |
@@ -11,9 +15,19 @@ stdio MCP server exposing the BeatOS library to AI clients (Claude Desktop, Curs
 | `get_track(id)` | Single track with assets + description fields |
 | `list_lists()` | All user + system lists |
 | `list_distinct_values(field)` | producer / genre / mood / key vocabulary + counts |
+| `search_tracks(query)` | Full-text + structured-token search (`genre:trap`, `bpm:>=140`, …) |
+| `await_approval(token)` | Poll the status/result of any write token |
 
-Read-only as of v0.0.20. Write tools (`import_track`, `confirm_*`, …) ship in
-v0.0.21+ on the 2PC token skeleton already shipped here.
+### Write tools (two-phase commit)
+
+Every write tool is phase 1 only: it issues a single-use token. The user approves
+in BeatOS → Approvals; the agent then polls `await_approval(token)` for the outcome.
+No write tool mutates the DB directly.
+
+`create_list`, `update_list`, `delete_list`, `add_tracks_to_list`,
+`remove_tracks_from_list`, `reorder_list`, `create_tracks`, `update_tracks`,
+`trash_tracks`, `restore_tracks`, `purge_tracks`, `attach_assets`, `detach_assets`,
+`set_license_tiers`, `merge_metadata`.
 
 ## Configure Claude Desktop
 

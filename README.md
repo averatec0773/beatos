@@ -50,7 +50,7 @@ A real SQLite database for every beat: title, BPM, key, genre (multi-value), moo
 
 ### 2. AI co-pilot (MCP)
 
-A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client. 20 tools: read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Approvals panel.
+A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client. 22 tools (7 read + 15 write): read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Approvals panel.
 
 </td>
 <td width="33%" valign="top">
@@ -71,7 +71,7 @@ Spotify-style bottom bar (Tone.js + Web Audio). Plays the FLOAT-32 WAVs your DAW
 
 <div align="center">
   <br/>
-  <img src="screenshots/mcp-claude-desktop.png" alt="BeatOS surfaced as a Desktop connector in Claude Desktop, with all 20 tools listed under read-only and write/delete permission groups" width="900" />
+  <img src="screenshots/mcp-claude-desktop.png" alt="BeatOS surfaced as a Desktop connector in Claude Desktop, with all 22 tools listed under read-only and write/delete permission groups" width="900" />
   <br/>
   <em>BeatOS registered as a Desktop MCP connector in Claude Desktop — read-only tools auto-allowed, writes gated behind approval.</em>
   <br/>
