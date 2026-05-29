@@ -9,7 +9,9 @@ Steps:
 """
 from __future__ import annotations
 
+import asyncio
 import atexit
+import logging
 import os
 import socket
 
@@ -20,8 +22,10 @@ _configure_logging()
 
 import uvicorn
 
-from beatos_http.app import create_app
+from beatos_http.app import create_app, create_inject_app
 from beatos_http.handshake import write_handshake
+
+log = logging.getLogger(__name__)
 
 
 def _bind_ephemeral(host: str = "127.0.0.1") -> tuple[socket.socket, int]:
@@ -74,19 +78,43 @@ class _HandshakeServer(uvicorn.Server):
         write_handshake(port=self._handshake_port)
 
 
+async def _serve(main_sock: socket.socket, main_port: int) -> None:
+    main_cfg = uvicorn.Config(
+        app=create_app(),
+        host="127.0.0.1",
+        port=main_port,
+        log_level="info",
+        access_log=False,
+    )
+    main_server = _HandshakeServer(main_cfg, port=main_port)
+    coros = [main_server.serve(sockets=[main_sock])]
+
+    inject_sock = _try_bind_fixed(INJECT_PORT)
+    if inject_sock is not None:
+        inj_cfg = uvicorn.Config(
+            app=create_inject_app(),
+            host="127.0.0.1",
+            port=INJECT_PORT,
+            log_level="warning",
+            access_log=False,
+        )
+        inj_server = uvicorn.Server(inj_cfg)
+        coros.append(inj_server.serve(sockets=[inject_sock]))
+        log.info("inject app listening on fixed port %d", INJECT_PORT)
+    else:
+        log.warning(
+            "inject fixed port %d in use — browser-extension upload disabled this session",
+            INJECT_PORT,
+        )
+
+    await asyncio.gather(*coros)
+
+
 def main() -> None:
     atexit.register(_cleanup_handshake)
     sock, port = _bind_ephemeral()
     try:
-        config = uvicorn.Config(
-            app=create_app(),
-            host="127.0.0.1",
-            port=port,
-            log_level="info",
-            access_log=False,
-        )
-        server = _HandshakeServer(config, port=port)
-        server.run(sockets=[sock])
+        asyncio.run(_serve(sock, port))
     finally:
         sock.close()
 
