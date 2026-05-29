@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref (e.g. force-push / rapid PR pushes).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # libsndfile + ffmpeg back librosa's decode path (the default analysis
+      # engine; the librosa backend test loads a real WAV fixture).
+      - name: Install audio system deps
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1 ffmpeg
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      # Plain sync (no `--extra essentia`) = the permissive librosa engine the
+      # distributed build ships. Keeps AGPL out of CI and tests the shipped path.
+      - name: Sync workspace
+        run: uv sync
+
+      - name: pytest
+        run: uv run pytest -q
+
+  desktop:
+    name: Desktop (typecheck · vitest · build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests (vitest)
+        run: npm test
+
+      - name: Build (electron-vite)
+        run: npm run build
+
+# Intentionally NOT gated here yet (would be red on arrival / flaky), tracked as
+# follow-ups so this CI stays a meaningful green signal from day one:
+#   - `npm run lint`: the repo isn't lint-clean (~199 eslint errors + thousands of
+#     prettier warnings from a single-vs-double-quote config mismatch). Needs a
+#     dedicated cleanup (fix prettier config + `--fix` + address real errors),
+#     then add a Lint step here.
+#   - `npm run smoke`: the Electron smoke harness needs a virtual display (xvfb),
+#     the Python sidecar env, and a packaged build. Add a `smoke` job
+#     (ubuntu + xvfb-run + uv sync + npm run build + npm run smoke) once reliable.
+#   - Python ruff/mypy: not configured yet (prior audit M1).
