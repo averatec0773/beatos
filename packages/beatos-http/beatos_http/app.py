@@ -24,6 +24,7 @@ from beatos_http.routes import (
     app_settings,
     assets,
     batch_analysis,
+    bulk,
     export,
     licenses,
     lists,
@@ -148,6 +149,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(tracks.router)
+    app.include_router(bulk.router)
     app.include_router(assets.router)
     app.include_router(lists.router)
     app.include_router(licenses.router)
