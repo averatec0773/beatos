@@ -70,6 +70,7 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
   const [platforms, setPlatforms] = useState<string[]>([]);
   const [platform, setPlatform] = useState<string>("netease");
   const [result, setResult] = useState<ExportResult | null>(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -94,6 +95,20 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
     };
   }, [open, trackId, platform]);
 
+  async function handleSend(): Promise<void> {
+    setSending(true);
+    try {
+      await injectApi.stage(trackId, platform);
+      useToastStore
+        .getState()
+        .show("success", "已发送，请切到浏览器上传页（需安装 BeatOS 扩展）");
+    } catch {
+      useToastStore.getState().show("error", "发送失败");
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -116,17 +131,9 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
           </select>
           <button
             type="button"
-            onClick={async () => {
-              try {
-                await injectApi.stage(trackId, platform);
-                useToastStore
-                  .getState()
-                  .show("success", "已发送，请切到浏览器上传页（需安装 BeatOS 扩展）");
-              } catch {
-                useToastStore.getState().show("error", "发送失败");
-              }
-            }}
-            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-sm text-text-primary hover:bg-bg-row-hover"
+            onClick={handleSend}
+            disabled={sending || platforms.length === 0}
+            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-sm text-text-primary hover:bg-bg-row-hover disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Send className="h-3.5 w-3.5" /> 发送到上传页
           </button>
