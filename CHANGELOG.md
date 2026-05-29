@@ -4,6 +4,21 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.35] — 2026-05-29 — Bulk metadata edit + batch analyze
+
+In-app bulk metadata editing and background batch BPM/Key analysis for any selection or the entire unanalyzed catalog.
+
+### Added
+
+- **Bulk metadata edit** — `BulkEditDialog` lets the user edit Genre, Mood, and Producer across any selection of tracks with three merge modes (追加 / 覆盖 / 移除: add-to-existing / replace / remove). A separate "Apply default license template" action bulk-stamps the default license tiers onto every selected track.
+- **Batch BPM/Key analysis** — two entry points: "分析选中" in `BulkActionBar` (analyze selection) and a library-top "分析全部未分析 (N)" button (analyze every unanalyzed track). Analysis runs as a background job in the sidecar; the renderer polls for progress and shows a docked `AnalysisProgressBar` until completion. Only high-confidence results (BPM ≥ 0.7, Key ≥ 0.6) autofill empty fields.
+- HTTP routes: `POST /api/tracks/bulk-update`, `POST /api/tracks/bulk-apply-license-template`, `POST /api/analysis/batch`, `GET /api/analysis/batch/{job_id}`, `GET /api/tracks/unanalyzed/count`.
+- Renderer API clients: `api/bulk.ts` + additions to `api/analysis.ts`; `stores/analysis-job.ts` (1 s polling job store); `AnalysisProgressBar` component (docked, dismissible on completion).
+
+### Changed (internal — no behavior change)
+
+- Extracted `beatos_core.tracks.patch` (`apply_array_patch`, `FIELD_TO_COL`, `SCALAR_FIELDS`) as a shared multi-value delta helper — consumed by both the new `bulk_update_tracks` core function and the existing MCP approve handler (`update_tracks`/`merge_metadata`), eliminating duplicated array-merge logic.
+
 ## [0.0.34] — 2026-05-29 — Export / metadata packs
 
 Per-track platform-shaped metadata export (NetEase first), reachable from the right-click context menu and the TrackEditor toolbar. Each exported field is individually copyable via a one-click copy button.

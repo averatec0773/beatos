@@ -295,6 +295,25 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 
 `track.license_type` (TEXT) and `track.price` (REAL) were dropped by migration 013. The renderer `Track` interface no longer carries them; any code referring to them is a pre-v0.0.26 leftover and should be removed.
 
+### v0.0.35 — Bulk Metadata Edit + Batch Analyze
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `beatos_core.tracks.patch` | `packages/beatos-core/beatos_core/tracks/patch.py` | Shared multi-value delta helper: `apply_array_patch` (list-replace or `{add?, remove?}` merge), `FIELD_TO_COL`, `SCALAR_FIELDS`. Consumed by the new `bulk_update_tracks` core function AND the existing MCP approve handler (`update_tracks`/`merge_metadata`). |
+| `bulk_update_tracks` | `packages/beatos-core/beatos_core/tracks/service.py` | Applies one patch to many tracks in a single transaction. Scalar fields set directly; multi-value fields (genre/mood/producer) use `apply_array_patch`. |
+| `count_unanalyzed` | `packages/beatos-core/beatos_core/tracks/service.py` | Returns the number of tracks that have no cached BPM/Key result for any audio asset. Used by the library-top "分析全部未分析 (N)" button. |
+| Batch analysis job | `packages/beatos-http/beatos_http/routes/batch_analysis.py` | In-memory job dict; `POST /api/analysis/batch` starts a background asyncio task, `GET /api/analysis/batch/{job_id}` returns `{status, total, done, failed}`. Autofills BPM/Key on empty fields at high-confidence threshold only. |
+| `GET /api/tracks/unanalyzed/count` | `routes/batch_analysis.py` | Returns `{count: int}` — tracks that have no cached BPM/Key result. Polled by the renderer to display the "分析全部未分析 (N)" label. |
+| `POST /api/tracks/bulk-update` | `packages/beatos-http/beatos_http/routes/bulk.py` | Body `{ids, patch}` — applies `bulk_update_tracks` to the given track IDs. Returns `{updated: int}`. |
+| `POST /api/tracks/bulk-apply-license-template` | `routes/bulk.py` | Body `{ids}` — copies the stored `default_license_tiers` app setting onto each track. Returns `{updated: int}`. |
+| Renderer API clients | `apps/desktop/src/renderer/src/api/bulk.ts` + `api/analysis.ts` additions | Typed fetch wrappers for the five new routes. |
+| `AnalysisProgressBar` + job store | `components/AnalysisProgressBar.tsx` + `stores/analysis-job.ts` | Docked progress bar shown while a batch job is running; 1 s polling; dismissible on completion. |
+| `BulkEditDialog` | `components/BulkEditDialog.tsx` | Modal for per-field merge mode (追加 / 覆盖 / 移除 for Genre/Mood/Producer) + Apply default license template action. |
+| `BulkActionBar` wiring | `components/BulkActionBar.tsx` | "编辑元数据" opens `BulkEditDialog`; "分析选中" posts `POST /api/analysis/batch` for the current selection. |
+| Library-top analyze button | `routes/TrackListPanel.tsx` | "分析全部未分析 (N)" button visible when unanalyzed count > 0; posts `POST /api/analysis/batch` with all unanalyzed IDs. |
+
+**Autofill-threshold coupling:** `BPM_AUTOFILL_CONFIDENCE` (0.7) and `KEY_AUTOFILL_CONFIDENCE` (0.6) are defined in both `apps/desktop/src/renderer/src/lib/audio-analysis-constants.ts` (TypeScript) and `packages/beatos-core/beatos_core/audio_analysis/constants.py` (Python). Both sides must be changed together — the Python constants govern batch-job autofill in the sidecar; the TypeScript constants govern single-track auto-analyze and UI threshold display.
+
 ### v0.0.23 — MCP Transport Migration
 
 | Capability | Location | Purpose |
