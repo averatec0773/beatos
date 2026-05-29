@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
@@ -15,6 +15,7 @@ import { DragOverlayPreview } from "@/components/DragOverlayPreview";
 import { useTrackStore } from "@/stores/tracks";
 import { useListStore } from "@/stores/lists";
 import { addTracksToList } from "@/lib/add-tracks-to-list";
+import { useVocabLocaleStore } from "@/stores/vocab-locale";
 
 interface ActiveDrag {
   trackId: number;
@@ -24,6 +25,12 @@ interface ActiveDrag {
 
 export default function App(): React.JSX.Element {
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+
+  // Load the persisted genre/mood display language once at boot. Failures
+  // fall back to the store's "both" default (logged in the store).
+  useEffect(() => {
+    void useVocabLocaleStore.getState().hydrate();
+  }, []);
 
   // Distance-based activation prevents click-to-select from triggering a drag.
   // Listeners are mounted on the whole row root in TrackRow, so a 5px move
