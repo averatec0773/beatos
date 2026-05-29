@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
 import { DefaultLicenseTiersSection } from "@/components/Settings/DefaultLicenseTiersSection";
 import { ProducersSection } from "@/components/Settings/ProducersSection";
+import { VocabLocaleSection } from "@/components/Settings/VocabLocaleSection";
 
 function StorageSection(): React.JSX.Element {
   const [dbPath, setDbPath] = useState<string>("");
@@ -109,6 +110,7 @@ export function SettingsPanel(): React.JSX.Element {
         <h1 className="text-2xl font-bold mb-1">Settings</h1>
         <p className="text-text-secondary text-sm mb-8">Storage location and library management.</p>
         <StorageSection />
+        <VocabLocaleSection />
         <DefaultLicenseTiersSection />
         <ProducersSection />
         <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
