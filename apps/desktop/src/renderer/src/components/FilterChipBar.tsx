@@ -2,6 +2,8 @@ import React, { useMemo, useState } from "react";
 
 import { useTrackQueryStore } from "@/stores/track-query";
 import { formatChipLabel } from "@/lib/format-chip-label";
+import { formatVocabLabel } from "@/data/vocab-label";
+import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { FilterFieldPopover } from "@/components/FilterFieldPopover";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -28,6 +30,7 @@ export function FilterChipBar(): React.JSX.Element {
   const filters = useTrackQueryStore((s) => s.filters);
   const clearAllFilters = useTrackQueryStore((s) => s.clearAllFilters);
   const removeFilter = useTrackQueryStore((s) => s.removeFilter);
+  const vocabLocale = useVocabLocaleStore((s) => s.locale);
 
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<PopoverView>("field-list");
@@ -46,14 +49,20 @@ export function FilterChipBar(): React.JSX.Element {
       result.push({
         field: "genre",
         filterKey: "genres",
-        label: formatChipLabel("Genre", filters.genres),
+        label: formatChipLabel(
+          "Genre",
+          filters.genres.map((v) => formatVocabLabel(v, "genre", vocabLocale)),
+        ),
       });
     }
     if (filters.moods.length > 0) {
       result.push({
         field: "mood",
         filterKey: "moods",
-        label: formatChipLabel("Mood", filters.moods),
+        label: formatChipLabel(
+          "Mood",
+          filters.moods.map((v) => formatVocabLabel(v, "mood", vocabLocale)),
+        ),
       });
     }
     if (filters.keys.length > 0) {
@@ -81,7 +90,7 @@ export function FilterChipBar(): React.JSX.Element {
     }
 
     return result;
-  }, [filters]);
+  }, [filters, vocabLocale]);
 
   function openFieldPicker() {
     setView("field-list");
