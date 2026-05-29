@@ -23,6 +23,7 @@ from beatos_http.routes import (
     analysis,
     app_settings,
     assets,
+    batch_analysis,
     export,
     licenses,
     lists,
@@ -156,6 +157,7 @@ def create_app() -> FastAPI:
     app.include_router(producers.router)
     app.include_router(app_settings.router)
     app.include_router(tokens.router)
+    app.include_router(batch_analysis.router)
 
     app.mount("/mcp", mcp_asgi_app)
 
