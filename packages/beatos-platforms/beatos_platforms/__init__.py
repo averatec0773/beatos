@@ -14,3 +14,15 @@ def load_vocab_map(platform: str, kind: str) -> dict[str, str]:
     if not resource.is_file():
         return {}
     return json.loads(resource.read_text("utf-8"))
+
+
+def load_form_map(platform: str) -> dict:
+    """Return the upload-form selector map for a platform.
+
+    Missing file -> {} (callsite decides 404). Shape:
+    {"match": [...], "fields": {key: {"selector": str, "type": str}}}.
+    """
+    resource = files("beatos_platforms").joinpath("data", platform, "upload-form.json")
+    if not resource.is_file():
+        return {}
+    return json.loads(resource.read_text("utf-8"))
