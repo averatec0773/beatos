@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import socket
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -166,6 +168,23 @@ def create_app() -> FastAPI:
     app.mount("/mcp", mcp_asgi_app)
 
     return app
+
+
+INJECT_PORT = int(os.environ.get("BEATOS_INJECT_PORT", "48923"))
+
+
+def _try_bind_fixed(port: int, host: str = "127.0.0.1") -> socket.socket | None:
+    """Bind the fixed extension-facing port. Returns the socket, or None if the
+    port is already in use (graceful degrade: the extension features are simply
+    unavailable this session; the main API is unaffected)."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind((host, port))
+        return sock
+    except OSError:
+        sock.close()
+        return None
 
 
 def create_inject_app() -> FastAPI:

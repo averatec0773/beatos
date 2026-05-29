@@ -6,8 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from beatos_core.db import run_migrations
-from beatos_http.__main__ import _try_bind_fixed
-from beatos_http.app import create_app, create_inject_app
+from beatos_http.app import create_app, create_inject_app, _try_bind_fixed
 from beatos_http.routes import inject
 
 

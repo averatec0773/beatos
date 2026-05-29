@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import atexit
 import logging
-import os
 import socket
 
 from beatos_http.handshake import default_handshake_path
@@ -22,7 +21,7 @@ _configure_logging()
 
 import uvicorn
 
-from beatos_http.app import create_app, create_inject_app
+from beatos_http.app import create_app, create_inject_app, INJECT_PORT, _try_bind_fixed
 from beatos_http.handshake import write_handshake
 
 log = logging.getLogger(__name__)
@@ -34,23 +33,6 @@ def _bind_ephemeral(host: str = "127.0.0.1") -> tuple[socket.socket, int]:
     sock.bind((host, 0))
     port = sock.getsockname()[1]
     return sock, port
-
-
-INJECT_PORT = int(os.environ.get("BEATOS_INJECT_PORT", "48923"))
-
-
-def _try_bind_fixed(port: int, host: str = "127.0.0.1") -> socket.socket | None:
-    """Bind the fixed extension-facing port. Returns the socket, or None if the
-    port is already in use (graceful degrade: the extension features are simply
-    unavailable this session; the main API is unaffected)."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    try:
-        sock.bind((host, port))
-        return sock
-    except OSError:
-        sock.close()
-        return None
 
 
 def _cleanup_handshake() -> None:
