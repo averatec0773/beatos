@@ -15,10 +15,8 @@ export function VocabLocaleSection(): React.JSX.Element {
 
   return (
     <section className="mb-10">
-      <h2 className="text-sm font-semibold uppercase tracking-[0.05em] text-text-tertiary mb-2">
-        Genre / Mood Language
-      </h2>
-      <p className="text-text-secondary text-sm mb-3">
+      <h2 className="text-lg font-semibold mb-3">Genre / Mood Language</h2>
+      <p className="text-xs text-text-tertiary mb-3">
         Display language for genre and mood options across the editor, filters, and track list.
         Stored values are unaffected.
       </p>
