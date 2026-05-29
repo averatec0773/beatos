@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 
 import { distinct } from "@/api/distinct";
+import { formatVocabLabel } from "@/data/vocab-label";
 import { useTrackQueryStore } from "@/stores/track-query";
+import { useVocabLocaleStore } from "@/stores/vocab-locale";
 
 type MultiField = "producer" | "genre" | "mood" | "key";
 type FieldType = MultiField | "bpm" | "has_audio";
@@ -39,6 +41,13 @@ function MultiValuePicker({
   const setGenreFilter = useTrackQueryStore((s) => s.setGenreFilter);
   const setMoodFilter = useTrackQueryStore((s) => s.setMoodFilter);
   const setKeyFilter = useTrackQueryStore((s) => s.setKeyFilter);
+  const vocabLocale = useVocabLocaleStore((s) => s.locale);
+
+  function displayLabel(val: string): string {
+    if (field === "genre") return formatVocabLabel(val, "genre", vocabLocale);
+    if (field === "mood") return formatVocabLabel(val, "mood", vocabLocale);
+    return val; // producer / key render raw
+  }
 
   const currentValues: string[] =
     field === "producer"
@@ -111,7 +120,7 @@ function MultiValuePicker({
                 onChange={() => toggle(val)}
                 className="accent-accent"
               />
-              <span className="truncate">{val}</span>
+              <span className="truncate">{displayLabel(val)}</span>
             </label>
           ))}
       </div>
