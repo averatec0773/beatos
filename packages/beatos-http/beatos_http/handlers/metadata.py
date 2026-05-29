@@ -19,8 +19,6 @@ from beatos_core.two_phase import (
 )
 from beatos_http.routes.tokens import register_approve_handler
 
-_MULTI = {"producer", "genre", "mood"}
-
 
 def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()

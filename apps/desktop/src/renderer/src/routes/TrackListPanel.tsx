@@ -96,10 +96,11 @@ export function TrackListPanel(): React.JSX.Element {
   const [importFiles, setImportFiles] = useState<File[]>([]);
   const importDialogOpen = importFiles.length > 0;
 
+  const analysisJobId = useAnalysisJobStore((s) => s.jobId);
   useEffect(() => {
     if (listId != null) return;
     analysis.unanalyzedCount().then((r) => setUnanalyzed(r.count)).catch(() => {});
-  }, [listId]);
+  }, [listId, analysisJobId]);
 
   // Single source of X-scroll: the body. The header sits in its own div with
   // an *invisible* native X-scroll (so `scrollLeft` is programmable) and we

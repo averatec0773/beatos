@@ -5,6 +5,8 @@ export const AUDIO_ROLES = [
   "audio_untagged_mp3",
 ] as const;
 
+// Keep in sync with packages/beatos-core/beatos_core/audio_analysis/constants.py
+// (server-side batch autofill uses the Python copy; both must change together).
 export const BPM_AUTOFILL_THRESHOLD = 0.7;
 export const KEY_AUTOFILL_THRESHOLD = 0.6;
 
