@@ -4,6 +4,12 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.36] — 2026-05-29 — Genre/Mood display language toggle
+
+### Added
+
+- **Genre/Mood display language setting** — a global three-way toggle in Settings → "Genre / Mood Language" (`中文 (English)` / `中文` / `English`, default bilingual) controls how genre and mood values are displayed everywhere they appear: the track editor, bulk-edit dialog, filter popover, filter chips, the track list, and the track detail panel. Genres without a Chinese translation (e.g. `Boom Bap`) fall back to English. Stored values remain English-canonical (zero data migration) and NetEase export is unaffected. Backed by the `vocab_locale` app-setting; a single `formatVocabLabel` helper is the source of truth for every display site.
+
 ## [0.0.35.1] — 2026-05-29 — Dogfood fixes: deselect on empty click + IME duplicate-input
 
 ### Fixed
