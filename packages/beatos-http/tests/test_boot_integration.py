@@ -87,6 +87,44 @@ def test_sidecar_boots_and_responds_to_health(isolated_env: dict[str, str], tmp_
             proc.kill()
 
 
+def test_sidecar_boots_when_inject_port_taken(isolated_env: dict[str, str], tmp_path: Path):
+    """Graceful degrade: a busy inject fixed port must not block main API boot.
+
+    We pre-occupy an OS-assigned port, point BEATOS_INJECT_PORT at it, then boot
+    the sidecar. The inject app's pre-bind contention path returns None and the
+    main API still comes up and serves /api/health.
+    """
+    import socket as _socket
+
+    blocker = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+    blocker.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
+    blocker.bind(("127.0.0.1", 0))
+    taken_port = blocker.getsockname()[1]
+    blocker.listen()
+    try:
+        isolated_env["BEATOS_INJECT_PORT"] = str(taken_port)
+        handshake = Path(isolated_env["BEATOS_HANDSHAKE_PATH"])
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "beatos_http"],
+            env=isolated_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            port = _wait_for_handshake_port(proc, handshake)
+            r = _get_health_when_ready(port)
+            assert r.status_code == 200
+            assert r.json() == {"status": "ok"}
+        finally:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3.0)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+    finally:
+        blocker.close()
+
+
 def test_sidecar_writes_jsonl_log(isolated_env: dict[str, str], tmp_path: Path):
     log_path = tmp_path / "sidecar.jsonl"
     isolated_env["BEATOS_LOG_PATH"] = str(log_path)

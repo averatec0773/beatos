@@ -81,7 +81,17 @@ async def _serve(main_sock: socket.socket, main_port: int) -> None:
             access_log=False,
         )
         inj_server = uvicorn.Server(inj_cfg)
-        coros.append(inj_server.serve(sockets=[inject_sock]))
+
+        async def _run_inject() -> None:
+            try:
+                await inj_server.serve(sockets=[inject_sock])
+            except Exception:
+                # Inject is best-effort: its failure must never take down the
+                # main API. Pre-bind contention is handled above; this guards
+                # post-startup faults.
+                log.exception("inject app crashed — extension upload disabled this session")
+
+        coros.append(_run_inject())
         log.info("inject app listening on fixed port %d", INJECT_PORT)
     else:
         log.warning(
