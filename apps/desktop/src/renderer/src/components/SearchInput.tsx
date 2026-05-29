@@ -152,6 +152,13 @@ export function SearchInput(): React.JSX.Element {
   }, []);
 
   function onInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>): void {
+    // While an IME composition is in progress (e.g. typing English via a
+    // Chinese IME), the Enter that confirms the candidate fires keydown with
+    // isComposing=true. Acting on it here would mutate the controlled value
+    // mid-composition and race the IME commit, duplicating the text
+    // ("regalia" → "regalia regalia"). Ignore all keys while composing — the
+    // first Enter confirms the IME, a second (non-composing) Enter submits.
+    if (e.nativeEvent.isComposing) return;
     if (e.key === "Escape") {
       e.preventDefault();
       closeAndClear();

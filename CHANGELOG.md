@@ -4,6 +4,13 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.35.1] — 2026-05-29 — Dogfood fixes: deselect on empty click + IME duplicate-input
+
+### Fixed
+
+- **Clicking the empty area of the track list now deselects the focused track.** Previously a selected row stayed highlighted (and the preview panel kept showing it) no matter where else you clicked. Clicking the empty list background below the rows now clears both the selection and the focused track. The auto-select-first-row behavior was made one-shot (initial load only) so the deselect sticks instead of immediately bouncing back to the first row.
+- **Search box no longer duplicates text typed via an IME.** Typing English (e.g. `regalia`) through a Chinese IME and pressing Enter produced `regalia regalia`: the Enter that *confirms* the IME candidate fired the keydown handler while composition was still active, mutating the controlled input mid-commit. The handler now ignores keys while `isComposing` is true — the first Enter confirms the IME candidate, a second Enter submits the search (the standard IME-aware behavior).
+
 ## [0.0.35] — 2026-05-29 — Bulk metadata edit + batch analyze
 
 In-app bulk metadata editing and background batch BPM/Key analysis for any selection or the entire unanalyzed catalog.

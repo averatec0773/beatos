@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SearchInput, extractCompletedChipToken } from "@/components/SearchInput";
 import { useTrackQueryStore } from "@/stores/track-query";
+import { facetsApi } from "@/api/facets";
 
 vi.mock("@/api/facets", () => ({
   facetsApi: {
@@ -147,5 +148,28 @@ describe("SearchInput", () => {
     await vi.advanceTimersByTimeAsync(300);
 
     expect(useTrackQueryStore.getState().q).toBe("dark trap 808");
+  });
+
+  it("ignores the Enter that confirms an IME composition, submits on the next Enter", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
+    renderInput();
+    await user.click(screen.getByLabelText(/Search/i));
+    const input = screen.getByPlaceholderText(/Search title/i) as HTMLInputElement;
+
+    // The box already holds the IME-composed English text (e.g. typed via a
+    // Chinese IME). onChange has set the controlled value to "regalia".
+    fireEvent.change(input, { target: { value: "regalia" } });
+    vi.mocked(facetsApi.pushRecent).mockClear();
+
+    // The Enter that CONFIRMS the IME candidate fires keydown with
+    // isComposing=true — our handler must ignore it (no submit, no mutation),
+    // otherwise it races the IME commit and duplicates the text.
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    expect(facetsApi.pushRecent).not.toHaveBeenCalled();
+    expect(input.value).toBe("regalia");
+
+    // A real Enter (composition finished) submits.
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(facetsApi.pushRecent).toHaveBeenCalledWith("regalia");
   });
 });

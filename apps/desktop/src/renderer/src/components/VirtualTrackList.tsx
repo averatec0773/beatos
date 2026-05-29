@@ -17,6 +17,12 @@ interface Props {
   onScrollLeftChange?: (scrollLeft: number) => void;
   /** Body scroll element exposed so the parent can drive it from the header. */
   scrollRef?: React.RefObject<HTMLDivElement | null>;
+  /**
+   * Fired when the empty scroll background (below the last row) is clicked —
+   * i.e. the click target is the scroll container itself, not a row. The
+   * parent uses this to deselect the focused/selected track.
+   */
+  onBackgroundClick?: () => void;
 }
 
 const ROW_HEIGHT = 64; // h-16
@@ -26,6 +32,7 @@ export function VirtualTrackList({
   renderRow,
   onScrollLeftChange,
   scrollRef,
+  onBackgroundClick,
 }: Props): React.JSX.Element {
   const parentRef = useRef<HTMLDivElement | null>(null);
 
@@ -61,7 +68,15 @@ export function VirtualTrackList({
     // width — each row's grid-template-columns + `min-width: min-content`
     // pushes its right edge past the parent's clientWidth, which is what
     // makes `overflow: auto` engage horizontally.
-    <div ref={parentRef} className="flex-1 overflow-auto beatos-scroll">
+    <div
+      ref={parentRef}
+      className="flex-1 overflow-auto beatos-scroll"
+      onClick={(e) => {
+        // Only fire for clicks on the empty background (target is the scroll
+        // container itself), not clicks that bubbled up from a row.
+        if (e.target === e.currentTarget) onBackgroundClick?.();
+      }}
+    >
       <div
         style={{
           height: virtualizer.getTotalSize(),

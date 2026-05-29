@@ -83,12 +83,17 @@ export function TrackListPanel(): React.JSX.Element {
 
   const visible = list;
 
-  // Auto-select first row on mount when nothing is selected and list is non-empty
+  // Auto-select the first row ONCE on initial load (so the preview panel isn't
+  // empty on first open). A one-shot ref guard is what lets a later deselect
+  // (clicking the empty list background) actually clear the highlight instead
+  // of immediately bouncing back to row 1 the moment `current` goes null.
+  const didAutoSelect = useRef(false);
   useEffect(() => {
-    if (visible.length > 0 && current == null) {
+    if (!didAutoSelect.current && visible.length > 0 && current == null) {
+      didAutoSelect.current = true;
       select(visible[0].id);
     }
-  }, [visible.length, current, select, visible]);
+  }, [visible, current, select]);
 
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [unanalyzed, setUnanalyzed] = useState(0);
@@ -379,6 +384,10 @@ export function TrackListPanel(): React.JSX.Element {
             tracks={visible}
             onScrollLeftChange={syncHeaderScroll}
             scrollRef={bodyScrollRef}
+            onBackgroundClick={() => {
+              clearSelection();
+              select(null);
+            }}
             renderRow={(t) => (
               <TrackContextMenu
                 key={t.id}

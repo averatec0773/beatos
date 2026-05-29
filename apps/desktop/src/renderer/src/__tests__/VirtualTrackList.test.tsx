@@ -1,5 +1,5 @@
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { VirtualTrackList } from "@/components/VirtualTrackList";
 import type { Track } from "@/api/tracks";
@@ -39,5 +39,34 @@ describe("VirtualTrackList", () => {
     // The important assertion: it doesn't render all 1000 (would be visible
     // as performance proof if not virtualized).
     expect(rows.length).toBeLessThan(1000);
+  });
+
+  it("calls onBackgroundClick when the scroll background itself is clicked", () => {
+    const onBackgroundClick = vi.fn();
+    const { container } = render(
+      <VirtualTrackList
+        tracks={makeTracks(3)}
+        onBackgroundClick={onBackgroundClick}
+        renderRow={(t) => <div data-testid="row">{t.title}</div>}
+      />,
+    );
+    const scroller = container.querySelector(".beatos-scroll") as HTMLElement;
+    fireEvent.click(scroller); // target === currentTarget (empty background)
+    expect(onBackgroundClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT call onBackgroundClick when a child (row area) is clicked", () => {
+    const onBackgroundClick = vi.fn();
+    const { container } = render(
+      <VirtualTrackList
+        tracks={makeTracks(3)}
+        onBackgroundClick={onBackgroundClick}
+        renderRow={(t) => <div data-testid="row">{t.title}</div>}
+      />,
+    );
+    const scroller = container.querySelector(".beatos-scroll") as HTMLElement;
+    const inner = scroller.firstElementChild as HTMLElement; // sizing div, not the scroller
+    fireEvent.click(inner); // bubbles up but target !== currentTarget
+    expect(onBackgroundClick).not.toHaveBeenCalled();
   });
 });
