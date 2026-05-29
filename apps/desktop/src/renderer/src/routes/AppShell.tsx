@@ -5,11 +5,13 @@ import { TopBar } from "@/components/TopBar";
 import { SidebarPanel } from "@/components/Sidebar/SidebarPanel";
 import { BottomPlayerBar } from "@/components/BottomPlayerBar";
 import { Toast } from "@/components/Toast";
+import { AnalysisProgressBar } from "@/components/AnalysisProgressBar";
 
 export function AppShell(): React.JSX.Element {
   return (
     <div className="h-screen bg-bg-base text-text-primary flex flex-col">
       <TopBar />
+      <AnalysisProgressBar />
       <div className="flex-1 flex overflow-hidden min-h-0">
         <SidebarPanel />
         <main className="flex-1 flex overflow-hidden min-w-0">
