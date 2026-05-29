@@ -1,5 +1,5 @@
-import React from "react";
-import { Wand2 } from "lucide-react";
+import React, { useState } from "react";
+import { Wand2, Share2 } from "lucide-react";
 
 import type { Track } from "@/api/tracks";
 import { producers as producersApi } from "@/api/producers";
@@ -12,6 +12,7 @@ import { BEATOS_GENRES, genreLabel } from "@/data/genres";
 import { BEATOS_MOODS } from "@/data/moods";
 import { SaveIndicator } from "@/components/TrackEditor/SaveIndicator";
 import { LicenseTiersSection } from "@/components/TrackEditor/LicenseTiersSection";
+import { ExportDialog } from "@/components/ExportDialog";
 import type { TrackEditorState } from "@/hooks/use-track-editor-state";
 
 export interface TrackEditorFormProps {
@@ -20,6 +21,8 @@ export interface TrackEditorFormProps {
 }
 
 export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.JSX.Element {
+  const [exportOpen, setExportOpen] = useState(false);
+
   const {
     titleEmpty,
     saveState,
@@ -51,6 +54,16 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
             >
               <Wand2 className="h-3.5 w-3.5" />
               {analyzing ? "Analyzing…" : "Analyze audio"}
+            </button>
+            <button
+              type="button"
+              data-export-button
+              onClick={() => setExportOpen(true)}
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-border-subtle px-3 py-2 text-xs text-text-primary hover:bg-bg-row-hover"
+              title="导出元数据到平台"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              导出元数据
             </button>
           </div>
 
@@ -254,6 +267,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
           </button>
         </div>
       </form>
+      <ExportDialog open={exportOpen} trackId={track.id} onClose={() => setExportOpen(false)} />
     </main>
   );
 }

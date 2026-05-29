@@ -1,5 +1,7 @@
-import React, { useMemo } from "react";
-import { Edit, Folder, Trash2, ListPlus, ListMinus } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Edit, Folder, Trash2, ListPlus, ListMinus, Share2 } from "lucide-react";
+
+import { ExportDialog } from "@/components/ExportDialog";
 
 import {
   ContextMenu,
@@ -34,6 +36,8 @@ export function TrackContextMenu({
   onRemoveFromList,
   children,
 }: Props): React.JSX.Element {
+  const [exportOpen, setExportOpen] = useState(false);
+
   // IMPORTANT: select the stable `all` array, then derive userLists with useMemo.
   // Inline `s.all.filter(...)` would return a new array each call, causing
   // useSyncExternalStore to spin in an infinite re-render loop.
@@ -51,6 +55,7 @@ export function TrackContextMenu({
   }
 
   return (
+    <>
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="w-52">
@@ -85,10 +90,16 @@ export function TrackContextMenu({
           <Folder size={14} className="mr-2" /> Reveal in Finder
         </ContextMenuItem>
         <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => setExportOpen(true)}>
+          <Share2 size={14} className="mr-2" /> 导出到平台…
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem className="text-danger" onClick={onConfirmDelete}>
           <Trash2 size={14} className="mr-2" /> Delete
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
+    <ExportDialog open={exportOpen} trackId={trackId} onClose={() => setExportOpen(false)} />
+    </>
   );
 }
