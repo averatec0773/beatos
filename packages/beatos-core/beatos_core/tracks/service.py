@@ -13,6 +13,7 @@ import aiosqlite
 
 from beatos_core.db import resolve_db_path
 from beatos_core.models import Track
+from beatos_core.tracks.patch import apply_array_patch, FIELD_TO_COL, SCALAR_FIELDS
 from beatos_core.tracks.sql_filter import (
     MULTI_VALUE_FIELDS,
     build_filter_clauses,
@@ -323,6 +324,46 @@ async def update_track(track_id: int, updates: dict[str, Any]) -> Track:
     if current is None:
         raise ValueError(f"Track {track_id} not found.")
     return current
+
+
+async def bulk_update_tracks(ids: list[int], patch: dict) -> dict:
+    """Apply one patch to many tracks. Scalar fields set directly; multi-value
+    fields accept a list (replace) or {add?, remove?} delta. In-app direct write
+    (no 2PC). Skips ids that no longer exist."""
+    now = _now()
+    db_path = resolve_db_path()
+    updated = 0
+    async with aiosqlite.connect(db_path) as conn:
+        for tid in ids:
+            sets: list[str] = []
+            params: list = []
+            for field, spec in patch.items():
+                col = FIELD_TO_COL[field]
+                if field in SCALAR_FIELDS:
+                    sets.append(f"{col}=?")
+                    params.append(spec)
+                else:
+                    async with conn.execute(
+                        f"SELECT {col} FROM track WHERE id=?", (tid,)
+                    ) as c0:
+                        row = await c0.fetchone()
+                    if row is None:
+                        continue
+                    new_arr = apply_array_patch(row[0], spec)
+                    sets.append(f"{col}=?")
+                    params.append(json.dumps(new_arr))
+            if not sets:
+                continue
+            sets.append("updated_at=?")
+            params.append(now)
+            params.append(tid)
+            cur = await conn.execute(
+                f"UPDATE track SET {', '.join(sets)} WHERE id=?", params
+            )
+            if cur.rowcount == 1:
+                updated += 1
+        await conn.commit()
+    return {"updated_count": updated, "ids": list(ids)}
 
 
 async def trash_track(track_id: int) -> Track:
