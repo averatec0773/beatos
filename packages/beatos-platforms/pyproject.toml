@@ -1,0 +1,17 @@
+[project]
+name = "beatos-platforms"
+version = "0.0.0"
+description = "BeatOS per-platform vocabulary maps (data package)."
+requires-python = ">=3.11,<3.12"
+dependencies = []
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["beatos_platforms"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

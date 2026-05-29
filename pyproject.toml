@@ -22,12 +22,14 @@ members = [
     "packages/beatos-core",
     "packages/beatos-http",
     "packages/beatos-mcp",
+    "packages/beatos-platforms",
 ]
 
 [tool.uv.sources]
 beatos-core = { workspace = true }
 beatos-http = { workspace = true }
 beatos-mcp = { workspace = true }
+beatos-platforms = { workspace = true }
 
 [dependency-groups]
 dev = [

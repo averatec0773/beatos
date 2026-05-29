@@ -7,6 +7,7 @@ members = [
     "beatos-core",
     "beatos-http",
     "beatos-mcp",
+    "beatos-platforms",
     "beatos-workspace",
 ]
 
@@ -87,6 +88,7 @@ version = "0.0.33.1"
 source = { editable = "packages/beatos-core" }
 dependencies = [
     { name = "aiosqlite" },
+    { name = "beatos-platforms" },
     { name = "librosa" },
     { name = "mutagen" },
     { name = "pydantic" },
@@ -101,6 +103,7 @@ essentia = [
 [package.metadata]
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20" },
+    { name = "beatos-platforms", editable = "packages/beatos-platforms" },
     { name = "essentia", marker = "extra == 'essentia'", specifier = ">=2.1b6.dev1110" },
     { name = "librosa", specifier = ">=0.10,<0.11" },
     { name = "mutagen", specifier = ">=1.47" },
@@ -152,6 +155,11 @@ requires-dist = [
     { name = "mcp-proxy", specifier = ">=0.10,<0.13" },
     { name = "structlog", specifier = ">=25.5.0" },
 ]
+
+[[package]]
+name = "beatos-platforms"
+version = "0.0.0"
+source = { editable = "packages/beatos-platforms" }
 
 [[package]]
 name = "beatos-workspace"
