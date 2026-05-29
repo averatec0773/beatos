@@ -4,7 +4,7 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
-## [0.0.34] — 2026-05-29 — Player: Prev/Next buttons wrap around the queue
+## [0.0.33.1] — 2026-05-29 — Player: Prev/Next buttons wrap around the queue
 
 ### Fixed
 
