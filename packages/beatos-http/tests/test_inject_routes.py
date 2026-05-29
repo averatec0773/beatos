@@ -88,6 +88,12 @@ async def test_stage_unknown_track_400(client):
 
 
 @pytest.mark.asyncio
+async def test_stage_unknown_platform_400(client):
+    res = await client.post("/api/inject/stage", json={"track_id": 1, "platform": "myspace"})
+    assert res.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_form_map_netease(client):
     res = await client.get("/api/inject/form-map/netease")
     assert res.status_code == 200
