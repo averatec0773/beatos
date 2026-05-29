@@ -81,6 +81,7 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    setResult(null);
     exportApi
       .forTrack(trackId, platform)
       .then((r) => !cancelled && setResult(r))

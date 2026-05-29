@@ -10,7 +10,7 @@ Per-track platform-shaped metadata export (NetEase first), reachable from the ri
 
 ### Added
 
-- `beatos_core/export/` — `ExportField` / `ExportResult` models, NetEase metadata renderer (en→zh field mapping, single-genre downgrade, price lines from `prices_json`), export service with platform registry, and a fetch/dispatch layer.
+- `beatos_core/export/` — `ExportField` / `ExportResult` models, NetEase metadata renderer (en→zh field mapping, single-genre downgrade, price lines from license-tier prices), export service with platform registry, and a fetch/dispatch layer.
 - HTTP routes: `GET /api/tracks/{id}/export?platform=<key>` returns a structured `ExportResult`; `GET /api/export/platforms` returns the registry of supported platforms.
 - MCP read tools: `export_metadata(track_id, platform)` and `list_export_platforms()` — backed by the same service as the HTTP routes so agent output and in-app output are identical. Tool count 22 → 24.
 - `beatos-platforms` is now an importable Python package (`beatos_platforms`) with a vocab loader and generated NetEase en→zh genre/mood maps (consumed by `beatos_core.export`). `beatos-core` declares it as a dependency.
