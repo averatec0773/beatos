@@ -19,14 +19,14 @@ jobs:
     name: Python (pytest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # libsndfile + ffmpeg back librosa's decode path (the default analysis
       # engine; the librosa backend test loads a real WAV fixture).
       - name: Install audio system deps
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1 ffmpeg
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v8
         with:
           python-version: "3.11"
           enable-cache: true
@@ -40,15 +40,15 @@ jobs:
         run: uv run pytest -q
 
   desktop:
-    name: Desktop (typecheck · vitest · build)
+    name: Desktop (lint · typecheck · vitest · build)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/desktop
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
