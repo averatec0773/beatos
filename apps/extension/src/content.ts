@@ -1,0 +1,47 @@
+import { fillForm, type ExportResult, type FormMap } from "./fill-form";
+
+const POLL_MS = 2000;
+
+function overlay(report: { filled: string[]; missed: string[] }, audioHint: string): void {
+  const id = "beatos-overlay";
+  document.getElementById(id)?.remove();
+  const box = document.createElement("div");
+  box.id = id;
+  box.style.cssText =
+    "position:fixed;right:16px;bottom:16px;z-index:2147483647;max-width:320px;" +
+    "background:#1b1b1f;color:#eee;font:13px/1.5 system-ui;padding:12px 14px;" +
+    "border:1px solid #444;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.4)";
+  const missed = report.missed.length
+    ? `<div style="color:#f6b">未匹配字段(可能改版): ${report.missed.join(", ")}</div>`
+    : "";
+  box.innerHTML =
+    `<div style="font-weight:600;margin-bottom:4px">BeatOS 已填 ${report.filled.length} 个字段</div>` +
+    missed +
+    `<div style="margin-top:6px;color:#9cf">请拖入音频文件 ${audioHint}</div>` +
+    `<div style="margin-top:2px;color:#888">核对后由你手动点提交</div>`;
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 12000);
+}
+
+function apply(exp: ExportResult, formMap: FormMap): void {
+  const report = fillForm(document, exp, formMap);
+  const title = exp.fields.find((f) => f.key === "title")?.value ?? "";
+  overlay(report, title ? `"${title}"` : "");
+}
+
+async function poll(): Promise<void> {
+  let resp: { staged: boolean; export?: unknown; formMap?: unknown } | undefined;
+  try {
+    resp = await chrome.runtime.sendMessage({ type: "beatos-poll" });
+  } catch {
+    return; // background asleep / extension reloading — try next tick
+  }
+  if (resp?.staged) {
+    apply(resp.export as ExportResult, resp.formMap as FormMap);
+  }
+}
+
+// content script runs in the page context, so setInterval is reliable while the
+// upload tab is open. This drives the cadence; background just does the fetch.
+setInterval(() => void poll(), POLL_MS);
+void poll();
