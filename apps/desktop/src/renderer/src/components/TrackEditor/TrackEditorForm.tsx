@@ -8,8 +8,10 @@ import { CoverDropZone } from "@/components/CoverDropZone";
 import { FileRowsSection } from "@/components/FileRowsSection";
 import { KeyPicker } from "@/components/KeyPicker";
 import { ChipMultiSelect } from "@/components/ChipMultiSelect";
-import { BEATOS_GENRES, genreLabel } from "@/data/genres";
+import { BEATOS_GENRES } from "@/data/genres";
 import { BEATOS_MOODS } from "@/data/moods";
+import { formatVocabLabel } from "@/data/vocab-label";
+import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { SaveIndicator } from "@/components/TrackEditor/SaveIndicator";
 import { LicenseTiersSection } from "@/components/TrackEditor/LicenseTiersSection";
 import { ExportDialog } from "@/components/ExportDialog";
@@ -22,6 +24,8 @@ export interface TrackEditorFormProps {
 
 export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.JSX.Element {
   const [exportOpen, setExportOpen] = useState(false);
+
+  const vocabLocale = useVocabLocaleStore((s) => s.locale);
 
   const {
     titleEmpty,
@@ -131,7 +135,10 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                 </label>
                 <ChipMultiSelect
                   value={track.genre ?? []}
-                  options={BEATOS_GENRES.map((g) => ({ value: g.en, label: genreLabel(g) }))}
+                  options={BEATOS_GENRES.map((g) => ({
+                    value: g.en,
+                    label: formatVocabLabel(g.en, "genre", vocabLocale),
+                  }))}
                   onChange={(v) => patch("genre", v.length ? v : null)}
                   popoverTitle="Genres"
                   placeholder="Add genre..."
@@ -149,7 +156,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                   value={track.mood ?? []}
                   options={BEATOS_MOODS.map((m) => ({
                     value: m.en,
-                    label: `${m.zh} (${m.en})`,
+                    label: formatVocabLabel(m.en, "mood", vocabLocale),
                     group: m.group,
                   }))}
                   onChange={(v) => patch("mood", v.length ? v : null)}

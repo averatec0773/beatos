@@ -9,8 +9,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ChipMultiSelect } from "@/components/ChipMultiSelect";
-import { BEATOS_GENRES, genreLabel } from "@/data/genres";
+import { BEATOS_GENRES } from "@/data/genres";
 import { BEATOS_MOODS } from "@/data/moods";
+import { formatVocabLabel } from "@/data/vocab-label";
+import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { bulk } from "@/api/bulk";
 import { useToastStore } from "@/stores/toast";
 import { useTrackStore } from "@/stores/tracks";
@@ -60,6 +62,7 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
   const [mood, setMood] = useState<FieldState>(EMPTY);
   const [producer, setProducer] = useState<FieldState>(EMPTY);
   const [busy, setBusy] = useState(false);
+  const vocabLocale = useVocabLocaleStore((s) => s.locale);
 
   const apply = async () => {
     const patch: Record<string, unknown> = {};
@@ -120,7 +123,10 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
             </div>
             <ChipMultiSelect
               value={genre.values}
-              options={BEATOS_GENRES.map((g) => ({ value: g.en, label: genreLabel(g) }))}
+              options={BEATOS_GENRES.map((g) => ({
+                value: g.en,
+                label: formatVocabLabel(g.en, "genre", vocabLocale),
+              }))}
               onChange={(v) => setGenre((s) => ({ ...s, values: v }))}
               placeholder="Add genre..."
               popoverTitle="Genres"
@@ -138,7 +144,7 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
               value={mood.values}
               options={BEATOS_MOODS.map((m) => ({
                 value: m.en,
-                label: `${m.zh} (${m.en})`,
+                label: formatVocabLabel(m.en, "mood", vocabLocale),
                 group: m.group,
               }))}
               onChange={(v) => setMood((s) => ({ ...s, values: v }))}
