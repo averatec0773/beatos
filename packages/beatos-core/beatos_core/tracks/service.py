@@ -281,6 +281,20 @@ async def count_tracks() -> int:
             return int(row[0]) if row else 0
 
 
+async def count_unanalyzed() -> int:
+    """Tracks with at least one non-missing audio asset but no BPM yet."""
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) FROM track t "
+            "WHERE t.deleted_at IS NULL AND t.bpm IS NULL "
+            "AND EXISTS (SELECT 1 FROM asset a WHERE a.track_id = t.id "
+            "AND a.missing = 0 AND a.role LIKE 'audio%')"
+        ) as cur:
+            (n,) = await cur.fetchone()
+    return int(n)
+
+
 async def get_track(track_id: int) -> Optional[Track]:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
