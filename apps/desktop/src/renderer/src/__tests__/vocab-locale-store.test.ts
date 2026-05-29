@@ -37,6 +37,12 @@ describe("useVocabLocaleStore", () => {
     expect(useVocabLocaleStore.getState().locale).toBe("both");
   });
 
+  it("hydrate() with an invalid value keeps 'both'", async () => {
+    getMock.mockResolvedValue({ key: "vocab_locale", value: "fr" });
+    await useVocabLocaleStore.getState().hydrate();
+    expect(useVocabLocaleStore.getState().locale).toBe("both");
+  });
+
   it("setLocale() updates state and persists", async () => {
     setMock.mockResolvedValue({ key: "vocab_locale", value: "en" });
     await useVocabLocaleStore.getState().setLocale("en");
