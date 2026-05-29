@@ -4,6 +4,26 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.31] — 2026-05-28 — Audit batch 1: security, data integrity, doc/test sync
+
+First batch of fixes from a full read-only code audit (reports under `reports/audits/`). High-value, low-risk items only: a CORS hole, an orphaned-rows bug on purge, a 500-on-missing-list, a dead-ternary, plus doc/test drift. The deeper concurrency findings (player load race, license preset double-create) and the LIKE-escaping / shared-search-builder work are deferred to a later batch.
+
+### Security
+
+- Sidecar CORS was `allow_origin_regex=".*"` — any web page the user visited could reach the no-auth localhost API cross-origin and approve pending write tokens, defeating the human-in-the-loop gate. Now restricted to the renderer's own origins via the (previously dead) `_ALLOWED_ORIGINS` allowlist.
+
+### Fixed
+
+- `purge_track` / `purge_all_trash` opened SQLite connections without `PRAGMA foreign_keys = ON`, so the `ON DELETE CASCADE` on `asset` / `track_list` / `license_tier` / `analysis_cache` was a silent no-op and child rows were orphaned on every hard-delete. Both now enable FK enforcement. (The MCP approve path already did; only the direct HTTP routes were affected.)
+- `update_list` on a non-existent id returned `None`, which serialized to an HTTP 500. Now raises `ValueError` → 400 (consistent with `update_track` and the other list routes).
+- `ImportAudioDialog`: removed a dead `canAttach ? "new" : "new"` ternary. Default stays "new" by design — "attach" replaces an existing asset, so it must be an explicit choice, never the one-click default.
+
+### Docs / tests
+
+- `conventions/architecture.md`: rewrote the "MCP surface" section — it listed ~7 tools / "21" but `server.py` registers **22** (7 read + 15 write, all two-phase). The canonical trust-boundary spec was understating the write surface by ~15 tools.
+- `scripts/smoke/sidebar.mjs`: the sidebar-order assertion was red (the documented baseline). The expected order was stale (`…Lists → Approvals`, actual is `…Approvals → Lists`) and it measured a shared wrapper `<div>` instead of the leaf buttons, collapsing several labels to the same `top`. Now anchors on the most-specific (shortest-text) element per label and asserts the actual order.
+- Added core tests: purge cascade (both purge paths) and `update_list` raising on a missing id.
+
 ## [0.0.30] — 2026-05-27 — Pluggable analysis engine + cache fix
 
 Makes the analysis engine a build-time switch instead of a hard dependency, so the AGPL exposure from v0.0.29 is opt-in rather than baked in. Also fixes a cache bug where a failed analysis stuck permanently.

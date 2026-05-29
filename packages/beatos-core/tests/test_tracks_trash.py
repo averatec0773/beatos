@@ -178,3 +178,54 @@ async def test_purge_all_trash_deletes_only_trashed():
 async def test_purge_all_trash_returns_zero_when_empty():
     await create_track("Active only")
     assert await purge_all_trash() == 0
+
+
+async def _count_child_rows(track_id: int) -> dict[str, int]:
+    import aiosqlite
+    from beatos_core.db import resolve_db_path
+
+    counts: dict[str, int] = {}
+    async with aiosqlite.connect(resolve_db_path()) as conn:
+        for table in ("license_tier", "track_list"):
+            async with conn.execute(
+                f"SELECT COUNT(*) FROM {table} WHERE track_id = ?", (track_id,)
+            ) as cur:
+                (counts[table],) = await cur.fetchone()
+    return counts
+
+
+async def _seed_track_with_children(title: str) -> int:
+    """Create a track plus a license tier and a list membership referencing it."""
+    from beatos_core.licenses.service import create_tier
+    from beatos_core.lists.service import create_list
+    from beatos_core.lists.membership import add_track_to_list
+
+    track = await create_track(title)
+    lst = await create_list(name=f"L-{title}", kind="user")
+    await add_track_to_list(track.id, lst.id)
+    await create_tier(track.id, deliverables=["mp3"], prices={"USD": 10.0})
+    return track.id
+
+
+@pytest.mark.asyncio
+async def test_purge_track_cascades_to_child_rows():
+    """purge_track must delete the track's child rows, not orphan them."""
+    track_id = await _seed_track_with_children("Cascade One")
+    await trash_track(track_id)
+    await purge_track(track_id)
+
+    counts = await _count_child_rows(track_id)
+    assert counts["license_tier"] == 0, "license_tier rows orphaned after purge_track"
+    assert counts["track_list"] == 0, "track_list rows orphaned after purge_track"
+
+
+@pytest.mark.asyncio
+async def test_purge_all_trash_cascades_to_child_rows():
+    """purge_all_trash must delete child rows of every purged track."""
+    track_id = await _seed_track_with_children("Cascade Two")
+    await trash_track(track_id)
+    await purge_all_trash()
+
+    counts = await _count_child_rows(track_id)
+    assert counts["license_tier"] == 0, "license_tier rows orphaned after purge_all_trash"
+    assert counts["track_list"] == 0, "track_list rows orphaned after purge_all_trash"

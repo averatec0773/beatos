@@ -74,3 +74,11 @@ async def test_delete_system_list_blocked():
 @pytest.mark.asyncio
 async def test_get_list_returns_none_for_missing_id():
     assert await get_list(99999) is None
+
+
+@pytest.mark.asyncio
+async def test_update_missing_list_raises():
+    """Updating a non-existent list must raise (so the route returns 404),
+    not silently return None (which serializes to a 500)."""
+    with pytest.raises(ValueError):
+        await update_list(99999, {"name": "Ghost"})

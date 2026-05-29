@@ -130,9 +130,13 @@ def create_app() -> FastAPI:
         finally:
             structlog.contextvars.clear_contextvars()
 
+    # Restrict to the renderer's own origins (dev Vite server + packaged app's
+    # file:// origin, which reports as "null"). A wildcard here would let any
+    # web page the user visits reach this no-auth localhost API and approve
+    # pending write tokens cross-origin — defeating the human-in-the-loop gate.
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=r".*",
+        allow_origins=_ALLOWED_ORIGINS,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
     )

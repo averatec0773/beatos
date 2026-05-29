@@ -305,21 +305,27 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | Tool annotations | `server.py` `@mcp.tool(annotations=...)` | `readOnlyHint` + `idempotentHint` on all read tools and `await_approval`. |
 | `await_approval(token)` | `beatos_mcp/tools/await_approval.py` | Unified 2PC status-check tool; tool-agnostic envelope `{token, tool_name, status, result?}`. `confirm_create_list` alias removed in v0.0.24. |
 
-## MCP surface (aspirational)
+## MCP surface
 
-`packages/beatos-mcp/` ships 6 read tools as of v0.0.20 (7 with `search_tracks`, v0.0.28), plus the first write tool as of v0.0.21. Any write tool requires two-phase commit:
+`packages/beatos-mcp/server.py` registers **22 tools** as of v0.0.30 — **7 read + 15 write** (verify with `grep -c '@mcp.tool' server.py`). Every write tool is two-phase: phase 1 issues a single-use token; the user approves in BeatOS Settings (`POST /api/tokens/{token}/approve`); the agent polls `await_approval(token)`. No write tool mutates the DB directly.
 
 | Tool | Type | Status |
 |---|---|---|
 | `ping` | read | Shipped v0.0.20. |
 | `list_tracks(filter?)` / `get_track(id)` | read | Shipped v0.0.20. |
 | `list_lists` / `list_distinct_values` | read | Shipped v0.0.20. (`list_sources` shipped v0.0.20, removed v0.0.22.) |
-| `create_list(name)` | write | Shipped v0.0.21. Two-phase: phase 1 issues token; user approves in BeatOS Settings; phase 2 (`await_approval(token)`) is read-only. |
 | `await_approval(token)` | read | Shipped v0.0.23. Unified 2PC status-check across all write tools. |
 | `search_tracks(query)` | read | Shipped v0.0.28. Parses the query via `beatos_core.tracks.query_parser.parse_query` — the SAME parser the HTTP `GET /api/tracks?query=` route uses, so agent search and in-app search return identical results. |
-| `list_platforms()` | read | Once adapters exist. |
-| `inject_to_platform(track_id, platform)` | write | Returns `confirm_token`; agent must call `confirm_inject(token)` separately. |
-| `suggest_tags(track_id)` / `find_similar(track_id)` | read | v0.2 / v0.3 (audio + text RAG). |
+| `create_list` | write (2PC) | Shipped v0.0.21 (first write tool). |
+| `update_list` / `delete_list` | write (2PC) | List rename/delete. |
+| `add_tracks_to_list` / `remove_tracks_from_list` / `reorder_list` | write (2PC) | List curation. |
+| `trash_tracks` / `restore_tracks` / `purge_tracks` | write (2PC) | Lifecycle (soft-delete / restore / hard-delete). |
+| `update_tracks` / `merge_metadata` | write (2PC) | Track-field edits. |
+| `set_license_tiers` | write (2PC) | Multi-currency license tiers (v0.0.26–27). |
+| `create_tracks` / `attach_assets` / `detach_assets` | write (2PC) | Ingest (catalog rows + asset references). |
+| `list_platforms()` | read | Future — once platform adapters exist. |
+| `inject_to_platform(track_id, platform)` | write | Future — returns `confirm_token`; agent must call `confirm_inject(token)` separately. |
+| `suggest_tags(track_id)` / `find_similar(track_id)` | read | Future — v0.2 / v0.3 (audio + text RAG). |
 
 Trust boundary = local stdio process; no network auth needed. See [ROADMAP.md](../ROADMAP.md) for the build sequence.
 

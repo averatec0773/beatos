@@ -25,34 +25,35 @@ export async function assertDropCreateApiPath(ctx) {
   }
 }
 
-// v0.0.22: assert the new sidebar order — All Beats / Trash / Lists / Approvals
+// Assert the sidebar order — All Beats / Trash / Approvals / Lists
 // (footer is non-button so omitted). Replaces the v0.0.14 source reorder API
 // assertion which targeted the now-removed /api/sources/reorder route.
 //
 // "All Beats", "Trash", "Approvals" each render as a single sidebar button whose
 // text starts with that label (count suffix appended, e.g. "All Beats5"). "Lists"
-// is a section header (plain text node, NOT a button), so we read the sidebar's
-// full topY-ordered text nodes instead of just buttons to anchor its position.
+// is a section header (plain text node, NOT a button). For each label we anchor
+// on the MOST SPECIFIC element containing it (shortest textContent) so a wrapper
+// that contains several labels never collapses them to the same top.
 export async function assertSidebarOrder(ctx) {
   const { window, failures } = ctx;
   try {
     const positions = await window.evaluate(() => {
       const sidebar = document.querySelector("aside");
       if (!sidebar) return null;
-      // Walk all text-bearing descendants; for each "needle", record the top
-      // of the first element whose textContent contains it.
-      const needles = ["All Beats", "Trash", "Lists", "Approvals"];
+      // For each "needle", record the top of the element with the SHORTEST
+      // textContent containing it — i.e. the most specific (leaf) node, so a
+      // wrapper that contains several labels never wins over the label itself.
+      const needles = ["All Beats", "Trash", "Approvals", "Lists"];
       const out = {};
       const all = Array.from(sidebar.querySelectorAll("*"));
       for (const needle of needles) {
+        let bestLen = Infinity;
         for (const el of all) {
           const txt = (el.textContent ?? "").trim();
-          // Only count leaf-ish nodes — avoid the <aside> root matching everything.
-          if (!txt || el.children.length > 4) continue;
-          if (txt.includes(needle)) {
-            const rect = el.getBoundingClientRect();
-            if (out[needle] === undefined) out[needle] = rect.top;
-            break;
+          if (!txt || !txt.includes(needle)) continue;
+          if (txt.length < bestLen) {
+            bestLen = txt.length;
+            out[needle] = el.getBoundingClientRect().top;
           }
         }
       }
@@ -62,7 +63,7 @@ export async function assertSidebarOrder(ctx) {
       failures.push("sidebar order: <aside> not found");
       return;
     }
-    const required = ["All Beats", "Trash", "Lists", "Approvals"];
+    const required = ["All Beats", "Trash", "Approvals", "Lists"];
     const missing = required.filter((n) => positions[n] === undefined);
     if (missing.length > 0) {
       failures.push(`sidebar order: missing labels ${JSON.stringify(missing)}; positions=${JSON.stringify(positions)}`);
@@ -75,7 +76,7 @@ export async function assertSidebarOrder(ctx) {
         return;
       }
     }
-    console.log("smoke: sidebar order (All Beats → Trash → Lists → Approvals) PASS");
+    console.log("smoke: sidebar order (All Beats → Trash → Approvals → Lists) PASS");
   } catch (e) {
     failures.push(`sidebar order assertion error: ${e.message}`);
   }

@@ -397,6 +397,10 @@ async def restore_track(track_id: int) -> Track:
 async def purge_track(track_id: int) -> None:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
+        # FK enforcement is per-connection and off by default — without this the
+        # ON DELETE CASCADE on asset/track_list/license_tier/analysis_cache is a
+        # no-op and child rows are orphaned.
+        await conn.execute("PRAGMA foreign_keys = ON")
         await conn.execute("DELETE FROM track WHERE id = ?", (track_id,))
         await conn.commit()
 
@@ -405,6 +409,7 @@ async def purge_all_trash() -> int:
     """Permanently delete every soft-deleted track. Returns count purged."""
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
+        await conn.execute("PRAGMA foreign_keys = ON")  # cascade child rows; see purge_track
         cursor = await conn.execute(
             "DELETE FROM track WHERE deleted_at IS NOT NULL",
         )

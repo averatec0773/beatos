@@ -93,7 +93,10 @@ async def update_list(list_id: int, updates: dict[str, Any]) -> ListModel:
             tuple(values),
         )
         await conn.commit()
-    return await get_list(list_id)  # type: ignore[return-value]
+    updated = await get_list(list_id)
+    if updated is None:
+        raise ValueError(f"List {list_id} not found.")
+    return updated
 
 
 async def reorder_lists(ids: list[int]) -> None:

@@ -32,10 +32,13 @@ export function ImportAudioDialog({
 
   useEffect(() => {
     if (open) {
-      setDestination(canAttach ? "new" : "new");
+      // Default to "new" even when attach is possible: "attach" replaces an
+      // existing asset, so it should be an explicit user choice, never the
+      // one-click default.
+      setDestination("new");
       setTag("untagged");
     }
-  }, [open, canAttach]);
+  }, [open]);
 
   const count = files.length;
   const title = count === 1 ? `Import "${files[0]?.name ?? "audio"}"` : `Import ${count} audio files`;
