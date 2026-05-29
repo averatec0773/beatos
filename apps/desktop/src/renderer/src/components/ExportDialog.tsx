@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Send } from "lucide-react";
 
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { exportApi, type ExportField, type ExportResult } from "@/api/export";
+import { injectApi } from "@/api/inject";
 import { useToastStore } from "@/stores/toast";
 
 interface Props {
@@ -100,7 +101,7 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
           <DialogTitle>导出元数据</DialogTitle>
           <DialogDescription>逐字段复制到平台上传表单。</DialogDescription>
         </DialogHeader>
-        <div className="mb-2">
+        <div className="mb-2 flex items-center gap-2">
           <select
             aria-label="平台"
             value={platform}
@@ -113,6 +114,22 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await injectApi.stage(trackId, platform);
+                useToastStore
+                  .getState()
+                  .show("success", "已发送，请切到浏览器上传页（需安装 BeatOS 扩展）");
+              } catch {
+                useToastStore.getState().show("error", "发送失败");
+              }
+            }}
+            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-sm text-text-primary hover:bg-bg-row-hover"
+          >
+            <Send className="h-3.5 w-3.5" /> 发送到上传页
+          </button>
         </div>
         <div className="max-h-[60vh] overflow-y-auto beatos-scroll">
           {result?.fields.map((f) => (
