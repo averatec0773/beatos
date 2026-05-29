@@ -166,3 +166,17 @@ def create_app() -> FastAPI:
     app.mount("/mcp", mcp_asgi_app)
 
     return app
+
+
+def create_inject_app() -> FastAPI:
+    """Minimal fixed-port app for the browser extension.
+
+    Serves ONLY the inject router (ping / pending / form-map / stage). No CORS
+    (the extension uses host_permissions, which bypasses page CORS; the absence
+    of CORS headers makes browsers fail the preflight for random web pages doing
+    cross-origin JSON POSTs). No MCP, no lifespan — shares the same process and
+    the same inject._STAGED singleton as the main app.
+    """
+    app = FastAPI(title="BeatOS Inject", version="0.0.4")
+    app.include_router(inject.router)
+    return app

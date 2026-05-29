@@ -1,11 +1,13 @@
 import datetime as dt
+import socket
 
 import aiosqlite
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from beatos_core.db import run_migrations
-from beatos_http.app import create_app
+from beatos_http.__main__ import _try_bind_fixed
+from beatos_http.app import create_app, create_inject_app
 from beatos_http.routes import inject
 
 
@@ -110,3 +112,30 @@ async def test_form_map_unknown_404(client):
 async def test_ping(client):
     res = await client.get("/api/inject/ping")
     assert res.json() == {"beatos_inject": True}
+
+
+@pytest.mark.asyncio
+async def test_inject_app_serves_ping_and_formmap():
+    app = create_inject_app()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        assert (await c.get("/api/inject/ping")).json() == {"beatos_inject": True}
+        assert (await c.get("/api/inject/form-map/netease")).status_code == 200
+
+
+def test_inject_app_has_no_mcp_mount():
+    app = create_inject_app()
+    paths = {r.path for r in app.routes}
+    assert "/mcp" not in paths
+    assert "/api/inject/pending" in paths
+
+
+def test_try_bind_fixed_returns_socket_then_none():
+    s1 = _try_bind_fixed(0)  # port 0 = OS picks a free port, always binds
+    assert s1 is not None
+    bound_port = s1.getsockname()[1]
+    try:
+        s2 = _try_bind_fixed(bound_port)  # already held -> None
+        assert s2 is None
+    finally:
+        s1.close()
