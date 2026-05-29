@@ -6,6 +6,8 @@ import { useAssetStore } from "@/stores/assets";
 import { CoverImage } from "@/components/CoverImage";
 import { formatRowDate } from "@/lib/format-row-date";
 import { PREVIEW_MAX_WIDTH, PREVIEW_MIN_WIDTH, usePreviewPanelStore } from "@/stores/preview-panel";
+import { formatVocabLabel } from "@/data/vocab-label";
+import { useVocabLocaleStore } from "@/stores/vocab-locale";
 
 function PreviewResizer(): React.JSX.Element {
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
@@ -69,6 +71,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
   const width = usePreviewPanelStore((s) => s.width);
   const current = useTrackStore((s) => s.current);
   const byTrack = useAssetStore((s) => s.byTrack);
+  const vocabLocale = useVocabLocaleStore((s) => s.locale);
 
   // Selecting a track while the panel is closed shouldn't silently open it —
   // user explicitly closed it. They re-open via the TopBar toggle.
@@ -130,7 +133,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         <div className="text-2xl font-bold leading-tight">{current.title}</div>
         <div className="text-text-secondary text-sm mt-1">
           {current.genre && current.genre.length > 0 ? (
-            current.genre.join(", ")
+            current.genre.map((g) => formatVocabLabel(g, "genre", vocabLocale)).join(", ")
           ) : (
             <span className="text-text-tertiary">No genre</span>
           )}
@@ -142,9 +145,9 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         <dt className="text-text-tertiary">Key</dt>
         <dd>{current.key_signature ?? "—"}</dd>
         <dt className="text-text-tertiary">Genre</dt>
-        <dd>{current.genre && current.genre.length > 0 ? current.genre.join(", ") : "—"}</dd>
+        <dd>{current.genre && current.genre.length > 0 ? current.genre.map((g) => formatVocabLabel(g, "genre", vocabLocale)).join(", ") : "—"}</dd>
         <dt className="text-text-tertiary">Mood</dt>
-        <dd>{current.mood && current.mood.length > 0 ? current.mood.join(", ") : "—"}</dd>
+        <dd>{current.mood && current.mood.length > 0 ? current.mood.map((m) => formatVocabLabel(m, "mood", vocabLocale)).join(", ") : "—"}</dd>
       </dl>
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-t border-border-subtle pt-3">
         Credits
