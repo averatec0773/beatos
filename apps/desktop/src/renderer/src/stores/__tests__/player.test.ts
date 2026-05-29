@@ -290,6 +290,33 @@ describe("togglePlay recovery", () => {
   });
 });
 
+describe("concurrent loadAndPlay (rapid track switch)", () => {
+  it("latest call wins — a slow earlier resolve must not clobber the newer track", async () => {
+    let resolveA!: (v: unknown) => void;
+    const aPending = new Promise((r) => {
+      resolveA = r as (v: unknown) => void;
+    });
+    vi.mocked(assetsApi.listForTrack)
+      .mockImplementationOnce(() => aPending as Promise<never>) // track 1: slow
+      .mockResolvedValueOnce([mockAsset(20, "audio_tagged_wav")]); // track 2: fast
+
+    // Fire two switches back-to-back; the second (track 2) is the user's latest intent.
+    const pA = usePlayerStore.getState().playFromQueue({
+      trackIds: [1], startIndex: 0, origin: { kind: "all" },
+    });
+    const pB = usePlayerStore.getState().playFromQueue({
+      trackIds: [2], startIndex: 0, origin: { kind: "all" },
+    });
+    await pB;
+    // Now the stale earlier request resolves — it must NOT win.
+    resolveA([mockAsset(10, "audio_tagged_wav")]);
+    await pA;
+
+    expect(usePlayerStore.getState().currentTrackId).toBe(2);
+    expect(usePlayerStore.getState().currentAssetId).toBe(20);
+  });
+});
+
 describe("setPreferredRole", () => {
   it("re-resolves asset if preferred role is available", async () => {
     vi.mocked(assetsApi.listForTrack).mockResolvedValue([

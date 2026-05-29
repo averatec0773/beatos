@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from beatos_core.tracks.query_parser import escape_like
 from beatos_mcp.db import connect
 
 
@@ -138,9 +139,9 @@ def _build_filter_clauses(
         cols = ("track.title", "track.description", "track.tags",
                 "track.producer", "track.genre", "track.mood", "track.key_signature")
         for term in text:
-            ors = " OR ".join(f"{c} LIKE ?" for c in cols)
+            ors = " OR ".join(f"{c} LIKE ? ESCAPE '\\'" for c in cols)
             clauses.append(f"({ors})")
-            params.extend([f"%{term}%"] * len(cols))
+            params.extend([f"%{escape_like(term)}%"] * len(cols))
     return clauses, params
 
 

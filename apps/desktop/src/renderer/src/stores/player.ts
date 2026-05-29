@@ -83,6 +83,9 @@ function effectiveOrder(state: PlayerState): { order: number[]; cur: number } {
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => {
+  // Monotonic token for the latest-wins guard in loadAndPlay (rapid switches).
+  let loadToken = 0;
+
   /**
    * Resolve a track's audio asset, hand it to the engine, and optionally
    * start playback. `targetStatus`:
@@ -95,8 +98,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     preferred: AudioRole | null,
     targetStatus: "playing" | "preserve" = "playing",
   ): Promise<void> {
+    // Latest-wins guard: rapid track switches fire overlapping loadAndPlay
+    // calls. A slow earlier asset-fetch/load must not clobber a newer one, so
+    // each call claims a token and bails after every await if superseded.
+    const myToken = ++loadToken;
     const prev = get();
     const list = await assetsApi.listForTrack(trackId);
+    if (myToken !== loadToken) return;
     const asset = resolveAudioAsset(list, preferred);
 
     if (!asset) {
@@ -130,6 +138,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       // engine fires "error" event → _setStatus("error") via subscription
       return;
     }
+    if (myToken !== loadToken) return;
     if (shouldPlay) {
       await audioEngine.play();
     }

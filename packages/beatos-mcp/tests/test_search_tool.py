@@ -43,3 +43,14 @@ async def test_search_bpm_operator(fresh_db):
     await _seed_track(fresh_db, title="Fast", bpm=150)
     res = await search_tracks(query="bpm:>=140")
     assert [t["title"] for t in res["items"]] == ["Fast"]
+
+
+@pytest.mark.asyncio
+async def test_search_underscore_is_literal(fresh_db):
+    """'_' in the query must be a literal underscore, not a single-char wildcard."""
+    await _seed_track(fresh_db, title="abc")
+    await _seed_track(fresh_db, title="a_c")
+    res = await search_tracks(query="a_c")
+    titles = {t["title"] for t in res["items"]}
+    assert "a_c" in titles
+    assert "abc" not in titles

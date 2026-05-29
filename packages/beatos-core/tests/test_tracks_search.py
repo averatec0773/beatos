@@ -81,6 +81,28 @@ async def test_q_combined_with_genre_no_match(seeded_tracks):
 
 
 @pytest.mark.asyncio
+async def test_underscore_is_literal_not_single_char_wildcard():
+    """A user's '_' must match a literal underscore, not any single char."""
+    await create_track("abc")
+    await create_track("a_c")
+    rows = await list_tracks(text=["a_c"])
+    titles = {r.title for r in rows}
+    assert "a_c" in titles
+    assert "abc" not in titles
+
+
+@pytest.mark.asyncio
+async def test_percent_is_literal_not_match_all_wildcard():
+    """A user's '%' must match a literal percent, not every row."""
+    await create_track("clean title")
+    await create_track("50% off")
+    rows = await list_tracks(text=["%"])
+    titles = {r.title for r in rows}
+    assert "50% off" in titles
+    assert "clean title" not in titles
+
+
+@pytest.mark.asyncio
 async def test_top_values_orders_by_count_desc():
     from beatos_core.tracks.service import list_top_values
     t1 = await create_track("A"); await update_track(t1.id, {"genre": ["trap"]})

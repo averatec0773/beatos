@@ -139,6 +139,9 @@ class AudioEngine {
     if (!this.player) return;
     if (Tone.getContext().state !== "running") {
       await Tone.start();
+      // A concurrent load()/dispose() (rapid track switch) can null the player
+      // while we were parked on the await — re-check before dereferencing.
+      if (!this.player) return;
     }
     this.contextTimeAtStart = Tone.now();
     this.player.start(undefined, this.offsetAtStart);

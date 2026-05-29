@@ -9,6 +9,25 @@ import re
 import shlex
 from dataclasses import dataclass, field
 
+# Backslash is the LIKE escape char used by every text-search clause (paired
+# with `ESCAPE '\'`). Shared so the HTTP and MCP SQL builders escape identically
+# — see escape_like().
+LIKE_ESCAPE_CHAR = "\\"
+
+
+def escape_like(term: str) -> str:
+    """Escape LIKE metacharacters so a user's `%` / `_` match literally.
+
+    The result is meant to be wrapped as `f"%{escape_like(term)}%"` and bound to
+    a clause that declares `LIKE ? ESCAPE '\\'`. Without this, a query of `%`
+    matches the whole catalog and `a_c` matches `abc`.
+    """
+    return (
+        term.replace(LIKE_ESCAPE_CHAR, LIKE_ESCAPE_CHAR * 2)
+        .replace("%", LIKE_ESCAPE_CHAR + "%")
+        .replace("_", LIKE_ESCAPE_CHAR + "_")
+    )
+
 
 @dataclass(eq=True)
 class FilterSpec:

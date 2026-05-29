@@ -4,6 +4,19 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.32] — 2026-05-29 — Audit batch 2: playback race + search escaping
+
+Second batch from the code audit. Two verified-real fixes; the license preset double-create (H5) was investigated and dropped — the existing `creating` flag + per-preset debounce + post-create slot replacement already guard it, and the residual window isn't deterministically reproducible.
+
+### Fixed
+
+- Rapid track-switching could crash playback. `loadAndPlay` fired overlapping async calls with no ordering guard, so a slow earlier asset-fetch could clobber a newer track, and `AudioEngine.play()` dereferenced `this.player` after `await Tone.start()` without re-checking — a concurrent `load()`/`dispose()` during that await threw `TypeError: …reading 'start'`. Now: a latest-wins token in `loadAndPlay` bails superseded calls after each await, and `play()` re-checks the player after the await.
+- Free-text search treated `%` and `_` as SQL LIKE wildcards: a query of `%` returned the whole catalog and `a_c` matched `abc`. User terms are now escaped (`escape_like` in `beatos_core.tracks.query_parser`, shared by the HTTP and MCP SQL builders) and the clauses declare `ESCAPE '\'`. Fixes both builders from one helper.
+
+### Tests
+
+- Engine race: `play()` survives a player disposed mid-`await Tone.start()`. Store race: a slow earlier `loadAndPlay` no longer clobbers a newer track. Search: `_`/`%` match literally (core + MCP).
+
 ## [0.0.31] — 2026-05-28 — Audit batch 1: security, data integrity, doc/test sync
 
 First batch of fixes from a full read-only code audit (reports under `reports/audits/`). High-value, low-risk items only: a CORS hole, an orphaned-rows bug on purge, a 500-on-missing-list, a dead-ternary, plus doc/test drift. The deeper concurrency findings (player load race, license preset double-create) and the LIKE-escaping / shared-search-builder work are deferred to a later batch.

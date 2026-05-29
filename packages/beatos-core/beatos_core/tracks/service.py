@@ -13,6 +13,7 @@ import aiosqlite
 
 from beatos_core.db import resolve_db_path
 from beatos_core.models import Track
+from beatos_core.tracks.query_parser import escape_like
 
 _WRITABLE_FIELDS = {
     "title",
@@ -209,8 +210,8 @@ def _build_where(
         )
     if text:
         for term in text:
-            like = f"%{term}%"
-            ors = " OR ".join(f"{col} LIKE ?" for col in _TEXT_SEARCH_COLS)
+            like = f"%{escape_like(term)}%"
+            ors = " OR ".join(f"{col} LIKE ? ESCAPE '\\'" for col in _TEXT_SEARCH_COLS)
             clauses.append(f"({ors})")
             params.extend([like] * len(_TEXT_SEARCH_COLS))
     return (" AND ".join(clauses), params)
