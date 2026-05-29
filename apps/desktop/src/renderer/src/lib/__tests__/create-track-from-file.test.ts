@@ -61,11 +61,7 @@ describe("importAsNewTracks", () => {
       .mockResolvedValueOnce({ id: 1, title: "beat1" } as any)
       .mockResolvedValueOnce({ id: 2, title: "beat2" } as any);
 
-    const files = [
-      makeFile("beat1.wav"),
-      makeFile("beat2.mp3"),
-      makeFile("document.pdf"),
-    ];
+    const files = [makeFile("beat1.wav"), makeFile("beat2.mp3"), makeFile("document.pdf")];
 
     const result = await importAsNewTracks(files, "untagged");
 

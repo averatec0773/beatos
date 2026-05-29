@@ -21,7 +21,15 @@ describe("useTrackStore refresh", () => {
     useTrackQueryStore.setState({
       sortBy: "updated_at",
       sortDir: "desc",
-      filters: { producers: [], genres: [], moods: [], keys: [], bpm_min: null, bpm_max: null, has_audio: null },
+      filters: {
+        producers: [],
+        genres: [],
+        moods: [],
+        keys: [],
+        bpm_min: null,
+        bpm_max: null,
+        has_audio: null,
+      },
     });
   });
 

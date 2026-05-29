@@ -10,7 +10,11 @@ vi.mock("electron", () => ({
 vi.mock("electron-log/main", () => ({
   default: {
     transports: {
-      file: { resolvePathFn: null as ((...args: unknown[]) => string) | null, maxSize: 0, level: "info" },
+      file: {
+        resolvePathFn: null as ((...args: unknown[]) => string) | null,
+        maxSize: 0,
+        level: "info",
+      },
       console: { level: "info" },
     },
     initialize: vi.fn(),

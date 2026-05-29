@@ -12,22 +12,22 @@ beforeEach(() => {
     json: () => Promise.resolve([]),
   });
   useListStore.setState({
-    all: [
-      { id: 101, name: "Q1 2025", kind: "user", position: 1, created_at: "x" },
-    ],
+    all: [{ id: 101, name: "Q1 2025", kind: "user", position: 1, created_at: "x" }],
   });
   useTrackStore.setState({
-    list: [
-      { id: 1 } as any,
-      { id: 2 } as any,
-      { id: 3 } as any,
-    ],
+    list: [{ id: 1 } as any, { id: 2 } as any, { id: 3 } as any],
     total: 3,
   });
 });
 
 it("renders the All Beats row with track count", () => {
-  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
+  render(
+    <MemoryRouter>
+      <DndContext>
+        <SidebarPanel />
+      </DndContext>
+    </MemoryRouter>,
+  );
   expect(screen.getByText("All Beats")).toBeInTheDocument();
   expect(screen.getByText("3")).toBeInTheDocument();
 });
@@ -46,21 +46,37 @@ it("clicking All Beats navigates to /", () => {
 
 it("AllBeatsSection renders no count badge when total is null", () => {
   useTrackStore.setState({ list: [], total: null });
-  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
+  render(
+    <MemoryRouter>
+      <DndContext>
+        <SidebarPanel />
+      </DndContext>
+    </MemoryRouter>,
+  );
   const allBeatsButton = screen.getByText("All Beats").closest("button")!;
   expect(allBeatsButton.textContent).toBe("All Beats");
 });
 
 it("AllBeatsSection renders no count badge when total is 0", () => {
   useTrackStore.setState({ list: [], total: 0 });
-  render(<MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>);
+  render(
+    <MemoryRouter>
+      <DndContext>
+        <SidebarPanel />
+      </DndContext>
+    </MemoryRouter>,
+  );
   const allBeatsButton = screen.getByText("All Beats").closest("button")!;
   expect(allBeatsButton.textContent).toBe("All Beats");
 });
 
 it("renders sections in Claude-style order", () => {
   const { container } = render(
-    <MemoryRouter><DndContext><SidebarPanel /></DndContext></MemoryRouter>,
+    <MemoryRouter>
+      <DndContext>
+        <SidebarPanel />
+      </DndContext>
+    </MemoryRouter>,
   );
   // Walk the aside DOM in document order and record the position of each
   // required label by its first occurrence.

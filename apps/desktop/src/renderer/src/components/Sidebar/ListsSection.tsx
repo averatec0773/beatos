@@ -28,8 +28,7 @@ function SidebarListRow({
   // row-shifting animation. Read the active drag id from context and gate
   // the droppable on it.
   const { active: activeDrag } = useDndContext();
-  const activeIsTrack =
-    typeof activeDrag?.id === "string" && activeDrag.id.startsWith("track:");
+  const activeIsTrack = typeof activeDrag?.id === "string" && activeDrag.id.startsWith("track:");
   const { setNodeRef, isOver } = useDroppable({
     id: `list-drop:${list.id}`,
     disabled: !activeIsTrack,

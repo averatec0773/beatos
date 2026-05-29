@@ -50,10 +50,7 @@ function resolveFiles(files: File[]): { ok: PathedFile[]; errors: string[]; skip
   return { ok, errors, skipped };
 }
 
-export async function importAsNewTracks(
-  files: File[],
-  tag: AudioTag,
-): Promise<ImportResult> {
+export async function importAsNewTracks(files: File[], tag: AudioTag): Promise<ImportResult> {
   const { ok, errors, skipped } = resolveFiles(files);
   const result: ImportResult = { created: 0, attached: 0, skipped, errors };
 
@@ -68,7 +65,9 @@ export async function importAsNewTracks(
     try {
       created = await tracks.create(titleStem);
     } catch (e) {
-      result.errors.push(`${f.name}: create failed - ${e instanceof Error ? e.message : String(e)}`);
+      result.errors.push(
+        `${f.name}: create failed - ${e instanceof Error ? e.message : String(e)}`,
+      );
       continue;
     }
     // Best-effort: copy the user's default license tiers onto the new
@@ -78,8 +77,14 @@ export async function importAsNewTracks(
       await useAssetStore.getState().attach(created.id, role as any, f.absPath);
       result.created++;
     } catch (e) {
-      try { await tracks.remove(created.id); } catch { /* best-effort rollback */ }
-      result.errors.push(`${f.name}: attach failed - ${e instanceof Error ? e.message : String(e)}`);
+      try {
+        await tracks.remove(created.id);
+      } catch {
+        /* best-effort rollback */
+      }
+      result.errors.push(
+        `${f.name}: attach failed - ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   }
   void useTrackStore.getState().refresh();

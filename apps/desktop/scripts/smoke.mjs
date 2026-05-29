@@ -26,8 +26,9 @@ import {
 } from "./smoke/setup.mjs";
 import { runAssertions } from "./smoke/runner.mjs";
 
-const { mainEntry, userData, logPath, dbPath, screenshotPath } =
-  bootstrapPaths(import.meta.dirname);
+const { mainEntry, userData, logPath, dbPath, screenshotPath } = bootstrapPaths(
+  import.meta.dirname,
+);
 
 let exitCode = 0;
 const failures = [];
@@ -41,9 +42,7 @@ try {
   // appears in smoke runs it would break firstWindow() semantics.
   const allWindows = app.windows();
   if (allWindows.length !== 1) {
-    failures.push(
-      `expected exactly 1 window (--no-splash), saw ${allWindows.length}`,
-    );
+    failures.push(`expected exactly 1 window (--no-splash), saw ${allWindows.length}`);
   }
   window.on("pageerror", (err) => {
     failures.push(`renderer pageerror: ${err.message}`);
@@ -67,9 +66,13 @@ try {
   console.log(`smoke: screenshot ${screenshotPath}`);
 
   // React-mount sanity: WelcomeScreen should render on a fresh DB.
-  const rootSize = await window.evaluate(() => document.getElementById("root")?.innerHTML?.length ?? -1);
+  const rootSize = await window.evaluate(
+    () => document.getElementById("root")?.innerHTML?.length ?? -1,
+  );
   if (rootSize < 100) {
-    failures.push(`#root content suspiciously small (${rootSize} chars) — React likely didn't mount`);
+    failures.push(
+      `#root content suspiciously small (${rootSize} chars) — React likely didn't mount`,
+    );
   }
 
   try {

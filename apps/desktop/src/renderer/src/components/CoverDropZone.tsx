@@ -9,18 +9,29 @@ const COVER_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 export function CoverDropZone({ trackId }: { trackId: number }) {
   const { asset, pickAndAttach, detach, relocate, reveal } = useAssetSlot(
-    trackId, "cover", "Cover", COVER_EXTENSIONS
+    trackId,
+    "cover",
+    "Cover",
+    COVER_EXTENSIONS,
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  useClickOutside(containerRef, useCallback(() => setMenuOpen(false), []), menuOpen);
+  useClickOutside(
+    containerRef,
+    useCallback(() => setMenuOpen(false), []),
+    menuOpen,
+  );
 
   if (asset && asset.missing) {
     return (
       <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-2 bg-bg-elevated border border-danger rounded-md text-danger p-2 text-center">
         <AlertTriangle size={16} />
         <span className="text-xs">Cover · Missing</span>
-        <button type="button" onClick={relocate} className="mt-1 inline-flex items-center gap-1 text-xs underline hover:no-underline">
+        <button
+          type="button"
+          onClick={relocate}
+          className="mt-1 inline-flex items-center gap-1 text-xs underline hover:no-underline"
+        >
           <RefreshCw size={10} /> Find file
         </button>
       </div>
@@ -68,17 +79,23 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
           className="absolute right-2 top-10 bg-bg-elevated border border-border-subtle rounded-md shadow-lg text-sm z-10 w-44"
           onClick={() => setMenuOpen(false)}
         >
-          <button type="button" onClick={reveal}
+          <button
+            type="button"
+            onClick={reveal}
             className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
             Reveal in Finder
           </button>
-          <button type="button" onClick={() => pickAndAttach(true)}
+          <button
+            type="button"
+            onClick={() => pickAndAttach(true)}
             className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
             Replace…
           </button>
-          <button type="button" onClick={detach}
+          <button
+            type="button"
+            onClick={detach}
             className="w-full text-left px-3 py-2 text-danger hover:bg-bg-row-hover"
           >
             Detach

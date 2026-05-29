@@ -71,12 +71,11 @@ export default function App(): React.JSX.Element {
           // usually picks the inner `list-drop:N`, so accept both ids here as
           // valid reorder targets.
           if (activeId.startsWith("list:")) {
-            const targetId =
-              overId.startsWith("list:")
-                ? Number(overId.slice("list:".length))
-                : overId.startsWith("list-drop:")
-                  ? Number(overId.slice("list-drop:".length))
-                  : null;
+            const targetId = overId.startsWith("list:")
+              ? Number(overId.slice("list:".length))
+              : overId.startsWith("list-drop:")
+                ? Number(overId.slice("list-drop:".length))
+                : null;
             const sourceId = Number(activeId.slice("list:".length));
             if (targetId == null || targetId === sourceId) return;
             const listStore = useListStore.getState();
@@ -118,7 +117,9 @@ export default function App(): React.JSX.Element {
           </Routes>
         </HashRouter>
         <DragOverlay>
-          {activeDrag ? <DragOverlayPreview count={activeDrag.count} title={activeDrag.title} /> : null}
+          {activeDrag ? (
+            <DragOverlayPreview count={activeDrag.count} title={activeDrag.title} />
+          ) : null}
         </DragOverlay>
       </DndContext>
     </ErrorBoundary>

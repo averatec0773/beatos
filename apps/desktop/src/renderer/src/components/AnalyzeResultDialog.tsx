@@ -23,7 +23,7 @@ function defaultChecked(
   fieldEmpty: boolean,
   confidence: number | null,
   threshold: number,
-  replaceExisting: boolean
+  replaceExisting: boolean,
 ): boolean {
   const aboveThreshold = confidence != null && confidence >= threshold;
   if (replaceExisting) return aboveThreshold;
@@ -46,10 +46,20 @@ export function AnalyzeResultDialog({
   useEffect(() => {
     if (!open || !result) return;
     setBpmChecked(
-      defaultChecked(currentBpm == null, result.bpm_confidence, BPM_AUTOFILL_THRESHOLD, replaceExisting)
+      defaultChecked(
+        currentBpm == null,
+        result.bpm_confidence,
+        BPM_AUTOFILL_THRESHOLD,
+        replaceExisting,
+      ),
     );
     setKeyChecked(
-      defaultChecked(currentKey == null, result.key_confidence, KEY_AUTOFILL_THRESHOLD, replaceExisting)
+      defaultChecked(
+        currentKey == null,
+        result.key_confidence,
+        KEY_AUTOFILL_THRESHOLD,
+        replaceExisting,
+      ),
     );
   }, [open, result, replaceExisting, currentBpm, currentKey]);
 
@@ -71,13 +81,16 @@ export function AnalyzeResultDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+    >
       <DialogContent data-analyze-dialog onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Audio Analysis Results</DialogTitle>
-          <DialogDescription>
-            Select which detected values to apply to the track.
-          </DialogDescription>
+          <DialogDescription>Select which detected values to apply to the track.</DialogDescription>
         </DialogHeader>
 
         {result && (
@@ -100,7 +113,10 @@ export function AnalyzeResultDialog({
                   {result.bpm != null ? Math.round(result.bpm) : "—"}
                 </span>
               </div>
-              <ConfidenceBadge confidence={result.bpm_confidence} threshold={BPM_AUTOFILL_THRESHOLD} />
+              <ConfidenceBadge
+                confidence={result.bpm_confidence}
+                threshold={BPM_AUTOFILL_THRESHOLD}
+              />
             </div>
 
             {/* Key row */}
@@ -117,11 +133,12 @@ export function AnalyzeResultDialog({
                 <span className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary w-8">
                   Key
                 </span>
-                <span className="text-text-primary font-mono">
-                  {result.key ?? "—"}
-                </span>
+                <span className="text-text-primary font-mono">{result.key ?? "—"}</span>
               </div>
-              <ConfidenceBadge confidence={result.key_confidence} threshold={KEY_AUTOFILL_THRESHOLD} />
+              <ConfidenceBadge
+                confidence={result.key_confidence}
+                threshold={KEY_AUTOFILL_THRESHOLD}
+              />
             </div>
           </div>
         )}
@@ -172,14 +189,9 @@ function ConfidenceBadge({
   const pct = Math.round(confidence * 100);
   const isLow = confidence < threshold;
   return (
-    <span
-      className={
-        isLow
-          ? "text-xs text-warning font-medium"
-          : "text-xs text-text-tertiary"
-      }
-    >
-      {isLow ? "⚠ Low " : ""}{pct}%
+    <span className={isLow ? "text-xs text-warning font-medium" : "text-xs text-text-tertiary"}>
+      {isLow ? "⚠ Low " : ""}
+      {pct}%
     </span>
   );
 }

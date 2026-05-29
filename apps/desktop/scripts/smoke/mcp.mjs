@@ -12,11 +12,15 @@ export async function assertHandshakePid(ctx) {
     const hsPath = join(userDataPath, "runtime", "handshake.json");
     const hs = JSON.parse(readFileSync(hsPath, "utf-8"));
     if (typeof hs.port !== "number" || hs.port <= 0) {
-      failures.push(`handshake.pid: port is not a positive number (got ${JSON.stringify(hs.port)})`);
+      failures.push(
+        `handshake.pid: port is not a positive number (got ${JSON.stringify(hs.port)})`,
+      );
       return;
     }
     if (typeof hs.pid !== "number" || hs.pid <= 0) {
-      failures.push(`handshake.pid: pid is missing or not a positive number (got ${JSON.stringify(hs.pid)})`);
+      failures.push(
+        `handshake.pid: pid is missing or not a positive number (got ${JSON.stringify(hs.pid)})`,
+      );
       return;
     }
     console.log(`smoke: handshake { port: ${hs.port}, pid: ${hs.pid} } PASS`);

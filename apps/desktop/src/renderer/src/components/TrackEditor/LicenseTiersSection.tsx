@@ -1,11 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Plus, Trash2, X } from "lucide-react";
 
-import {
-  licenseTiers as api,
-  type LicenseTier,
-  type LicenseTierUpdate,
-} from "@/api/license-tiers";
+import { licenseTiers as api, type LicenseTier, type LicenseTierUpdate } from "@/api/license-tiers";
 import { useToastStore } from "@/stores/toast";
 import { fxConvertedString, SUPPORTED_CURRENCIES } from "@/lib/fx-rates";
 
@@ -31,9 +27,7 @@ const PRESET_KEYS = new Set<string>(PRESET_SLOTS.map((p) => p.key));
 const FIXED_CURRENCIES = ["CNY", "USD"] as const;
 const FIXED_CURRENCY_SET = new Set<string>(FIXED_CURRENCIES);
 /** Currencies available in the optional third-slot dropdown. */
-const OTHER_CURRENCIES = SUPPORTED_CURRENCIES.filter(
-  (c) => !FIXED_CURRENCY_SET.has(c),
-);
+const OTHER_CURRENCIES = SUPPORTED_CURRENCIES.filter((c) => !FIXED_CURRENCY_SET.has(c));
 
 const AUTOSAVE_MS = 600;
 
@@ -112,9 +106,7 @@ function deriveAutoName(deliverables: string[]): string {
 }
 
 function deliverablesKey(deliverables: string[]): string {
-  return JSON.stringify(
-    Array.from(new Set(deliverables.map((d) => d.toLowerCase()))).sort(),
-  );
+  return JSON.stringify(Array.from(new Set(deliverables.map((d) => d.toLowerCase()))).sort());
 }
 
 function draftToUpdate(d: DraftTier): LicenseTierUpdate {
@@ -139,9 +131,8 @@ function emptyPresetDefaults(): Record<PresetKey, EmptyPresetState> {
 export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
   const [tiers, setTiers] = useState<DraftTier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [emptySlots, setEmptySlots] = useState<Record<PresetKey, EmptyPresetState>>(
-    emptyPresetDefaults(),
-  );
+  const [emptySlots, setEmptySlots] =
+    useState<Record<PresetKey, EmptyPresetState>>(emptyPresetDefaults());
   const [pendingCustom, setPendingCustom] = useState<PendingCustom | null>(null);
   const savingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const createTimers = useRef<Map<PresetKey, ReturnType<typeof setTimeout>>>(new Map());
@@ -204,10 +195,9 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
       try {
         await api.update(tierId, draftToUpdate(next));
       } catch (e) {
-        useToastStore.getState().show(
-          "error",
-          `Save tier failed: ${e instanceof Error ? e.message : String(e)}`,
-        );
+        useToastStore
+          .getState()
+          .show("error", `Save tier failed: ${e instanceof Error ? e.message : String(e)}`);
       } finally {
         savingTimers.current.delete(tierId);
       }
@@ -255,20 +245,15 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
       await api.remove(tierId);
       setTiers((prev) => prev.filter((t) => t.id !== tierId));
     } catch (e) {
-      useToastStore.getState().show(
-        "error",
-        `Delete tier failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      useToastStore
+        .getState()
+        .show("error", `Delete tier failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
   /** Empty-preset price input handler. Buffers local state and debounces a
    *  CREATE once at least one currency has a non-empty value. */
-  function onEmptyPresetPriceChange(
-    preset: PresetKey,
-    currency: string,
-    raw: string,
-  ): void {
+  function onEmptyPresetPriceChange(preset: PresetKey, currency: string, raw: string): void {
     setEmptySlots((prev) => ({
       ...prev,
       [preset]: {
@@ -284,10 +269,7 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     createTimers.current.set(preset, handle);
   }
 
-  function onEmptyPresetOtherCurrencyChange(
-    preset: PresetKey,
-    next: string | null,
-  ): void {
+  function onEmptyPresetOtherCurrencyChange(preset: PresetKey, next: string | null): void {
     setEmptySlots((prev) => {
       const slot = prev[preset];
       const nextInputs = { ...slot.priceInputs };
@@ -326,10 +308,12 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
         ...prev,
         [preset]: { ...prev[preset], creating: false },
       }));
-      useToastStore.getState().show(
-        "error",
-        `Add ${preset.toUpperCase()} tier failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      useToastStore
+        .getState()
+        .show(
+          "error",
+          `Add ${preset.toUpperCase()} tier failed: ${e instanceof Error ? e.message : String(e)}`,
+        );
     }
   }
 
@@ -349,8 +333,7 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     if (PRESET_KEYS.has(name))
       return `"${name.toUpperCase()}" is a preset — fill the row above instead.`;
     const dupe = tiers.find(
-      (t) =>
-        t.deliverables.length === 1 && t.deliverables[0].toLowerCase() === name,
+      (t) => t.deliverables.length === 1 && t.deliverables[0].toLowerCase() === name,
     );
     if (dupe) return `A "${name.toUpperCase()}" tier already exists.`;
     return null;
@@ -376,10 +359,9 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
       setTiers((prev) => [...prev, toDraft(created)]);
       setPendingCustom(null);
     } catch (e) {
-      useToastStore.getState().show(
-        "error",
-        `Add tier failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      useToastStore
+        .getState()
+        .show("error", `Add tier failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -430,9 +412,7 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
                 otherCurrency={empty.otherCurrency}
                 creating={empty.creating}
                 onPriceChange={(c, v) => onEmptyPresetPriceChange(slot.key, c, v)}
-                onOtherCurrencyChange={(c) =>
-                  onEmptyPresetOtherCurrencyChange(slot.key, c)
-                }
+                onOtherCurrencyChange={(c) => onEmptyPresetOtherCurrencyChange(slot.key, c)}
               />
             );
           })}
@@ -508,10 +488,7 @@ function pickFxSource(
   return null;
 }
 
-function fxPlaceholderFor(
-  target: string,
-  source: [string, number] | null,
-): string {
+function fxPlaceholderFor(target: string, source: [string, number] | null): string {
   if (!source) return "—";
   const [from, amount] = source;
   if (from === target) return "—";
@@ -559,7 +536,9 @@ function PriceTrio({
           </label>
         );
       })}
-      <div className={`inline-flex items-center min-w-0 rounded-md border border-border-subtle ${inputBg} focus-within:border-accent`}>
+      <div
+        className={`inline-flex items-center min-w-0 rounded-md border border-border-subtle ${inputBg} focus-within:border-accent`}
+      >
         <select
           value={otherCurrency ?? ""}
           onChange={(e) => onOtherCurrencyChange(e.target.value || null)}
@@ -579,9 +558,7 @@ function PriceTrio({
           min={0}
           step="0.01"
           value={otherCurrency ? (priceInputs[otherCurrency] ?? "") : ""}
-          onChange={(e) =>
-            otherCurrency && onPriceChange(otherCurrency, e.target.value)
-          }
+          onChange={(e) => otherCurrency && onPriceChange(otherCurrency, e.target.value)}
           disabled={disabled || !otherCurrency}
           placeholder={
             otherCurrency && (priceInputs[otherCurrency] ?? "") === ""

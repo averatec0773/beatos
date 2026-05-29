@@ -5,11 +5,7 @@ import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { CoverImage } from "@/components/CoverImage";
 import { formatRowDate } from "@/lib/format-row-date";
-import {
-  PREVIEW_MAX_WIDTH,
-  PREVIEW_MIN_WIDTH,
-  usePreviewPanelStore,
-} from "@/stores/preview-panel";
+import { PREVIEW_MAX_WIDTH, PREVIEW_MIN_WIDTH, usePreviewPanelStore } from "@/stores/preview-panel";
 
 function PreviewResizer(): React.JSX.Element {
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
@@ -133,9 +129,11 @@ export function TrackDetailPanel(): React.JSX.Element | null {
       <div>
         <div className="text-2xl font-bold leading-tight">{current.title}</div>
         <div className="text-text-secondary text-sm mt-1">
-          {current.genre && current.genre.length > 0
-            ? current.genre.join(", ")
-            : <span className="text-text-tertiary">No genre</span>}
+          {current.genre && current.genre.length > 0 ? (
+            current.genre.join(", ")
+          ) : (
+            <span className="text-text-tertiary">No genre</span>
+          )}
         </div>
       </div>
       <dl className="grid grid-cols-2 gap-2 text-sm">
@@ -154,9 +152,11 @@ export function TrackDetailPanel(): React.JSX.Element | null {
       <dl className="grid grid-cols-[80px_1fr] gap-x-3 gap-y-2 text-sm">
         <dt className="text-text-tertiary">Producer</dt>
         <dd>
-          {current.producer && current.producer.length > 0
-            ? current.producer.join(", ")
-            : <span className="text-text-tertiary">—</span>}
+          {current.producer && current.producer.length > 0 ? (
+            current.producer.join(", ")
+          ) : (
+            <span className="text-text-tertiary">—</span>
+          )}
         </dd>
         <dt className="text-text-tertiary">Tags</dt>
         <dd>

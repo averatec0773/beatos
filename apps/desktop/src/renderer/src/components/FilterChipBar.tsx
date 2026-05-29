@@ -3,11 +3,7 @@ import React, { useMemo, useState } from "react";
 import { useTrackQueryStore } from "@/stores/track-query";
 import { formatChipLabel } from "@/lib/format-chip-label";
 import { FilterFieldPopover } from "@/components/FilterFieldPopover";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type FieldType = "producer" | "genre" | "mood" | "key" | "bpm" | "has_audio";
 
@@ -19,10 +15,10 @@ interface Chip {
 
 const FIELD_OPTIONS: { field: FieldType; label: string }[] = [
   { field: "producer", label: "Producer" },
-  { field: "genre",    label: "Genre" },
-  { field: "mood",     label: "Mood" },
-  { field: "key",      label: "Key" },
-  { field: "bpm",      label: "BPM" },
+  { field: "genre", label: "Genre" },
+  { field: "mood", label: "Mood" },
+  { field: "key", label: "Key" },
+  { field: "bpm", label: "BPM" },
   { field: "has_audio", label: "Audio" },
 ];
 
@@ -139,7 +135,13 @@ export function FilterChipBar(): React.JSX.Element {
         </button>
       ))}
 
-      <Popover open={open} onOpenChange={(o) => { if (!o) closePopover(); else setOpen(true); }}>
+      <Popover
+        open={open}
+        onOpenChange={(o) => {
+          if (!o) closePopover();
+          else setOpen(true);
+        }}
+      >
         <PopoverTrigger asChild>
           <button
             type="button"
@@ -168,11 +170,7 @@ export function FilterChipBar(): React.JSX.Element {
               ))}
             </div>
           ) : (
-            <FilterFieldPopover
-              field={view}
-              onApply={closePopover}
-              onCancel={closePopover}
-            />
+            <FilterFieldPopover field={view} onApply={closePopover} onCancel={closePopover} />
           )}
         </PopoverContent>
       </Popover>

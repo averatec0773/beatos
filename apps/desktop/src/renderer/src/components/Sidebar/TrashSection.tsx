@@ -23,9 +23,7 @@ export function TrashSection(): React.JSX.Element {
     >
       <Trash2 size={14} />
       <span className="flex-1">Trash</span>
-      {trashCount > 0 && (
-        <span className="text-[10px] text-text-tertiary">{trashCount}</span>
-      )}
+      {trashCount > 0 && <span className="text-[10px] text-text-tertiary">{trashCount}</span>}
     </button>
   );
 }

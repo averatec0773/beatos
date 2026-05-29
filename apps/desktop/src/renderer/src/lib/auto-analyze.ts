@@ -4,10 +4,7 @@ import { analysis } from "@/api/analysis";
 import { tracks } from "@/api/tracks";
 import { useTrackStore } from "@/stores/tracks";
 import { useToastStore } from "@/stores/toast";
-import {
-  BPM_AUTOFILL_THRESHOLD,
-  KEY_AUTOFILL_THRESHOLD,
-} from "@/lib/audio-analysis-constants";
+import { BPM_AUTOFILL_THRESHOLD, KEY_AUTOFILL_THRESHOLD } from "@/lib/audio-analysis-constants";
 
 interface AnalyzingState {
   inflight: Record<number, boolean>;
@@ -71,7 +68,7 @@ export async function maybeAutoAnalyze(trackId: number): Promise<void> {
         toast.show(
           "warning",
           `Low confidence (not applied): ${skippedParts.join(" · ")} — click "Analyze audio" to review`,
-          6000
+          6000,
         );
       }
     } else if (wantBpm || wantKey) {
@@ -83,7 +80,7 @@ export async function maybeAutoAnalyze(trackId: number): Promise<void> {
       toast.show(
         "warning",
         `Analysis low confidence: ${parts.join(" · ")} — click "Analyze audio" to review`,
-        6000
+        6000,
       );
     }
   } catch (e) {

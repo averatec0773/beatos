@@ -52,11 +52,17 @@ const rejectedRow = { ...consumedRow, token: "r1", status: "rejected", result: n
 const expiredRow = { ...consumedRow, token: "e1", status: "expired", result: null };
 
 describe("ApprovalsPanel", () => {
-  beforeEach(() => { mockTokensApi([], []); });
+  beforeEach(() => {
+    mockTokensApi([], []);
+  });
 
   it("renders the empty-empty state when both sections are empty", async () => {
     mockTokensApi([], []);
-    render(<MemoryRouter><ApprovalsPanel /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ApprovalsPanel />
+      </MemoryRouter>,
+    );
     await waitFor(() => {
       expect(screen.getByText(/No AI activity yet/i)).toBeInTheDocument();
     });
@@ -64,7 +70,11 @@ describe("ApprovalsPanel", () => {
 
   it("renders Pending section when pending tokens exist", async () => {
     mockTokensApi([pendingRow], []);
-    render(<MemoryRouter><ApprovalsPanel /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ApprovalsPanel />
+      </MemoryRouter>,
+    );
     await waitFor(() => {
       expect(screen.getByText(/Pending \(1\)/i)).toBeInTheDocument();
       expect(screen.getByText(/Trap 2026/)).toBeInTheDocument();
@@ -75,7 +85,11 @@ describe("ApprovalsPanel", () => {
 
   it("renders Recent section with status glyphs", async () => {
     mockTokensApi([], [consumedRow, rejectedRow, expiredRow]);
-    render(<MemoryRouter><ApprovalsPanel /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ApprovalsPanel />
+      </MemoryRouter>,
+    );
     await waitFor(() => {
       expect(screen.getByText(/Recent \(3\)/i)).toBeInTheDocument();
     });
@@ -86,33 +100,43 @@ describe("ApprovalsPanel", () => {
 
   it("Approve button calls approve endpoint", async () => {
     mockTokensApi([pendingRow], []);
-    render(<MemoryRouter><ApprovalsPanel /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ApprovalsPanel />
+      </MemoryRouter>,
+    );
     const btn = await screen.findByRole("button", { name: /approve/i });
     (global.fetch as any).mockClear();
     (global.fetch as any).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
     await userEvent.click(btn);
-    expect(global.fetch).toHaveBeenCalledWith(
-      `${FAKE_BASE}/api/tokens/p1/approve`,
-      { method: "POST" },
-    );
+    expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens/p1/approve`, {
+      method: "POST",
+    });
   });
 
   it("Reject button calls reject endpoint", async () => {
     mockTokensApi([pendingRow], []);
-    render(<MemoryRouter><ApprovalsPanel /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ApprovalsPanel />
+      </MemoryRouter>,
+    );
     const btn = await screen.findByRole("button", { name: /reject/i });
     (global.fetch as any).mockClear();
     (global.fetch as any).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
     await userEvent.click(btn);
-    expect(global.fetch).toHaveBeenCalledWith(
-      `${FAKE_BASE}/api/tokens/p1/reject`,
-      { method: "POST" },
-    );
+    expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens/p1/reject`, {
+      method: "POST",
+    });
   });
 
   it("hides Pending header when pending list is empty (history-only)", async () => {
     mockTokensApi([], [consumedRow]);
-    render(<MemoryRouter><ApprovalsPanel /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ApprovalsPanel />
+      </MemoryRouter>,
+    );
     await waitFor(() => {
       expect(screen.getByText(/Recent \(1\)/i)).toBeInTheDocument();
     });
@@ -121,7 +145,11 @@ describe("ApprovalsPanel", () => {
 
   it("hides Recent header when history is empty (pending-only)", async () => {
     mockTokensApi([pendingRow], []);
-    render(<MemoryRouter><ApprovalsPanel /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ApprovalsPanel />
+      </MemoryRouter>,
+    );
     await waitFor(() => {
       expect(screen.getByText(/Pending \(1\)/i)).toBeInTheDocument();
     });

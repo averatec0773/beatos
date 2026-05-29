@@ -4,11 +4,7 @@ import { matchPath, useLocation } from "react-router-dom";
 import { useListStore } from "@/stores/lists";
 import { useTrackStore } from "@/stores/tracks";
 import { useTrashStore } from "@/stores/trash";
-import {
-  SIDEBAR_MAX_WIDTH,
-  SIDEBAR_MIN_WIDTH,
-  useSidebarPanelStore,
-} from "@/stores/sidebar-panel";
+import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH, useSidebarPanelStore } from "@/stores/sidebar-panel";
 
 import { AllBeatsSection } from "@/components/Sidebar/AllBeatsSection";
 import { ListsSection } from "@/components/Sidebar/ListsSection";

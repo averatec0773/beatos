@@ -26,9 +26,7 @@ describe("usePendingTokens", () => {
   it("performs initial GET on mount", async () => {
     renderHook(() => usePendingTokens());
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        `${FAKE_BASE}/api/tokens?status=pending`,
-      );
+      expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens?status=pending`);
     });
   });
 
@@ -44,7 +42,9 @@ describe("usePendingTokens", () => {
     renderHook(() => usePendingTokens());
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
     const es = (window as any).__lastEventSource;
-    act(() => { es.dispatch("pending_changed", JSON.stringify({ count: 1 })); });
+    act(() => {
+      es.dispatch("pending_changed", JSON.stringify({ count: 1 }));
+    });
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
   });
 
@@ -61,11 +61,12 @@ describe("usePendingTokens", () => {
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
     (global.fetch as any).mockClear();
     (global.fetch as any).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
-    await act(async () => { await result.current.approve("abc"); });
-    expect(global.fetch).toHaveBeenCalledWith(
-      `${FAKE_BASE}/api/tokens/abc/approve`,
-      { method: "POST" },
-    );
+    await act(async () => {
+      await result.current.approve("abc");
+    });
+    expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens/abc/approve`, {
+      method: "POST",
+    });
   });
 
   it("reject calls POST", async () => {
@@ -73,10 +74,11 @@ describe("usePendingTokens", () => {
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
     (global.fetch as any).mockClear();
     (global.fetch as any).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
-    await act(async () => { await result.current.reject("xyz"); });
-    expect(global.fetch).toHaveBeenCalledWith(
-      `${FAKE_BASE}/api/tokens/xyz/reject`,
-      { method: "POST" },
-    );
+    await act(async () => {
+      await result.current.reject("xyz");
+    });
+    expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens/xyz/reject`, {
+      method: "POST",
+    });
   });
 });

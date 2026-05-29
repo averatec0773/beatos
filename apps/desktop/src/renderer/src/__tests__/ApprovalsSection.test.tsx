@@ -36,18 +36,28 @@ const row = {
 };
 
 describe("ApprovalsSection", () => {
-  beforeEach(() => { mockPending([]); });
+  beforeEach(() => {
+    mockPending([]);
+  });
 
   it("hides badge when pending = 0", async () => {
     mockPending([]);
-    render(<MemoryRouter><ApprovalsSection /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ApprovalsSection />
+      </MemoryRouter>,
+    );
     await screen.findByText(/Approvals/i);
     expect(screen.queryByText(/\(\d+\)/)).toBeNull();
   });
 
   it("shows yellow badge when pending > 0", async () => {
     mockPending([row, { ...row, token: "p2" }]);
-    render(<MemoryRouter><ApprovalsSection /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ApprovalsSection />
+      </MemoryRouter>,
+    );
     const badge = await screen.findByText("2");
     expect(badge.className).toMatch(/bg-warning/);
     expect(badge.className).toMatch(/rounded-full/);

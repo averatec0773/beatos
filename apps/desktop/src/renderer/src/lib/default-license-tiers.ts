@@ -12,9 +12,7 @@ export type DefaultLicenseTierTemplate = LicenseTierCreate;
 
 export async function loadDefaultLicenseTiers(): Promise<DefaultLicenseTierTemplate[]> {
   try {
-    const r = await appSettings.get<DefaultLicenseTierTemplate[]>(
-      DEFAULT_LICENSE_TIERS_KEY,
-    );
+    const r = await appSettings.get<DefaultLicenseTierTemplate[]>(DEFAULT_LICENSE_TIERS_KEY);
     return Array.isArray(r.value) ? r.value : [];
   } catch (e) {
     console.warn("[default-license-tiers] load failed:", e);

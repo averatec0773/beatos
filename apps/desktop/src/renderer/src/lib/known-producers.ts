@@ -59,10 +59,7 @@ export async function loadAllProducerNames(): Promise<{
   knownOnly: string[];
   all: string[];
 }> {
-  const [used, known] = await Promise.all([
-    distinct.values("producer"),
-    loadKnownProducers(),
-  ]);
+  const [used, known] = await Promise.all([distinct.values("producer"), loadKnownProducers()]);
   const usedSet = new Set(used);
   const knownOnly = known.filter((n) => !usedSet.has(n));
   return { used, knownOnly, all: [...used, ...knownOnly] };

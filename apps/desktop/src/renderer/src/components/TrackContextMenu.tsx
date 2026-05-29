@@ -40,10 +40,7 @@ export function TrackContextMenu({
   const allLists = useListStore((s) => s.all);
   const addToList = useListStore((s) => s.addTrack);
   const removeFromList = useListStore((s) => s.removeTrack);
-  const userLists = useMemo(
-    () => allLists.filter((l) => l.kind !== "system"),
-    [allLists]
-  );
+  const userLists = useMemo(() => allLists.filter((l) => l.kind !== "system"), [allLists]);
 
   function onReveal(): void {
     if (audioPath) window.beatos.revealInFinder(audioPath);

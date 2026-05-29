@@ -70,7 +70,7 @@ export function KeyPickerPopover({ initialValue, onCommit, onClear, onClose }: P
             >
               {n}
             </button>
-          )
+          ),
         )}
       </div>
 
@@ -111,7 +111,12 @@ export function KeyPickerPopover({ initialValue, onCommit, onClear, onClose }: P
       </div>
 
       <div className="flex items-center justify-between border-t border-border-subtle pt-3">
-        <button type="button" aria-label="Clear" onClick={handleClear} className="text-sm text-text-tertiary hover:underline">
+        <button
+          type="button"
+          aria-label="Clear"
+          onClick={handleClear}
+          className="text-sm text-text-tertiary hover:underline"
+        >
           Clear
         </button>
         <button

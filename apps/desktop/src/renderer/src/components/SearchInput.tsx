@@ -33,7 +33,9 @@ export function extractCompletedChipToken(
   const raw = m[3] !== undefined ? m[3] : m[2];
   const value = raw.trim();
   if (!value) return null;
-  const rest = (text.slice(0, m.index) + text.slice(m.index + m[0].length)).replace(/\s+/g, " ").trim();
+  const rest = (text.slice(0, m.index) + text.slice(m.index + m[0].length))
+    .replace(/\s+/g, " ")
+    .trim();
   return { field, value, rest };
 }
 

@@ -34,7 +34,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
               {this.state.error.name}: {this.state.error.message}
               {"\n\n"}
               {this.state.error.stack ?? ""}
-              {this.state.info?.componentStack ? `\n\nComponent stack:${this.state.info.componentStack}` : ""}
+              {this.state.info?.componentStack
+                ? `\n\nComponent stack:${this.state.info.componentStack}`
+                : ""}
             </pre>
             <button
               onClick={() => this.setState({ error: null, info: null })}

@@ -1,6 +1,14 @@
 // Boot orchestration: artifact purge, electron.launch, ctx assembly, log assertions.
 import { _electron as electron } from "playwright";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 

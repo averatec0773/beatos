@@ -25,8 +25,12 @@ export function usePendingTokensHistory(): { tokens: HistoryToken[] } {
     if (!apiBase) return;
     void fetchHistory();
     const es = new EventSource(`${apiBase}/api/tokens/stream`);
-    es.addEventListener("pending_changed", () => { void fetchHistory(); });
-    es.onerror = () => { /* EventSource auto-reconnects */ };
+    es.addEventListener("pending_changed", () => {
+      void fetchHistory();
+    });
+    es.onerror = () => {
+      /* EventSource auto-reconnects */
+    };
     return () => es.close();
   }, [apiBase, fetchHistory]);
 

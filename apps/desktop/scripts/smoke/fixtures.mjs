@@ -2,12 +2,11 @@
 
 // Minimal valid 1x1 PNG (67 bytes).
 export const TINY_PNG = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
-  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
-  0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
-  0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
-  0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+  0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+  0x42, 0x60, 0x82,
 ]);
 
 // Minimal valid WAV: 8 kHz, 8-bit mono, 5 s silence (40000 samples of 0x80).
@@ -24,21 +23,34 @@ export function makeTinyWav() {
   const buf = Buffer.alloc(44 + dataSize);
   let off = 0;
   // RIFF chunk
-  buf.write("RIFF", off); off += 4;
-  buf.writeUInt32LE(36 + dataSize, off); off += 4;
-  buf.write("WAVE", off); off += 4;
+  buf.write("RIFF", off);
+  off += 4;
+  buf.writeUInt32LE(36 + dataSize, off);
+  off += 4;
+  buf.write("WAVE", off);
+  off += 4;
   // fmt  sub-chunk
-  buf.write("fmt ", off); off += 4;
-  buf.writeUInt32LE(16, off); off += 4;          // sub-chunk size
-  buf.writeUInt16LE(1, off); off += 2;           // PCM
-  buf.writeUInt16LE(numChannels, off); off += 2;
-  buf.writeUInt32LE(sampleRate, off); off += 4;
-  buf.writeUInt32LE(byteRate, off); off += 4;
-  buf.writeUInt16LE(blockAlign, off); off += 2;
-  buf.writeUInt16LE(bitsPerSample, off); off += 2;
+  buf.write("fmt ", off);
+  off += 4;
+  buf.writeUInt32LE(16, off);
+  off += 4; // sub-chunk size
+  buf.writeUInt16LE(1, off);
+  off += 2; // PCM
+  buf.writeUInt16LE(numChannels, off);
+  off += 2;
+  buf.writeUInt32LE(sampleRate, off);
+  off += 4;
+  buf.writeUInt32LE(byteRate, off);
+  off += 4;
+  buf.writeUInt16LE(blockAlign, off);
+  off += 2;
+  buf.writeUInt16LE(bitsPerSample, off);
+  off += 2;
   // data sub-chunk
-  buf.write("data", off); off += 4;
-  buf.writeUInt32LE(dataSize, off); off += 4;
+  buf.write("data", off);
+  off += 4;
+  buf.writeUInt32LE(dataSize, off);
+  off += 4;
   buf.fill(0x80, off); // 0x80 = silence for unsigned 8-bit PCM
   return buf;
 }
@@ -57,18 +69,25 @@ export function makeDawStyleWav() {
   const out = Buffer.alloc(12 + 8 + junkLen + (clean.length - 12) + trailerLen);
   let off = 0;
   // RIFF + size + WAVE
-  out.write("RIFF", off); off += 4;
-  out.writeUInt32LE(out.length - 8, off); off += 4;
-  out.write("WAVE", off); off += 4;
+  out.write("RIFF", off);
+  off += 4;
+  out.writeUInt32LE(out.length - 8, off);
+  off += 4;
+  out.write("WAVE", off);
+  off += 4;
   // JUNK chunk (28 zero bytes — sector-align padding)
-  out.write("JUNK", off); off += 4;
-  out.writeUInt32LE(junkLen, off); off += 4;
+  out.write("JUNK", off);
+  off += 4;
+  out.writeUInt32LE(junkLen, off);
+  off += 4;
   off += junkLen;
   // fmt + data copied verbatim from clean (skip its 12-byte RIFF header)
   clean.copy(out, off, 12);
   off += clean.length - 12;
   // Trailer: simulate a "cue " chunk with bogus body — must be ignored
-  out.write("cue ", off); off += 4;
-  out.writeUInt32LE(trailerLen - 8, off); off += 4;
+  out.write("cue ", off);
+  off += 4;
+  out.writeUInt32LE(trailerLen - 8, off);
+  off += 4;
   return out;
 }

@@ -14,7 +14,7 @@ describe("parseKey", () => {
   it("returns null for null/empty/unparseable", () => {
     expect(parseKey(null)).toBeNull();
     expect(parseKey("")).toBeNull();
-    expect(parseKey("F#m")).toBeNull();    // legacy form, not normalized
+    expect(parseKey("F#m")).toBeNull(); // legacy form, not normalized
     expect(parseKey("Cmaj")).toBeNull();
     expect(parseKey("random text")).toBeNull();
   });

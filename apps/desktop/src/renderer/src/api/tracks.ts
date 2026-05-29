@@ -17,9 +17,7 @@ export interface Track {
   deleted_at: string | null;
 }
 
-export type TrackUpdate = Partial<
-  Omit<Track, "id" | "has_audio" | "created_at" | "updated_at">
->;
+export type TrackUpdate = Partial<Omit<Track, "id" | "has_audio" | "created_at" | "updated_at">>;
 
 export interface ListParams {
   list_id?: number;

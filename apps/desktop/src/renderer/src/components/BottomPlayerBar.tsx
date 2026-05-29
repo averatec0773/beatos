@@ -46,8 +46,7 @@ export function BottomPlayerBar() {
   // The status/position/duration/ended subscription lives in player.ts so
   // tests can mock the engine without mounting this component.
   useEffect(() => {
-    const force =
-      (typeof window !== "undefined" && window.beatos?.isAudioForceMuted?.()) ?? false;
+    const force = (typeof window !== "undefined" && window.beatos?.isAudioForceMuted?.()) ?? false;
     audioEngine.setForceMuted(force);
     audioEngine.setVolume(usePlayerStore.getState().volume);
     audioEngine.setMuted(usePlayerStore.getState().muted);
@@ -74,9 +73,7 @@ export function BottomPlayerBar() {
     // recovery from a failed track, and idle state.
     if (
       selectedTrack &&
-      (s.currentTrackId == null ||
-        s.status === "error" ||
-        s.status === "idle")
+      (s.currentTrackId == null || s.status === "error" || s.status === "idle")
     ) {
       const ids = getVisibleIds();
       const startIndex = ids.indexOf(selectedTrack.id);
@@ -125,9 +122,7 @@ export function BottomPlayerBar() {
       <div className="flex w-[28%] min-w-0 items-center gap-3">
         <CoverImage assetId={track?.cover_asset_id ?? null} size={40} />
         <div className="min-w-0">
-          <div className="truncate text-sm font-medium text-zinc-100">
-            {track?.title ?? "—"}
-          </div>
+          <div className="truncate text-sm font-medium text-zinc-100">{track?.title ?? "—"}</div>
           <div className="truncate text-xs text-zinc-400">
             {formatPlayerSubtitle({
               producer: track?.producer ?? null,

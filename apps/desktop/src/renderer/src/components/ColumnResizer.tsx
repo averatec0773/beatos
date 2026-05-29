@@ -13,7 +13,11 @@ interface Props {
 // pixel value the instant the user accidentally clicks the resizer overlay.
 const DRAG_THRESHOLD_PX = 3;
 
-export function ColumnResizer({ columnKey, currentWidth, getCurrentRenderedWidth }: Props): React.JSX.Element {
+export function ColumnResizer({
+  columnKey,
+  currentWidth,
+  getCurrentRenderedWidth,
+}: Props): React.JSX.Element {
   const startX = useRef(0);
   const startW = useRef(0);
   const dragging = useRef(false);
@@ -22,9 +26,8 @@ export function ColumnResizer({ columnKey, currentWidth, getCurrentRenderedWidth
   function onPointerDown(e: React.PointerEvent) {
     e.preventDefault();
     startX.current = e.clientX;
-    startW.current = currentWidth === 0 && getCurrentRenderedWidth
-      ? getCurrentRenderedWidth()
-      : currentWidth;
+    startW.current =
+      currentWidth === 0 && getCurrentRenderedWidth ? getCurrentRenderedWidth() : currentWidth;
     dragging.current = true;
     committed.current = false;
     e.currentTarget.setPointerCapture(e.pointerId);

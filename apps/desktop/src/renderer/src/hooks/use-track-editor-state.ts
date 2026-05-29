@@ -11,11 +11,7 @@ import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { useAnalyzingStore } from "@/lib/auto-analyze";
 import { shallowEqualEditable } from "@/lib/shallow-equal-track";
-import {
-  AUTOSAVE_DEBOUNCE_MS,
-  buildPayload,
-  type SaveState,
-} from "@/lib/track-editor-helpers";
+import { AUTOSAVE_DEBOUNCE_MS, buildPayload, type SaveState } from "@/lib/track-editor-helpers";
 
 export type ProducerOption = { value: string; label: string };
 
@@ -53,9 +49,7 @@ export function useTrackEditorState(): TrackEditorState {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [producerOptions, setProducerOptions] = useState<ProducerOption[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
-  const externallyAnalyzing = useAnalyzingStore((s) =>
-    track ? !!s.inflight[track.id] : false,
-  );
+  const externallyAnalyzing = useAnalyzingStore((s) => (track ? !!s.inflight[track.id] : false));
   const [analyzeResult, setAnalyzeResult] = useState<AudioAnalysisResult | null>(null);
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -84,10 +78,7 @@ export function useTrackEditorState(): TrackEditorState {
   useEffect(() => {
     if (!params.id) return;
     let cancelled = false;
-    Promise.all([
-      tracks.get(Number(params.id)),
-      assetsApi.listForTrack(Number(params.id)),
-    ])
+    Promise.all([tracks.get(Number(params.id)), assetsApi.listForTrack(Number(params.id))])
       .then(([t, assetList]) => {
         if (!cancelled) {
           setTrack(t);

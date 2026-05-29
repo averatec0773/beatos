@@ -31,21 +31,31 @@ export function usePendingTokens(): {
     if (!apiBase) return;
     void fetchPending();
     const es = new EventSource(`${apiBase}/api/tokens/stream`);
-    es.addEventListener("pending_changed", () => { void fetchPending(); });
-    es.onerror = () => { /* EventSource auto-reconnects */ };
+    es.addEventListener("pending_changed", () => {
+      void fetchPending();
+    });
+    es.onerror = () => {
+      /* EventSource auto-reconnects */
+    };
     return () => es.close();
   }, [apiBase, fetchPending]);
 
-  const approve = useCallback(async (token: string) => {
-    if (!apiBase) return;
-    await fetch(`${apiBase}/api/tokens/${token}/approve`, { method: "POST" });
-    await useListStore.getState().refresh();
-  }, [apiBase]);
+  const approve = useCallback(
+    async (token: string) => {
+      if (!apiBase) return;
+      await fetch(`${apiBase}/api/tokens/${token}/approve`, { method: "POST" });
+      await useListStore.getState().refresh();
+    },
+    [apiBase],
+  );
 
-  const reject = useCallback(async (token: string) => {
-    if (!apiBase) return;
-    await fetch(`${apiBase}/api/tokens/${token}/reject`, { method: "POST" });
-  }, [apiBase]);
+  const reject = useCallback(
+    async (token: string) => {
+      if (!apiBase) return;
+      await fetch(`${apiBase}/api/tokens/${token}/reject`, { method: "POST" });
+    },
+    [apiBase],
+  );
 
   return { tokens, approve, reject };
 }

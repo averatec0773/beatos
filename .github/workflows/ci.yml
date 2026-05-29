@@ -57,6 +57,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -68,11 +71,12 @@ jobs:
 
 # Intentionally NOT gated here yet (would be red on arrival / flaky), tracked as
 # follow-ups so this CI stays a meaningful green signal from day one:
-#   - `npm run lint`: the repo isn't lint-clean (~199 eslint errors + thousands of
-#     prettier warnings from a single-vs-double-quote config mismatch). Needs a
-#     dedicated cleanup (fix prettier config + `--fix` + address real errors),
-#     then add a Lint step here.
 #   - `npm run smoke`: the Electron smoke harness needs a virtual display (xvfb),
 #     the Python sidecar env, and a packaged build. Add a `smoke` job
 #     (ubuntu + xvfb-run + uv sync + npm run build + npm run smoke) once reliable.
 #   - Python ruff/mypy: not configured yet (prior audit M1).
+#
+# Lint runs with errors-fail / warnings-allowed (eslint default — no
+# --max-warnings). ~52 advisory warnings remain (explicit-return-type,
+# set-state-in-effect, etc., deliberately downgraded from errors); tighten later
+# if desired.

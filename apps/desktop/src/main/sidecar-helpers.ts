@@ -13,7 +13,7 @@ export function assertSidecarLayout(repoRoot: string, dirname: string): void {
     throw new Error(
       `Sidecar bootstrap failed: pyproject.toml not found at ${pyprojectPath}. ` +
         `Computed repoRoot from __dirname=${dirname}. ` +
-        `electron-builder layout may have changed.`
+        `electron-builder layout may have changed.`,
     );
   }
 }

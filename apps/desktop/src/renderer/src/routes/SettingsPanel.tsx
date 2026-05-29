@@ -8,7 +8,10 @@ function StorageSection(): React.JSX.Element {
   const [dbPath, setDbPath] = useState<string>("");
 
   useEffect(() => {
-    window.beatos.getDbPath().then(setDbPath).catch(() => setDbPath(""));
+    window.beatos
+      .getDbPath()
+      .then(setDbPath)
+      .catch(() => setDbPath(""));
   }, []);
 
   async function onChange(): Promise<void> {
@@ -78,7 +81,9 @@ function AboutSection(): React.JSX.Element {
           <span className="text-text-secondary">Project repo: </span>
           <button
             type="button"
-            onClick={() => void window.beatos.openExternal("https://github.com/averatec0773/beatos")}
+            onClick={() =>
+              void window.beatos.openExternal("https://github.com/averatec0773/beatos")
+            }
             className="text-accent underline hover:no-underline"
             aria-label="Open project repository on GitHub in browser"
           >
@@ -102,9 +107,7 @@ export function SettingsPanel(): React.JSX.Element {
     <main className="beatos-scroll flex-1 overflow-y-auto p-8">
       <div className="max-w-2xl">
         <h1 className="text-2xl font-bold mb-1">Settings</h1>
-        <p className="text-text-secondary text-sm mb-8">
-          Storage location and library management.
-        </p>
+        <p className="text-text-secondary text-sm mb-8">Storage location and library management.</p>
         <StorageSection />
         <DefaultLicenseTiersSection />
         <ProducersSection />

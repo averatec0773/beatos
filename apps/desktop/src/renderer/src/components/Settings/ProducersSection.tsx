@@ -2,11 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 
 import { producers as producersApi } from "@/api/producers";
-import {
-  addKnownProducer,
-  loadAllProducerNames,
-  removeKnownProducer,
-} from "@/lib/known-producers";
+import { addKnownProducer, loadAllProducerNames, removeKnownProducer } from "@/lib/known-producers";
 import { useToastStore } from "@/stores/toast";
 import { useTrackStore } from "@/stores/tracks";
 
@@ -53,8 +49,7 @@ export function ProducersSection(): React.JSX.Element {
   }, [adding]);
 
   async function onRemove(name: string, isOrphan: boolean): Promise<void> {
-    if (!confirm(`Remove "${name}"${isOrphan ? "" : " from every track"}?`))
-      return;
+    if (!confirm(`Remove "${name}"${isOrphan ? "" : " from every track"}?`)) return;
     setBusy(name);
     try {
       if (!isOrphan) {
@@ -64,10 +59,9 @@ export function ProducersSection(): React.JSX.Element {
       await removeKnownProducer(name);
       await refresh();
     } catch (e) {
-      useToastStore.getState().show(
-        "error",
-        `Failed to remove "${name}": ${e instanceof Error ? e.message : String(e)}`,
-      );
+      useToastStore
+        .getState()
+        .show("error", `Failed to remove "${name}": ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(null);
     }
@@ -91,10 +85,9 @@ export function ProducersSection(): React.JSX.Element {
       setAdding(false);
       await refresh();
     } catch (e) {
-      useToastStore.getState().show(
-        "error",
-        `Add failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      useToastStore
+        .getState()
+        .show("error", `Add failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -126,8 +119,8 @@ export function ProducersSection(): React.JSX.Element {
         <div className="rounded-md border border-border-subtle p-3">
           {allEmpty && !adding ? (
             <p className="text-xs text-text-tertiary py-1">
-              No producers yet. Click + Add producer to pre-register names, or
-              they'll appear here as soon as you set Producer on a track.
+              No producers yet. Click + Add producer to pre-register names, or they'll appear here
+              as soon as you set Producer on a track.
             </p>
           ) : (
             <div className="flex flex-wrap items-center gap-1.5">
@@ -178,9 +171,8 @@ export function ProducersSection(): React.JSX.Element {
         </div>
       )}
       <p className="mt-2 text-xs text-text-tertiary">
-        Dashed-outline chips are names you added here but no track uses yet.
-        Solid chips are in use on at least one track — removing them clears
-        the name from every track.
+        Dashed-outline chips are names you added here but no track uses yet. Solid chips are in use
+        on at least one track — removing them clears the name from every track.
       </p>
     </section>
   );
@@ -193,12 +185,7 @@ interface ProducerChipProps {
   onRemove: () => void;
 }
 
-function ProducerChip({
-  name,
-  variant,
-  busy,
-  onRemove,
-}: ProducerChipProps): React.JSX.Element {
+function ProducerChip({ name, variant, busy, onRemove }: ProducerChipProps): React.JSX.Element {
   const baseStyle =
     variant === "used"
       ? "bg-accent/20 text-text-primary"

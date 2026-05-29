@@ -5,7 +5,9 @@ import * as client from "@/api/client";
 describe("facetsApi", () => {
   beforeEach(() => vi.restoreAllMocks());
   it("fetches top values for a field", async () => {
-    const spy = vi.spyOn(client, "apiGet").mockResolvedValue({ items: [{ value: "trap", count: 3 }] });
+    const spy = vi
+      .spyOn(client, "apiGet")
+      .mockResolvedValue({ items: [{ value: "trap", count: 3 }] });
     const res = await facetsApi.top("genre", 5);
     expect(spy).toHaveBeenCalledWith("/api/tracks/facets?field=genre&limit=5");
     expect(res[0]).toEqual({ value: "trap", count: 3 });

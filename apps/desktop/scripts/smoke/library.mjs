@@ -40,7 +40,9 @@ export async function assertSeedAndDragDrop(ctx) {
   // Force renderer to pick up the new state. Navigate to "/" so the library
   // view mounts and refreshes. (v0.0.22: WelcomeScreen removed; first-launch
   // lands on All Beats directly.)
-  await window.evaluate(() => { location.hash = "/"; });
+  await window.evaluate(() => {
+    location.hash = "/";
+  });
   await window.evaluate(() => location.reload());
   await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
   await window.waitForSelector('[role="row"]', { timeout: 5000 });
@@ -95,7 +97,10 @@ export async function assertSeedAndDragDrop(ctx) {
     while (Date.now() - pollStart < 3000) {
       const r = await fetch(`${baseUrl}/api/tracks?list_id=${list.id}`);
       const arr = await r.json();
-      if (Array.isArray(arr) && arr.length === 1) { pollResult = arr; break; }
+      if (Array.isArray(arr) && arr.length === 1) {
+        pollResult = arr;
+        break;
+      }
       await new Promise((res) => setTimeout(res, 100));
     }
     if (pollResult === null) {
@@ -158,29 +163,31 @@ export async function assertFilterChips(ctx) {
   await putJson(`/api/tracks/${t1.id}`, { producer: ["smoke-producer"] });
 
   // Navigate to "/" to ensure the main library view is showing.
-  await window.evaluate(() => { location.hash = "/"; });
+  await window.evaluate(() => {
+    location.hash = "/";
+  });
   await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
-  await window.waitForSelector('[data-track-id]', { timeout: 5000 });
+  await window.waitForSelector("[data-track-id]", { timeout: 5000 });
 
   try {
-    const addFilterBtn = window.locator('[data-add-filter]').first();
+    const addFilterBtn = window.locator("[data-add-filter]").first();
     await addFilterBtn.click();
 
-    await window.waitForSelector('text=Producer', { timeout: 3000 });
+    await window.waitForSelector("text=Producer", { timeout: 3000 });
 
     const producerOption = window.locator('button:has-text("Producer")').first();
     await producerOption.click();
 
     await window.waitForFunction(
       () => {
-        const labels = Array.from(document.querySelectorAll('label'));
-        return labels.some((l) => l.textContent && l.textContent.includes('smoke-producer'));
+        const labels = Array.from(document.querySelectorAll("label"));
+        return labels.some((l) => l.textContent && l.textContent.includes("smoke-producer"));
       },
       undefined,
       { timeout: 5000 },
     );
 
-    const smokeProducerLabel = window.locator('label', { hasText: 'smoke-producer' }).first();
+    const smokeProducerLabel = window.locator("label", { hasText: "smoke-producer" }).first();
     await smokeProducerLabel.click();
 
     await window.locator('button:has-text("Apply")').first().click();
@@ -189,12 +196,12 @@ export async function assertFilterChips(ctx) {
     console.log("smoke: filter chip appears PASS");
 
     await window.waitForFunction(
-      () => document.querySelectorAll('[data-track-id]').length === 1,
+      () => document.querySelectorAll("[data-track-id]").length === 1,
       undefined,
       { timeout: 3000 },
     );
     const filteredCount = await window.evaluate(
-      () => document.querySelectorAll('[data-track-id]').length,
+      () => document.querySelectorAll("[data-track-id]").length,
     );
     if (filteredCount !== 1) {
       failures.push(`filter chip: expected 1 visible track row, got ${filteredCount}`);
@@ -214,12 +221,12 @@ export async function assertFilterChips(ctx) {
     console.log("smoke: filter chip remove PASS");
 
     await window.waitForFunction(
-      () => document.querySelectorAll('[data-track-id]').length === 2,
+      () => document.querySelectorAll("[data-track-id]").length === 2,
       undefined,
       { timeout: 3000 },
     );
     const restoredCount = await window.evaluate(
-      () => document.querySelectorAll('[data-track-id]').length,
+      () => document.querySelectorAll("[data-track-id]").length,
     );
     if (restoredCount !== 2) {
       failures.push(`filter chip remove: expected 2 rows restored, got ${restoredCount}`);
@@ -235,9 +242,9 @@ export async function assertSortTitle(ctx) {
   const { window, failures } = ctx;
   try {
     // We should already be on the main library view after assertion 14 cleanup.
-    await window.waitForSelector('[data-track-id]', { timeout: 5000 });
+    await window.waitForSelector("[data-track-id]", { timeout: 5000 });
     await window.waitForFunction(
-      () => document.querySelectorAll('[data-track-id]').length >= 2,
+      () => document.querySelectorAll("[data-track-id]").length >= 2,
       undefined,
       { timeout: 5000 },
     );
@@ -247,9 +254,9 @@ export async function assertSortTitle(ctx) {
     await window.waitForTimeout(1200);
 
     const ascResult = await window.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('[data-track-id]'));
+      const rows = Array.from(document.querySelectorAll("[data-track-id]"));
       const titles = rows.map((el) => {
-        const span = el.querySelector('[data-track-title]');
+        const span = el.querySelector("[data-track-title]");
         return span ? (span.textContent ?? "").trim() : "";
       });
       return { count: rows.length, titles };
@@ -260,16 +267,16 @@ export async function assertSortTitle(ctx) {
     } else if (ascResult.titles[0] > ascResult.titles[1]) {
       failures.push(`sort asc: expected ascending order, got ${JSON.stringify(ascResult.titles)}`);
     } else {
-      console.log(`smoke: sort title asc PASS (${ascResult.titles.join(', ')})`);
+      console.log(`smoke: sort title asc PASS (${ascResult.titles.join(", ")})`);
     }
 
     await titleHeaderBtn.click();
     await window.waitForTimeout(1200);
 
     const descResult = await window.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('[data-track-id]'));
+      const rows = Array.from(document.querySelectorAll("[data-track-id]"));
       const titles = rows.map((el) => {
-        const span = el.querySelector('[data-track-title]');
+        const span = el.querySelector("[data-track-title]");
         return span ? (span.textContent ?? "").trim() : "";
       });
       return { count: rows.length, titles };
@@ -278,9 +285,11 @@ export async function assertSortTitle(ctx) {
     if (descResult.count !== 2) {
       failures.push(`sort desc: expected 2 rows, got ${descResult.count}`);
     } else if (descResult.titles[0] < descResult.titles[1]) {
-      failures.push(`sort desc: expected descending order, got ${JSON.stringify(descResult.titles)}`);
+      failures.push(
+        `sort desc: expected descending order, got ${JSON.stringify(descResult.titles)}`,
+      );
     } else {
-      console.log(`smoke: sort title desc PASS (${descResult.titles.join(', ')})`);
+      console.log(`smoke: sort title desc PASS (${descResult.titles.join(", ")})`);
     }
   } catch (e) {
     failures.push(`UI: sort title round-trip — ${e.message}`);
@@ -291,7 +300,7 @@ export async function assertSortTitle(ctx) {
 export async function assertColumnResizerDrag(ctx) {
   const { window, failures } = ctx;
   try {
-    await window.waitForSelector('[data-track-id]', { timeout: 5000 });
+    await window.waitForSelector("[data-track-id]", { timeout: 5000 });
 
     const bpmHeader = window.locator('[data-column-cell="bpm"]').first();
     const initialBox = await bpmHeader.boundingBox();
@@ -316,7 +325,9 @@ export async function assertColumnResizerDrag(ctx) {
     const newWidth = newBox.width;
 
     if (newWidth >= initialWidth + 30) {
-      console.log(`smoke: column resizer drag PASS (bpm: ${Math.round(initialWidth)}px → ${Math.round(newWidth)}px)`);
+      console.log(
+        `smoke: column resizer drag PASS (bpm: ${Math.round(initialWidth)}px → ${Math.round(newWidth)}px)`,
+      );
     } else {
       failures.push(
         `UI: column resizer drag — expected bpm width ≥ ${initialWidth + 30}, got ${newWidth} (initial ${initialWidth})`,
@@ -351,7 +362,10 @@ export async function assertColumnAlignmentAfterResize(ctx) {
       for (const col of COLS) {
         const h = g(header.querySelector(`[data-column-cell="${col}"]`));
         const c = g(row.querySelector(`[data-column-cell="${col}"]`));
-        if (!h || !c) { diffs.push({ col, error: "missing" }); continue; }
+        if (!h || !c) {
+          diffs.push({ col, error: "missing" });
+          continue;
+        }
         diffs.push({ col, leftDelta: c.left - h.left, rightDelta: c.right - h.right });
       }
       return { diffs };
@@ -379,9 +393,7 @@ export async function assertScrollSync(ctx) {
     const result = await window.evaluate(() => {
       const scrollables = [...document.querySelectorAll(".beatos-scroll")];
       const body = scrollables.find((el) => el.querySelector("[data-track-id]"));
-      const header = scrollables.find(
-        (el) => el !== body && el.querySelector('[role="row"]'),
-      );
+      const header = scrollables.find((el) => el !== body && el.querySelector('[role="row"]'));
       if (!body || !header) return { error: "scroll containers not found" };
       body.scrollLeft = 80;
       return new Promise((resolve) => {
@@ -408,9 +420,7 @@ export async function assertScrollSync(ctx) {
     await window.evaluate(() => {
       const scrollables = [...document.querySelectorAll(".beatos-scroll")];
       const body = scrollables.find((el) => el.querySelector("[data-track-id]"));
-      const header = scrollables.find(
-        (el) => el !== body && el.querySelector('[role="row"]'),
-      );
+      const header = scrollables.find((el) => el !== body && el.querySelector('[role="row"]'));
       if (body) body.scrollLeft = 0;
       if (header) header.scrollLeft = 0;
       return new Promise((resolve) =>
@@ -456,9 +466,7 @@ export async function assertTableAlignment(ctx) {
         (d) => d.error || Math.abs(d.leftDelta) > 1 || Math.abs(d.rightDelta) > 1,
       );
       if (desynced.length > 0) {
-        failures.push(
-          `table-align: column desync — ${JSON.stringify(desynced)}`,
-        );
+        failures.push(`table-align: column desync — ${JSON.stringify(desynced)}`);
       } else {
         console.log("smoke: TableHeader/TrackRow column alignment PASS (5 cols, ≤1px slack)");
       }

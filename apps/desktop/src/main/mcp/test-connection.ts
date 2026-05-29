@@ -27,14 +27,10 @@ export async function testMcpConnection(opts: {
       resolve(r);
     };
 
-    const child = spawn(
-      "uv",
-      ["run", "--directory", opts.repoRoot, "beatos-mcp"],
-      {
-        env: { ...process.env, BEATOS_DB_PATH: opts.dbPath },
-        stdio: ["pipe", "pipe", "pipe"],
-      },
-    );
+    const child = spawn("uv", ["run", "--directory", opts.repoRoot, "beatos-mcp"], {
+      env: { ...process.env, BEATOS_DB_PATH: opts.dbPath },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
 
     const timer = setTimeout(
       () => finish({ ok: false, error: `Timed out after ${TIMEOUT_MS}ms` }),

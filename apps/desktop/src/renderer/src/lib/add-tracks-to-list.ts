@@ -15,9 +15,7 @@ export async function addTracksToList(
   listId: number,
   trackIds: number[],
 ): Promise<{ addedNew: number; alreadyIn: number; failed: number }> {
-  const results = await Promise.allSettled(
-    trackIds.map((tid) => listsApi.addTrack(listId, tid)),
-  );
+  const results = await Promise.allSettled(trackIds.map((tid) => listsApi.addTrack(listId, tid)));
   let addedNew = 0;
   let alreadyIn = 0;
   let failed = 0;
@@ -26,31 +24,26 @@ export async function addTracksToList(
     else if (r.value.added) addedNew += 1;
     else alreadyIn += 1;
   }
-  const listName =
-    useListStore.getState().all.find((l) => l.id === listId)?.name ?? `#${listId}`;
+  const listName = useListStore.getState().all.find((l) => l.id === listId)?.name ?? `#${listId}`;
   const toast = useToastStore.getState();
   const total = trackIds.length;
   if (failed === total) {
     toast.show("error", `Failed to add to "${listName}"`);
   } else if (failed > 0) {
-    toast.show(
-      "warning",
-      `Added ${addedNew}/${total} to "${listName}" — ${failed} failed`,
-    );
+    toast.show("warning", `Added ${addedNew}/${total} to "${listName}" — ${failed} failed`);
   } else if (addedNew === 0 && alreadyIn === total) {
     toast.show(
       "info",
       total === 1 ? `Already in "${listName}"` : `All ${total} tracks already in "${listName}"`,
     );
   } else if (alreadyIn > 0) {
-    toast.show(
-      "warning",
-      `Added ${addedNew} to "${listName}" — ${alreadyIn} already in list`,
-    );
+    toast.show("warning", `Added ${addedNew} to "${listName}" — ${alreadyIn} already in list`);
   } else {
     toast.show(
       "success",
-      addedNew === 1 ? `Added 1 track to "${listName}"` : `Added ${addedNew} tracks to "${listName}"`,
+      addedNew === 1
+        ? `Added 1 track to "${listName}"`
+        : `Added ${addedNew} tracks to "${listName}"`,
     );
   }
   await useListStore.getState().refresh();

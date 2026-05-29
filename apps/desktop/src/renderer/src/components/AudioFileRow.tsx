@@ -14,12 +14,19 @@ interface Props {
 
 export function AudioFileRow({ trackId, role, label, extensions }: Props) {
   const { asset, pickAndAttach, detach, relocate, reveal } = useAssetSlot(
-    trackId, role, label, extensions
+    trackId,
+    role,
+    label,
+    extensions,
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  useClickOutside(containerRef, useCallback(() => setMenuOpen(false), []), menuOpen);
+  useClickOutside(
+    containerRef,
+    useCallback(() => setMenuOpen(false), []),
+    menuOpen,
+  );
 
   const filename = asset ? (asset.abs_path.split("/").pop() ?? asset.abs_path) : null;
 
@@ -75,10 +82,16 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
         data-file-row
         className="group flex items-center gap-3 px-3 py-2 rounded-md border border-danger/40 bg-danger/5"
       >
-        <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">{label}</span>
+        <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
+          {label}
+        </span>
         <AlertTriangle size={14} className="text-danger" />
         <span className="flex-1 text-sm text-danger truncate">Missing</span>
-        <button type="button" onClick={relocate} className="text-xs text-danger underline hover:no-underline inline-flex items-center gap-1">
+        <button
+          type="button"
+          onClick={relocate}
+          className="text-xs text-danger underline hover:no-underline inline-flex items-center gap-1"
+        >
           <RefreshCw size={10} /> Find file
         </button>
       </div>
@@ -98,7 +111,9 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
           dragOver ? "border-accent bg-accent/10" : "border-border-subtle"
         }`}
       >
-        <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">{label}</span>
+        <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
+          {label}
+        </span>
         <span className="text-text-tertiary text-sm">—</span>
         <div className="flex-1" />
         <button
@@ -124,9 +139,15 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
         dragOver ? "border-accent" : "border-border-subtle"
       }`}
     >
-      <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">{label}</span>
-      <span className="flex-1 text-sm text-text-primary truncate" title={asset.abs_path}>{filename}</span>
-      <span className="w-20 text-right text-xs font-mono text-text-secondary">{formatBytes(asset.size_bytes)}</span>
+      <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
+        {label}
+      </span>
+      <span className="flex-1 text-sm text-text-primary truncate" title={asset.abs_path}>
+        {filename}
+      </span>
+      <span className="w-20 text-right text-xs font-mono text-text-secondary">
+        {formatBytes(asset.size_bytes)}
+      </span>
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}

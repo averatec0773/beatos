@@ -4,7 +4,14 @@
  * TableHeader vs the first TrackRow. Reveals header/row desync.
  */
 import { _electron as electron } from "playwright";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, promises as fsPromises } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  promises as fsPromises,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -55,16 +62,17 @@ try {
   await postJson("/api/tracks", { title: "Inspect1" });
   await postJson("/api/tracks", { title: "Inspect2" });
 
-  await window.evaluate(() => { window.location.hash = "#/"; });
+  await window.evaluate(() => {
+    window.location.hash = "#/";
+  });
   await window.reload();
   await window.waitForLoadState("domcontentloaded");
-  await window.evaluate(() => { window.location.hash = "#/"; });
+  await window.evaluate(() => {
+    window.location.hash = "#/";
+  });
   // Ensure preview panel open at default width to mirror the user's screenshot.
   await window.evaluate(() => {
-    sessionStorage.setItem(
-      "beatos.previewPanel.v1",
-      JSON.stringify({ open: true, width: 380 }),
-    );
+    sessionStorage.setItem("beatos.previewPanel.v1", JSON.stringify({ open: true, width: 380 }));
   });
   await window.reload();
   await window.waitForLoadState("domcontentloaded");
@@ -78,11 +86,19 @@ try {
     }
     const header = document.querySelector('[role="row"]');
     const headerBtns = header
-      ? [...header.children].map((c) => ({ tag: c.tagName, label: c.getAttribute("data-column") ?? c.textContent?.trim().slice(0, 12) ?? "?", ...geom(c) }))
+      ? [...header.children].map((c) => ({
+          tag: c.tagName,
+          label: c.getAttribute("data-column") ?? c.textContent?.trim().slice(0, 12) ?? "?",
+          ...geom(c),
+        }))
       : null;
     const row = document.querySelector("[data-track-id]");
     const rowCells = row
-      ? [...row.children].map((c) => ({ tag: c.tagName, label: c.textContent?.trim().slice(0, 12) ?? "?", ...geom(c) }))
+      ? [...row.children].map((c) => ({
+          tag: c.tagName,
+          label: c.textContent?.trim().slice(0, 12) ?? "?",
+          ...geom(c),
+        }))
       : null;
     const section = document.querySelector("[data-library-drop-target]");
     return {
@@ -98,9 +114,15 @@ try {
   console.log("Header:  ", dims.headerRect);
   console.log("Row:     ", dims.rowRect);
   console.log("\nHeader children:");
-  for (const b of dims.headerBtns ?? []) console.log(`  ${b.tag.padEnd(7)} ${String(b.label).padEnd(14)} left=${b.left}  width=${b.width}  right=${b.right}`);
+  for (const b of dims.headerBtns ?? [])
+    console.log(
+      `  ${b.tag.padEnd(7)} ${String(b.label).padEnd(14)} left=${b.left}  width=${b.width}  right=${b.right}`,
+    );
   console.log("\nRow children:");
-  for (const c of dims.rowCells ?? []) console.log(`  ${c.tag.padEnd(7)} ${String(c.label).padEnd(14)} left=${c.left}  width=${c.width}  right=${c.right}`);
+  for (const c of dims.rowCells ?? [])
+    console.log(
+      `  ${c.tag.padEnd(7)} ${String(c.label).padEnd(14)} left=${c.left}  width=${c.width}  right=${c.right}`,
+    );
 } finally {
   await app.close();
   try {

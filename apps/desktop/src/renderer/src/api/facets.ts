@@ -1,10 +1,15 @@
 import { apiGet, apiPost } from "./client";
 
-export interface FacetValue { value: string; count: number; }
+export interface FacetValue {
+  value: string;
+  count: number;
+}
 
 export const facetsApi = {
   top: async (field: "producer" | "genre" | "mood" | "key", limit = 8): Promise<FacetValue[]> => {
-    const res = await apiGet<{ items: FacetValue[] }>(`/api/tracks/facets?field=${field}&limit=${limit}`);
+    const res = await apiGet<{ items: FacetValue[] }>(
+      `/api/tracks/facets?field=${field}&limit=${limit}`,
+    );
     return res.items;
   },
   recent: async (): Promise<string[]> => {

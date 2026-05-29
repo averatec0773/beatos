@@ -107,9 +107,7 @@ class AudioEngine {
       this.bufferCache.set(assetId, buf);
     } else {
       try {
-        buf = await new Tone.ToneAudioBuffer().load(
-          `beatos-asset://audio/${assetId}`,
-        );
+        buf = await new Tone.ToneAudioBuffer().load(`beatos-asset://audio/${assetId}`);
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e));
         this.currentAssetId = null;
@@ -267,8 +265,7 @@ class AudioEngine {
 
   private applyAudioParams(): void {
     if (!this.player) return;
-    this.player.volume.value =
-      this.volume <= 0 ? -Infinity : Tone.gainToDb(this.volume);
+    this.player.volume.value = this.volume <= 0 ? -Infinity : Tone.gainToDb(this.volume);
     this.player.mute = this.muted || this.forceMuted;
   }
 
@@ -288,10 +285,7 @@ class AudioEngine {
     // Evict LRU until under budget. Always keep at least the just-inserted
     // entry — a single buffer that exceeds the budget by itself is allowed
     // (the alternative is rejecting playback of large tracks, worse UX).
-    while (
-      this.bufferCacheBytes > BUFFER_CACHE_BUDGET_BYTES &&
-      this.bufferCache.size > 1
-    ) {
+    while (this.bufferCacheBytes > BUFFER_CACHE_BUDGET_BYTES && this.bufferCache.size > 1) {
       const oldest = this.bufferCache.keys().next().value;
       if (oldest === undefined || oldest === assetId) break;
       const oldBuf = this.bufferCache.get(oldest);

@@ -1,4 +1,9 @@
-singleQuote: true
-semi: false
+# Aligned to the established code style (double-quote + semicolons + trailing
+# commas). The previous single-quote/no-semi/no-trailing-comma config never
+# matched the ~16k LOC actually in the tree, so eslint's prettier rule emitted
+# thousands of spurious warnings and `npm run format` would have churned every
+# file. Tooling now matches reality.
+singleQuote: false
+semi: true
 printWidth: 100
-trailingComma: none
+trailingComma: all

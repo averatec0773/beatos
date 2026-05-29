@@ -20,9 +20,7 @@ describe("usePendingTokensHistory", () => {
   it("performs initial GET on mount with status=history", async () => {
     renderHook(() => usePendingTokensHistory());
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        `${FAKE_BASE}/api/tokens?status=history`,
-      );
+      expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens?status=history`);
     });
   });
 
@@ -38,7 +36,9 @@ describe("usePendingTokensHistory", () => {
     renderHook(() => usePendingTokensHistory());
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
     const es = (window as any).__lastEventSource;
-    act(() => { es.dispatch("pending_changed", JSON.stringify({ count: 0 })); });
+    act(() => {
+      es.dispatch("pending_changed", JSON.stringify({ count: 0 }));
+    });
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
   });
 
@@ -53,18 +53,19 @@ describe("usePendingTokensHistory", () => {
   it("populates tokens from the GET response", async () => {
     (global.fetch as any) = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve([
-        {
-          token: "abc",
-          tool_name: "create_list",
-          payload: { name: "Trap" },
-          created_at: 1000,
-          expires_at: 1300,
-          status: "consumed",
-          consumed_at: 1100,
-          result: { list_id: 7 },
-        },
-      ]),
+      json: () =>
+        Promise.resolve([
+          {
+            token: "abc",
+            tool_name: "create_list",
+            payload: { name: "Trap" },
+            created_at: 1000,
+            expires_at: 1300,
+            status: "consumed",
+            consumed_at: 1100,
+            result: { list_id: 7 },
+          },
+        ]),
     });
     const { result } = renderHook(() => usePendingTokensHistory());
     await waitFor(() => {

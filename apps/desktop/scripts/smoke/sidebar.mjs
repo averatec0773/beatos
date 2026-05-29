@@ -12,7 +12,10 @@ export async function assertDropCreateApiPath(ctx) {
     const dropPath = join(userData, "drop-test.wav");
     writeFileSync(dropPath, makeTinyWav());
     const dropTrack = await postJson("/api/tracks", { title: "drop-test" });
-    await postJson(`/api/tracks/${dropTrack.id}/assets`, { role: "audio_tagged_wav", path: dropPath });
+    await postJson(`/api/tracks/${dropTrack.id}/assets`, {
+      role: "audio_tagged_wav",
+      path: dropPath,
+    });
     const allTracks = await (await fetch(`${baseUrl}/api/tracks`)).json();
     const found = Array.isArray(allTracks) && allTracks.some((t) => t.title === "drop-test");
     if (found) {
@@ -66,13 +69,17 @@ export async function assertSidebarOrder(ctx) {
     const required = ["All Beats", "Trash", "Approvals", "Lists"];
     const missing = required.filter((n) => positions[n] === undefined);
     if (missing.length > 0) {
-      failures.push(`sidebar order: missing labels ${JSON.stringify(missing)}; positions=${JSON.stringify(positions)}`);
+      failures.push(
+        `sidebar order: missing labels ${JSON.stringify(missing)}; positions=${JSON.stringify(positions)}`,
+      );
       return;
     }
     const tops = required.map((n) => positions[n]);
     for (let i = 1; i < tops.length; i++) {
       if (tops[i] <= tops[i - 1]) {
-        failures.push(`sidebar order: out of order — ${required[i - 1]}=${tops[i - 1]} not above ${required[i]}=${tops[i]}`);
+        failures.push(
+          `sidebar order: out of order — ${required[i - 1]}=${tops[i - 1]} not above ${required[i]}=${tops[i]}`,
+        );
         return;
       }
     }

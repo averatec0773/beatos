@@ -14,8 +14,8 @@ vi.mock("@radix-ui/react-popover", async () => {
       "div",
       { "data-popover-root": "true" },
       React.Children.map(children, (child: any) =>
-        React.cloneElement(child, { __isOpen: isOpen, __setOpen: setOpen })
-      )
+        React.cloneElement(child, { __isOpen: isOpen, __setOpen: setOpen }),
+      ),
     );
   }
 
@@ -62,37 +62,21 @@ const GROUPED_OPTIONS = [
 
 describe("ChipMultiSelect", () => {
   it("renders chips for initial value array", () => {
-    render(
-      <ChipMultiSelect
-        value={["pop", "trap"]}
-        options={OPTIONS}
-        onChange={vi.fn()}
-      />
-    );
+    render(<ChipMultiSelect value={["pop", "trap"]} options={OPTIONS} onChange={vi.fn()} />);
     expect(screen.getByText("Pop")).toBeInTheDocument();
     expect(screen.getByText("Trap Rap")).toBeInTheDocument();
   });
 
   it("clicking × on a chip calls onChange with that value removed", () => {
     const onChange = vi.fn();
-    render(
-      <ChipMultiSelect
-        value={["pop", "trap"]}
-        options={OPTIONS}
-        onChange={onChange}
-      />
-    );
+    render(<ChipMultiSelect value={["pop", "trap"]} options={OPTIONS} onChange={onChange} />);
     fireEvent.click(screen.getByLabelText("Remove Pop"));
     expect(onChange).toHaveBeenCalledWith(["trap"]);
   });
 
   it("clicking + Add button opens popover", () => {
     const { container } = render(
-      <ChipMultiSelect
-        value={[]}
-        options={OPTIONS}
-        onChange={vi.fn()}
-      />
+      <ChipMultiSelect value={[]} options={OPTIONS} onChange={vi.fn()} />,
     );
     expect(screen.queryByRole("checkbox")).toBeNull();
     fireEvent.click(container.querySelector("[data-add-button]")!);
@@ -102,11 +86,7 @@ describe("ChipMultiSelect", () => {
   it("checking an option then clicking Apply fires onChange with new value added", () => {
     const onChange = vi.fn();
     const { container } = render(
-      <ChipMultiSelect
-        value={["pop"]}
-        options={OPTIONS}
-        onChange={onChange}
-      />
+      <ChipMultiSelect value={["pop"]} options={OPTIONS} onChange={onChange} />,
     );
     fireEvent.click(container.querySelector("[data-add-button]")!);
     const trapCheckbox = screen.getByRole("checkbox", { name: /trap rap/i });
@@ -118,12 +98,7 @@ describe("ChipMultiSelect", () => {
   it("with allowCustomAdd: typing in input + clicking Add adds option to selection", () => {
     const onChange = vi.fn();
     const { container } = render(
-      <ChipMultiSelect
-        value={[]}
-        options={OPTIONS}
-        onChange={onChange}
-        allowCustomAdd
-      />
+      <ChipMultiSelect value={[]} options={OPTIONS} onChange={onChange} allowCustomAdd />,
     );
     fireEvent.click(container.querySelector("[data-add-button]")!);
     const input = screen.getByPlaceholderText(/type to add/i);
@@ -137,11 +112,7 @@ describe("ChipMultiSelect", () => {
 
   it("without allowCustomAdd: text input is not rendered", () => {
     const { container } = render(
-      <ChipMultiSelect
-        value={[]}
-        options={OPTIONS}
-        onChange={vi.fn()}
-      />
+      <ChipMultiSelect value={[]} options={OPTIONS} onChange={vi.fn()} />,
     );
     fireEvent.click(container.querySelector("[data-add-button]")!);
     expect(screen.queryByPlaceholderText(/type to add/i)).toBeNull();
@@ -154,7 +125,7 @@ describe("ChipMultiSelect", () => {
         options={GROUPED_OPTIONS}
         onChange={vi.fn()}
         popoverTitle="Moods"
-      />
+      />,
     );
     fireEvent.click(container.querySelector("[data-add-button]")!);
     expect(screen.getByText("positive")).toBeInTheDocument();
@@ -165,11 +136,7 @@ describe("ChipMultiSelect", () => {
   it("Cancel discards picker changes without calling onChange", () => {
     const onChange = vi.fn();
     const { container } = render(
-      <ChipMultiSelect
-        value={["pop"]}
-        options={OPTIONS}
-        onChange={onChange}
-      />
+      <ChipMultiSelect value={["pop"]} options={OPTIONS} onChange={onChange} />,
     );
     fireEvent.click(container.querySelector("[data-add-button]")!);
     const trapCheckbox = screen.getByRole("checkbox", { name: /trap rap/i });
@@ -180,14 +147,14 @@ describe("ChipMultiSelect", () => {
 
   it("renders data-chip-multiselect attribute on root", () => {
     const { container } = render(
-      <ChipMultiSelect value={[]} options={OPTIONS} onChange={vi.fn()} />
+      <ChipMultiSelect value={[]} options={OPTIONS} onChange={vi.fn()} />,
     );
     expect(container.querySelector("[data-chip-multiselect]")).toBeInTheDocument();
   });
 
   it("renders data-add-button attribute on Add button", () => {
     const { container } = render(
-      <ChipMultiSelect value={[]} options={OPTIONS} onChange={vi.fn()} />
+      <ChipMultiSelect value={[]} options={OPTIONS} onChange={vi.fn()} />,
     );
     expect(container.querySelector("[data-add-button]")).toBeInTheDocument();
   });
@@ -195,12 +162,7 @@ describe("ChipMultiSelect", () => {
   it("maxSelections=1 renders single-select trigger (no chips), replaces on pick", () => {
     const onChange = vi.fn();
     const { container } = render(
-      <ChipMultiSelect
-        value={["pop"]}
-        options={OPTIONS}
-        onChange={onChange}
-        maxSelections={1}
-      />
+      <ChipMultiSelect value={["pop"]} options={OPTIONS} onChange={onChange} maxSelections={1} />,
     );
     // Single-select trigger lives on the data-add-button (label = current value)
     const trigger = container.querySelector("[data-add-button]") as HTMLButtonElement;
@@ -220,7 +182,7 @@ describe("ChipMultiSelect", () => {
         options={OPTIONS}
         onChange={onChange}
         maxSelections={2}
-      />
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: /add/i }));
     const jazz = screen.getByLabelText("Jazz") as HTMLInputElement;
@@ -235,7 +197,7 @@ describe("ChipMultiSelect", () => {
         options={OPTIONS}
         onChange={onChange}
         maxSelections={2}
-      />
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: /add/i }));
     // Uncheck trap — should work (deselect always allowed)

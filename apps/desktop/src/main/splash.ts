@@ -33,7 +33,7 @@ function iconDataUri(): string {
     throw new Error(
       `Splash icon not found at ${p}. ` +
         `Dev expects apps/desktop/resources/icon.png; ` +
-        `prod expects extraResources to copy it to process.resourcesPath.`
+        `prod expects extraResources to copy it to process.resourcesPath.`,
     );
   }
   const b64 = readFileSync(p).toString("base64");
@@ -158,7 +158,7 @@ export function fadeOutAndClose(splash: BrowserWindow, durationMs = 250): void {
 export function closeSplashAndShowMain(
   splash: BrowserWindow | null,
   mainWin: BrowserWindow,
-  shownAt: number
+  shownAt: number,
 ): void {
   // BEATOS_HEADLESS=1 keeps the main window invisible — used by smoke + diagnose
   // harnesses so they don't steal focus or pop a Dock icon. Renderer + sidecar

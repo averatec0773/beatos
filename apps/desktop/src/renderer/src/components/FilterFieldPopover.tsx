@@ -25,7 +25,15 @@ function toDistinctField(field: MultiField): "producer" | "genre" | "mood" | "ke
   return field === "key" ? "key_signature" : field;
 }
 
-function MultiValuePicker({ field, onApply, onCancel }: { field: MultiField; onApply: () => void; onCancel: () => void }) {
+function MultiValuePicker({
+  field,
+  onApply,
+  onCancel,
+}: {
+  field: MultiField;
+  onApply: () => void;
+  onCancel: () => void;
+}) {
   const filters = useTrackQueryStore((s) => s.filters);
   const setProducerFilter = useTrackQueryStore((s) => s.setProducerFilter);
   const setGenreFilter = useTrackQueryStore((s) => s.setGenreFilter);
@@ -33,10 +41,13 @@ function MultiValuePicker({ field, onApply, onCancel }: { field: MultiField; onA
   const setKeyFilter = useTrackQueryStore((s) => s.setKeyFilter);
 
   const currentValues: string[] =
-    field === "producer" ? filters.producers
-    : field === "genre" ? filters.genres
-    : field === "mood" ? filters.moods
-    : filters.keys;
+    field === "producer"
+      ? filters.producers
+      : field === "genre"
+        ? filters.genres
+        : field === "mood"
+          ? filters.moods
+          : filters.keys;
 
   const [selected, setSelected] = useState<Set<string>>(new Set(currentValues));
   const [values, setValues] = useState<string[]>([]);
@@ -82,29 +93,27 @@ function MultiValuePicker({ field, onApply, onCancel }: { field: MultiField; onA
         {FIELD_LABELS[field]}
       </div>
       <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5">
-        {loading && (
-          <span className="text-xs text-text-tertiary px-1 py-1">Loading…</span>
-        )}
-        {error && (
-          <span className="text-xs text-text-tertiary px-1 py-1">Failed to load</span>
-        )}
+        {loading && <span className="text-xs text-text-tertiary px-1 py-1">Loading…</span>}
+        {error && <span className="text-xs text-text-tertiary px-1 py-1">Failed to load</span>}
         {!loading && !error && values.length === 0 && (
           <span className="text-xs text-text-tertiary px-1 py-1">No values found</span>
         )}
-        {!loading && !error && values.map((val) => (
-          <label
-            key={val}
-            className="flex items-center gap-2 px-1 py-1 rounded cursor-pointer hover:bg-bg-row-hover text-sm text-text-secondary"
-          >
-            <input
-              type="checkbox"
-              checked={selected.has(val)}
-              onChange={() => toggle(val)}
-              className="accent-accent"
-            />
-            <span className="truncate">{val}</span>
-          </label>
-        ))}
+        {!loading &&
+          !error &&
+          values.map((val) => (
+            <label
+              key={val}
+              className="flex items-center gap-2 px-1 py-1 rounded cursor-pointer hover:bg-bg-row-hover text-sm text-text-secondary"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(val)}
+                onChange={() => toggle(val)}
+                className="accent-accent"
+              />
+              <span className="truncate">{val}</span>
+            </label>
+          ))}
       </div>
       <div className="flex gap-2 justify-end pt-1 border-t border-border-subtle">
         <button

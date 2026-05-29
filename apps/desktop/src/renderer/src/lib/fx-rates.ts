@@ -32,7 +32,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
   CNY: "¥",
   EUR: "€",
-  JPY: "¥",     // intentionally the same glyph as CNY; disambiguate via code
+  JPY: "¥", // intentionally the same glyph as CNY; disambiguate via code
   GBP: "£",
 };
 
@@ -55,11 +55,7 @@ export function convertFx(amount: number, from: string, to: string): number | nu
  * with trailing zeros stripped. Returns "" when conversion fails, so callers
  * can drop it into a placeholder without conditional logic.
  */
-export function fxConvertedString(
-  amount: number,
-  from: string,
-  to: string,
-): string {
+export function fxConvertedString(amount: number, from: string, to: string): string {
   if (!Number.isFinite(amount)) return "";
   const converted = convertFx(amount, from, to);
   if (converted == null) return "";
@@ -99,11 +95,7 @@ function formatHintAmount(amount: number, currency: string): string {
  * hint cannot be computed (missing price, unknown currency, etc.) so the
  * caller can render nothing without conditional guards.
  */
-export function buildFxHint(
-  price: number | null,
-  currency: string,
-  alternates?: string[],
-): string {
+export function buildFxHint(price: number | null, currency: string, alternates?: string[]): string {
   if (price == null || !Number.isFinite(price)) return "";
   const targets = alternates ?? pickHintCurrencies(currency);
   const parts: string[] = [];

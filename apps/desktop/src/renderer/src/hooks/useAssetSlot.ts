@@ -14,7 +14,7 @@ export function useAssetSlot(
   trackId: number,
   role: string,
   label: string,
-  extensions: string[]
+  extensions: string[],
 ): UseAssetSlotResult {
   const assetsForTrack = useAssetStore((s) => s.byTrack[trackId] ?? []);
   const attachAction = useAssetStore((s) => s.attach);
@@ -25,9 +25,9 @@ export function useAssetSlot(
   const filterExtensions = extensions.map((e) => e.replace(/^\./, ""));
 
   const pickAndAttach = async (replace: boolean, explicitPath?: string) => {
-    const picked = explicitPath ?? await window.beatos.openFileDialog([
-      { name: label, extensions: filterExtensions },
-    ]);
+    const picked =
+      explicitPath ??
+      (await window.beatos.openFileDialog([{ name: label, extensions: filterExtensions }]));
     if (!picked) return;
     try {
       await attachAction(trackId, role, picked, { replace });

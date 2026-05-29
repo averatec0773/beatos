@@ -32,7 +32,7 @@ describe("VirtualTrackList", () => {
       <VirtualTrackList
         tracks={tracks}
         renderRow={(t) => <div data-testid="row">{t.title}</div>}
-      />
+      />,
     );
     const rows = container.querySelectorAll('[data-testid="row"]');
     // jsdom has 0 layout, so virtualizer fallback may render very few or none.

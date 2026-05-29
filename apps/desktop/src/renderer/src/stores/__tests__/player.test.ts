@@ -179,9 +179,7 @@ describe("playFromQueue", () => {
   });
 
   it("sets status='error' when no audio asset resolvable", async () => {
-    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([
-      mockAsset(20, "cover"),
-    ]);
+    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([mockAsset(20, "cover")]);
     await usePlayerStore.getState().playFromQueue({
       trackIds: [5],
       startIndex: 0,
@@ -193,9 +191,7 @@ describe("playFromQueue", () => {
 
 describe("next/prev with repeat", () => {
   beforeEach(() => {
-    vi.mocked(assetsApi.listForTrack).mockResolvedValue([
-      mockAsset(10, "audio_tagged_wav"),
-    ]);
+    vi.mocked(assetsApi.listForTrack).mockResolvedValue([mockAsset(10, "audio_tagged_wav")]);
   });
 
   it("next advances queueIndex", async () => {
@@ -249,18 +245,16 @@ describe("next/prev with repeat", () => {
 describe("togglePlay recovery", () => {
   it("retries loadAndPlay when status='error' with currentTrackId set", async () => {
     // First attempt fails (no audio asset resolvable)
-    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([
-      mockAsset(99, "cover"),
-    ]);
+    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([mockAsset(99, "cover")]);
     await usePlayerStore.getState().playFromQueue({
-      trackIds: [5], startIndex: 0, origin: { kind: "all" },
+      trackIds: [5],
+      startIndex: 0,
+      origin: { kind: "all" },
     });
     expect(usePlayerStore.getState().status).toBe("error");
 
     // Now an audio asset is available — togglePlay should retry
-    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([
-      mockAsset(10, "audio_tagged_wav"),
-    ]);
+    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([mockAsset(10, "audio_tagged_wav")]);
     usePlayerStore.getState().togglePlay();
     // wait microtask for the async loadAndPlay to settle
     await new Promise((r) => setTimeout(r, 0));
@@ -275,9 +269,7 @@ describe("togglePlay recovery", () => {
       currentRole: null,
       status: "idle",
     });
-    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([
-      mockAsset(20, "audio_tagged_wav"),
-    ]);
+    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([mockAsset(20, "audio_tagged_wav")]);
     usePlayerStore.getState().togglePlay();
     await new Promise((r) => setTimeout(r, 0));
     expect(usePlayerStore.getState().status).toBe("playing");
@@ -302,10 +294,14 @@ describe("concurrent loadAndPlay (rapid track switch)", () => {
 
     // Fire two switches back-to-back; the second (track 2) is the user's latest intent.
     const pA = usePlayerStore.getState().playFromQueue({
-      trackIds: [1], startIndex: 0, origin: { kind: "all" },
+      trackIds: [1],
+      startIndex: 0,
+      origin: { kind: "all" },
     });
     const pB = usePlayerStore.getState().playFromQueue({
-      trackIds: [2], startIndex: 0, origin: { kind: "all" },
+      trackIds: [2],
+      startIndex: 0,
+      origin: { kind: "all" },
     });
     await pB;
     // Now the stale earlier request resolves — it must NOT win.

@@ -23,7 +23,9 @@ export async function assertAttachAudioAndBottomBar(ctx) {
   ctx.fixtures.audioPath = audioPath;
 
   // Reload so the renderer fetches updated has_audio flags.
-  await window.evaluate(() => { location.hash = "/"; });
+  await window.evaluate(() => {
+    location.hash = "/";
+  });
   await window.evaluate(() => location.reload());
   await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
   await window.waitForSelector('[role="row"]', { timeout: 5000 });
@@ -109,7 +111,7 @@ export async function assertResumeAfterEnd(ctx) {
   }
   try {
     await window.waitForSelector('[data-bottom-player][data-playing="false"]', { timeout: 8000 });
-    const bottomPlayBtn = window.locator('[data-bottom-player] [data-play-button]').first();
+    const bottomPlayBtn = window.locator("[data-bottom-player] [data-play-button]").first();
     await bottomPlayBtn.click();
     await window.waitForSelector('[data-bottom-player][data-playing="true"]', { timeout: 3000 });
     console.log("smoke: resume after end PASS");
@@ -131,17 +133,22 @@ export async function assertDawWavDecode(ctx) {
       role: "audio_tagged_wav",
       path: dawWavPath,
     });
-    await window.evaluate(() => { window.location.hash = "#/"; });
+    await window.evaluate(() => {
+      window.location.hash = "#/";
+    });
     await new Promise((r) => setTimeout(r, 200));
     await window.reload();
     await window.waitForLoadState("domcontentloaded");
-    await window.evaluate(() => { window.location.hash = "#/"; });
+    await window.evaluate(() => {
+      window.location.hash = "#/";
+    });
     await new Promise((r) => setTimeout(r, 800));
     const dawRow = window.locator("[data-track-id]").filter({ hasText: "SmokeDaw" }).first();
     if ((await dawRow.count()) === 0) {
       const titles = await window.evaluate(() =>
-        [...document.querySelectorAll("[data-track-id]")].map((el) =>
-          el.querySelector("[data-track-title]")?.textContent ?? el.textContent?.slice(0, 40),
+        [...document.querySelectorAll("[data-track-id]")].map(
+          (el) =>
+            el.querySelector("[data-track-title]")?.textContent ?? el.textContent?.slice(0, 40),
         ),
       );
       failures.push(`daw-wav: SmokeDaw row not visible. Visible rows: ${JSON.stringify(titles)}`);
@@ -150,8 +157,7 @@ export async function assertDawWavDecode(ctx) {
       await new Promise((r) => setTimeout(r, 2000));
       const s = await window.evaluate(() => window.__beatos?.engine?.());
       if (!s) failures.push("daw-wav: __beatos.engine() not available");
-      else if (s.status === "error")
-        failures.push(`daw-wav: engine status=error`);
+      else if (s.status === "error") failures.push(`daw-wav: engine status=error`);
       else if (!(s.duration > 0))
         failures.push(`daw-wav: duration not > 0 (${s.duration}), status=${s.status}`);
       else if (!(s.position > 0))
@@ -180,22 +186,27 @@ export async function assertRealAudioRegression(ctx) {
       role: "audio_tagged_wav",
       path: realAudio,
     });
-    await window.evaluate(() => { window.location.hash = "#/"; });
+    await window.evaluate(() => {
+      window.location.hash = "#/";
+    });
     await new Promise((r) => setTimeout(r, 200));
     await window.reload();
     await window.waitForLoadState("domcontentloaded");
-    await window.evaluate(() => { window.location.hash = "#/"; });
+    await window.evaluate(() => {
+      window.location.hash = "#/";
+    });
     await new Promise((r) => setTimeout(r, 800));
-    const rowReal = window.locator("[data-track-id]").filter({ hasText: "real-audio-smoke" }).first();
+    const rowReal = window
+      .locator("[data-track-id]")
+      .filter({ hasText: "real-audio-smoke" })
+      .first();
     await rowReal.waitFor({ timeout: 5000 });
     await rowReal.locator("[data-row-play-button]").click();
     await new Promise((r) => setTimeout(r, 3000));
     const s = await window.evaluate(() => window.__beatos?.engine?.());
     if (!s) failures.push("real-audio: __beatos.engine() not available");
-    else if (s.status === "error")
-      failures.push(`real-audio: engine status=error`);
-    else if (!(s.duration > 0))
-      failures.push(`real-audio: duration not > 0 (${s.duration})`);
+    else if (s.status === "error") failures.push(`real-audio: engine status=error`);
+    else if (!(s.duration > 0)) failures.push(`real-audio: duration not > 0 (${s.duration})`);
     else if (!(s.position > 0))
       failures.push(`real-audio: position did not advance (${s.position})`);
     else

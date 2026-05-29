@@ -3,13 +3,7 @@ import { Play, Pause } from "lucide-react";
 import { usePlayerStore } from "@/stores/player";
 import { useTrackStore } from "@/stores/tracks";
 
-export function TrackRowPlayButton({
-  trackId,
-  hasAudio,
-}: {
-  trackId: number;
-  hasAudio: boolean;
-}) {
+export function TrackRowPlayButton({ trackId, hasAudio }: { trackId: number; hasAudio: boolean }) {
   const currentTrackId = usePlayerStore((s) => s.currentTrackId);
   const status = usePlayerStore((s) => s.status);
   const isCurrent = currentTrackId === trackId;

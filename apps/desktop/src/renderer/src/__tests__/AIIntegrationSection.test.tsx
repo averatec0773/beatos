@@ -54,28 +54,27 @@ describe("AIIntegrationSection", () => {
 
   it("Test connection shows success state", async () => {
     mockBeatos.testMcpConnection.mockResolvedValue({
-      ok: true, toolsCount: 6, version: "0.0.20",
+      ok: true,
+      toolsCount: 6,
+      version: "0.0.20",
     });
     const user = userEvent.setup();
     render(<AIIntegrationSection dbPath="/x/beatos.db" repoRoot="/r" />);
     await user.click(screen.getByRole("button", { name: /AI Integration/i }));
     await user.click(screen.getByRole("button", { name: /Test connection/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/Connection OK · 6 tools/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Connection OK · 6 tools/i)).toBeInTheDocument());
   });
 
   it("Test connection shows failure state", async () => {
     mockBeatos.testMcpConnection.mockResolvedValue({
-      ok: false, error: "Spawn failed: command not found",
+      ok: false,
+      error: "Spawn failed: command not found",
     });
     const user = userEvent.setup();
     render(<AIIntegrationSection dbPath="/x/beatos.db" repoRoot="/r" />);
     await user.click(screen.getByRole("button", { name: /AI Integration/i }));
     await user.click(screen.getByRole("button", { name: /Test connection/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/Spawn failed/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Spawn failed/i)).toBeInTheDocument());
   });
 
   it("no longer renders any Pending confirmations block (moved to /approvals)", async () => {

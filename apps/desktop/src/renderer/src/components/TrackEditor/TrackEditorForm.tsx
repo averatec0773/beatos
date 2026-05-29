@@ -78,7 +78,9 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                 onChange={(e) => patch("title", e.target.value)}
                 aria-invalid={titleEmpty}
                 className={`w-full bg-bg-elevated border rounded-md px-3 py-2 text-text-primary focus:outline-none ${
-                  titleEmpty ? "border-danger focus:border-danger" : "border-border-subtle focus:border-accent"
+                  titleEmpty
+                    ? "border-danger focus:border-danger"
+                    : "border-border-subtle focus:border-accent"
                 }`}
               />
             </div>
@@ -95,7 +97,9 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                   id="track-bpm"
                   type="number"
                   value={track.bpm ?? ""}
-                  onChange={(e) => patch("bpm", e.target.value === "" ? null : Number(e.target.value))}
+                  onChange={(e) =>
+                    patch("bpm", e.target.value === "" ? null : Number(e.target.value))
+                  }
                   className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 font-mono"
                 />
               </div>
@@ -103,7 +107,10 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                 <label className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1">
                   Key
                 </label>
-                <KeyPicker value={track.key_signature ?? null} onChange={(v) => patch("key_signature", v)} />
+                <KeyPicker
+                  value={track.key_signature ?? null}
+                  onChange={(v) => patch("key_signature", v)}
+                />
               </div>
               <div data-field="genre">
                 <label className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1">
@@ -127,7 +134,11 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                 </label>
                 <ChipMultiSelect
                   value={track.mood ?? []}
-                  options={BEATOS_MOODS.map((m) => ({ value: m.en, label: `${m.zh} (${m.en})`, group: m.group }))}
+                  options={BEATOS_MOODS.map((m) => ({
+                    value: m.en,
+                    label: `${m.zh} (${m.en})`,
+                    group: m.group,
+                  }))}
                   onChange={(v) => patch("mood", v.length ? v : null)}
                   popoverTitle="Moods"
                   placeholder="Add mood..."
@@ -163,15 +174,19 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                         const next = track.producer.filter((p) => p !== v);
                         patch("producer", next.length ? next : null);
                       }
-                      useToastStore.getState().show(
-                        "success",
-                        `Deleted "${v}" from ${r.affected} track${r.affected === 1 ? "" : "s"}`,
-                      );
+                      useToastStore
+                        .getState()
+                        .show(
+                          "success",
+                          `Deleted "${v}" from ${r.affected} track${r.affected === 1 ? "" : "s"}`,
+                        );
                     } catch (e) {
-                      useToastStore.getState().show(
-                        "error",
-                        `Delete failed: ${e instanceof Error ? e.message : String(e)}`,
-                      );
+                      useToastStore
+                        .getState()
+                        .show(
+                          "error",
+                          `Delete failed: ${e instanceof Error ? e.message : String(e)}`,
+                        );
                       throw e;
                     }
                   }}
@@ -234,11 +249,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
             Close (ESC)
           </button>
           <div className="flex-1" />
-          <button
-            type="button"
-            onClick={onDelete}
-            className="text-danger text-sm hover:underline"
-          >
+          <button type="button" onClick={onDelete} className="text-danger text-sm hover:underline">
             Delete
           </button>
         </div>

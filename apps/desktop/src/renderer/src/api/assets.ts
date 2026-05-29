@@ -28,7 +28,5 @@ export const assets = {
     apiPost<Asset>(`/api/tracks/${trackId}/assets/${assetId}/relocate`, { new_path: newPath }),
   listForTrack: (trackId: number) => apiGet<Asset[]>(`/api/tracks/${trackId}/assets`),
   sweep: () =>
-    apiPost<{ checked: number; marked_missing: number; recovered: number }>(
-      `/api/sweep/assets`
-    ),
+    apiPost<{ checked: number; marked_missing: number; recovered: number }>(`/api/sweep/assets`),
 };

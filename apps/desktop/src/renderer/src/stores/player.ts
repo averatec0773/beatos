@@ -120,8 +120,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       return;
     }
 
-    const shouldPlay =
-      targetStatus === "playing" || prev.status === "playing";
+    const shouldPlay = targetStatus === "playing" || prev.status === "playing";
 
     set({
       currentTrackId: trackId,
@@ -169,10 +168,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         audioEngine.play().catch((e) => {
           console.warn("[player] resume failed", e);
         });
-      } else if (
-        (s.status === "error" || s.status === "idle") &&
-        s.currentTrackId != null
-      ) {
+      } else if ((s.status === "error" || s.status === "idle") && s.currentTrackId != null) {
         // Recovery: retry load + play from a broken state.
         loadAndPlay(s.currentTrackId, s.preferredRole).catch((e) => {
           console.warn("[player] retry from error/idle failed", e);

@@ -37,9 +37,7 @@ class MockEventSource {
     this.listeners[type] = (this.listeners[type] ?? []).filter((f) => f !== cb);
   }
   dispatch(type: string, data: string) {
-    (this.listeners[type] ?? []).forEach((cb) =>
-      cb({ data } as MessageEvent),
-    );
+    (this.listeners[type] ?? []).forEach((cb) => cb({ data } as MessageEvent));
   }
   close() {
     (window as any).__lastEventSource = null;

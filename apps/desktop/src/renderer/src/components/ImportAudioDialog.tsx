@@ -41,7 +41,8 @@ export function ImportAudioDialog({
   }, [open]);
 
   const count = files.length;
-  const title = count === 1 ? `Import "${files[0]?.name ?? "audio"}"` : `Import ${count} audio files`;
+  const title =
+    count === 1 ? `Import "${files[0]?.name ?? "audio"}"` : `Import ${count} audio files`;
 
   return (
     <Dialog
@@ -69,9 +70,7 @@ export function ImportAudioDialog({
                 onChange={() => setDestination("new")}
                 className="accent-accent"
               />
-              <span>
-                Create {count > 1 ? `${count} new tracks` : "new track"}
-              </span>
+              <span>Create {count > 1 ? `${count} new tracks` : "new track"}</span>
             </label>
             <label
               className={[

@@ -26,8 +26,6 @@ export function TopBarRouteTitle(): React.JSX.Element {
   }
 
   return (
-    <div className="text-[15px] font-medium text-text-primary truncate select-none">
-      {title}
-    </div>
+    <div className="text-[15px] font-medium text-text-primary truncate select-none">{title}</div>
   );
 }

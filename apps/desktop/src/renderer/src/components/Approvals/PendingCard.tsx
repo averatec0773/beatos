@@ -99,7 +99,8 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
           {token.tool_name} {JSON.stringify(token.payload)}
         </div>
         <div className="mt-1 text-xs text-text-tertiary">
-          Requested {relativeSeconds(token.created_at)} · expires in {untilSeconds(token.expires_at)}
+          Requested {relativeSeconds(token.created_at)} · expires in{" "}
+          {untilSeconds(token.expires_at)}
         </div>
         <div className="mt-3 flex gap-2">
           <button
@@ -138,13 +139,9 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
       <div className={"font-medium " + (isDestructive ? "text-danger" : "")}>
         {preview.headline}
       </div>
-      {isDestructive && (
-        <div className="mt-1 text-xs text-danger">This cannot be undone.</div>
-      )}
+      {isDestructive && <div className="mt-1 text-xs text-danger">This cannot be undone.</div>}
 
-      <div className="mt-2 text-xs text-text-secondary">
-        {preview.sample.join(" · ")}
-      </div>
+      <div className="mt-2 text-xs text-text-secondary">{preview.sample.join(" · ")}</div>
 
       {total > preview.sample.length && (
         <button
@@ -166,7 +163,10 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
       {preview.warnings.length > 0 && (
         <ul className="mt-2 space-y-1 text-xs text-warning">
           {preview.warnings.map((w, i) => (
-            <li key={i}><span aria-hidden="true">⚠ </span><span>{w}</span></li>
+            <li key={i}>
+              <span aria-hidden="true">⚠ </span>
+              <span>{w}</span>
+            </li>
           ))}
         </ul>
       )}

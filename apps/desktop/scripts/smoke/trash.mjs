@@ -13,7 +13,9 @@ export async function assertTrashSoftDeleteRestore(ctx) {
       if (!foundInTrash) {
         failures.push(`trash: newly trashed track ${trashTrack.id} not in /api/tracks/trash`);
       } else {
-        const restoreRes = await fetch(`${baseUrl}/api/tracks/${trashTrack.id}/restore`, { method: "POST" });
+        const restoreRes = await fetch(`${baseUrl}/api/tracks/${trashTrack.id}/restore`, {
+          method: "POST",
+        });
         if (!restoreRes.ok) {
           failures.push(`trash: restore returned ${restoreRes.status}`);
         } else {

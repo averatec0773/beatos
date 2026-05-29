@@ -20,10 +20,7 @@ export const AUDIO_ROLE_LABEL: Record<AudioRole, string> = {
   audio_untagged_mp3: "MP3 (untagged)",
 };
 
-export function resolveAudioAsset(
-  assets: Asset[],
-  preferred?: AudioRole | null
-): Asset | null {
+export function resolveAudioAsset(assets: Asset[], preferred?: AudioRole | null): Asset | null {
   if (preferred) {
     const direct = assets.find((a) => a.role === preferred && !a.missing);
     if (direct) return direct;
@@ -36,7 +33,5 @@ export function resolveAudioAsset(
 }
 
 export function availableAudioRoles(assets: Asset[]): AudioRole[] {
-  return AUDIO_ROLES.filter((r) =>
-    assets.some((a) => a.role === r && !a.missing)
-  );
+  return AUDIO_ROLES.filter((r) => assets.some((a) => a.role === r && !a.missing));
 }

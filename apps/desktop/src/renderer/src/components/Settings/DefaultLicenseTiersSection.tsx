@@ -27,9 +27,7 @@ const PRESET_KEYS = new Set<string>(PRESET_SLOTS.map((p) => p.key));
 
 const FIXED_CURRENCIES = ["CNY", "USD"] as const;
 const FIXED_CURRENCY_SET = new Set<string>(FIXED_CURRENCIES);
-const OTHER_CURRENCIES = SUPPORTED_CURRENCIES.filter(
-  (c) => !FIXED_CURRENCY_SET.has(c),
-);
+const OTHER_CURRENCIES = SUPPORTED_CURRENCIES.filter((c) => !FIXED_CURRENCY_SET.has(c));
 
 const SAVE_DEBOUNCE_MS = 600;
 
@@ -153,10 +151,9 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
           await saveDefaultLicenseTiers(templates);
           setSavedAt(new Date());
         } catch (e) {
-          useToastStore.getState().show(
-            "error",
-            `Save defaults failed: ${e instanceof Error ? e.message : String(e)}`,
-          );
+          useToastStore
+            .getState()
+            .show("error", `Save defaults failed: ${e instanceof Error ? e.message : String(e)}`);
         } finally {
           setSaving(false);
         }
@@ -216,8 +213,8 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
         <span className="text-xs text-text-tertiary">{status}</span>
       </div>
       <p className="text-xs text-text-tertiary mb-3">
-        Applied to every newly-created track. Empty rows are skipped. Existing
-        tracks are not touched when you change these.
+        Applied to every newly-created track. Empty rows are skipped. Existing tracks are not
+        touched when you change these.
       </p>
 
       {loading ? (
@@ -226,7 +223,8 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
         <div className="flex flex-col gap-1.5">
           {PRESET_SLOTS.map((slot) => {
             const row = presets[slot.key];
-            const filled = Object.keys(inputsToPrices(row.priceInputs, row.otherCurrency)).length > 0;
+            const filled =
+              Object.keys(inputsToPrices(row.priceInputs, row.otherCurrency)).length > 0;
             return (
               <RowEditor
                 key={slot.key}
@@ -325,10 +323,7 @@ function pickFxSource(
   return null;
 }
 
-function fxPlaceholderFor(
-  target: string,
-  source: [string, number] | null,
-): string {
+function fxPlaceholderFor(target: string, source: [string, number] | null): string {
   if (!source) return "—";
   const [from, amount] = source;
   if (from === target) return "—";
@@ -417,9 +412,7 @@ function RowEditor({
           min={0}
           step="0.01"
           value={row.otherCurrency ? (row.priceInputs[row.otherCurrency] ?? "") : ""}
-          onChange={(e) =>
-            row.otherCurrency && onPriceChange(row.otherCurrency, e.target.value)
-          }
+          onChange={(e) => row.otherCurrency && onPriceChange(row.otherCurrency, e.target.value)}
           disabled={!row.otherCurrency}
           placeholder={
             row.otherCurrency && (row.priceInputs[row.otherCurrency] ?? "") === ""

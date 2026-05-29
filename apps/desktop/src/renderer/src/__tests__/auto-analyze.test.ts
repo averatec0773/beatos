@@ -57,7 +57,7 @@ describe("maybeAutoAnalyze", () => {
 
   it("skips when track already has both bpm and key_signature", async () => {
     vi.mocked(tracksModule.tracks.get).mockResolvedValueOnce(
-      makeTrack({ bpm: 120, key_signature: "A minor" })
+      makeTrack({ bpm: 120, key_signature: "A minor" }),
     );
 
     await maybeAutoAnalyze(1);
@@ -68,10 +68,10 @@ describe("maybeAutoAnalyze", () => {
 
   it("patches bpm only when bpm null, key already set, bpm confidence >= 0.7", async () => {
     vi.mocked(tracksModule.tracks.get).mockResolvedValueOnce(
-      makeTrack({ bpm: null, key_signature: "A minor" })
+      makeTrack({ bpm: null, key_signature: "A minor" }),
     );
     vi.mocked(analysisModule.analysis.analyze).mockResolvedValueOnce(
-      makeResult({ bpm: 140.6, bpm_confidence: 0.85, key: "C major", key_confidence: 0.8 })
+      makeResult({ bpm: 140.6, bpm_confidence: 0.85, key: "C major", key_confidence: 0.8 }),
     );
     vi.mocked(tracksModule.tracks.update).mockResolvedValueOnce(makeTrack({ bpm: 141 }));
 
@@ -83,13 +83,13 @@ describe("maybeAutoAnalyze", () => {
 
   it("patches key_signature only when key null, bpm already set, key confidence >= 0.6", async () => {
     vi.mocked(tracksModule.tracks.get).mockResolvedValueOnce(
-      makeTrack({ bpm: 120, key_signature: null })
+      makeTrack({ bpm: 120, key_signature: null }),
     );
     vi.mocked(analysisModule.analysis.analyze).mockResolvedValueOnce(
-      makeResult({ bpm: 120, bpm_confidence: 0.9, key: "D minor", key_confidence: 0.75 })
+      makeResult({ bpm: 120, bpm_confidence: 0.9, key: "D minor", key_confidence: 0.75 }),
     );
     vi.mocked(tracksModule.tracks.update).mockResolvedValueOnce(
-      makeTrack({ bpm: 120, key_signature: "D minor" })
+      makeTrack({ bpm: 120, key_signature: "D minor" }),
     );
 
     await maybeAutoAnalyze(1);
@@ -100,13 +100,13 @@ describe("maybeAutoAnalyze", () => {
 
   it("skips bpm patch when confidence is 0.65 (below 0.7 threshold)", async () => {
     vi.mocked(tracksModule.tracks.get).mockResolvedValueOnce(
-      makeTrack({ bpm: null, key_signature: null })
+      makeTrack({ bpm: null, key_signature: null }),
     );
     vi.mocked(analysisModule.analysis.analyze).mockResolvedValueOnce(
-      makeResult({ bpm: 140, bpm_confidence: 0.65, key: "C major", key_confidence: 0.8 })
+      makeResult({ bpm: 140, bpm_confidence: 0.65, key: "C major", key_confidence: 0.8 }),
     );
     vi.mocked(tracksModule.tracks.update).mockResolvedValueOnce(
-      makeTrack({ key_signature: "C major" })
+      makeTrack({ key_signature: "C major" }),
     );
 
     await maybeAutoAnalyze(1);
@@ -118,10 +118,10 @@ describe("maybeAutoAnalyze", () => {
 
   it("skips key patch when confidence is 0.55 (below 0.6 threshold)", async () => {
     vi.mocked(tracksModule.tracks.get).mockResolvedValueOnce(
-      makeTrack({ bpm: null, key_signature: null })
+      makeTrack({ bpm: null, key_signature: null }),
     );
     vi.mocked(analysisModule.analysis.analyze).mockResolvedValueOnce(
-      makeResult({ bpm: 140, bpm_confidence: 0.9, key: "C major", key_confidence: 0.55 })
+      makeResult({ bpm: 140, bpm_confidence: 0.9, key: "C major", key_confidence: 0.55 }),
     );
     vi.mocked(tracksModule.tracks.update).mockResolvedValueOnce(makeTrack({ bpm: 140 }));
 
@@ -134,13 +134,13 @@ describe("maybeAutoAnalyze", () => {
 
   it("calls tracks.update once with combined patch when both fields can be filled", async () => {
     vi.mocked(tracksModule.tracks.get).mockResolvedValueOnce(
-      makeTrack({ bpm: null, key_signature: null })
+      makeTrack({ bpm: null, key_signature: null }),
     );
     vi.mocked(analysisModule.analysis.analyze).mockResolvedValueOnce(
-      makeResult({ bpm: 90.4, bpm_confidence: 0.95, key: "F# minor", key_confidence: 0.7 })
+      makeResult({ bpm: 90.4, bpm_confidence: 0.95, key: "F# minor", key_confidence: 0.7 }),
     );
     vi.mocked(tracksModule.tracks.update).mockResolvedValueOnce(
-      makeTrack({ bpm: 90, key_signature: "F# minor" })
+      makeTrack({ bpm: 90, key_signature: "F# minor" }),
     );
 
     await maybeAutoAnalyze(1);
@@ -157,15 +157,15 @@ describe("maybeAutoAnalyze", () => {
     // Slow analyze so both calls overlap in time
     let resolveAnalyze: ((r: AudioAnalysisResult) => void) | undefined;
     vi.mocked(tracksModule.tracks.get).mockResolvedValue(
-      makeTrack({ bpm: null, key_signature: null })
+      makeTrack({ bpm: null, key_signature: null }),
     );
     vi.mocked(analysisModule.analysis.analyze).mockReturnValue(
       new Promise<AudioAnalysisResult>((res) => {
         resolveAnalyze = res;
-      })
+      }),
     );
     vi.mocked(tracksModule.tracks.update).mockResolvedValue(
-      makeTrack({ bpm: 140, key_signature: "C major" })
+      makeTrack({ bpm: 140, key_signature: "C major" }),
     );
 
     const first = maybeAutoAnalyze(1);
@@ -177,7 +177,7 @@ describe("maybeAutoAnalyze", () => {
     expect(analysisModule.analysis.analyze).toHaveBeenCalledTimes(1);
 
     resolveAnalyze!(
-      makeResult({ bpm: 140, bpm_confidence: 0.9, key: "C major", key_confidence: 0.8 })
+      makeResult({ bpm: 140, bpm_confidence: 0.9, key: "C major", key_confidence: 0.8 }),
     );
     await first;
     // Lock cleaned up so a follow-up call is allowed
@@ -186,7 +186,7 @@ describe("maybeAutoAnalyze", () => {
 
   it("logs warn and does not throw when analysis.analyze throws", async () => {
     vi.mocked(tracksModule.tracks.get).mockResolvedValueOnce(
-      makeTrack({ bpm: null, key_signature: null })
+      makeTrack({ bpm: null, key_signature: null }),
     );
     vi.mocked(analysisModule.analysis.analyze).mockRejectedValueOnce(new Error("504 timeout"));
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -194,17 +194,17 @@ describe("maybeAutoAnalyze", () => {
     await expect(maybeAutoAnalyze(1)).resolves.toBeUndefined();
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[auto-analyze] failed"),
-      expect.any(Error)
+      expect.any(Error),
     );
     warnSpy.mockRestore();
   });
 
   it("logs warn and does not throw when tracks.update throws", async () => {
     vi.mocked(tracksModule.tracks.get).mockResolvedValueOnce(
-      makeTrack({ bpm: null, key_signature: null })
+      makeTrack({ bpm: null, key_signature: null }),
     );
     vi.mocked(analysisModule.analysis.analyze).mockResolvedValueOnce(
-      makeResult({ bpm: 100, bpm_confidence: 0.9, key: "G major", key_confidence: 0.75 })
+      makeResult({ bpm: 100, bpm_confidence: 0.9, key: "G major", key_confidence: 0.75 }),
     );
     vi.mocked(tracksModule.tracks.update).mockRejectedValueOnce(new Error("DB error"));
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -212,7 +212,7 @@ describe("maybeAutoAnalyze", () => {
     await expect(maybeAutoAnalyze(1)).resolves.toBeUndefined();
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[auto-analyze] failed"),
-      expect.any(Error)
+      expect.any(Error),
     );
     warnSpy.mockRestore();
   });

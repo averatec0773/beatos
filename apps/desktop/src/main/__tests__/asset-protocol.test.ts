@@ -136,21 +136,45 @@ describe("repairWavIfNeeded", () => {
     const u8 = new Uint8Array(buf);
     const v = new DataView(buf);
     let p = 0;
-    u8.set([0x52, 0x49, 0x46, 0x46], p); p += 4;
-    v.setUint32(p, total - 8, true); p += 4;
-    u8.set([0x57, 0x41, 0x56, 0x45], p); p += 4;
-    u8.set([0x4a, 0x55, 0x4e, 0x4b], p); p += 4; v.setUint32(p, junkLen, true); p += 4;
+    u8.set([0x52, 0x49, 0x46, 0x46], p);
+    p += 4;
+    v.setUint32(p, total - 8, true);
+    p += 4;
+    u8.set([0x57, 0x41, 0x56, 0x45], p);
+    p += 4;
+    u8.set([0x4a, 0x55, 0x4e, 0x4b], p);
+    p += 4;
+    v.setUint32(p, junkLen, true);
+    p += 4;
     p += junkLen;
-    u8.set([0x66, 0x6d, 0x74, 0x20], p); p += 4; v.setUint32(p, fmtLen, true); p += 4;
-    v.setUint16(p, 3, true); p += 2; // FLOAT
-    v.setUint16(p, 1, true); p += 2;
-    v.setUint32(p, 44100, true); p += 4;
-    v.setUint32(p, 44100 * 4, true); p += 4;
-    v.setUint16(p, 4, true); p += 2;
-    v.setUint16(p, 32, true); p += 2;
-    u8.set([0x64, 0x61, 0x74, 0x61], p); p += 4; v.setUint32(p, dataLen, true); p += 4;
-    for (let i = 0; i < samples.length; i++) { v.setFloat32(p, samples[i], true); p += 4; }
-    u8.set([0x73, 0x6d, 0x70, 0x6c], p); p += 4; v.setUint32(p, trailerLen, true); p += 4;
+    u8.set([0x66, 0x6d, 0x74, 0x20], p);
+    p += 4;
+    v.setUint32(p, fmtLen, true);
+    p += 4;
+    v.setUint16(p, 3, true);
+    p += 2; // FLOAT
+    v.setUint16(p, 1, true);
+    p += 2;
+    v.setUint32(p, 44100, true);
+    p += 4;
+    v.setUint32(p, 44100 * 4, true);
+    p += 4;
+    v.setUint16(p, 4, true);
+    p += 2;
+    v.setUint16(p, 32, true);
+    p += 2;
+    u8.set([0x64, 0x61, 0x74, 0x61], p);
+    p += 4;
+    v.setUint32(p, dataLen, true);
+    p += 4;
+    for (let i = 0; i < samples.length; i++) {
+      v.setFloat32(p, samples[i], true);
+      p += 4;
+    }
+    u8.set([0x73, 0x6d, 0x70, 0x6c], p);
+    p += 4;
+    v.setUint32(p, trailerLen, true);
+    p += 4;
 
     const out = repairWavIfNeeded(buf);
     expect(out).not.toBe(buf);
@@ -178,8 +202,10 @@ describe("repairWavIfNeeded", () => {
     u8.set([0x66, 0x6d, 0x74, 0x20], 12);
     v.setUint32(16, fmtLen, true);
     v.setUint16(20, 0xfffe, true); // EXTENSIBLE
-    v.setUint16(22, 2, true); v.setUint32(24, 44100, true);
-    v.setUint32(28, 176400, true); v.setUint16(32, 4, true);
+    v.setUint16(22, 2, true);
+    v.setUint32(24, 44100, true);
+    v.setUint32(28, 176400, true);
+    v.setUint16(32, 4, true);
     v.setUint16(34, 16, true);
     // Extension at offset 36: cbSize(2) + validBitsPerSample(2) + channelMask(4) + SubFormat GUID(16)
     v.setUint16(36, 22, true); // cbSize
@@ -277,18 +303,18 @@ describe("repairWavIfNeeded", () => {
 
 describe("handleAssetRequest", () => {
   it("returns 503 when apiPort is null", async () => {
-    const resp = await handleAssetRequest(
-      new Request("beatos-asset://cover/1"),
-      { apiPort: () => null, fetchImpl: mockFetch(() => new Response()) }
-    );
+    const resp = await handleAssetRequest(new Request("beatos-asset://cover/1"), {
+      apiPort: () => null,
+      fetchImpl: mockFetch(() => new Response()),
+    });
     expect(resp.status).toBe(503);
   });
 
   it("returns 404 for unknown host", async () => {
-    const resp = await handleAssetRequest(
-      new Request("beatos-asset://unknown/1"),
-      { apiPort: () => 8000, fetchImpl: mockFetch(() => new Response()) }
-    );
+    const resp = await handleAssetRequest(new Request("beatos-asset://unknown/1"), {
+      apiPort: () => 8000,
+      fetchImpl: mockFetch(() => new Response()),
+    });
     expect(resp.status).toBe(404);
   });
 
@@ -297,10 +323,10 @@ describe("handleAssetRequest", () => {
       expect(url).toBe("http://127.0.0.1:8000/api/assets/cover/42");
       return new Response("ok", { status: 200, headers: { "content-type": "image/png" } });
     });
-    const resp = await handleAssetRequest(
-      new Request("beatos-asset://cover/42"),
-      { apiPort: () => 8000, fetchImpl: f }
-    );
+    const resp = await handleAssetRequest(new Request("beatos-asset://cover/42"), {
+      apiPort: () => 8000,
+      fetchImpl: f,
+    });
     expect(resp.status).toBe(200);
     expect(resp.headers.get("content-type")).toBe("image/png");
   });
@@ -313,22 +339,26 @@ describe("handleAssetRequest", () => {
         headers: { "content-type": "audio/wav" },
       });
     });
-    const resp = await handleAssetRequest(
-      new Request("beatos-asset://audio/7"),
-      { apiPort: () => 8000, fetchImpl: f }
-    );
+    const resp = await handleAssetRequest(new Request("beatos-asset://audio/7"), {
+      apiPort: () => 8000,
+      fetchImpl: f,
+    });
     expect(resp.status).toBe(200);
     expect(resp.headers.get("content-type")).toBe("audio/wav");
   });
 
   it("normalizes audio/x-wav → audio/wav (Chromium media stack picky)", async () => {
-    const f = mockFetch(() =>
-      new Response(buildMinimalWav(), { status: 200, headers: { "content-type": "audio/x-wav" } })
+    const f = mockFetch(
+      () =>
+        new Response(buildMinimalWav(), {
+          status: 200,
+          headers: { "content-type": "audio/x-wav" },
+        }),
     );
-    const resp = await handleAssetRequest(
-      new Request("beatos-asset://audio/1"),
-      { apiPort: () => 8000, fetchImpl: f }
-    );
+    const resp = await handleAssetRequest(new Request("beatos-asset://audio/1"), {
+      apiPort: () => 8000,
+      fetchImpl: f,
+    });
     expect(resp.headers.get("content-type")).toBe("audio/wav");
   });
 
@@ -336,7 +366,10 @@ describe("handleAssetRequest", () => {
     const f = mockFetch((_url, init) => {
       const range = (init?.headers as Record<string, string> | undefined)?.range;
       expect(range).toBeUndefined();
-      return new Response(buildMinimalWav(), { status: 200, headers: { "content-type": "audio/wav" } });
+      return new Response(buildMinimalWav(), {
+        status: 200,
+        headers: { "content-type": "audio/wav" },
+      });
     });
     const req = new Request("beatos-asset://audio/7", { headers: { range: "bytes=0-1023" } });
     const resp = await handleAssetRequest(req, { apiPort: () => 8000, fetchImpl: f });
@@ -345,13 +378,13 @@ describe("handleAssetRequest", () => {
 
   it("repairs DAW WAV with JUNK + trailing chunks", async () => {
     const { input } = buildDawWav();
-    const f = mockFetch(() =>
-      new Response(input, { status: 200, headers: { "content-type": "audio/wav" } })
+    const f = mockFetch(
+      () => new Response(input, { status: 200, headers: { "content-type": "audio/wav" } }),
     );
-    const resp = await handleAssetRequest(
-      new Request("beatos-asset://audio/1"),
-      { apiPort: () => 8000, fetchImpl: f }
-    );
+    const resp = await handleAssetRequest(new Request("beatos-asset://audio/1"), {
+      apiPort: () => 8000,
+      fetchImpl: f,
+    });
     const out = await resp.arrayBuffer();
     expect(out.byteLength).toBeLessThan(input.byteLength);
     const u = new Uint8Array(out);

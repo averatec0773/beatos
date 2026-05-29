@@ -29,25 +29,40 @@ const useLargeWav = process.argv.includes("--large");
 
 if (useTinyWav || useLargeWav) {
   const numSamples = useLargeWav ? 700000 : 40000;
-  const sampleRate = 8000, numChannels = 1, bitsPerSample = 8;
+  const sampleRate = 8000,
+    numChannels = 1,
+    bitsPerSample = 8;
   const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
   const blockAlign = (numChannels * bitsPerSample) / 8;
   const dataSize = numSamples * blockAlign;
   const buf = Buffer.alloc(44 + dataSize);
   let off = 0;
-  buf.write("RIFF", off); off += 4;
-  buf.writeUInt32LE(36 + dataSize, off); off += 4;
-  buf.write("WAVE", off); off += 4;
-  buf.write("fmt ", off); off += 4;
-  buf.writeUInt32LE(16, off); off += 4;
-  buf.writeUInt16LE(1, off); off += 2;
-  buf.writeUInt16LE(numChannels, off); off += 2;
-  buf.writeUInt32LE(sampleRate, off); off += 4;
-  buf.writeUInt32LE(byteRate, off); off += 4;
-  buf.writeUInt16LE(blockAlign, off); off += 2;
-  buf.writeUInt16LE(bitsPerSample, off); off += 2;
-  buf.write("data", off); off += 4;
-  buf.writeUInt32LE(dataSize, off); off += 4;
+  buf.write("RIFF", off);
+  off += 4;
+  buf.writeUInt32LE(36 + dataSize, off);
+  off += 4;
+  buf.write("WAVE", off);
+  off += 4;
+  buf.write("fmt ", off);
+  off += 4;
+  buf.writeUInt32LE(16, off);
+  off += 4;
+  buf.writeUInt16LE(1, off);
+  off += 2;
+  buf.writeUInt16LE(numChannels, off);
+  off += 2;
+  buf.writeUInt32LE(sampleRate, off);
+  off += 4;
+  buf.writeUInt32LE(byteRate, off);
+  off += 4;
+  buf.writeUInt16LE(blockAlign, off);
+  off += 2;
+  buf.writeUInt16LE(bitsPerSample, off);
+  off += 2;
+  buf.write("data", off);
+  off += 4;
+  buf.writeUInt32LE(dataSize, off);
+  off += 4;
   buf.fill(0x80, off);
   audioPath = join(tmpdir(), useLargeWav ? "diag-large.wav" : "diag-tiny.wav");
   writeFileSync(audioPath, buf);
@@ -55,7 +70,9 @@ if (useTinyWav || useLargeWav) {
 }
 
 if (!audioPath) {
-  console.error("usage: BEATOS_TEST_AUDIO=/path/to/file.wav node scripts/diagnose-playback.mjs [--tiny|--large]");
+  console.error(
+    "usage: BEATOS_TEST_AUDIO=/path/to/file.wav node scripts/diagnose-playback.mjs [--tiny|--large]",
+  );
   process.exit(2);
 }
 if (!existsSync(audioPath)) {
@@ -108,25 +125,34 @@ for (let i = 0; i < 20; i++) {
   await new Promise((r) => setTimeout(r, 250));
 }
 console.log("[diag] apiPort =", apiPort);
-if (!apiPort) { await app.close(); throw new Error("apiPort never appeared"); }
+if (!apiPort) {
+  await app.close();
+  throw new Error("apiPort never appeared");
+}
 
-const setupResult = await window.evaluate(async ({ apiPort, audioPath, sourceDir }) => {
-  const base = `http://127.0.0.1:${apiPort}`;
-  const j = (r) => r.json();
-  const src = await fetch(`${base}/api/sources`, {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ root_path: sourceDir, label: "diag-source" }),
-  }).then(j);
-  const trk = await fetch(`${base}/api/tracks`, {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ title: "diag-track" }),
-  }).then(j);
-  const att = await fetch(`${base}/api/tracks/${trk.id}/assets`, {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ role: "audio_tagged_wav", path: audioPath }),
-  }).then(j);
-  return { src, trk, att };
-}, { apiPort, audioPath, sourceDir });
+const setupResult = await window.evaluate(
+  async ({ apiPort, audioPath, sourceDir }) => {
+    const base = `http://127.0.0.1:${apiPort}`;
+    const j = (r) => r.json();
+    const src = await fetch(`${base}/api/sources`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ root_path: sourceDir, label: "diag-source" }),
+    }).then(j);
+    const trk = await fetch(`${base}/api/tracks`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "diag-track" }),
+    }).then(j);
+    const att = await fetch(`${base}/api/tracks/${trk.id}/assets`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ role: "audio_tagged_wav", path: audioPath }),
+    }).then(j);
+    return { src, trk, att };
+  },
+  { apiPort, audioPath, sourceDir },
+);
 
 console.log("[diag] setup =", JSON.stringify(setupResult.att));
 

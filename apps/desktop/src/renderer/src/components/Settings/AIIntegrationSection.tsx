@@ -1,21 +1,13 @@
 import { useState } from "react";
 
-type TestResult =
-  | { ok: true; toolsCount: number; version: string }
-  | { ok: false; error: string };
+type TestResult = { ok: true; toolsCount: number; version: string } | { ok: false; error: string };
 
 interface Props {
   dbPath: string;
   repoRoot: string;
 }
 
-const TOOL_NAMES = [
-  "ping",
-  "list_tracks",
-  "get_track",
-  "list_lists",
-  "list_distinct_values",
-];
+const TOOL_NAMES = ["ping", "list_tracks", "get_track", "list_lists", "list_distinct_values"];
 
 function buildConfigJson(repoRoot: string, dbPath: string): string {
   return JSON.stringify(
@@ -71,8 +63,8 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
       {open && (
         <div className="mt-3 space-y-3 text-sm">
           <p className="text-text-secondary">
-            Lets Claude Desktop and other AI clients read your BeatOS library
-            over MCP. Read-only in v0.0.20.
+            Lets Claude Desktop and other AI clients read your BeatOS library over MCP. Read-only in
+            v0.0.20.
           </p>
 
           <div className="flex items-center justify-between">
@@ -91,13 +83,7 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
           </div>
 
           {typeof testState === "object" && testState.kind === "result" && (
-            <div
-              className={
-                testState.result.ok
-                  ? "text-success text-xs"
-                  : "text-danger text-xs"
-              }
-            >
+            <div className={testState.result.ok ? "text-success text-xs" : "text-danger text-xs"}>
               {testState.result.ok
                 ? `✓ Connection OK · ${testState.result.toolsCount} tools`
                 : `✗ ${testState.result.error}`}

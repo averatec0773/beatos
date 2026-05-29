@@ -12,8 +12,7 @@ export interface List {
 
 export const lists = {
   all: () => apiGet<List[]>("/api/lists"),
-  create: (name: string, kind: ListKind = "user") =>
-    apiPost<List>("/api/lists", { name, kind }),
+  create: (name: string, kind: ListKind = "user") => apiPost<List>("/api/lists", { name, kind }),
   rename: (id: number, name: string) => apiPut<List>(`/api/lists/${id}`, { name }),
   remove: (id: number) => apiDelete(`/api/lists/${id}`),
   addTrack: (listId: number, trackId: number) =>

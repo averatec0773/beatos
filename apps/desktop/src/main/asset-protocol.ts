@@ -37,8 +37,10 @@ export function repairWavIfNeeded(buffer: ArrayBuffer): ArrayBuffer {
   // Walk the chunks. RIFF chunk header is 8 bytes: 4-byte id + 4-byte LE size.
   // We accept ONLY the canonical { fmt, data } structure as clean.
   let pos = 12;
-  let fmtStart = -1, fmtLen = -1;
-  let dataStart = -1, dataLen = -1;
+  let fmtStart = -1,
+    fmtLen = -1;
+  let dataStart = -1,
+    dataLen = -1;
   let extraChunkCount = 0;
   const seenIds: string[] = [];
   while (pos + 8 <= buffer.byteLength) {
@@ -115,7 +117,7 @@ export function repairWavIfNeeded(buffer: ArrayBuffer): ArrayBuffer {
 
 export async function handleAssetRequest(
   request: Request,
-  deps: AssetProtocolDeps
+  deps: AssetProtocolDeps,
 ): Promise<Response> {
   try {
     const url = new URL(request.url);

@@ -12,16 +12,10 @@ interface Props {
   excludeListId?: number | null;
 }
 
-export function AddToListPopover({
-  trackIds,
-  onDone,
-  excludeListId,
-}: Props): React.JSX.Element {
+export function AddToListPopover({ trackIds, onDone, excludeListId }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const allLists = useListStore((s) => s.all);
-  const userLists = allLists.filter(
-    (l) => l.kind === "user" && l.id !== excludeListId,
-  );
+  const userLists = allLists.filter((l) => l.kind === "user" && l.id !== excludeListId);
 
   async function pick(listId: number): Promise<void> {
     setOpen(false);

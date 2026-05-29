@@ -43,7 +43,8 @@ async function safeFetch(input: RequestInfo, init?: RequestInit): Promise<Respon
 
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await safeFetch(`${await base()}${path}`);
-  if (!res.ok) throw new ApiError(res.status, await parseBody(res), `GET ${path} failed: ${res.status}`);
+  if (!res.ok)
+    throw new ApiError(res.status, await parseBody(res), `GET ${path} failed: ${res.status}`);
   return res.json();
 }
 
@@ -53,7 +54,8 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: body == null ? undefined : JSON.stringify(body),
   });
-  if (!res.ok) throw new ApiError(res.status, await parseBody(res), `POST ${path} failed: ${res.status}`);
+  if (!res.ok)
+    throw new ApiError(res.status, await parseBody(res), `POST ${path} failed: ${res.status}`);
   return res.json();
 }
 
@@ -63,7 +65,8 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new ApiError(res.status, await parseBody(res), `PUT ${path} failed: ${res.status}`);
+  if (!res.ok)
+    throw new ApiError(res.status, await parseBody(res), `PUT ${path} failed: ${res.status}`);
   return res.json();
 }
 
@@ -73,13 +76,15 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new ApiError(res.status, await parseBody(res), `PATCH ${path} failed: ${res.status}`);
+  if (!res.ok)
+    throw new ApiError(res.status, await parseBody(res), `PATCH ${path} failed: ${res.status}`);
   return res.json();
 }
 
 export async function apiDelete(path: string): Promise<void> {
   const res = await safeFetch(`${await base()}${path}`, { method: "DELETE" });
-  if (!res.ok && res.status !== 204) throw new ApiError(res.status, await parseBody(res), `DELETE ${path} failed: ${res.status}`);
+  if (!res.ok && res.status !== 204)
+    throw new ApiError(res.status, await parseBody(res), `DELETE ${path} failed: ${res.status}`);
 }
 
 export function _resetBaseForTests(): void {

@@ -2,14 +2,7 @@ import type { Track } from "@/api/tracks";
 
 type EditableFields = Pick<
   Track,
-  | "title"
-  | "bpm"
-  | "key_signature"
-  | "genre"
-  | "mood"
-  | "tags"
-  | "description"
-  | "producer"
+  "title" | "bpm" | "key_signature" | "genre" | "mood" | "tags" | "description" | "producer"
 >;
 
 export function shallowEqualEditable(a: EditableFields, b: EditableFields): boolean {

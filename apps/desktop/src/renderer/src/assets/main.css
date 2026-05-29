@@ -49,8 +49,14 @@ body,
   height: 100%;
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
-  font-feature-settings: "ss01" on, "cv11" on;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-feature-settings:
+    "ss01" on,
+    "cv11" on;
 }
 
 .font-mono {
@@ -59,5 +65,10 @@ body,
 
 /* Hide native scrollbar on macOS "Always show" mode for inner content panels.
    Does not affect the AppShell outer scroll, VirtualTrackList, or Sidebar. */
-.beatos-scroll::-webkit-scrollbar { width: 0; background: transparent; }
-.beatos-scroll { scrollbar-width: none; }
+.beatos-scroll::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+.beatos-scroll {
+  scrollbar-width: none;
+}

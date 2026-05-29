@@ -1,6 +1,8 @@
 export const AUDIO_ROLES = [
-  "audio_tagged_wav", "audio_untagged_wav",
-  "audio_tagged_mp3", "audio_untagged_mp3",
+  "audio_tagged_wav",
+  "audio_untagged_wav",
+  "audio_tagged_mp3",
+  "audio_untagged_mp3",
 ] as const;
 
 export const BPM_AUTOFILL_THRESHOLD = 0.7;

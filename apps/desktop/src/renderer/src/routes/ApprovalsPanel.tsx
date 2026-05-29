@@ -18,8 +18,8 @@ export function ApprovalsPanel(): React.JSX.Element {
 
         {empty ? (
           <div className="rounded border border-border-subtle bg-bg-elevated p-6 text-sm text-text-secondary">
-            No AI activity yet. Connect an MCP-compatible client to start
-            (see Settings → AI Integration).
+            No AI activity yet. Connect an MCP-compatible client to start (see Settings → AI
+            Integration).
           </div>
         ) : (
           <>

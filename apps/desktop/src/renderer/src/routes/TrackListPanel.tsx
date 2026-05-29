@@ -2,10 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Plus, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import {
-  attachAudioToTrack,
-  importAsNewTracks,
-} from "@/lib/create-track-from-file";
+import { attachAudioToTrack, importAsNewTracks } from "@/lib/create-track-from-file";
 
 import { useTrackStore } from "@/stores/tracks";
 import { useTrackQueryStore } from "@/stores/track-query";
@@ -162,12 +159,18 @@ export function TrackListPanel(): React.JSX.Element {
     }
     const r = await importAsNewTracks(files, opts.tag);
     if (r.errors.length > 0) {
-      toast.show("warning", `Imported ${r.created}/${files.length} — ${r.errors.length} failed`, 6000);
+      toast.show(
+        "warning",
+        `Imported ${r.created}/${files.length} — ${r.errors.length} failed`,
+        6000,
+      );
       console.warn("[import] errors:", r.errors);
     } else if (r.created > 0) {
       toast.show(
         "success",
-        r.created === 1 ? `Imported 1 track (${opts.tag})` : `Imported ${r.created} tracks (${opts.tag})`,
+        r.created === 1
+          ? `Imported 1 track (${opts.tag})`
+          : `Imported ${r.created} tracks (${opts.tag})`,
       );
     }
   }
@@ -207,9 +210,7 @@ export function TrackListPanel(): React.JSX.Element {
           const ids = Array.from(selectedIds);
           if (
             !confirm(
-              ids.length === 1
-                ? "Move 1 track to trash?"
-                : `Move ${ids.length} tracks to trash?`,
+              ids.length === 1 ? "Move 1 track to trash?" : `Move ${ids.length} tracks to trash?`,
             )
           )
             return;
@@ -227,9 +228,7 @@ export function TrackListPanel(): React.JSX.Element {
             .getState()
             .show(
               "success",
-              ids.length === 1
-                ? "Moved 1 track to trash"
-                : `Moved ${ids.length} tracks to trash`,
+              ids.length === 1 ? "Moved 1 track to trash" : `Moved ${ids.length} tracks to trash`,
             );
         },
       },
@@ -343,48 +342,42 @@ export function TrackListPanel(): React.JSX.Element {
             onScrollLeftChange={syncHeaderScroll}
             scrollRef={bodyScrollRef}
             renderRow={(t) => (
-            <TrackContextMenu
-              key={t.id}
-              trackId={t.id}
-              trackTitle={t.title}
-              audioPath={null}
-              currentListId={listId}
-              onEdit={() => navigate(`/tracks/${t.id}/edit`)}
-              onDelete={() => remove(t.id)}
-              onRemoveFromList={() =>
-                refresh(listId != null ? { list_id: listId } : undefined)
-              }
-            >
-              <div className="data-[state=open]:ring-2 data-[state=open]:ring-inset data-[state=open]:ring-accent">
-                <TrackRow
-                  track={t}
-                  coverAssetId={t.cover_asset_id}
-                  selected={current?.id === t.id}
-                  isMultiSelected={selectedIds.has(t.id)}
-                  onSelect={(e: React.MouseEvent) => {
-                    if (e.shiftKey) {
-                      selectOne(t.id, "range");
-                    } else if (e.metaKey || e.ctrlKey) {
-                      selectOne(t.id, "toggle");
-                    } else {
-                      selectOne(t.id, "replace");
-                      select(t.id);
-                    }
-                  }}
-                  onOpen={() => navigate(`/tracks/${t.id}/edit`)}
-                  onDelete={() => {
-                    if (confirm(`Delete "${t.title}"?`)) remove(t.id);
-                  }}
-                />
-              </div>
-            </TrackContextMenu>
-          )}
+              <TrackContextMenu
+                key={t.id}
+                trackId={t.id}
+                trackTitle={t.title}
+                audioPath={null}
+                currentListId={listId}
+                onEdit={() => navigate(`/tracks/${t.id}/edit`)}
+                onDelete={() => remove(t.id)}
+                onRemoveFromList={() => refresh(listId != null ? { list_id: listId } : undefined)}
+              >
+                <div className="data-[state=open]:ring-2 data-[state=open]:ring-inset data-[state=open]:ring-accent">
+                  <TrackRow
+                    track={t}
+                    coverAssetId={t.cover_asset_id}
+                    selected={current?.id === t.id}
+                    isMultiSelected={selectedIds.has(t.id)}
+                    onSelect={(e: React.MouseEvent) => {
+                      if (e.shiftKey) {
+                        selectOne(t.id, "range");
+                      } else if (e.metaKey || e.ctrlKey) {
+                        selectOne(t.id, "toggle");
+                      } else {
+                        selectOne(t.id, "replace");
+                        select(t.id);
+                      }
+                    }}
+                    onOpen={() => navigate(`/tracks/${t.id}/edit`)}
+                    onDelete={() => {
+                      if (confirm(`Delete "${t.title}"?`)) remove(t.id);
+                    }}
+                  />
+                </div>
+              </TrackContextMenu>
+            )}
           />
-          <BulkActionBar
-            count={selectedIds.size}
-            onClear={clearSelection}
-            actions={bulkActions}
-          />
+          <BulkActionBar count={selectedIds.size} onClear={clearSelection} actions={bulkActions} />
         </div>
       </section>
       <TrackDetailPanel />

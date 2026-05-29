@@ -42,12 +42,7 @@ export function RoleSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={currentTrackId == null}
-          className="gap-1"
-        >
+        <Button variant="ghost" size="sm" disabled={currentTrackId == null} className="gap-1">
           <span className="text-xs">{label}</span>
           <ChevronDown className="h-3 w-3" />
         </Button>

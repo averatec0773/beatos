@@ -73,7 +73,9 @@ export function TrackRow({
       </div>
 
       <div className="min-w-0 flex flex-col justify-center" data-column-cell="title">
-        <span data-track-title className="text-sm font-medium text-text-primary truncate">{track.title}</span>
+        <span data-track-title className="text-sm font-medium text-text-primary truncate">
+          {track.title}
+        </span>
         <span className="text-xs text-text-tertiary truncate">
           {[...(track.producer ?? [])].sort((a, b) => a.localeCompare(b)).join(", ")}
         </span>
@@ -93,7 +95,10 @@ export function TrackRow({
           : "—"}
       </div>
 
-      <div className="truncate font-mono text-xs text-text-tertiary min-w-0" data-column-cell="updated_at">
+      <div
+        className="truncate font-mono text-xs text-text-tertiary min-w-0"
+        data-column-cell="updated_at"
+      >
         {formatRowDate(track.updated_at)}
       </div>
     </div>

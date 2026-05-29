@@ -19,7 +19,12 @@ interface Props {
  * square — without this, `<img>` under `width: 100%` lets the browser pick
  * height from the natural aspect ratio.
  */
-export function CoverImage({ assetId, size, responsive = false, className = "" }: Props): React.JSX.Element {
+export function CoverImage({
+  assetId,
+  size,
+  responsive = false,
+  className = "",
+}: Props): React.JSX.Element {
   const [errored, setErrored] = useState(false);
 
   const wrapperStyle: React.CSSProperties | undefined = responsive

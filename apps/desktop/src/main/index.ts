@@ -229,9 +229,7 @@ app.whenReady().then(async () => {
       console.warn("[drag-out] non-string path");
       return;
     }
-    const isAbsolute = process.platform === "win32"
-      ? /^[a-zA-Z]:[\\\/]/.test(p)
-      : p.startsWith("/");
+    const isAbsolute = process.platform === "win32" ? /^[a-zA-Z]:[\\/]/.test(p) : p.startsWith("/");
     if (!isAbsolute || p.includes("..")) {
       console.warn("[drag-out] rejected unsafe path:", p);
       return;
@@ -272,7 +270,7 @@ app.whenReady().then(async () => {
   ipcMain.handle(IPC_CHANNELS.STORAGE_GET_REPO_ROOT, () => repoRoot());
 
   ipcMain.handle(IPC_CHANNELS.MCP_TEST_CONNECTION, () =>
-    testMcpConnection({ repoRoot: repoRoot(), dbPath: resolveDbPath() })
+    testMcpConnection({ repoRoot: repoRoot(), dbPath: resolveDbPath() }),
   );
 
   ipcMain.handle(IPC_CHANNELS.STORAGE_SET_DB_PATH, (_e, newPath: string) => {
@@ -297,7 +295,7 @@ app.whenReady().then(async () => {
         title: "Choose File",
       });
       return result.canceled ? null : result.filePaths[0];
-    }
+    },
   );
 
   ipcMain.handle(IPC_CHANNELS.SHELL_REVEAL_IN_FINDER, (_e, path: string) => {
@@ -312,7 +310,7 @@ app.whenReady().then(async () => {
   });
 
   protocol.handle("beatos-asset", (request) =>
-    handleAssetRequest(request, { apiPort: () => apiPort })
+    handleAssetRequest(request, { apiPort: () => apiPort }),
   );
 
   try {
@@ -325,10 +323,7 @@ app.whenReady().then(async () => {
       splashWin.close();
       splashWin = null;
     }
-    dialog.showErrorBox(
-      "BeatOS could not start",
-      err instanceof Error ? err.message : String(err)
-    );
+    dialog.showErrorBox("BeatOS could not start", err instanceof Error ? err.message : String(err));
     app.quit();
     return;
   }

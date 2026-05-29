@@ -6,7 +6,12 @@ interface AssetState {
   /** Assets keyed by track_id (only the currently-loaded editor track is cached). */
   byTrack: Record<number, Asset[]>;
   setForTrack(trackId: number, list: Asset[]): void;
-  attach(trackId: number, role: AssetRole, path: string, options?: { replace?: boolean }): Promise<Asset>;
+  attach(
+    trackId: number,
+    role: AssetRole,
+    path: string,
+    options?: { replace?: boolean },
+  ): Promise<Asset>;
   detach(trackId: number, assetId: number): Promise<void>;
   relocate(trackId: number, assetId: number, newPath: string): Promise<Asset>;
 }

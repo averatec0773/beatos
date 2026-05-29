@@ -35,7 +35,7 @@ describe("TrackEditor (auto-save)", () => {
         <Routes>
           <Route path="/tracks/:id/edit" element={<TrackEditor />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const titleInput = await screen.findByDisplayValue("Untitled");
@@ -64,7 +64,7 @@ describe("TrackEditor (auto-save)", () => {
         <Routes>
           <Route path="/tracks/:id/edit" element={<TrackEditor />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const titleInput = await screen.findByDisplayValue(sampleTrack.title);
@@ -89,7 +89,7 @@ describe("TrackEditor (auto-save)", () => {
         <Routes>
           <Route path="/tracks/:id/edit" element={<TrackEditor />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await screen.findByDisplayValue(sampleTrack.title);
@@ -111,7 +111,7 @@ describe("TrackEditor (auto-save)", () => {
         <Routes>
           <Route path="/tracks/:id/edit" element={<TrackEditor />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const titleInput = await screen.findByDisplayValue("Untitled");

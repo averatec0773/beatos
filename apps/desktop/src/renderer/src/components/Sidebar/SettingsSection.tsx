@@ -18,9 +18,7 @@ export function SettingsSection(): React.JSX.Element {
       aria-pressed={active}
       className={[
         "w-full px-3 py-1.5 text-left text-[15px] rounded-md flex items-center gap-2",
-        active
-          ? "bg-bg-row-active text-accent"
-          : "text-text-primary hover:bg-bg-row-hover",
+        active ? "bg-bg-row-active text-accent" : "text-text-primary hover:bg-bg-row-hover",
       ].join(" ")}
     >
       <Settings size={14} />

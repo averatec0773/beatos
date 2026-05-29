@@ -71,10 +71,7 @@ export function TrashPanel(): React.JSX.Element {
     void useTrackStore.getState().refreshTotal();
     useToastStore
       .getState()
-      .show(
-        "success",
-        ids.length === 1 ? "Restored 1 track" : `Restored ${ids.length} tracks`,
-      );
+      .show("success", ids.length === 1 ? "Restored 1 track" : `Restored ${ids.length} tracks`);
   }
 
   async function onPurge(ids: number[], names?: string): Promise<void> {
@@ -218,11 +215,7 @@ export function TrashPanel(): React.JSX.Element {
           })}
         </div>
       )}
-      <BulkActionBar
-        count={selectedIds.size}
-        actions={bulkActions}
-        onClear={clearSelection}
-      />
+      <BulkActionBar count={selectedIds.size} actions={bulkActions} onClear={clearSelection} />
     </section>
   );
 }

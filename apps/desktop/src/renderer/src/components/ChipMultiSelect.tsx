@@ -1,10 +1,6 @@
 import React, { useState, useRef } from "react";
 import { X, Plus, ChevronDown, MoreHorizontal, Trash2, Check } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Option {
   value: string;
@@ -148,7 +144,10 @@ export function ChipMultiSelect({
     } else {
       setDraft((cur) => [...cur, trimmed]);
     }
-    if (!customOptions.some((o) => o.value === trimmed) && !options.some((o) => o.value === trimmed)) {
+    if (
+      !customOptions.some((o) => o.value === trimmed) &&
+      !options.some((o) => o.value === trimmed)
+    ) {
       setCustomOptions((cur) => [...cur, { value: trimmed, label: trimmed }]);
     }
     setCustomInput("");
@@ -280,7 +279,10 @@ export function ChipMultiSelect({
   }
 
   return (
-    <div data-chip-multiselect className={isSingleSelect ? "" : "flex flex-wrap items-center gap-1.5"}>
+    <div
+      data-chip-multiselect
+      className={isSingleSelect ? "" : "flex flex-wrap items-center gap-1.5"}
+    >
       {!isSingleSelect &&
         value.map((v) => (
           <span

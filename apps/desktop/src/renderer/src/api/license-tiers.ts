@@ -25,8 +25,7 @@ export interface LicenseTierCreate {
 export type LicenseTierUpdate = Partial<LicenseTierCreate>;
 
 export const licenseTiers = {
-  listForTrack: (trackId: number) =>
-    apiGet<LicenseTier[]>(`/api/tracks/${trackId}/license_tiers`),
+  listForTrack: (trackId: number) => apiGet<LicenseTier[]>(`/api/tracks/${trackId}/license_tiers`),
   create: (trackId: number, payload: LicenseTierCreate) =>
     apiPost<LicenseTier>(`/api/tracks/${trackId}/license_tiers`, payload),
   update: (tierId: number, updates: LicenseTierUpdate) =>

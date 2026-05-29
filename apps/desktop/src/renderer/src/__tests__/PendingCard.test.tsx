@@ -26,9 +26,7 @@ function makeToken(overrides: Partial<PendingToken> = {}): PendingToken {
 
 describe("PendingCard", () => {
   it("renders the preview headline + sample", () => {
-    render(
-      <PendingCard token={makeToken()} onApprove={vi.fn()} onReject={vi.fn()} />,
-    );
+    render(<PendingCard token={makeToken()} onApprove={vi.fn()} onReject={vi.fn()} />);
     expect(screen.getByText("Add producer X to 3 tracks")).toBeInTheDocument();
     expect(screen.getByText(/Beat A/)).toBeInTheDocument();
     expect(screen.getByText(/Beat C/)).toBeInTheDocument();

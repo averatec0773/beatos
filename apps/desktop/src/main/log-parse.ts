@@ -2,7 +2,7 @@ const UVICORN_LEVEL_RE = /^(INFO|WARNING|ERROR|DEBUG|CRITICAL):/;
 
 export function parseUvicornLevel(
   line: string,
-  fallback: "info" | "error"
+  fallback: "info" | "error",
 ): "info" | "warn" | "error" | "debug" {
   const m = UVICORN_LEVEL_RE.exec(line);
   if (!m) return fallback;

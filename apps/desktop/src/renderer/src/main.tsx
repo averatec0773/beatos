@@ -1,8 +1,8 @@
-import './assets/main.css'
+import "./assets/main.css";
 
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './App'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App";
 
 // Stable debug surface — kept in production builds on purpose.
 // `scripts/smoke/player.mjs` and `scripts/diagnose-playback.mjs` read
@@ -33,8 +33,8 @@ if (typeof window !== "undefined") {
   })();
 }
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
-  </StrictMode>
-)
+  </StrictMode>,
+);
