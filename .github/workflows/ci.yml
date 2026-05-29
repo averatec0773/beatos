@@ -26,7 +26,7 @@ jobs:
       - name: Install audio system deps
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1 ffmpeg
 
-      - uses: astral-sh/setup-uv@v8
+      - uses: astral-sh/setup-uv@v8.1.0
         with:
           python-version: "3.11"
           enable-cache: true
