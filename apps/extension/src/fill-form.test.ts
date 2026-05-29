@@ -75,6 +75,16 @@ describe("fillForm", () => {
     expect(report.missed).toEqual([]);
   });
 
+  it("reports a select as missed when no option matches the value", () => {
+    document.body.innerHTML = `<select id="genre"><option value="Hip-Hop">Hip-Hop</option></select>`;
+    const report = fillForm(document, mkResult([["genre", "陷阱说唱"]]), FORM_MAP);
+    expect(report.missed).toEqual(["genre"]);
+    expect(report.filled).toEqual([]);
+    // jsdom resets select.value to "" on an unmatched write (real browsers keep
+    // the first option selected, but both behaviours confirm the write failed).
+    expect((document.querySelector("#genre") as HTMLSelectElement).value).toBe("");
+  });
+
   it("ignores keys present in result but absent from form map", () => {
     document.body.innerHTML = `<input id="title">`;
     const report = fillForm(

@@ -70,6 +70,13 @@ export function fillForm(doc: Document, result: ExportResult, formMap: FormMap):
     // text / textarea / select / tags all set value the same robust way in
     // Phase 1; 'tags' is best-effort and verified against the live page later.
     setNativeValue(el, value);
+    // A <select> silently ignores a value with no matching <option> (e.g. the
+    // platform's option vocabulary changed). Detect that and report it as a
+    // miss rather than a false-positive fill.
+    if (spec.type === "select" && (el as HTMLSelectElement).value !== value) {
+      missed.push(key);
+      continue;
+    }
     filled.push(key);
   }
 
