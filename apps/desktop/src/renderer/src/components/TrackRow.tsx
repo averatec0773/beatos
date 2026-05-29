@@ -7,6 +7,8 @@ import type { Track } from "@/api/tracks";
 import { formatRowDate } from "@/lib/format-row-date";
 import { useColumnWidthStore } from "@/stores/column-widths";
 import { getGridTemplateColumns, TABLE_COL_GAP } from "@/lib/table-layout";
+import { formatVocabLabel } from "@/data/vocab-label";
+import { useVocabLocaleStore } from "@/stores/vocab-locale";
 
 interface Props {
   track: Track;
@@ -29,6 +31,7 @@ export function TrackRow({
 }: Props): React.JSX.Element {
   const widths = useColumnWidthStore((s) => s.widths);
   const gridCols = getGridTemplateColumns(widths);
+  const vocabLocale = useVocabLocaleStore((s) => s.locale);
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `track:${track.id}`,
@@ -91,7 +94,9 @@ export function TrackRow({
 
       <div className="truncate text-xs min-w-0" data-column-cell="genre">
         {track.genre && track.genre.length > 0
-          ? `${track.genre[0]}${track.genre.length > 1 ? ` +${track.genre.length - 1}` : ""}`
+          ? `${formatVocabLabel(track.genre[0], "genre", vocabLocale)}${
+              track.genre.length > 1 ? ` +${track.genre.length - 1}` : ""
+            }`
           : "—"}
       </div>
 
