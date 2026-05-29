@@ -150,14 +150,14 @@ Tie this to the Settings Producers UI work — that section is the natural place
 
 ---
 
-## v0.1.0 — Catalog → publish-ready
+## v0.1.0 — Catalog → publish-ready — SHIPPED
 
-Make the catalog actually usable for publishing — without browser automation yet. Two mutually reinforcing, mostly read-side features; the NetEase *automation* adapter that previously held this slot moved to v0.2.0 and will reuse the vocab-translation layer built here. (Search was pulled forward to its own v0.0.28.) Suggested build order: analysis → export (each independently shippable; numbering decided at implementation).
+Both originally-planned features are now delivered:
 
-- **essentia audio analysis** — replace/augment the librosa pipeline (`beatos_core/audio_analysis/`) with essentia (named in CHANGELOG v0.0.25), re-enable auto-analyze on import + a "Analyze all unanalyzed" batch action. Fills the mostly-empty BPM/Key fields that search and export both consume. Watch the PyInstaller sidecar bundle size.
-- **Export / metadata packs** — per-track + bulk export of the canonical catalog into platform-shaped metadata (copyable text block + CSV/JSON), using `packages/beatos-platforms/<platform>/{genre,mood}-map.json` vocab maps and license-tier `prices_json`. New `beatos_core/export/` service + HTTP route + MCP read tool `export_metadata(track_id, platform)`. This is the direct precursor to the v0.2.0 NetEase automation adapter.
+- **essentia audio analysis** — SHIPPED v0.0.29/v0.0.30. Replaced librosa with Essentia BPM/Key pipeline (8/8 vs 7/8 accuracy, ~6× faster). Made pluggable: `BEATOS_ANALYSIS_ENGINE=librosa|essentia`; Essentia is an opt-in AGPL extra (`uv sync --extra essentia`). Failed-analysis cache fix also in v0.0.30. See [CHANGELOG.md](CHANGELOG.md#0029---2026-05-26--audio-analysis-engine-librosa--essentia).
+- **Export / metadata packs** — SHIPPED v0.0.34. Per-track platform-shaped metadata export (NetEase first) with field-by-field copy UI; reachable from right-click menu and TrackEditor toolbar. `beatos_core/export/` service + `GET /api/tracks/{id}/export` + `GET /api/export/platforms` HTTP routes + MCP read tools `export_metadata` + `list_export_platforms` (tool count 22→24, same service as HTTP so agent==human). `beatos-platforms` is now an importable package with generated NetEase en→zh genre/mood vocab maps. See [CHANGELOG.md](CHANGELOG.md#0034---2026-05-29--export--metadata-packs).
 
-> Not selected for this milestone: **metadata canonicalization (#3)** stays in Unscheduled. Heads-up — dirty multi-value metadata (the `AVERATEC`/`averatec` drift) will surface in the export packs above; promote canonicalization in if it bites during the export work.
+> **Metadata canonicalization** (the `AVERATEC`/`averatec` drift) stays in Unscheduled. It surfaces in export packs — promote it if it causes friction during the v0.2.0 NetEase adapter work.
 
 ---
 

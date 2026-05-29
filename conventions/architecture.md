@@ -24,7 +24,7 @@ Tracks are global — they belong to BeatOS as a whole. Each track holds 0+ asse
 
 ## Layering rules
 
-1. `packages/beatos-core/` is pure Python business logic — no `fastapi` / `mcp` / Electron imports; allowed deps: stdlib, `aiosqlite`, `pydantic`, `playwright`, `mutagen`, `watchdog`.
+1. `packages/beatos-core/` is pure Python business logic — no `fastapi` / `mcp` / Electron imports; allowed deps: stdlib, `aiosqlite`, `pydantic`, `playwright`, `mutagen`, `watchdog`, `beatos-platforms` (vocab maps for export renderers).
 2. `packages/beatos-http/` and `packages/beatos-mcp/` are thin facades — each route / tool is a few lines calling into `beatos-core`. Since v0.0.23, `beatos-mcp` tools run inside the `beatos-http` process (mounted at `/mcp`); the `beatos-mcp` console script is a stdio bridge launcher only.
 3. `apps/desktop/electron/` (main + preload) is thin — spawns sidecar, creates `BrowserWindow`, exposes native dialogs / tray / shortcuts via IPC; business logic stays in `beatos-core`.
 4. The renderer (`apps/desktop/src/`) talks to `beatos-http` over `http://127.0.0.1:<port>`; port is ephemeral, written to a JSON handshake file, exposed via `contextBridge` in `preload.ts`.
@@ -76,8 +76,9 @@ packages/beatos-mcp/         ← FastMCP tools + stdio bridge launcher
     launcher.py              ← discovery + mcp-proxy exec logic
     __main__.py              ← stdio bridge launcher entry (reads handshake, execs mcp-proxy)
 
-packages/beatos-platforms/   ← v0.0.12 per-platform vocab maps
-  <platform>/                ← e.g. netease/ — {genre,mood}-map.json stubs
+packages/beatos-platforms/   ← v0.0.12 per-platform vocab maps; importable package as of v0.0.34
+  beatos_platforms/          ← vocab loader (`load_map(platform, field)`)
+  <platform>/                ← e.g. netease/ — {genre,mood}-map.json (generated en→zh maps, v0.0.34)
 ```
 
 ## Key components
@@ -307,7 +308,7 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 
 ## MCP surface
 
-`packages/beatos-mcp/server.py` registers **22 tools** as of v0.0.30 — **7 read + 15 write** (verify with `grep -c '@mcp.tool' server.py`). Every write tool is two-phase: phase 1 issues a single-use token; the user approves in BeatOS Settings (`POST /api/tokens/{token}/approve`); the agent polls `await_approval(token)`. No write tool mutates the DB directly.
+`packages/beatos-mcp/server.py` registers **24 tools** as of v0.0.34 — **9 read + 15 write** (verify with `grep -c '@mcp.tool' server.py`). Every write tool is two-phase: phase 1 issues a single-use token; the user approves in BeatOS Settings (`POST /api/tokens/{token}/approve`); the agent polls `await_approval(token)`. No write tool mutates the DB directly.
 
 | Tool | Type | Status |
 |---|---|---|
@@ -316,6 +317,8 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | `list_lists` / `list_distinct_values` | read | Shipped v0.0.20. (`list_sources` shipped v0.0.20, removed v0.0.22.) |
 | `await_approval(token)` | read | Shipped v0.0.23. Unified 2PC status-check across all write tools. |
 | `search_tracks(query)` | read | Shipped v0.0.28. Parses the query via `beatos_core.tracks.query_parser.parse_query` AND builds the WHERE clause via `beatos_core.tracks.sql_filter.build_filter_clauses` — the SAME parser + builder the HTTP `GET /api/tracks?query=` route uses, so agent search and in-app search return identical results. |
+| `list_export_platforms()` | read | Shipped v0.0.34. Returns the registry of supported export platforms (e.g. `netease`). Backed by the same service as `GET /api/export/platforms`. |
+| `export_metadata(track_id, platform)` | read | Shipped v0.0.34. Returns a structured `ExportResult` with per-field platform-shaped metadata (en→zh mapping, single-genre downgrade, price lines). Backed by the same `beatos_core.export` service as `GET /api/tracks/{id}/export`, so agent output matches in-app output. |
 | `create_list` | write (2PC) | Shipped v0.0.21 (first write tool). |
 | `update_list` / `delete_list` | write (2PC) | List rename/delete. |
 | `add_tracks_to_list` / `remove_tracks_from_list` / `reorder_list` | write (2PC) | List curation. |
@@ -323,7 +326,6 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | `update_tracks` / `merge_metadata` | write (2PC) | Track-field edits. |
 | `set_license_tiers` | write (2PC) | Multi-currency license tiers (v0.0.26–27). |
 | `create_tracks` / `attach_assets` / `detach_assets` | write (2PC) | Ingest (catalog rows + asset references). |
-| `list_platforms()` | read | Future — once platform adapters exist. |
 | `inject_to_platform(track_id, platform)` | write | Future — returns `confirm_token`; agent must call `confirm_inject(token)` separately. |
 | `suggest_tags(track_id)` / `find_similar(track_id)` | read | Future — v0.2 / v0.3 (audio + text RAG). |
 

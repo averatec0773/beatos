@@ -4,6 +4,18 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.34] — 2026-05-29 — Export / metadata packs
+
+Per-track platform-shaped metadata export (NetEase first), reachable from the right-click context menu and the TrackEditor toolbar. Each exported field is individually copyable via a one-click copy button.
+
+### Added
+
+- `beatos_core/export/` — `ExportField` / `ExportResult` models, NetEase metadata renderer (en→zh field mapping, single-genre downgrade, price lines from `prices_json`), export service with platform registry, and a fetch/dispatch layer.
+- HTTP routes: `GET /api/tracks/{id}/export?platform=<key>` returns a structured `ExportResult`; `GET /api/export/platforms` returns the registry of supported platforms.
+- MCP read tools: `export_metadata(track_id, platform)` and `list_export_platforms()` — backed by the same service as the HTTP routes so agent output and in-app output are identical. Tool count 22 → 24.
+- `beatos-platforms` is now an importable Python package (`beatos_platforms`) with a vocab loader and generated NetEase en→zh genre/mood maps (consumed by `beatos_core.export`). `beatos-core` declares it as a dependency.
+- Renderer `ExportDialog` with platform selector and per-field copy buttons. Reachable via right-click on any track row and via the TrackEditor toolbar.
+
 ## [0.0.33.1] — 2026-05-29 — Player: Prev/Next buttons wrap around the queue
 
 ### Fixed
