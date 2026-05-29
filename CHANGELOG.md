@@ -4,6 +4,23 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.33] — 2026-05-29 — Audit batch 3: boot race fix + dedup refactors
+
+Closes the remaining audit code items: one real fix plus two behavior-preserving refactors that kill duplicated logic. (The fourth item — Python ruff/mypy + Electron smoke in CI — is parked in ROADMAP as TBD.)
+
+### Fixed
+
+- Sidecar boot race (audit B2): `__main__.py` wrote the handshake file (advertising the port) before uvicorn had put the socket into listen mode, so a client reading the port too early could get Connection refused — observed as a CI flake. The handshake is now written from the server's `startup` hook, which completes only once the port is actually accepting requests.
+
+### Changed (internal — no behavior change)
+
+- Unified the HTTP and MCP track-search SQL builders behind a single `build_filter_clauses` in `beatos_core.tracks.sql_filter` (was hand-copied in `tracks/service.py` and `beatos_mcp/tools/tracks.py` — the drift class the v0.0.28/30 search work kept hitting). `MULTI_VALUE_FIELDS` / text-search columns now have one definition.
+- Extracted the byte-identical license-tier price helpers (`inputsToPrices`, `pickFxSource`, `fxPlaceholderFor`, preset/currency constants, `LABEL_WIDTH`) shared by `LicenseTiersSection` and `DefaultLicenseTiersSection` into `lib/license-price.ts`. ~120 lines of duplication removed.
+
+### Tests
+
+- Unit tests for the extracted license-price helpers; the shared search builder is covered by the existing core + MCP search suites (all still green).
+
 ## [0.0.32] — 2026-05-29 — Audit batch 2: playback race + search escaping
 
 Second batch from the code audit. Two verified-real fixes; the license preset double-create (H5) was investigated and dropped — the existing `creating` flag + per-preset debounce + post-create slot replacement already guard it, and the residual window isn't deterministically reproducible.

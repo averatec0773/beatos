@@ -13,7 +13,10 @@ import aiosqlite
 
 from beatos_core.db import resolve_db_path
 from beatos_core.models import Track
-from beatos_core.tracks.query_parser import escape_like
+from beatos_core.tracks.sql_filter import (
+    MULTI_VALUE_FIELDS,
+    build_filter_clauses,
+)
 
 _WRITABLE_FIELDS = {
     "title",
@@ -33,19 +36,8 @@ SORTABLE_FIELDS = frozenset({
 SORT_DIRS = frozenset({"asc", "desc"})
 DISTINCT_FIELDS = frozenset({"producer", "genre", "mood", "key_signature"})
 
-# Fields stored as JSON arrays in the DB.
-MULTI_VALUE_FIELDS = frozenset({"producer", "genre", "mood"})
-
-# Free-text search columns for list_tracks(q=...). Two known limitations:
-#  - SQLite LIKE is case-insensitive for ASCII only; non-ASCII text matches
-#    case-sensitively.
-#  - producer/genre/mood are JSON-array TEXT columns, so LIKE matches the raw
-#    JSON substring (e.g. "rap" matches ["trap"]). Acceptable for discovery-style
-#    free text; precise per-value matching uses the structured filters instead.
-_TEXT_SEARCH_COLS = (
-    "track.title", "track.description", "track.tags",
-    "track.producer", "track.genre", "track.mood", "track.key_signature",
-)
+# MULTI_VALUE_FIELDS is re-exported from sql_filter (single source of truth) so
+# existing imports `from ...service import MULTI_VALUE_FIELDS` keep working.
 
 
 def _now() -> str:
@@ -175,45 +167,12 @@ def _build_where(
     has_audio: bool | None,
     text: list[str] | None = None,
 ) -> tuple[str, list]:
-    clauses: list[str] = []
-    params: list = []
-    for field, values in [
-        ("producer", producers), ("genre", genres), ("mood", moods), ("key_signature", keys),
-    ]:
-        if values:
-            placeholders = ", ".join("?" for _ in values)
-            if field in MULTI_VALUE_FIELDS:
-                clauses.append(
-                    f"EXISTS (SELECT 1 FROM json_each(track.{field}) je "
-                    f"WHERE je.value IN ({placeholders}))"
-                )
-            else:
-                clauses.append(f"{field} IN ({placeholders})")
-            params.extend(values)
-    if bpm_min is not None:
-        clauses.append("bpm >= ?")
-        params.append(bpm_min)
-    if bpm_max is not None:
-        clauses.append("bpm <= ?")
-        params.append(bpm_max)
-    if has_audio is True:
-        clauses.append(
-            "EXISTS (SELECT 1 FROM asset ax3 "
-            "WHERE ax3.track_id = track.id AND ax3.missing = 0 "
-            "AND ax3.role IN ('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav'))"
-        )
-    elif has_audio is False:
-        clauses.append(
-            "NOT EXISTS (SELECT 1 FROM asset ax3 "
-            "WHERE ax3.track_id = track.id AND ax3.missing = 0 "
-            "AND ax3.role IN ('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav'))"
-        )
-    if text:
-        for term in text:
-            like = f"%{escape_like(term)}%"
-            ors = " OR ".join(f"{col} LIKE ? ESCAPE '\\'" for col in _TEXT_SEARCH_COLS)
-            clauses.append(f"({ors})")
-            params.extend([like] * len(_TEXT_SEARCH_COLS))
+    """Filter clauses (excl. deleted_at) AND-joined into a single WHERE fragment.
+    Delegates to the shared builder so HTTP and MCP search stay identical."""
+    clauses, params = build_filter_clauses(
+        producers=producers, genres=genres, moods=moods, keys=keys,
+        bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio, text=text,
+    )
     return (" AND ".join(clauses), params)
 
 

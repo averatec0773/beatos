@@ -57,7 +57,7 @@ packages/beatos-core/        ← business logic
     migrations/              ← versioned .sql files (append-only)
     models/                  ← Pydantic models (one file per entity)
     library/                 ← library lifecycle service
-    tracks/                  ← track CRUD + queries; query_parser.py = pure FilterSpec parser (shared by HTTP route + MCP tool, no IO)
+    tracks/                  ← track CRUD + queries; query_parser.py = pure FilterSpec parser + sql_filter.py = shared WHERE-clause builder (both used by HTTP route + MCP tool, no IO)
     assets/                  ← reference / managed mode, relocate
     lists/                   ← user-list CRUD + membership
     audio_analysis/          ← BPM + Key pipeline; pluggable backends/ (essentia | librosa)
@@ -315,7 +315,7 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 | `list_tracks(filter?)` / `get_track(id)` | read | Shipped v0.0.20. |
 | `list_lists` / `list_distinct_values` | read | Shipped v0.0.20. (`list_sources` shipped v0.0.20, removed v0.0.22.) |
 | `await_approval(token)` | read | Shipped v0.0.23. Unified 2PC status-check across all write tools. |
-| `search_tracks(query)` | read | Shipped v0.0.28. Parses the query via `beatos_core.tracks.query_parser.parse_query` — the SAME parser the HTTP `GET /api/tracks?query=` route uses, so agent search and in-app search return identical results. |
+| `search_tracks(query)` | read | Shipped v0.0.28. Parses the query via `beatos_core.tracks.query_parser.parse_query` AND builds the WHERE clause via `beatos_core.tracks.sql_filter.build_filter_clauses` — the SAME parser + builder the HTTP `GET /api/tracks?query=` route uses, so agent search and in-app search return identical results. |
 | `create_list` | write (2PC) | Shipped v0.0.21 (first write tool). |
 | `update_list` / `delete_list` | write (2PC) | List rename/delete. |
 | `add_tracks_to_list` / `remove_tracks_from_list` / `reorder_list` | write (2PC) | List curation. |

@@ -124,12 +124,16 @@ Search overhaul: server-side full-catalog search, shared `beatos_core.tracks.que
 
 Features we want but haven't tied to a release. Promote to a numbered version when a dogfood signal or product decision makes one urgent.
 
-### CI/CD (deferred)
+### CI/CD
 
-Deferred — solo project, and the agent runs `build` + tests before every commit/push, so the test-gate value is already covered locally. The one gap CI would close is **clean-checkout reproducibility** (the v0.0.20.2 / v0.0.26.2 class of "works locally, broken from a fresh clone" bug). Cheaper stopgap: run `npm ci && npm run build && npm test` + `uv sync && uv run pytest` from a fresh clone before each minor release. Revisit full CI when distributing installers to others or adding collaborators.
+**Basic gate SHIPPED** (post-v0.0.32, `.github/workflows/ci.yml`): GitHub Actions on push-to-main / PR — `python` job (`uv sync` + `pytest`) and `desktop` job (`npm ci` + lint + typecheck + vitest + `electron-vite build`). Actions pinned to node24 majors. This closed the clean-checkout reproducibility gap and the audit's #1 finding (tests were unenforced). Lint was made green and gated (errors fail, ~52 advisory warnings allowed).
 
-- Planned shape (when revived): GitHub Actions PR gate — `npm run build` + `vitest` (ubuntu — typecheck/bundle/vitest don't need macOS) + `uv run pytest` for backend packages; npm + uv caches.
-- Release-build automation (electron-builder matrix + signing) belongs with the first installer distribution, not the gate.
+Deferred (TBD — no committed version):
+
+- **Electron smoke in CI** — `npm run smoke` needs a virtual display (xvfb), the Python sidecar env, and a packaged build; it's the most flake-prone. Add a `smoke` job (ubuntu + `xvfb-run` + `uv sync` + `npm run build` + `npm run smoke`) once it can run green reliably.
+- **Python ruff + mypy** — no Python lint/type-check exists yet (prior audit M1). Add `[tool.ruff]` + `[tool.mypy]` (start with `ignore_missing_imports`, at least cover `beatos_core`) and a step in the `python` CI job.
+- **Tighten lint** — optionally re-promote the downgraded advisory rules (explicit-return-type, no-explicit-any, set-state-in-effect) to errors after fixing the ~52 warnings, and/or add `--max-warnings 0`.
+- **Release-build automation** (electron-builder matrix + signing) belongs with the first installer distribution, not the gate.
 
 ---
 

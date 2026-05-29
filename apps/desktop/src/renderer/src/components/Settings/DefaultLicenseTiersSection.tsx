@@ -7,7 +7,18 @@ import {
   type DefaultLicenseTierTemplate,
 } from "@/lib/default-license-tiers";
 import { useToastStore } from "@/stores/toast";
-import { fxConvertedString, SUPPORTED_CURRENCIES } from "@/lib/fx-rates";
+import {
+  PRESET_SLOTS,
+  PRESET_KEYS,
+  FIXED_CURRENCIES,
+  FIXED_CURRENCY_SET,
+  OTHER_CURRENCIES,
+  LABEL_WIDTH,
+  inputsToPrices,
+  pickFxSource,
+  fxPlaceholderFor,
+  type PresetKey,
+} from "@/lib/license-price";
 
 /**
  * Default license tier templates applied to every newly-created track.
@@ -16,18 +27,6 @@ import { fxConvertedString, SUPPORTED_CURRENCIES } from "@/lib/fx-rates";
  * rows. Empty slots are not persisted — they simply mean "do not auto-add
  * this tier on new tracks."
  */
-
-const PRESET_SLOTS = [
-  { key: "mp3", label: "MP3" },
-  { key: "wav", label: "WAV" },
-  { key: "stem", label: "STEMS" },
-] as const;
-type PresetKey = (typeof PRESET_SLOTS)[number]["key"];
-const PRESET_KEYS = new Set<string>(PRESET_SLOTS.map((p) => p.key));
-
-const FIXED_CURRENCIES = ["CNY", "USD"] as const;
-const FIXED_CURRENCY_SET = new Set<string>(FIXED_CURRENCIES);
-const OTHER_CURRENCIES = SUPPORTED_CURRENCIES.filter((c) => !FIXED_CURRENCY_SET.has(c));
 
 const SAVE_DEBOUNCE_MS = 600;
 
@@ -41,27 +40,6 @@ interface DraftRow {
   otherCurrency: string | null;
   /** Internal id used as a React key — not persisted. */
   uid: number;
-}
-
-function inputsToPrices(
-  inputs: Record<string, string>,
-  otherCurrency: string | null,
-): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const code of FIXED_CURRENCIES) {
-    const v = inputs[code]?.trim() ?? "";
-    if (v === "") continue;
-    const n = Number(v);
-    if (Number.isFinite(n) && n >= 0) out[code] = n;
-  }
-  if (otherCurrency) {
-    const v = inputs[otherCurrency]?.trim() ?? "";
-    if (v !== "") {
-      const n = Number(v);
-      if (Number.isFinite(n) && n >= 0) out[otherCurrency] = n;
-    }
-  }
-  return out;
 }
 
 function templateToDraft(t: DefaultLicenseTierTemplate, uid: number): DraftRow {
@@ -295,8 +273,6 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
   );
 }
 
-const LABEL_WIDTH = "w-[100px]";
-
 interface RowEditorProps {
   label?: string;
   row: DraftRow;
@@ -306,30 +282,6 @@ interface RowEditorProps {
   onPriceChange: (currency: string, raw: string) => void;
   onOtherCurrencyChange: (currency: string | null) => void;
   onDelete?: () => void;
-}
-
-/** See LicenseTiersSection — same FX-source picking rule. */
-function pickFxSource(
-  priceInputs: Record<string, string>,
-  otherCurrency: string | null,
-): [string, number] | null {
-  const order = [...FIXED_CURRENCIES, ...(otherCurrency ? [otherCurrency] : [])];
-  for (const code of order) {
-    const raw = priceInputs[code]?.trim();
-    if (!raw) continue;
-    const n = Number(raw);
-    if (Number.isFinite(n) && n > 0) return [code, n];
-  }
-  return null;
-}
-
-function fxPlaceholderFor(target: string, source: [string, number] | null): string {
-  if (!source) return "—";
-  const [from, amount] = source;
-  if (from === target) return "—";
-  // Bare numeric — see LicenseTiersSection for the width rationale.
-  const hint = fxConvertedString(amount, from, target);
-  return hint || "—";
 }
 
 function RowEditor({

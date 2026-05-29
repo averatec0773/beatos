@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from beatos_core.tracks.query_parser import escape_like
+from beatos_core.tracks.sql_filter import build_filter_clauses
 from beatos_mcp.db import connect
 
 
@@ -86,15 +86,6 @@ _SORT_COL = {"created_at": "created_at", "updated_at": "updated_at",
              "bpm": "bpm", "name": "title"}
 
 
-def _multi_clause(field: str, values: list[str]) -> tuple[str, list]:
-    placeholders = ", ".join("?" for _ in values)
-    return (
-        f"EXISTS (SELECT 1 FROM json_each(track.{field}) je "
-        f"WHERE je.value IN ({placeholders}))",
-        list(values),
-    )
-
-
 def _build_filter_clauses(
     *,
     producers: list[str] | None,
@@ -106,43 +97,12 @@ def _build_filter_clauses(
     has_audio: bool | None,
     text: list[str] | None = None,
 ) -> tuple[list[str], list]:
-    clauses: list[str] = ["track.deleted_at IS NULL"]
-    params: list = []
-    for field, values in [("producer", producers), ("genre", genres), ("mood", moods)]:
-        if values:
-            c, p = _multi_clause(field, values)
-            clauses.append(c)
-            params.extend(p)
-    if keys:
-        placeholders = ", ".join("?" for _ in keys)
-        clauses.append(f"key_signature IN ({placeholders})")
-        params.extend(keys)
-    if bpm_min is not None:
-        clauses.append("bpm >= ?")
-        params.append(bpm_min)
-    if bpm_max is not None:
-        clauses.append("bpm <= ?")
-        params.append(bpm_max)
-    if has_audio is True:
-        clauses.append(
-            "EXISTS (SELECT 1 FROM asset ax WHERE ax.track_id=track.id "
-            "AND ax.missing=0 AND ax.role IN "
-            "('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav'))"
-        )
-    elif has_audio is False:
-        clauses.append(
-            "NOT EXISTS (SELECT 1 FROM asset ax WHERE ax.track_id=track.id "
-            "AND ax.missing=0 AND ax.role IN "
-            "('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav'))"
-        )
-    if text:
-        cols = ("track.title", "track.description", "track.tags",
-                "track.producer", "track.genre", "track.mood", "track.key_signature")
-        for term in text:
-            ors = " OR ".join(f"{c} LIKE ? ESCAPE '\\'" for c in cols)
-            clauses.append(f"({ors})")
-            params.extend([f"%{escape_like(term)}%"] * len(cols))
-    return clauses, params
+    # Shared core builder (HTTP↔MCP parity); MCP scopes to non-deleted rows.
+    clauses, params = build_filter_clauses(
+        producers=producers, genres=genres, moods=moods, keys=keys,
+        bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio, text=text,
+    )
+    return (["track.deleted_at IS NULL", *clauses], params)
 
 
 async def list_tracks(

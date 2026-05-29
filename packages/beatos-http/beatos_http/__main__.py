@@ -2,8 +2,10 @@
 
 Steps:
 1. Bind a socket to port 0 to get an OS-assigned free port.
-2. Write the handshake file so Electron main can read the port.
-3. Hand the socket to uvicorn.
+2. Hand the socket to uvicorn.
+3. Write the handshake file only AFTER uvicorn is listening (in the server's
+   startup hook) — writing it at bind time races the bind→listen gap, so a
+   client that reads the port too early gets Connection refused (audit B2).
 """
 from __future__ import annotations
 
@@ -36,11 +38,28 @@ def _cleanup_handshake() -> None:
         pass
 
 
+class _HandshakeServer(uvicorn.Server):
+    """uvicorn Server that publishes the handshake once it is actually serving.
+
+    `startup()` completes only after the socket has been put into listen mode
+    and the app lifespan has run, so writing the handshake here guarantees the
+    advertised port is already accepting requests — closing the bind→listen
+    race (audit B2).
+    """
+
+    def __init__(self, config: uvicorn.Config, port: int) -> None:
+        super().__init__(config)
+        self._handshake_port = port
+
+    async def startup(self, sockets: list | None = None) -> None:
+        await super().startup(sockets=sockets)
+        write_handshake(port=self._handshake_port)
+
+
 def main() -> None:
     atexit.register(_cleanup_handshake)
     sock, port = _bind_ephemeral()
     try:
-        write_handshake(port=port)
         config = uvicorn.Config(
             app=create_app(),
             host="127.0.0.1",
@@ -48,7 +67,7 @@ def main() -> None:
             log_level="info",
             access_log=False,
         )
-        server = uvicorn.Server(config)
+        server = _HandshakeServer(config, port=port)
         server.run(sockets=[sock])
     finally:
         sock.close()
