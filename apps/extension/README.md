@@ -1,7 +1,10 @@
 # BeatOS Uploader (browser extension)
 
-Phase 1: auto-fills a platform upload form with metadata staged from BeatOS.
+Auto-fills a platform upload form with metadata staged from BeatOS.
 You drag the audio file in and click submit yourself. The extension never submits.
+
+- **Phase 1** — native text fields (Beat名称 / BPM / Beat说明).
+- **Phase 2 (v0.0.38)** — also fills the click-to-open Ant widgets: 曲风 (single-select), KEY (音名/调号/调式, decomposed from e.g. "F# minor"), 说明标签 (matches mood/tags against NetEase's scene-tag buttons), 价格 (授权方式 modal). 曲风/KEY fill reliably; 说明标签/价格 are best-effort — anything not matched is listed in the overlay for you to set by hand.
 
 ## Install (load unpacked)
 

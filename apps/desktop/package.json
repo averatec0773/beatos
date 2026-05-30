@@ -1,6 +1,6 @@
 {
   "name": "beatos-desktop",
-  "version": "0.0.37",
+  "version": "0.0.38",
   "description": "BeatOS — Electron desktop renderer for the local-first beat producer toolkit.",
   "main": "./out/main/index.js",
   "author": "Scott Huang (averatec0773)",

@@ -4,6 +4,12 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.38] — 2026-05-29 — Platform upload auto-fill: custom widgets (Phase 2-B)
+
+### Added
+
+- **The uploader extension now fills NetEase's click-to-open widgets too** — not just the plain text fields. 曲风 (genre, single-select), KEY (音名/调号/调式, decomposed from a key like "F# minor" via `♯/♭/无` + English `Major/Minor`), 说明标签 (matches the track's mood/tags against NetEase's fixed scene-tag buttons), and 价格 (授权方式 modal). Implemented as typed async "widget drivers" in the extension (`interaction-fill.ts`) that resolve triggers by field label, wait for the Ant portal/modal, click the matching option, and verify — never submitting the form. 曲风/KEY fill reliably; 说明标签/价格 are best-effort (unmatched values are listed in the overlay for manual entry). Widget selectors + the KEY/价格 vocab live as data in `beatos-platforms/.../netease/upload-form.json` (fixable without reloading the extension). Zero sidecar changes — the existing `/api/inject/form-map` endpoint just serves a richer recipe. Extension bumped to 0.2.0.
+
 ## [0.0.37] — 2026-05-29 — Platform upload auto-fill (browser extension, Phase 1)
 
 ### Added
