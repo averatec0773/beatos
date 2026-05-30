@@ -20,6 +20,11 @@ async def db(tmp_path, monkeypatch):
             "VALUES (1, '仙泉', '[\"Chinese Style\"]', ?, ?)",
             (now, now),
         )
+        await conn.execute(
+            "INSERT INTO track (id, title, producer, created_at, updated_at) "
+            "VALUES (2, '夜行', '[\"Averatec\", \"Redketch\"]', ?, ?)",
+            (now, now),
+        )
         await conn.commit()
     return p
 
@@ -51,3 +56,33 @@ async def test_year_token_uses_current_year(db, monkeypatch):
     await set_setting("upload_templates", {"album_name": "{year} {title}"})
     r = await export_metadata(1, "netease")
     assert _fields(r)["album_name"].value == "2030 仙泉"
+
+
+@pytest.mark.asyncio
+async def test_prod_uses_track_producer_joined(db):
+    await set_setting("upload_templates", {"beat_description": "Prod.{prod}"})
+    r = await export_metadata(2, "netease")
+    assert _fields(r)["description"].value == "Prod.Averatec x Redketch"
+
+
+@pytest.mark.asyncio
+async def test_prod_custom_separator(db):
+    await set_setting("upload_templates", {"beat_description": "Prod.{prod}", "prod_separator": " & "})
+    r = await export_metadata(2, "netease")
+    assert _fields(r)["description"].value == "Prod.Averatec & Redketch"
+
+
+@pytest.mark.asyncio
+async def test_prod_falls_back_to_setting_when_no_producer(db):
+    await set_setting("upload_templates", {"beat_description": "Prod.{prod}", "prod": "Fallback"})
+    r = await export_metadata(1, "netease")
+    assert _fields(r)["description"].value == "Prod.Fallback"
+
+
+@pytest.mark.asyncio
+async def test_publish_date_injected(db, monkeypatch):
+    import beatos_core.export.service as svc
+    monkeypatch.setattr(svc, "_current_date", lambda: "2030-01-02")
+    await set_setting("upload_templates", {"album_description": "{publish date}"})
+    r = await export_metadata(1, "netease")
+    assert _fields(r)["album_description"].value == "2030-01-02"

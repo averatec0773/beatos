@@ -29,6 +29,18 @@ def _current_year() -> int:
     return _dt.datetime.now().year
 
 
+def _current_date() -> str:
+    return _dt.datetime.now().strftime("%Y-%m-%d")
+
+
+def _resolve_prod(track: Track, templates: dict[str, str]) -> str:
+    producers = track.producer or []
+    if producers:
+        sep = templates.get("prod_separator", " x ")
+        return sep.join(producers)
+    return templates.get("prod", "")
+
+
 async def _resolve_templates() -> dict[str, str]:
     stored = await get_setting(_TEMPLATES_KEY)
     templates = dict(DEFAULT_TEMPLATES)
@@ -48,4 +60,11 @@ async def export_metadata(track_id: int, platform: str) -> ExportResult:
         raise ValueError(f"Track {track_id} not found")
     tiers = await list_tiers_for_track(track_id)
     templates = await _resolve_templates()
-    return renderer(track, tiers, templates, year=_current_year())
+    return renderer(
+        track,
+        tiers,
+        templates,
+        prod=_resolve_prod(track, templates),
+        year=_current_year(),
+        publish_date=_current_date(),
+    )

@@ -83,5 +83,16 @@ def test_album_name_field_present_and_rendered():
 
 
 def test_description_uses_template_not_raw():
-    r = render(_track(title="仙泉", description="ignored raw"), [], _tmpl(beat_description="Prod.{prod}"))
-    assert _fields(r)["description"].value == "Prod.Averatec x Redketch"
+    r = render(_track(title="仙泉", description="ignored raw"), [], _tmpl(beat_description="Prod.{prod}"), prod="Neo")
+    assert _fields(r)["description"].value == "Prod.Neo"
+
+
+def test_album_description_field_rendered():
+    r = render(_track(title="仙泉"), [], _tmpl(album_description="{publish date} Prod.{prod}"),
+               prod="Neo", publish_date="2026-05-30")
+    assert _fields(r)["album_description"].value == "2026-05-30 Prod.Neo"
+
+
+def test_render_ignores_templates_prod_key():
+    r = render(_track(title="仙泉"), [], _tmpl(prod="SHOULD_NOT_APPEAR", beat_description="Prod.{prod}"), prod="Neo")
+    assert _fields(r)["description"].value == "Prod.Neo"

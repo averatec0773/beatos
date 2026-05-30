@@ -34,7 +34,9 @@ def render(
     tiers: list[LicenseTier],
     templates: dict[str, str],
     *,
+    prod: str = "",
     year: int = 0,
+    publish_date: str = "",
 ) -> ExportResult:
     genre_map = load_vocab_map(PLATFORM, "genre")
     mood_map = load_vocab_map(PLATFORM, "mood")
@@ -45,15 +47,15 @@ def render(
     # Beat name needs one concrete genre; the producer may pick a different one
     # in the selector — that mismatch is intentional, not a bug.
     genre_zh = genres[0] if genres else ""
-    prod = templates.get("prod", "")
 
     def _tmpl(key: str) -> str:
         return render_template(
-            templates.get(key, ""), track, prod=prod, year=year, genre_zh=genre_zh
+            templates.get(key, ""), track, prod=prod, year=year, publish_date=publish_date, genre_zh=genre_zh
         )
 
     fields: list[ExportField] = []
     fields.append(ExportField(key="album_name", label="专辑名", value=_tmpl("album_name")))
+    fields.append(ExportField(key="album_description", label="专辑描述", value=_tmpl("album_description")))
     fields.append(ExportField(key="title", label="标题", value=_tmpl("beat_name")))
 
     if len(genres) <= 1:
