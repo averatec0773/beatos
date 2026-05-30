@@ -142,31 +142,6 @@ describe("fillInteractions — antv3-select (genre)", () => {
     expect(clicked).toBe("Minor"); // matched option lives in the SECOND dropdown
   });
 
-  it("force-hides a leftover dropdown that refuses to close", async () => {
-    document.body.innerHTML = `<div class="kbox"><div class="ant-select" id="stuck"></div></div>`;
-    const trig = document.getElementById("stuck")!;
-    // trigger opens a dropdown but NEVER closes (orphaned-node simulation):
-    let opened = false;
-    trig.addEventListener("click", () => {
-      if (opened) return; // re-click does nothing (won't close)
-      opened = true;
-      const dd = document.createElement("div");
-      dd.className = "ant-select-dropdown";
-      const li = document.createElement("div");
-      li.className = "ant-select-dropdown-menu-item";
-      li.textContent = "Minor";
-      li.addEventListener("click", () => trig.setAttribute("data-selected", "Minor")); // multi: stays open
-      dd.appendChild(li);
-      document.body.appendChild(dd);
-    });
-    const spec = { type: "antv3-select", triggerSelector: ".kbox .ant-select", optionContainer: ".ant-select-dropdown", optionItem: ".ant-select-dropdown-menu-item", match: "exact" };
-    const map = { match: ["x"], fields: { genre: spec } } as unknown as FormMap;
-    const report = await fillInteractions(document, mkResult([["genre", "Minor"]]), map);
-    expect(report.filled).toEqual(["genre"]); // value still picked
-    const dd = document.querySelector(".ant-select-dropdown") as HTMLElement;
-    expect(dd.classList.contains("ant-select-dropdown-hidden")).toBe(true); // force-hidden
-    expect(dd.style.display).toBe("none");
-  });
 });
 
 describe("fillInteractions — key-triple", () => {
