@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+import re
+
+from beatos_core.models.track import Track
+
+# Producer credit default is interpolated into beat_description's "Prod.{prod}".
+DEFAULT_TEMPLATES: dict[str, str] = {
+    "album_name": "{year} {title}",
+    "beat_name": '[FREE] "{title}" - {genre} TYPE BEAT',
+    "beat_description": (
+        "Prod.{prod}\n"
+        "评论+关注+歌名后缀获取非商用使用权\n"
+        "!非商用使用权仅允许本平台发歌，上传歌曲需要绑定25%播放收益分成!\n"
+        "不允许: 发布其他音乐或短视频平台，以及拍摄MV, 演出等盈利行为\n"
+        "如需完整使用权请进行购买，感谢支持！"
+    ),
+    "prod": "Averatec x Redketch",
+}
+
+_TOKEN_RE = re.compile(r"\{(\w+)\}")
+
+
+def render_template(tmpl: str, track: Track, *, prod: str, year: int, genre_zh: str) -> str:
+    """Substitute {title}/{genre}/{year}/{prod}/{bpm}/{key} in `tmpl`.
+
+    Pure: no I/O. `genre_zh` (already vocab-mapped) and `year`/`prod` are
+    supplied by the caller. Unknown tokens are left verbatim; missing values
+    render as empty string.
+    """
+    values: dict[str, str] = {
+        "title": track.title or "",
+        "genre": genre_zh or "",
+        "year": str(year),
+        "prod": prod or "",
+        "bpm": str(track.bpm) if track.bpm is not None else "",
+        "key": track.key_signature or "",
+    }
+
+    def _sub(m: re.Match[str]) -> str:
+        name = m.group(1)
+        return values[name] if name in values else m.group(0)
+
+    return _TOKEN_RE.sub(_sub, tmpl)
