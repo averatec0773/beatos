@@ -242,3 +242,69 @@ describe("fillInteractions — tag-modal", () => {
     expect(report.missed).toEqual(["mood"]);
   });
 });
+
+describe("fillInteractions — license-modal", () => {
+  beforeEach(() => (document.body.innerHTML = ""));
+
+  // Simulate: a "+添加授权方式" trigger; clicking opens a modal with a price
+  // input + a 确定 button. Confirm records the price (durable marker on body) + closes modal.
+  function wireLicenseModal(): void {
+    const trig = document.createElement("button");
+    trig.id = "addlic";
+    trig.textContent = "+ 添加授权方式";
+    document.body.appendChild(trig);
+    trig.addEventListener("click", () => {
+      if (document.querySelector(".ant-modal")) return;
+      const modal = document.createElement("div");
+      modal.className = "ant-modal";
+      const price = document.createElement("input");
+      price.className = "price-in";
+      const ok = document.createElement("button");
+      ok.textContent = "确 定";
+      ok.addEventListener("click", () => {
+        const mark = document.createElement("i");
+        mark.className = "saved";
+        mark.textContent = price.value;
+        document.body.appendChild(mark); // survives modal.remove()
+        modal.remove();
+      });
+      modal.appendChild(price);
+      modal.appendChild(ok);
+      document.body.appendChild(modal);
+    });
+  }
+
+  const PRICE_SPEC = {
+    type: "license-modal",
+    triggerText: "添加授权方式",
+    modal: ".ant-modal",
+    priceInput: ".price-in",
+    confirmText: "确定",
+    tierMap: {},
+  };
+
+  it("fills + confirms a price per tier (best-effort, no type mapping)", async () => {
+    wireLicenseModal();
+    const map = { match: ["x"], fields: { price: PRICE_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(
+      document,
+      mkResult([["price", "Basic: ¥50\nPremium: ¥300 / USD 50"]]),
+      map,
+    );
+    expect(report.filled).toEqual(["price"]);
+    expect([...document.querySelectorAll("i.saved")].map((s) => s.textContent)).toEqual(["50", "300"]);
+  });
+
+  it("reports missed when there is no price", async () => {
+    wireLicenseModal();
+    const map = { match: ["x"], fields: { price: PRICE_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["price", ""]]), map);
+    expect(report.missed).toEqual(["price"]);
+  });
+
+  it("reports missed when the trigger is absent", async () => {
+    const map = { match: ["x"], fields: { price: PRICE_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["price", "Basic: ¥50"]]), map);
+    expect(report.missed).toEqual(["price"]);
+  });
+});

@@ -1,6 +1,8 @@
 import { waitFor } from "./dom-wait";
 import type { ExportResult, FillReport, FormMap } from "./fill-form";
+import { setNativeValue } from "./fill-form";
 import { decomposeKey } from "./key-decompose";
+import { parsePrice } from "./price-parse";
 
 export type DriverResult = "filled" | "missed";
 
@@ -169,10 +171,66 @@ const tagModal: Driver = async (spec, key, exp, ctx) => {
   return matched > 0 ? "filled" : "missed";
 };
 
+const licenseModal: Driver = async (spec, key, exp, ctx) => {
+  const tiers = parsePrice(fieldValue(exp, key));
+  if (!tiers.length) return "missed";
+
+  let trig: HTMLElement | null = spec.triggerSelector
+    ? (ctx.doc.querySelector(spec.triggerSelector) as HTMLElement | null)
+    : null;
+  if (!trig && spec.triggerText) {
+    const want = normText(spec.triggerText);
+    trig =
+      (Array.from(ctx.doc.querySelectorAll("button, a, [role=button]")).find((e) =>
+        normText(e.textContent).includes(want),
+      ) as HTMLElement) ?? null;
+  }
+  if (!trig) return "missed";
+
+  let added = 0;
+  for (const tier of tiers) {
+    trig.click();
+    const modal = (await ctx.waitFor(spec.modal, { timeoutMs: 2000 })) as HTMLElement | null;
+    if (!modal) break;
+
+    // best-effort 授权方式 type mapping; skip if unmapped (user picks manually).
+    const mapped = spec.tierMap?.[tier.name];
+    if (mapped && spec.typeSelect) {
+      await pickAntOption(
+        ctx,
+        {
+          triggerSelector: spec.typeSelect,
+          optionContainer: spec.optionContainer ?? ".ant-select-dropdown:not(.ant-select-dropdown-hidden)",
+          optionItem: spec.optionItem ?? ".ant-select-dropdown-menu-item",
+        },
+        mapped,
+      );
+    }
+
+    const priceEl = modal.querySelector(spec.priceInput) as HTMLInputElement | null;
+    const amt = tier.amounts["CNY"] ?? Object.values(tier.amounts)[0];
+    const wantConfirm = normText(spec.confirmText ?? "确定");
+    const confirm =
+      (Array.from(modal.querySelectorAll("button")).find((b) => normText(b.textContent) === wantConfirm) as
+        | HTMLElement
+        | undefined) ?? null;
+    if (priceEl && amt != null && confirm) {
+      setNativeValue(priceEl, String(amt));
+      confirm.click();
+      added++;
+    } else {
+      closePopups(ctx.doc);
+      break;
+    }
+  }
+  return added > 0 ? "filled" : "missed";
+};
+
 const DRIVERS: Record<string, Driver> = {
   "antv3-select": antv3Select,
   "key-triple": keyTriple,
   "tag-modal": tagModal,
+  "license-modal": licenseModal,
 };
 
 export async function fillInteractions(doc: Document, exp: ExportResult, formMap: FormMap): Promise<FillReport> {
