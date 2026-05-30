@@ -1,17 +1,38 @@
 {
-  "_note": "Verified against the live NetEase 音乐人 beat-upload page (Ant Design) on 2026-05-29. Only native text inputs are auto-filled; selectors use placeholder substrings because the page has multiple ant-input controls (the album block too) and CSS-module class hashes (e.g. textarea--21WWH) are unstable. Field keys mirror ExportResult keys.",
+  "_note": "Verified against the live NetEase 音乐人 beat-upload page (Ant Design v3) on 2026-05-29. Native text fields (title/bpm/description) use placeholder selectors. Interaction fields (genre/key/mood/price) use label-resolved triggers + click drivers (apps/extension/src/interaction-fill.ts). KEY: 音名 C-B, 调号 ♯/♭/无, 调式 English Major/Minor (multi-select). 说明标签 is a fixed scene-tag-button modal (mood/tags best-effort). Price modal selectors are best-effort — calibrate against the live modal.",
   "match": ["https://music.163.com/*"],
   "fields": {
     "title":       { "selector": "input[placeholder*='请输入Beat名称']", "type": "text" },
     "bpm":         { "selector": "input[placeholder*='每分钟拍子数']", "type": "text" },
-    "description": { "selector": "textarea[placeholder*='对beat作品的介绍']", "type": "textarea" }
-  },
-  "manual": {
-    "_comment": "Click-to-open custom widgets — NOT auto-fillable by value-setting in Phase 1 (candidates for a Phase 2 click-interaction filler). Left for the user to set manually.",
-    "genre": "曲风 — Ant Select (input.ant-select-search__field); needs click + option pick",
-    "key": "KEY 音名/调号/调式 — Ant Selects; needs click + option pick",
-    "mood": "情绪 — folded into 说明标签 on NetEase",
-    "tags": "说明标签 — '+添加标签' popover",
-    "price": "价格 — 授权设置 '+添加授权方式' modal"
+    "description": { "selector": "textarea[placeholder*='对beat作品的介绍']", "type": "textarea" },
+    "genre": {
+      "type": "antv3-select",
+      "triggerLabel": "曲风",
+      "controlSelector": ".ant-select",
+      "optionContainer": ".ant-select-dropdown:not(.ant-select-dropdown-hidden)",
+      "optionItem": ".ant-select-dropdown-menu-item",
+      "match": "prefix"
+    },
+    "key": {
+      "type": "key-triple",
+      "note":       { "triggerLabel": "音名", "controlSelector": ".ant-select", "optionContainer": ".ant-select-dropdown:not(.ant-select-dropdown-hidden)", "optionItem": ".ant-select-dropdown-menu-item" },
+      "accidental": { "triggerLabel": "调号", "controlSelector": ".ant-select", "optionContainer": ".ant-select-dropdown:not(.ant-select-dropdown-hidden)", "optionItem": ".ant-select-dropdown-menu-item", "labelMap": { "sharp": "♯", "flat": "♭", "natural": "无" } },
+      "mode":       { "triggerLabel": "调式", "controlSelector": ".ant-select", "optionContainer": ".ant-select-dropdown:not(.ant-select-dropdown-hidden)", "optionItem": ".ant-select-dropdown-menu-item", "labelMap": { "major": "Major", "minor": "Minor" } }
+    },
+    "mood": {
+      "type": "tag-modal",
+      "sourceKeys": ["mood", "tags"],
+      "triggerText": "添加标签",
+      "modal": ".ant-modal",
+      "confirmText": "确定"
+    },
+    "price": {
+      "type": "license-modal",
+      "triggerText": "添加授权方式",
+      "modal": ".ant-modal",
+      "priceInput": ".ant-modal input.ant-input-number-input, .ant-modal input[type='number'], .ant-modal input",
+      "confirmText": "确定",
+      "tierMap": {}
+    }
   }
 }
