@@ -127,6 +127,7 @@ def test_inject_app_has_no_mcp_mount():
     paths = {r.path for r in app.routes}
     assert "/mcp" not in paths
     assert "/api/inject/pending" in paths
+    assert "/api/inject/stage" not in paths
 
 
 def test_try_bind_fixed_returns_socket_then_none():

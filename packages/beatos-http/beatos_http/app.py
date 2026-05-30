@@ -160,6 +160,7 @@ def create_app() -> FastAPI:
     app.include_router(analysis.router)
     app.include_router(export.router)
     app.include_router(inject.router)
+    app.include_router(inject.read_router)
     app.include_router(producers.router)
     app.include_router(app_settings.router)
     app.include_router(tokens.router)
@@ -190,12 +191,14 @@ def _try_bind_fixed(port: int, host: str = "127.0.0.1") -> socket.socket | None:
 def create_inject_app() -> FastAPI:
     """Minimal fixed-port app for the browser extension.
 
-    Serves ONLY the inject router (ping / pending / form-map / stage). No CORS
-    (the extension uses host_permissions, which bypasses page CORS; the absence
-    of CORS headers makes browsers fail the preflight for random web pages doing
-    cross-origin JSON POSTs). No MCP, no lifespan — shares the same process and
-    the same inject._STAGED singleton as the main app.
+    Read-only: serves ONLY the inject read_router (ping / pending / form-map).
+    The write endpoint (/stage) is intentionally absent — the renderer stages
+    via the main ephemeral API port. No CORS (the extension uses
+    host_permissions, which bypasses page CORS; the absence of CORS headers
+    makes browsers fail the preflight for random web pages doing cross-origin
+    JSON POSTs). No MCP, no lifespan — shares the same process and the same
+    inject._STAGED singleton as the main app.
     """
     app = FastAPI(title="BeatOS Inject", version="0.0.4")
-    app.include_router(inject.router)
+    app.include_router(inject.read_router)
     return app

@@ -18,6 +18,7 @@ from beatos_core.export.service import export_metadata
 from beatos_platforms import load_form_map
 
 router = APIRouter(tags=["inject"])
+read_router = APIRouter(tags=["inject"])
 
 # Overwrite-style single slot. Phase 1 holds one staged fill at a time.
 _STAGED: dict | None = None
@@ -28,7 +29,7 @@ class StageRequest(BaseModel):
     platform: str
 
 
-@router.get("/api/inject/ping")
+@read_router.get("/api/inject/ping")
 async def inject_ping() -> dict:
     """Liveness + identity marker so the extension confirms it's BeatOS."""
     return {"beatos_inject": True}
@@ -45,7 +46,7 @@ async def stage_inject(req: StageRequest) -> dict:
     return {"ok": True}
 
 
-@router.get("/api/inject/pending")
+@read_router.get("/api/inject/pending")
 async def pending_inject(platform: str | None = None) -> dict:
     """Consume-on-read: returns the slot once, then clears it. A platform
     mismatch returns empty WITHOUT consuming (so the right platform tab gets it)."""
@@ -59,7 +60,7 @@ async def pending_inject(platform: str | None = None) -> dict:
     return {"staged": True, "platform": slot["platform"], "export": slot["export"]}
 
 
-@router.get("/api/inject/form-map/{platform}")
+@read_router.get("/api/inject/form-map/{platform}")
 async def form_map(platform: str) -> dict:
     fm = load_form_map(platform)
     if not fm:
