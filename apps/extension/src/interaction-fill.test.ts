@@ -111,3 +111,57 @@ describe("fillInteractions — antv3-select (genre)", () => {
     expect(document.querySelector(".ant-select-dropdown")).toBeNull(); // closePopups removed it
   });
 });
+
+describe("fillInteractions — key-triple", () => {
+  beforeEach(() => (document.body.innerHTML = ""));
+
+  const KEY_SPEC = {
+    type: "key-triple",
+    note: { triggerLabel: "音名", controlSelector: ".ant-select", optionContainer: ".ant-select-dropdown", optionItem: ".ant-select-dropdown-menu-item" },
+    accidental: { triggerLabel: "调号", controlSelector: ".ant-select", optionContainer: ".ant-select-dropdown", optionItem: ".ant-select-dropdown-menu-item", labelMap: { sharp: "♯", flat: "♭", natural: "无" } },
+    mode: { triggerLabel: "调式", controlSelector: ".ant-select", optionContainer: ".ant-select-dropdown", optionItem: ".ant-select-dropdown-menu-item", labelMap: { major: "Major", minor: "Minor" } },
+  };
+
+  function wireKeyForm(noteOpts: string[], accOpts: string[], modeOpts: string[]): void {
+    document.body.innerHTML = `
+      <div class="r"><span>音名</span><div class="ant-select" id="kn"></div></div>
+      <div class="r"><span>调号</span><div class="ant-select" id="ka"></div></div>
+      <div class="r"><span>调式</span><div class="ant-select" id="km"></div></div>`;
+    wireAntSelect(document.getElementById("kn")!, noteOpts);
+    wireAntSelect(document.getElementById("ka")!, accOpts);
+    wireAntSelect(document.getElementById("km")!, modeOpts, { multi: true }); // 调式 is multi-select
+  }
+
+  it("fills note + accidental + mode for 'F# minor'", async () => {
+    wireKeyForm(["C", "F", "G"], ["♯", "♭", "无"], ["Major", "Minor", "Dorian"]);
+    const map = { match: ["x"], fields: { key: KEY_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["key", "F# minor"]]), map);
+    expect(report.filled).toEqual(["key"]);
+    expect(document.getElementById("kn")!.getAttribute("data-selected")).toBe("F");
+    expect(document.getElementById("ka")!.getAttribute("data-selected")).toBe("♯");
+    expect(document.getElementById("km")!.getAttribute("data-selected")).toBe("Minor");
+  });
+
+  it("selects 无 for a natural key (C major) — accidental NOT skipped", async () => {
+    wireKeyForm(["C", "D"], ["♯", "♭", "无"], ["Major", "Minor"]);
+    const map = { match: ["x"], fields: { key: KEY_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["key", "C major"]]), map);
+    expect(report.filled).toEqual(["key"]);
+    expect(document.getElementById("ka")!.getAttribute("data-selected")).toBe("无");
+    expect(document.getElementById("km")!.getAttribute("data-selected")).toBe("Major");
+  });
+
+  it("reports missed when a sub-select option is absent", async () => {
+    wireKeyForm(["F"], ["♯"], ["Major"]); // no Minor
+    const map = { match: ["x"], fields: { key: KEY_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["key", "F# minor"]]), map);
+    expect(report.missed).toEqual(["key"]);
+  });
+
+  it("reports missed for an unparseable key", async () => {
+    wireKeyForm(["C"], ["无"], ["Major"]);
+    const map = { match: ["x"], fields: { key: KEY_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["key", "nonsense"]]), map);
+    expect(report.missed).toEqual(["key"]);
+  });
+});

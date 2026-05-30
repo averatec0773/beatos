@@ -1,5 +1,6 @@
 import { waitFor } from "./dom-wait";
 import type { ExportResult, FillReport, FormMap } from "./fill-form";
+import { decomposeKey } from "./key-decompose";
 
 export type DriverResult = "filled" | "missed";
 
@@ -95,8 +96,29 @@ const antv3Select: Driver = async (spec, key, exp, ctx) => {
   return ok ? "filled" : "missed";
 };
 
+const keyTriple: Driver = async (spec, key, exp, ctx) => {
+  const dk = decomposeKey(fieldValue(exp, key));
+  if (!dk) return "missed";
+  const subs: Array<{ sub: any; raw: string }> = [
+    { sub: spec.note, raw: dk.note },
+    { sub: spec.accidental, raw: dk.accidental },
+    { sub: spec.mode, raw: dk.mode },
+  ];
+  let ok = true;
+  for (const { sub, raw } of subs) {
+    if (!sub) continue;
+    const label = sub.labelMap ? (sub.labelMap[raw] ?? "") : raw;
+    if (label === "") continue; // labelMap intentionally maps this part to nothing
+    const picked = await pickAntOption(ctx, sub, label);
+    if (picked && ctx.doc.querySelector(sub.optionContainer)) closePopups(ctx.doc);
+    if (!picked) ok = false;
+  }
+  return ok ? "filled" : "missed";
+};
+
 const DRIVERS: Record<string, Driver> = {
   "antv3-select": antv3Select,
+  "key-triple": keyTriple,
 };
 
 export async function fillInteractions(doc: Document, exp: ExportResult, formMap: FormMap): Promise<FillReport> {
