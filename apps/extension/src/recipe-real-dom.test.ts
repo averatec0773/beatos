@@ -131,4 +131,10 @@ describe("recipe vs real saved NetEase DOM", () => {
     expect(picked).toContain("无"); // labelMap natural -> 无 matches NetEase
     expect(picked).toContain("Major");
   });
+
+  it("album_name native field selector resolves on the real page", () => {
+    const f = RECIPE.fields as Record<string, any>;
+    expect(f.album_name, "album_name in recipe").toBeTruthy();
+    expect(document.querySelector(f.album_name.selector), "album_name input").toBeTruthy();
+  });
 });

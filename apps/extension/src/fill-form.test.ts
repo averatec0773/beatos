@@ -95,6 +95,15 @@ describe("fillForm", () => {
     expect(report.filled).toEqual(["title"]);
   });
 
+  it("fills a native album_name text field", () => {
+    document.body.innerHTML = `<input id="al" placeholder="输入专辑名称，50字以内" />`;
+    const map = { match: ["x"], fields: { album_name: { selector: "#al", type: "text" } } } as unknown as FormMap;
+    const exp = { platform: "netease", fields: [{ key: "album_name", label: "album_name", value: "2026 仙泉", options: [], note: null }] } as ExportResult;
+    const report = fillForm(document, exp, map);
+    expect(report.filled).toEqual(["album_name"]);
+    expect((document.getElementById("al") as HTMLInputElement).value).toBe("2026 仙泉");
+  });
+
   it("ignores interaction-type fields (no selector, non-native type)", () => {
     document.body.innerHTML = `<input id="title">`;
     const map = {

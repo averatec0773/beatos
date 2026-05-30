@@ -3,7 +3,7 @@ import { fillInteractions } from "./interaction-fill";
 
 const POLL_MS = 2000;
 
-function overlay(report: { filled: string[]; missed: string[] }, audioHint: string): void {
+function overlay(report: { filled: string[]; missed: string[] }, audioHint: string, coverHint = ""): void {
   const id = "beatos-overlay";
   document.getElementById(id)?.remove();
   const box = document.createElement("div");
@@ -24,6 +24,7 @@ function overlay(report: { filled: string[]; missed: string[] }, audioHint: stri
     box.appendChild(line(`未匹配字段(可能改版): ${report.missed.join(", ")}`, "color:#f6b"));
   }
   box.appendChild(line(`请拖入音频文件 ${audioHint}`, "margin-top:6px;color:#9cf"));
+  if (coverHint) box.appendChild(line(`请拖入封面图 ${coverHint}`, "margin-top:2px;color:#9cf"));
   box.appendChild(line("核对后由你手动点提交", "margin-top:2px;color:#888"));
 
   document.body.appendChild(box);
@@ -33,12 +34,14 @@ function overlay(report: { filled: string[]; missed: string[] }, audioHint: stri
 async function apply(exp: ExportResult, formMap: FormMap): Promise<void> {
   const title = exp.fields.find((f) => f.key === "title")?.value ?? "";
   const hint = title ? `"${title}"` : "";
+  const coverHint = "（用作品封面）";
   const native = fillForm(document, exp, formMap);
-  overlay(native, hint); // instant feedback for the native text fields
+  overlay(native, hint, coverHint); // instant feedback for the native text fields
   const interactive = await fillInteractions(document, exp, formMap);
   overlay(
     { filled: [...native.filled, ...interactive.filled], missed: [...native.missed, ...interactive.missed] },
     hint,
+    coverHint,
   ); // update with interaction results
 }
 
