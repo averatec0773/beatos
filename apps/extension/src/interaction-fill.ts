@@ -19,6 +19,21 @@ export function fieldValue(exp: ExportResult, key: string): string {
   return exp.fields.find((f) => f.key === key)?.value ?? "";
 }
 
+/**
+ * Last-resort cleanup: some Ant multi-select dropdowns get orphaned open on the
+ * NetEase page and ignore every dismissal (Esc, outside-click, trigger re-click).
+ * Force-hide any leftover visible dropdown so it stops overlaying/blocking the
+ * form. We hide rather than remove to avoid React removeChild errors on live nodes.
+ */
+function forceHideOpenDropdowns(doc: Document): void {
+  doc.querySelectorAll(".ant-select-dropdown:not(.ant-select-dropdown-hidden)").forEach((el) => {
+    const d = el as HTMLElement;
+    d.classList.add("ant-select-dropdown-hidden");
+    d.style.display = "none";
+    d.style.pointerEvents = "none";
+  });
+}
+
 export function closePopups(doc: Document): void {
   // Ant v3 multi-select dropdowns close on an OUTSIDE pointer event, not Esc.
   // Dispatch a body mousedown+click (outside the portal) plus Esc + blur to
@@ -280,5 +295,6 @@ export async function fillInteractions(doc: Document, exp: ExportResult, formMap
     }
     (result === "filled" ? filled : missed).push(key);
   }
+  forceHideOpenDropdowns(doc);
   return { filled, missed };
 }
