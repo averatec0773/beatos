@@ -184,7 +184,12 @@ describe("fillInteractions — tag-modal", () => {
       for (const t of tags) {
         const b = document.createElement("button");
         b.textContent = t;
-        b.addEventListener("click", () => b.setAttribute("data-on", "1"));
+        b.addEventListener("click", () => {
+          const mark = document.createElement("i");
+          mark.className = "picked";
+          mark.textContent = t;
+          document.body.appendChild(mark); // survives modal.remove()
+        });
         modal.appendChild(b);
       }
       const ok = document.createElement("button");
@@ -212,7 +217,7 @@ describe("fillInteractions — tag-modal", () => {
       map,
     );
     expect(report.filled).toEqual(["mood"]);
-    const on = [...document.querySelectorAll("button[data-on]")].map((b) => b.textContent);
+    const on = [...document.querySelectorAll("i.picked")].map((b) => b.textContent);
     expect(on.sort()).toEqual(["学习", "跑步", "驾驶"]);
     expect(document.querySelector(".ant-modal")).toBeNull(); // 确定 closed it
   });

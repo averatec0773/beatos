@@ -148,29 +148,21 @@ const tagModal: Driver = async (spec, key, exp, ctx) => {
   const modal = await ctx.waitFor(spec.modal, { timeoutMs: 2000 });
   if (!modal) return "missed";
 
-  const wantConfirm = normText(spec.confirmText ?? "确定");
-  const allButtons = Array.from(modal.querySelectorAll(spec.tagButton ?? "button")) as HTMLElement[];
-  const confirm =
-    (allButtons.find((b) => normText(b.textContent) === wantConfirm) as HTMLElement | undefined) ?? null;
-  const tagButtons = allButtons.filter((b) => b !== confirm);
-
-  const clicked: HTMLElement[] = [];
+  const buttons = Array.from(modal.querySelectorAll(spec.tagButton ?? "button")) as HTMLElement[];
+  let matched = 0;
   for (const v of values) {
-    const btn = tagButtons.find((b) => (b.textContent ?? "").trim() === v);
+    const btn = buttons.find((b) => (b.textContent ?? "").trim() === v);
     if (btn) {
       btn.click();
-      clicked.push(btn);
+      matched++;
     }
   }
-  const matched = clicked.length;
 
-  // Re-anchor clicked buttons to document.body so they survive modal removal.
-  const anchor = ctx.doc.createElement("div");
-  anchor.setAttribute("data-tag-modal-selection", "1");
-  anchor.style.display = "none";
-  for (const b of clicked) anchor.appendChild(b);
-  ctx.doc.body.appendChild(anchor);
-
+  const wantConfirm = normText(spec.confirmText ?? "确定");
+  const confirm =
+    (Array.from(modal.querySelectorAll("button")).find((b) => normText(b.textContent) === wantConfirm) as
+      | HTMLElement
+      | undefined) ?? null;
   if (confirm) confirm.click();
   else closePopups(ctx.doc);
 
