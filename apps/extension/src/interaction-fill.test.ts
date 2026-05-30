@@ -121,6 +121,22 @@ describe("fillInteractions — antv3-select (genre)", () => {
     expect(report.filled).toEqual(["genre"]);
     expect(trigs[1].getAttribute("data-selected")).toBe("Minor");
   });
+
+  it("pickAntOption finds the matching option across multiple open dropdowns", async () => {
+    document.body.innerHTML = `
+      <div class="ant-select-dropdown"><div class="ant-select-dropdown-menu-item">C</div><div class="ant-select-dropdown-menu-item">D</div></div>
+      <div class="ant-select-dropdown"><div class="ant-select-dropdown-menu-item">Major</div><div class="ant-select-dropdown-menu-item">Minor</div></div>
+      <div class="ant-select" id="t"></div>`;
+    let clicked = "";
+    document.querySelectorAll(".ant-select-dropdown-menu-item").forEach((it) =>
+      it.addEventListener("click", () => { clicked = it.textContent ?? ""; }),
+    );
+    const spec = { type: "antv3-select", triggerSelector: "#t", optionContainer: ".ant-select-dropdown", optionItem: ".ant-select-dropdown-menu-item", match: "exact" };
+    const map = { match: ["x"], fields: { genre: spec } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["genre", "Minor"]]), map);
+    expect(report.filled).toEqual(["genre"]);
+    expect(clicked).toBe("Minor"); // matched option lives in the SECOND dropdown
+  });
 });
 
 describe("fillInteractions — key-triple", () => {

@@ -1,4 +1,4 @@
-import { waitFor } from "./dom-wait";
+import { waitFor, sleep } from "./dom-wait";
 import type { ExportResult, FillReport, FormMap } from "./fill-form";
 import { setNativeValue } from "./fill-form";
 import { decomposeKey } from "./key-decompose";
@@ -74,6 +74,7 @@ export async function pickAntOption(
   ctx: DriverCtx,
   cfg: {
     triggerSelector?: string;
+    triggerIndex?: number;
     triggerLabel?: string;
     controlSelector?: string;
     optionContainer: string;
@@ -85,13 +86,21 @@ export async function pickAntOption(
   const trig = resolveTrigger(ctx.doc, cfg);
   if (!trig) return false;
   trig.click();
-  const container = await ctx.waitFor(cfg.optionContainer, { timeoutMs: 2000 });
-  if (!container) return false;
-  const items = Array.from(container.querySelectorAll(cfg.optionItem)) as HTMLElement[];
-  const hit = items.find((it) => optionMatches((it.textContent ?? "").trim(), target, cfg.match ?? "exact"));
-  if (!hit) return false;
-  hit.click();
-  return true;
+  // Wait for at least one dropdown to appear.
+  const appeared = await ctx.waitFor(cfg.optionContainer, { timeoutMs: 2000 });
+  if (!appeared) return false;
+  // Multiple selects can be open at once (e.g. the KEY triple). Search EVERY
+  // visible dropdown and click the matching option wherever it lives.
+  const containers = Array.from(ctx.doc.querySelectorAll(cfg.optionContainer));
+  for (const c of containers) {
+    const items = Array.from(c.querySelectorAll(cfg.optionItem)) as HTMLElement[];
+    const hit = items.find((it) => optionMatches((it.textContent ?? "").trim(), target, cfg.match ?? "exact"));
+    if (hit) {
+      hit.click();
+      return true;
+    }
+  }
+  return false;
 }
 
 const antv3Select: Driver = async (spec, key, exp, ctx) => {
@@ -116,6 +125,8 @@ const keyTriple: Driver = async (spec, key, exp, ctx) => {
     if (!sub) continue;
     const label = sub.labelMap ? (sub.labelMap[raw] ?? "") : raw;
     if (label === "") continue; // labelMap intentionally maps this part to nothing
+    closePopups(ctx.doc);     // dismiss the previous sub's dropdown first
+    await sleep(120);
     const picked = await pickAntOption(ctx, sub, label);
     if (picked && ctx.doc.querySelector(sub.optionContainer)) closePopups(ctx.doc);
     if (!picked) ok = false;
