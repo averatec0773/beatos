@@ -72,10 +72,12 @@ function optionMatches(text: string, target: string, mode: string): boolean {
 }
 
 /**
- * Open an Ant v3 select (trigger resolved by label or selector) and click the
- * option whose text matches `target`. Returns true on a successful click.
- * Does NOT close the dropdown — callers close (multi-selects stay open) unless
- * used inside a modal (where Esc would close the modal).
+ * Open an Ant v3 select (trigger resolved by label/selector/index), scan every
+ * open dropdown for the option whose text matches `target`, and click it. On a
+ * multi-select (dropdown stays open after the pick) it re-clicks the trigger to
+ * toggle closed. Returns true on a successful click. NOTE: NetEase's 调式
+ * multi-select ignores this close (and Esc, and outside-clicks) and may linger —
+ * a known, accepted limitation; the value is still correctly committed.
  */
 export async function pickAntOption(
   ctx: DriverCtx,
