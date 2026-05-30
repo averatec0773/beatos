@@ -137,4 +137,10 @@ describe("recipe vs real saved NetEase DOM", () => {
     expect(f.album_name, "album_name in recipe").toBeTruthy();
     expect(document.querySelector(f.album_name.selector), "album_name input").toBeTruthy();
   });
+
+  it("album_description native field selector resolves on the real page", () => {
+    const f = RECIPE.fields as Record<string, any>;
+    expect(f.album_description, "album_description in recipe").toBeTruthy();
+    expect(document.querySelector(f.album_description.selector), "album_description textarea").toBeTruthy();
+  });
 });

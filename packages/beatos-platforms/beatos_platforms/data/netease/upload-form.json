@@ -6,6 +6,7 @@
     "bpm":         { "selector": "input[placeholder*='每分钟拍子数']", "type": "text" },
     "description": { "selector": "textarea[placeholder*='对beat作品的介绍']", "type": "textarea" },
     "album_name": { "selector": "input[placeholder*='输入专辑名称']", "type": "text" },
+    "album_description": { "selector": "textarea[placeholder*='输入专辑描述']", "type": "textarea" },
     "genre": {
       "type": "antv3-select",
       "triggerSelector": "[data-ne2e-name='beatGenre'] .ant-select-selection",
