@@ -4,6 +4,12 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.40] — 2026-05-30 — Upload templates (album name / Beat 名称 / Beat 说明)
+
+### Added
+
+- **Configurable upload templates** — Settings → 上传模板 lets you define three `{}` templates (专辑名 / Beat 名称 / Beat 说明) plus a producer credit, rendered at export time so the NetEase upload auto-fill submits formatted text instead of raw title/description. Placeholders: `{title} {genre} {year} {prod} {bpm} {key}` (unknown tokens kept verbatim, missing values blank). Defaults match the producer's existing format (`[FREE] "{title}" - {genre} TYPE BEAT`, `{year} {title}` for the album, and the non-commercial license boilerplate). Every beat maps to a single-track album; the extension now also fills 专辑名 and shows a cover-image reminder in the overlay (you still drag the cover + audio and submit — no auto-submit). Stored in `app_setting["upload_templates"]` (per-field merge over defaults; corrupt/partial settings fall back safely). The renderer (`beatos-core/export/templates.py`) is a pure function — the year is injected by `export_service`, keeping it deterministic and unit-tested. Verified end-to-end on the live NetEase page (专辑名 = `2026 仙泉`, Beat 名称 = `[FREE] "仙泉" - 国风 TYPE BEAT`, Beat 说明 = the boilerplate).
+
 ## [0.0.39] — 2026-05-30 — Platform auto-fill: KEY/标签/价格 fixed against the live page
 
 ### Fixed

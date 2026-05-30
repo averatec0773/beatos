@@ -192,16 +192,13 @@ All three reported failures were root-caused by driving the real logged-in NetEa
 - **价格 multi-tier**: map BeatOS's multiple tiers onto NetEase's fixed sub-tier matrix (MP3 / MP3+WAV / +分轨) rather than filling only the first 售价 row.
 - **说明标签 自定义 tab**: also push unmatched moods into the 自定义标签 free-text input (currently only matches the fixed 适用场景 + 情绪表达 buttons).
 
-### Phase 2-C — album flow + formatted name/description (NEXT, design captured live 2026-05-30)
+### Phase 2-C — upload templates + single-track album (templates SHIPPED v0.0.40)
 
-Studied the live NetEase upload page. The page has TWO sections we don't yet model:
+**Templates + single-album name shipped in v0.0.40** — see CHANGELOG. Three `{}` templates (专辑名 / Beat 名称 / Beat 说明) + producer credit, configured in Settings → 上传模板, stored in `app_setting["upload_templates"]`, rendered by the pure `beatos-core/export/templates.py` and threaded through `netease.render`; the extension fills 专辑名 as a native field + shows a cover reminder. Decided during brainstorming: **every beat = a single-track album**, so NO album entity / migration / new track field — the album name is just another template. The `{ARTIST}` idea was dropped (the producer writes the reference artist into `{title}` or the template literal).
 
-**1. 专辑 (album) section, above the Beat fields** — NetEase separates album from track. Fields: 专辑封面 (cover upload) · 专辑名称 (≤50 chars) · 专辑类型 (select, default 专辑, currently disabled) · 专辑版本 · 发行日期 · 专辑描述. There's also a `选择专辑` text input (pick an existing album vs. create new). BeatOS has no album concept yet — needs: an album entity (or at least a "create/select album" step in the export→inject flow), cover art, and an album-name/type/date carry-through. Until then the producer fills the album section manually. Decide: model albums in BeatOS, or just expose album fields in the recipe for manual+assisted fill.
-
-**2. Formatted Beat名称 + Beat说明 templates** — the producer's names/descriptions follow fixed, derivable patterns, so BeatOS should generate them rather than ship raw `track.title`:
-  - **Beat名称 pattern** (from the live list): `[FREE] "{title}" - {genre} {ARTIST} TYPE BEAT` — e.g. `[FREE] "仙泉" - 中国风 GUNNA TYPE BEAT`, `[FREE] "MEMPHIS叁" - 孟菲斯 APMOZART TYPE BEAT`. Needs a template with title + genre(zh) + a "TYPE BEAT" artist-reference field (new track metadata? or per-export input) + a free/paid prefix.
-  - **Beat说明 template** (fixed boilerplate, producer-specific): Prod credit line (`Prod.Averatec x Redketch`), the 评论+关注+歌名后缀 non-commercial-grant terms, the 25% play-revenue binding restriction, the "no other platforms / MV / performance" prohibitions, and the purchase CTA. Should be a configurable per-producer description template (with `{prod}`, `{title}` slots), stored as a setting and rendered at export time — NOT hardcoded.
-  - Implement as: a name/description **template setting** + a renderer in the export layer (`beatos-core/export/platforms/netease.py` builds the formatted `title`/`description` values), so the existing inject pipeline carries them through unchanged.
+Remaining Phase 2-C follow-ups (future):
+- **Album cover auto-carry**: BeatOS knows the track's `cover_asset_id` but the extension can't inject a local file into a file input (and must never auto-submit) — today it's a manual drag + overlay reminder. A future path could expose the cover file to the producer more directly.
+- **Album type / 版本 / 发行日期 / 专辑描述**: still filled manually on the page; could be added to the recipe/templates if they turn out to need automation.
 
 ### Phase 2-A — MCP tool + multi-platform (pending)
 
