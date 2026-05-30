@@ -163,11 +163,21 @@ Both originally-planned features are now delivered:
 
 ## v0.2.0 — First publish adapter (NetEase Cloudmusic)
 
-- Adapter abstraction in `packages/beatos-core/beatos_core/adapters/` (currently empty stub).
-- NetEase Cloudmusic Beat-upload adapter. Vocab maps already exist at `packages/beatos-platforms/netease/{genre,mood}-map.json` (identity stubs).
-- Execution via Playwright CDP against user-launched Chrome on a dedicated profile (`~/.chrome-beatos-profile`, `--remote-debugging-port=9222`).
-- "Launch Browser for BeatOS" UI + "Inject" button per track. Progress / validation surfacing in the bottom panel.
-- Two-phase commit pattern (built in v0.0.21) reused for `inject_to_platform`.
+> **Implementation approach updated** (feat/platform-inject-extension). The original Playwright/CDP sketch (`beatos-core/adapters/` + `--remote-debugging-port=9222`) is superseded by a browser-extension + fixed-port sidecar design. See `apps/extension/README.md`.
+
+### Phase 1 — browser-extension form-filling (IMPLEMENTED, feat/platform-inject-extension)
+
+- **Sidecar inject port**: fixed port **48923** (`BEATOS_INJECT_PORT`). The sidecar exposes `POST /api/inject/stage` (write metadata slot) and `GET /api/inject/form-map/{platform}` (serve selector maps). If 48923 is already in use at startup, extension upload is disabled that session (main app unaffected).
+- **ExportDialog trigger**: "发送到上传页" button in the per-track 导出 dialog stages metadata to the port, then opens the platform URL in the default browser.
+- **Browser extension** (`apps/extension/`): content script polls the staging slot, fills matched fields via selectors, shows an overlay (filled count + unmatched fields + which audio file to drag). The extension **never submits** — the user drags the audio file and clicks submit.
+- **Selector maps as data**: field→CSS-selector mappings live in `packages/beatos-platforms/data/netease/upload-form.json`, served via `GET /api/inject/form-map/netease`. NetEase page redesigns only require updating the JSON — no extension reload needed.
+- **NetEase only** for Phase 1. Vocab maps at `packages/beatos-platforms/` already cover genre/mood translation.
+- The empty `beatos-core/adapters/` stub is unused; the Playwright/CDP path is abandoned.
+
+### Phase 2 — MCP tool + multi-platform (pending)
+
+- MCP `inject_to_platform` tool with 2PC approval (`token` → `await_approval`), consistent with the existing write-surface pattern.
+- Additional platforms via data-driven selector maps in `beatos-platforms/data/{platform}/upload-form.json`.
 - Spec hooks: `docs/superpowers/specs/future-netease-license-model.md`.
 
 ---
