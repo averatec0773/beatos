@@ -184,6 +184,7 @@ npm run build && npm run smoke         # Playwright _electron end-to-end
 
 ```
 apps/desktop/              Electron shell + React renderer
+apps/extension/            Browser extension — auto-fills platform upload forms (v0.0.37, Phase 1)
 packages/
   beatos-core/             Pure Python business logic (no web/RPC deps)
   beatos-http/             FastAPI facade for the renderer

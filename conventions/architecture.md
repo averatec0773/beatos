@@ -13,7 +13,7 @@ BeatOS is a local-first desktop app for beat producers — catalog beats and the
 | **Track** | Beat record with metadata + 0+ assets; globally unique. |
 | **Asset** | File attached to a Track via `role` (`audio_tagged_wav`, `audio_untagged_mp3`, `cover`, `stems`). Stored with absolute path; `missing: bool` reflects on-disk presence (sweeper-maintained). |
 | **List** | User-curated playlist; membership preserved across soft-delete / restore. |
-| **Adapter** | Platform-specific browser-automation class `inject(page, track_data)` (not yet implemented; v0.1.0). |
+| **Adapter** | Per-platform upload integration. As of v0.0.37 implemented (Phase 1) as a browser extension that fills the platform form from a sidecar fixed-port (48923) staging slot — see the v0.0.37 section. The earlier Playwright/CDP `inject(page, track_data)` sketch is superseded. |
 | **Inject** | User action running an adapter against an open browser page; code fills form, user submits. Never auto-submit. |
 | **Sidecar** | Python backend (`packages/beatos-*`), launched as child process by Electron main. |
 | **MCP** | Model Context Protocol facade. Since v0.0.23: FastMCP server runs inside the sidecar (`beatos-http`), mounted at `/mcp` (Streamable HTTP). Claude Desktop reaches it via the `beatos-mcp` launcher → `mcp-proxy` stdio bridge. Writes require two-phase `await_approval` commit. |
@@ -314,6 +314,18 @@ In Electron main, derive from `app.getPath('userData') + '/runtime/handshake.jso
 
 **Autofill-threshold coupling:** `BPM_AUTOFILL_CONFIDENCE` (0.7) and `KEY_AUTOFILL_CONFIDENCE` (0.6) are defined in both `apps/desktop/src/renderer/src/lib/audio-analysis-constants.ts` (TypeScript) and `packages/beatos-core/beatos_core/audio_analysis/constants.py` (Python). Both sides must be changed together — the Python constants govern batch-job autofill in the sidecar; the TypeScript constants govern single-track auto-analyze and UI threshold display.
 
+### v0.0.37 — Platform Inject (Phase 1, browser extension)
+
+Auto-fills a platform (NetEase) upload form with metadata staged from BeatOS. Human-triggered, metadata-only — the user drags the audio file and submits manually. Replaces the abandoned Playwright/CDP adapter sketch.
+
+| Capability | Location | Purpose |
+|---|---|---|
+| Browser extension | `apps/extension/` (standalone MV3; esbuild bundle, vitest+jsdom) | `src/fill-form.ts` pure filler (React-safe `setNativeValue`, reports filled/missed, select value-mismatch → missed); `background.ts` does the CSP-bypassing fetch (host_permissions); `content.ts` drives a 2 s poll + renders an overlay (built via `textContent`, never `innerHTML`). NEVER submits the form. |
+| Inject staging slot | `packages/beatos-http/beatos_http/routes/inject.py` | Single overwrite slot (module singleton `_STAGED`). `POST /api/inject/stage {track_id, platform}` resolves an `ExportResult` and stores it (on `router`, main API only). Reads on `read_router`: `GET /api/inject/pending` (consume-on-read; platform mismatch does NOT consume), `GET /api/inject/form-map/{platform}`, `GET /api/inject/ping`. |
+| Fixed-port inject app | `app.py` (`create_inject_app`, `INJECT_PORT=48923`, `_try_bind_fixed`) + `__main__.py` (`_serve` runs main API + inject app concurrently via `asyncio.gather`) | The extension can't read the ephemeral handshake port, so the sidecar also serves the inject **read_router only** on fixed port 48923 (no CORS; host_permissions bypass it). Port conflict → graceful degrade (warn, main API only); a post-startup inject fault is isolated and never takes down the main API. |
+| Selector map (data) | `packages/beatos-platforms/beatos_platforms/data/netease/upload-form.json` + `load_form_map(platform)` | Field→selector map served via `/api/inject/form-map`. NetEase redesign → fix the JSON (no extension reload). Phase 1 auto-fills native text inputs (title/bpm/description, placeholder selectors); genre/key/mood/tags/price are click-to-open Ant widgets (documented under `manual`, filled by hand — Phase 2 candidate). |
+| Renderer trigger | `apps/desktop/src/renderer/src/api/inject.ts` + ExportDialog "发送到上传页" button | Stages the current track+platform via the ephemeral main port; double-submit + pre-load guarded. |
+
 ### v0.0.23 — MCP Transport Migration
 
 | Capability | Location | Purpose |
@@ -361,3 +373,4 @@ Trust boundary = local stdio process; no network auth needed. See [ROADMAP.md](.
 - **`beatos_core.two_phase.verify_token` is read-only.** Must NOT call `conn.commit()`. The lazy-expire commit (v0.0.20) was removed in v0.0.21 because it broke outer transactions (approve handler needs `verify+insert+consume` atomic). The cleanup task (`_periodic_token_cleanup`) owns the `pending → expired` transition.
 - **`_APPROVE_HANDLERS` in `beatos_http/routes/tokens.py` is the sole translator.** This registry is the only place that maps a token's `tool_name` to actual write code. Do not dispatch tokens from the MCP server side; all write tool dispatch must go through `POST /api/tokens/{token}/approve` in the HTTP facade.
 - New MCP write tools register an approve handler via `@register_approve_handler(tool_name)` in `packages/beatos-http/beatos_http/handlers/<group>.py`. Do not add ad-hoc routes for write surfaces — `_APPROVE_HANDLERS` is the dispatch.
+- **The fixed inject port (48923) serves `read_router` only** (v0.0.37). `create_inject_app` must never expose write endpoints (e.g. `/api/inject/stage`) — it's an unauthenticated localhost port reachable by any local process; the renderer stages via the ephemeral main port instead. The browser extension NEVER programmatically submits a platform upload form (see critical rule 3).

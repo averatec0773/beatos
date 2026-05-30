@@ -4,6 +4,13 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.37] — 2026-05-29 — Platform upload auto-fill (browser extension, Phase 1)
+
+### Added
+
+- **Auto-fill a platform upload form from BeatOS** — a new companion browser extension (`apps/extension/`, MV3, load-unpacked) fills the NetEase 音乐人 beat-upload form with a track's metadata. Trigger it from the 导出 dialog → pick 网易云 → **发送到上传页**; switch to the logged-in upload tab and the extension fills the native text fields (Beat名称 / BPM / Beat说明) and shows an overlay listing what it filled and what's left. You drag the audio file and click submit yourself — the extension **never** submits. Click-to-open Ant widgets (曲风 / KEY / 标签 / 价格) are left for manual selection in this phase.
+- **Sidecar inject staging** — `POST /api/inject/stage` resolves a track+platform into the existing `ExportResult` and holds it in a single overwrite slot; the extension polls a fixed port **48923** (`GET /api/inject/pending` consume-on-read, `GET /api/inject/form-map/{platform}`, `GET /api/inject/ping`). The main API keeps its ephemeral port; the fixed inject port is read-only and degrades gracefully if already in use. Field→selector maps live as data in `beatos-platforms/.../netease/upload-form.json` (fixable without reloading the extension). Uses the user's own logged-in browser session — no separate profile, no programmatic submit. (Phase 2 will add the AI/MCP `inject_to_platform` trigger via two-phase commit and multi-platform support.)
+
 ## [0.0.36] — 2026-05-29 — Genre/Mood display language toggle
 
 ### Added
