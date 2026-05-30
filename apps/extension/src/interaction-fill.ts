@@ -20,7 +20,14 @@ export function fieldValue(exp: ExportResult, key: string): string {
 }
 
 export function closePopups(doc: Document): void {
-  doc.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  // Ant v3 multi-select dropdowns close on an OUTSIDE pointer event, not Esc.
+  // Dispatch a body mousedown+click (outside the portal) plus Esc + blur to
+  // cover single-selects, multi-selects, and modals.
+  const body = doc.body;
+  body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  body.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   (doc.activeElement as HTMLElement | null)?.blur?.();
 }
 

@@ -30,6 +30,9 @@ function wireAntSelect(trigger: HTMLElement, options: string[], opts: { multi?: 
     document.addEventListener("keydown", function onEsc(e) {
       if ((e as KeyboardEvent).key === "Escape") { dd.remove(); document.removeEventListener("keydown", onEsc); }
     });
+    document.body.addEventListener("mousedown", function onOutside() {
+      dd.remove(); document.body.removeEventListener("mousedown", onOutside);
+    });
   });
 }
 
