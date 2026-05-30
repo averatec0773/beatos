@@ -3,6 +3,7 @@ from __future__ import annotations
 from beatos_platforms import load_vocab_map
 
 from beatos_core.export.models import ExportField, ExportResult
+from beatos_core.export.templates import render_template
 from beatos_core.models.license_tier import LicenseTier
 from beatos_core.models.track import Track
 
@@ -28,14 +29,29 @@ def _price_line(tier: LicenseTier) -> str:
     return f"{label}: {' / '.join(parts)}"
 
 
-def render(track: Track, tiers: list[LicenseTier]) -> ExportResult:
+def render(
+    track: Track,
+    tiers: list[LicenseTier],
+    templates: dict[str, str],
+    *,
+    year: int = 0,
+) -> ExportResult:
     genre_map = load_vocab_map(PLATFORM, "genre")
     mood_map = load_vocab_map(PLATFORM, "mood")
 
-    fields: list[ExportField] = []
-    fields.append(ExportField(key="title", label="标题", value=track.title or ""))
-
     genres = [genre_map.get(g, g) for g in (track.genre or [])]
+    genre_zh = genres[0] if genres else ""
+    prod = templates.get("prod", "")
+
+    def _tmpl(key: str) -> str:
+        return render_template(
+            templates.get(key, ""), track, prod=prod, year=year, genre_zh=genre_zh
+        )
+
+    fields: list[ExportField] = []
+    fields.append(ExportField(key="album_name", label="专辑名", value=_tmpl("album_name")))
+    fields.append(ExportField(key="title", label="标题", value=_tmpl("beat_name")))
+
     if len(genres) <= 1:
         fields.append(ExportField(key="genre", label="流派", value=genres[0] if genres else ""))
     else:
@@ -51,7 +67,7 @@ def render(track: Track, tiers: list[LicenseTier]) -> ExportResult:
     fields.append(ExportField(key="bpm", label="BPM",
                               value=str(track.bpm) if track.bpm is not None else ""))
     fields.append(ExportField(key="key", label="调性", value=track.key_signature or ""))
-    fields.append(ExportField(key="description", label="简介", value=track.description or ""))
+    fields.append(ExportField(key="description", label="简介", value=_tmpl("beat_description")))
     fields.append(ExportField(key="tags", label="标签", value=" ".join(track.tags or [])))
 
     price_value = "\n".join(_price_line(t) for t in tiers)
