@@ -40,6 +40,10 @@ def render(
     mood_map = load_vocab_map(PLATFORM, "mood")
 
     genres = [genre_map.get(g, g) for g in (track.genre or [])]
+    # beat_name's {genre} token always uses the FIRST genre, even when the genre
+    # field below downgrades to options-with-note (multi-genre → manual pick). A
+    # Beat name needs one concrete genre; the producer may pick a different one
+    # in the selector — that mismatch is intentional, not a bug.
     genre_zh = genres[0] if genres else ""
     prod = templates.get("prod", "")
 
