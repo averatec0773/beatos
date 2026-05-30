@@ -31,14 +31,15 @@ function overlay(report: { filled: string[]; missed: string[] }, audioHint: stri
 }
 
 async function apply(exp: ExportResult, formMap: FormMap): Promise<void> {
-  const native = fillForm(document, exp, formMap);
-  const interactive = await fillInteractions(document, exp, formMap);
-  const report = {
-    filled: [...native.filled, ...interactive.filled],
-    missed: [...native.missed, ...interactive.missed],
-  };
   const title = exp.fields.find((f) => f.key === "title")?.value ?? "";
-  overlay(report, title ? `"${title}"` : "");
+  const hint = title ? `"${title}"` : "";
+  const native = fillForm(document, exp, formMap);
+  overlay(native, hint); // instant feedback for the native text fields
+  const interactive = await fillInteractions(document, exp, formMap);
+  overlay(
+    { filled: [...native.filled, ...interactive.filled], missed: [...native.missed, ...interactive.missed] },
+    hint,
+  ); // update with interaction results
 }
 
 async function poll(): Promise<void> {

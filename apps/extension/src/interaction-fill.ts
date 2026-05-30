@@ -47,7 +47,12 @@ export function findControlByLabel(doc: Document, label: string, controlSel: str
 }
 
 function resolveTrigger(doc: Document, spec: any): HTMLElement | null {
-  if (spec.triggerSelector) return doc.querySelector(spec.triggerSelector) as HTMLElement | null;
+  if (spec.triggerSelector) {
+    if (typeof spec.triggerIndex === "number") {
+      return (doc.querySelectorAll(spec.triggerSelector)[spec.triggerIndex] as HTMLElement) ?? null;
+    }
+    return doc.querySelector(spec.triggerSelector) as HTMLElement | null;
+  }
   if (spec.triggerLabel)
     return findControlByLabel(doc, spec.triggerLabel, spec.controlSelector ?? ".ant-select, .ant-select-selection");
   return null;

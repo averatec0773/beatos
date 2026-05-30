@@ -110,6 +110,17 @@ describe("fillInteractions — antv3-select (genre)", () => {
     expect(document.getElementById("g")!.getAttribute("data-selected")).toBe("中文说唱 Chinese Hip Hop");
     expect(document.querySelector(".ant-select-dropdown")).toBeNull(); // closePopups removed it
   });
+
+  it("triggerIndex selects the Nth matching trigger", async () => {
+    document.body.innerHTML = `<div class="kbox"><div class="ant-select" data-i="0"></div><div class="ant-select" data-i="1"></div><div class="ant-select" data-i="2"></div></div>`;
+    const trigs = [...document.querySelectorAll(".ant-select")] as HTMLElement[];
+    wireAntSelect(trigs[1], ["Major", "Minor"]); // only the index-1 trigger opens options
+    const spec = { type: "antv3-select", triggerSelector: ".kbox .ant-select", triggerIndex: 1, optionContainer: ".ant-select-dropdown", optionItem: ".ant-select-dropdown-menu-item", match: "exact" };
+    const map = { match: ["x"], fields: { genre: spec } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["genre", "Minor"]]), map);
+    expect(report.filled).toEqual(["genre"]);
+    expect(trigs[1].getAttribute("data-selected")).toBe("Minor");
+  });
 });
 
 describe("fillInteractions — key-triple", () => {
