@@ -1,4 +1,5 @@
 import { fillForm, type ExportResult, type FormMap } from "./fill-form";
+import { fillInteractions } from "./interaction-fill";
 
 const POLL_MS = 2000;
 
@@ -29,8 +30,13 @@ function overlay(report: { filled: string[]; missed: string[] }, audioHint: stri
   setTimeout(() => box.remove(), 12000);
 }
 
-function apply(exp: ExportResult, formMap: FormMap): void {
-  const report = fillForm(document, exp, formMap);
+async function apply(exp: ExportResult, formMap: FormMap): Promise<void> {
+  const native = fillForm(document, exp, formMap);
+  const interactive = await fillInteractions(document, exp, formMap);
+  const report = {
+    filled: [...native.filled, ...interactive.filled],
+    missed: [...native.missed, ...interactive.missed],
+  };
   const title = exp.fields.find((f) => f.key === "title")?.value ?? "";
   overlay(report, title ? `"${title}"` : "");
 }
@@ -43,7 +49,7 @@ async function poll(): Promise<void> {
     return; // background asleep / extension reloading — try next tick
   }
   if (resp?.staged) {
-    apply(resp.export as ExportResult, resp.formMap as FormMap);
+    await apply(resp.export as ExportResult, resp.formMap as FormMap);
   }
 }
 
