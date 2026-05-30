@@ -105,14 +105,18 @@ describe("fillInteractions — antv3-select (genre)", () => {
     expect(report.missed).toEqual([]);
   });
 
-  it("closes a multi-select dropdown after picking (it does not auto-close)", async () => {
+  it("commits the value on a multi-select even though its dropdown lingers open", async () => {
+    // Verified live on NetEase: Ant v3 only closes a dropdown on a TRUSTED
+    // outside click, which a content script can't emit — so a multi-select's
+    // dropdown stays open after the pick. That's purely cosmetic; the value is
+    // committed. The driver no longer tries (and fails) to close it.
     document.body.innerHTML = `<div class="row"><span class="lbl">曲风</span><div class="ant-select" id="g"></div></div>`;
     wireAntSelect(document.getElementById("g")!, ["流行 Pop", "中文说唱 Chinese Hip Hop"], { multi: true });
     const map = { match: ["x"], fields: { genre: GENRE_SPEC } } as unknown as FormMap;
     const report = await fillInteractions(document, mkResult([["genre", "中文说唱"]]), map);
     expect(report.filled).toEqual(["genre"]);
     expect(document.getElementById("g")!.getAttribute("data-selected")).toBe("中文说唱 Chinese Hip Hop");
-    expect(document.querySelector(".ant-select-dropdown")).toBeNull(); // closePopups removed it
+    expect(document.querySelector(".ant-select-dropdown")).not.toBeNull(); // lingers — and that's fine
   });
 
   it("triggerIndex selects the Nth matching trigger", async () => {
@@ -275,60 +279,72 @@ describe("fillInteractions — tag-modal", () => {
   });
 });
 
-describe("fillInteractions — license-modal", () => {
+describe("fillInteractions — license-modal (drawer)", () => {
   beforeEach(() => (document.body.innerHTML = ""));
 
-  // Simulate: a "+添加授权方式" trigger; clicking opens a modal with a price
-  // input + a 确定 button. Confirm records the price (durable marker on body) + closes modal.
-  function wireLicenseModal(): void {
+  // Simulate NetEase's 授权设置 RIGHT-SIDE DRAWER (verified live 2026-05-30):
+  // a "添加授权方式" trigger opens an .ant-drawer-open holding three checkbox
+  // options (免费使用/租赁授权/永久独家); checking 租赁授权 reveals its 售价
+  // input[type=number]. Footer is 取消/保存 — the driver NEVER clicks 保存.
+  function wireLicenseDrawer(): void {
     const trig = document.createElement("button");
     trig.id = "addlic";
     trig.textContent = "+ 添加授权方式";
     document.body.appendChild(trig);
     trig.addEventListener("click", () => {
-      if (document.querySelector(".ant-modal")) return;
-      const modal = document.createElement("div");
-      modal.className = "ant-modal";
-      const price = document.createElement("input");
-      price.className = "price-in";
-      const ok = document.createElement("button");
-      ok.textContent = "确 定";
-      ok.addEventListener("click", () => {
-        const mark = document.createElement("i");
-        mark.className = "saved";
-        mark.textContent = price.value;
-        document.body.appendChild(mark); // survives modal.remove()
-        modal.remove();
-      });
-      modal.appendChild(price);
-      modal.appendChild(ok);
-      document.body.appendChild(modal);
+      if (document.querySelector(".ant-drawer-open")) return;
+      const drawer = document.createElement("div");
+      drawer.className = "ant-drawer ant-drawer-open";
+      for (const name of ["免费使用", "租赁授权", "永久独家"]) {
+        const opt = document.createElement("div");
+        opt.className = "defaultView--2Kp-o";
+        const label = document.createElement("label");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        const span = document.createElement("span");
+        span.textContent = name;
+        label.append(cb, span);
+        opt.appendChild(label);
+        // 租赁授权's price input appears only after its checkbox is checked.
+        if (name === "租赁授权") {
+          label.addEventListener("click", () => {
+            if (opt.querySelector("input[type=number]")) return;
+            const price = document.createElement("input");
+            price.type = "number";
+            price.setAttribute("placeholder", "输入售价");
+            opt.appendChild(price);
+          });
+        }
+        drawer.appendChild(opt);
+      }
+      document.body.appendChild(drawer);
     });
   }
 
   const PRICE_SPEC = {
     type: "license-modal",
     triggerText: "添加授权方式",
-    modal: ".ant-modal",
-    priceInput: ".price-in",
-    confirmText: "确定",
-    tierMap: {},
+    drawer: ".ant-drawer-open",
+    optionSelector: ".defaultView--2Kp-o",
+    licenseType: "租赁授权",
+    priceInput: "input[type='number'][placeholder*='售价']",
   };
 
-  it("fills + confirms a price per tier (best-effort, no type mapping)", async () => {
-    wireLicenseModal();
+  it("checks 租赁授权 and fills the first tier's price (best-effort, never saves)", async () => {
+    wireLicenseDrawer();
     const map = { match: ["x"], fields: { price: PRICE_SPEC } } as unknown as FormMap;
     const report = await fillInteractions(
       document,
-      mkResult([["price", "Basic: ¥50\nPremium: ¥300 / USD 50"]]),
+      mkResult([["price", "租赁: ¥199\nPremium: ¥300"]]),
       map,
     );
     expect(report.filled).toEqual(["price"]);
-    expect([...document.querySelectorAll("i.saved")].map((s) => s.textContent)).toEqual(["50", "300"]);
+    const priceEl = document.querySelector("input[type='number'][placeholder*='售价']") as HTMLInputElement;
+    expect(priceEl.value).toBe("199"); // first tier's CNY amount
   });
 
   it("reports missed when there is no price", async () => {
-    wireLicenseModal();
+    wireLicenseDrawer();
     const map = { match: ["x"], fields: { price: PRICE_SPEC } } as unknown as FormMap;
     const report = await fillInteractions(document, mkResult([["price", ""]]), map);
     expect(report.missed).toEqual(["price"]);
@@ -336,7 +352,7 @@ describe("fillInteractions — license-modal", () => {
 
   it("reports missed when the trigger is absent", async () => {
     const map = { match: ["x"], fields: { price: PRICE_SPEC } } as unknown as FormMap;
-    const report = await fillInteractions(document, mkResult([["price", "Basic: ¥50"]]), map);
+    const report = await fillInteractions(document, mkResult([["price", "租赁: ¥199"]]), map);
     expect(report.missed).toEqual(["price"]);
   });
 });

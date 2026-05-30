@@ -176,15 +176,32 @@ Both originally-planned features are now delivered:
 
 ### Phase 2-B — custom-widget click-interaction fill (IMPLEMENTED, v0.0.38)
 
-- Typed async "widget drivers" in `apps/extension/src/interaction-fill.ts` fill the click-to-open Ant widgets: `antv3-select` (曲风), `key-triple` (音名/调号/调式 via `key-decompose.ts`), `tag-modal` (说明标签), `license-modal` (价格). Triggers resolve by stable `data-ne2e-name` anchors; `pickAntOption` scans all open dropdowns for a text match.
-- **Live-verified:** 曲风 + KEY fill reliably. 说明标签/价格 are best-effort.
+- Typed async "widget drivers" in `apps/extension/src/interaction-fill.ts` fill the click-to-open Ant widgets: `antv3-select` (曲风), `key-triple` (音名/调号/调式 via `key-decompose.ts`), `tag-modal` (说明标签), `license-modal` (价格). Triggers resolve by stable `data-ne2e-name` anchors.
 - Reference DOM snapshot for future calibration: `apps/extension/reference/netease-upload-page.html`.
+
+### Phase 2-B fixes — verified live via Playwright (DONE, v0.0.39)
+
+All three reported failures were root-caused by driving the real logged-in NetEase page with the Playwright MCP (not a static snapshot, which lacks the modals/drawer entirely):
+
+- **调式 race fixed**: dropdowns accumulate because Ant v3 only closes on a *trusted* outside click (a content script can't emit one), so a stale open dropdown satisfied the wait instantly and the option scan raced ahead of 调式's render. `pickAntOption` now scopes to each trigger's own dropdown via `aria-controls` + polls for the target option. Value commits; the dropdown still cosmetically lingers (unavoidable).
+- **说明标签 fixed**: the modal is a vertical-tab widget (适用场景/情绪表达/自定义); `tag-modal` now switches tabs to find moods under 情绪表达.
+- **价格 fixed (best-effort)**: 授权设置 is a right-side **drawer** (not `.ant-modal`), multi-step — `license-modal` opens it, checks the configured license type (default 租赁授权), and fills the first tier's 售价. Never clicks 保存 (human reviews the sub-tier matrix + submits).
 
 ### Next-step fixes (Phase 2-B follow-ups, unscheduled)
 
-- **调式 multi-select dropdown lingers open** after selection (value is committed; the widget ignores Esc / outside-click / trigger re-click / DOM-hide — React re-renders it). Accepted for now. Revisit if a real close hook is found, or fall back to removing the orphaned node.
-- **说明标签 deeper matching**: map a track's moods to NetEase's 情绪 tag section + the 自定义标签 input (currently only exact-matches the 适用场景 buttons, so typical moods miss).
-- **价格 modal**: the 授权方式 flow is multi-step (select授权方式 checkboxes → price → upload-file); the current best-effort `license-modal` driver can't drive it. Needs a dedicated multi-step recipe.
+- **价格 multi-tier**: map BeatOS's multiple tiers onto NetEase's fixed sub-tier matrix (MP3 / MP3+WAV / +分轨) rather than filling only the first 售价 row.
+- **说明标签 自定义 tab**: also push unmatched moods into the 自定义标签 free-text input (currently only matches the fixed 适用场景 + 情绪表达 buttons).
+
+### Phase 2-C — album flow + formatted name/description (NEXT, design captured live 2026-05-30)
+
+Studied the live NetEase upload page. The page has TWO sections we don't yet model:
+
+**1. 专辑 (album) section, above the Beat fields** — NetEase separates album from track. Fields: 专辑封面 (cover upload) · 专辑名称 (≤50 chars) · 专辑类型 (select, default 专辑, currently disabled) · 专辑版本 · 发行日期 · 专辑描述. There's also a `选择专辑` text input (pick an existing album vs. create new). BeatOS has no album concept yet — needs: an album entity (or at least a "create/select album" step in the export→inject flow), cover art, and an album-name/type/date carry-through. Until then the producer fills the album section manually. Decide: model albums in BeatOS, or just expose album fields in the recipe for manual+assisted fill.
+
+**2. Formatted Beat名称 + Beat说明 templates** — the producer's names/descriptions follow fixed, derivable patterns, so BeatOS should generate them rather than ship raw `track.title`:
+  - **Beat名称 pattern** (from the live list): `[FREE] "{title}" - {genre} {ARTIST} TYPE BEAT` — e.g. `[FREE] "仙泉" - 中国风 GUNNA TYPE BEAT`, `[FREE] "MEMPHIS叁" - 孟菲斯 APMOZART TYPE BEAT`. Needs a template with title + genre(zh) + a "TYPE BEAT" artist-reference field (new track metadata? or per-export input) + a free/paid prefix.
+  - **Beat说明 template** (fixed boilerplate, producer-specific): Prod credit line (`Prod.Averatec x Redketch`), the 评论+关注+歌名后缀 non-commercial-grant terms, the 25% play-revenue binding restriction, the "no other platforms / MV / performance" prohibitions, and the purchase CTA. Should be a configurable per-producer description template (with `{prod}`, `{title}` slots), stored as a setting and rendered at export time — NOT hardcoded.
+  - Implement as: a name/description **template setting** + a renderer in the export layer (`beatos-core/export/platforms/netease.py` builds the formatted `title`/`description` values), so the existing inject pipeline carries them through unchanged.
 
 ### Phase 2-A — MCP tool + multi-platform (pending)
 

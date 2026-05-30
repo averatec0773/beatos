@@ -12,6 +12,9 @@ TODO.md
 /memory/
 /docs/
 
+# Playwright MCP scratch output (live-debugging snapshots/screenshots)
+.playwright-mcp/
+
 # Environment / secrets
 .env
 .env.local

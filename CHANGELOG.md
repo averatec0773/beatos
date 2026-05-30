@@ -4,6 +4,14 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.39] — 2026-05-30 — Platform auto-fill: KEY/标签/价格 fixed against the live page
+
+### Fixed
+
+- **调式 (KEY mode) now actually commits** — it was frequently left blank. Root cause (found by driving the real NetEase page with Playwright, not a static snapshot): Ant v3 closes a dropdown only on a *trusted* outside click, which a content script can't emit, so the genre/音名/调号 dropdowns stayed open and **accumulated**. A stale open dropdown then satisfied the "wait for a dropdown" check instantly, so the option scan raced ahead of 调式's own dropdown render and found nothing. `pickAntOption` now scopes strictly to each trigger's **own** dropdown via its `aria-controls` id and polls until the target option is present — no more race, no dependence on closing popups (which never worked). The 调式 dropdown still visibly lingers (unavoidable, cosmetic); the value is committed.
+- **说明标签 (scene/mood tags) now fills moods** — the 添加标签 modal is a vertical-tab widget (适用场景 / 情绪表达 / 自定义) and moods live under 情绪表达, but the driver only ever looked at the default 适用场景 tab. It now switches tabs and matches buttons in each active panel.
+- **价格 (授权设置) now fills a price** — it's a right-side **drawer**, not a modal (the old `.ant-modal` selectors never matched anything), and it's multi-step: checking 租赁授权 reveals the 售价 inputs. The driver opens the drawer, checks the configured license type, and fills the first tier's 售价 — best-effort, and it **never clicks 保存** (you review NetEase's sub-tier matrix and submit). All three verified end-to-end on the live logged-in page; the recipe's selectors were re-calibrated from the real DOM.
+
 ## [0.0.38] — 2026-05-29 — Platform upload auto-fill: custom widgets (Phase 2-B)
 
 ### Added
