@@ -104,6 +104,14 @@ export async function pickAntOption(
     const hit = items.find((it) => optionMatches((it.textContent ?? "").trim(), target, cfg.match ?? "exact"));
     if (hit) {
       hit.click();
+      // A multi-select keeps its dropdown open after a pick AND ignores
+      // outside-click dismissal on this page. Re-click the trigger to toggle it
+      // closed (controlled open-state), then blur. Single-selects already
+      // auto-closed, so the container is gone and this is skipped.
+      if (ctx.doc.querySelector(cfg.optionContainer)) {
+        resolveTrigger(ctx.doc, cfg)?.click();
+        (ctx.doc.activeElement as HTMLElement | null)?.blur?.();
+      }
       return true;
     }
   }

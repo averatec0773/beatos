@@ -13,7 +13,8 @@ function mkResult(fields: Array<[string, string]>): ExportResult {
 // Single-select removes the dropdown on pick; multi keeps it open.
 function wireAntSelect(trigger: HTMLElement, options: string[], opts: { multi?: boolean } = {}): void {
   trigger.addEventListener("click", () => {
-    if (document.querySelector(".ant-select-dropdown")) return;
+    const existing = document.querySelector(".ant-select-dropdown");
+    if (existing) { existing.remove(); return; } // re-click toggles closed
     const dd = document.createElement("div");
     dd.className = "ant-select-dropdown";
     for (const o of options) {
@@ -22,7 +23,7 @@ function wireAntSelect(trigger: HTMLElement, options: string[], opts: { multi?: 
       li.textContent = o;
       li.addEventListener("click", () => {
         trigger.setAttribute("data-selected", o);
-        if (!opts.multi) dd.remove();
+        if (!opts.multi) dd.remove(); // single-select closes on pick; multi stays open
       });
       dd.appendChild(li);
     }
