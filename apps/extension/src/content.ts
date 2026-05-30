@@ -11,14 +11,20 @@ function overlay(report: { filled: string[]; missed: string[] }, audioHint: stri
     "position:fixed;right:16px;bottom:16px;z-index:2147483647;max-width:320px;" +
     "background:#1b1b1f;color:#eee;font:13px/1.5 system-ui;padding:12px 14px;" +
     "border:1px solid #444;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.4)";
-  const missed = report.missed.length
-    ? `<div style="color:#f6b">未匹配字段(可能改版): ${report.missed.join(", ")}</div>`
-    : "";
-  box.innerHTML =
-    `<div style="font-weight:600;margin-bottom:4px">BeatOS 已填 ${report.filled.length} 个字段</div>` +
-    missed +
-    `<div style="margin-top:6px;color:#9cf">请拖入音频文件 ${audioHint}</div>` +
-    `<div style="margin-top:2px;color:#888">核对后由你手动点提交</div>`;
+  const line = (text: string, css: string): HTMLDivElement => {
+    const d = document.createElement("div");
+    d.style.cssText = css;
+    d.textContent = text;
+    return d;
+  };
+
+  box.appendChild(line(`BeatOS 已填 ${report.filled.length} 个字段`, "font-weight:600;margin-bottom:4px"));
+  if (report.missed.length) {
+    box.appendChild(line(`未匹配字段(可能改版): ${report.missed.join(", ")}`, "color:#f6b"));
+  }
+  box.appendChild(line(`请拖入音频文件 ${audioHint}`, "margin-top:6px;color:#9cf"));
+  box.appendChild(line("核对后由你手动点提交", "margin-top:2px;color:#888"));
+
   document.body.appendChild(box);
   setTimeout(() => box.remove(), 12000);
 }
