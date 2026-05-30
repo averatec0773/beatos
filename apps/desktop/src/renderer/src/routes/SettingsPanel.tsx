@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
 import { DefaultLicenseTiersSection } from "@/components/Settings/DefaultLicenseTiersSection";
 import { ProducersSection } from "@/components/Settings/ProducersSection";
+import { UploadTemplatesSection } from "@/components/Settings/UploadTemplatesSection";
 import { VocabLocaleSection } from "@/components/Settings/VocabLocaleSection";
 
 function StorageSection(): React.JSX.Element {
@@ -112,6 +113,7 @@ export function SettingsPanel(): React.JSX.Element {
         <StorageSection />
         <VocabLocaleSection />
         <DefaultLicenseTiersSection />
+        <UploadTemplatesSection />
         <ProducersSection />
         <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
         <AboutSection />
