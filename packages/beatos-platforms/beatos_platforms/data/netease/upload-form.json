@@ -1,14 +1,17 @@
 {
-  "_note": "Selectors are best-effort and MUST be verified against the live NetEase upload page. Field keys mirror ExportResult keys.",
-  "match": ["https://music.163.com/*upload*", "https://music.163.com/st/musician*"],
+  "_note": "Verified against the live NetEase 音乐人 beat-upload page (Ant Design) on 2026-05-29. Only native text inputs are auto-filled; selectors use placeholder substrings because the page has multiple ant-input controls (the album block too) and CSS-module class hashes (e.g. textarea--21WWH) are unstable. Field keys mirror ExportResult keys.",
+  "match": ["https://music.163.com/*"],
   "fields": {
-    "title":       { "selector": "input[name='songName'], input#songName", "type": "text" },
-    "genre":       { "selector": "select[name='genre'], select.genre", "type": "select" },
-    "mood":        { "selector": "input[name='mood'], input.mood-tags", "type": "tags" },
-    "bpm":         { "selector": "input[name='bpm']", "type": "text" },
-    "key":         { "selector": "input[name='key']", "type": "text" },
-    "description": { "selector": "textarea[name='description'], textarea.desc", "type": "textarea" },
-    "tags":        { "selector": "input[name='tags'], input.tag-input", "type": "tags" },
-    "price":       { "selector": "input[name='price'], input.price", "type": "text" }
+    "title":       { "selector": "input[placeholder*='请输入Beat名称']", "type": "text" },
+    "bpm":         { "selector": "input[placeholder*='每分钟拍子数']", "type": "text" },
+    "description": { "selector": "textarea[placeholder*='对beat作品的介绍']", "type": "textarea" }
+  },
+  "manual": {
+    "_comment": "Click-to-open custom widgets — NOT auto-fillable by value-setting in Phase 1 (candidates for a Phase 2 click-interaction filler). Left for the user to set manually.",
+    "genre": "曲风 — Ant Select (input.ant-select-search__field); needs click + option pick",
+    "key": "KEY 音名/调号/调式 — Ant Selects; needs click + option pick",
+    "mood": "情绪 — folded into 说明标签 on NetEase",
+    "tags": "说明标签 — '+添加标签' popover",
+    "price": "价格 — 授权设置 '+添加授权方式' modal"
   }
 }
