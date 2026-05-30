@@ -8,7 +8,9 @@ export interface UploadTemplates {
   album_name: string;
   beat_name: string;
   beat_description: string;
+  album_description: string;
   prod: string;
+  prod_separator: string;
 }
 
 export const DEFAULT_TEMPLATES: UploadTemplates = {
@@ -19,7 +21,9 @@ export const DEFAULT_TEMPLATES: UploadTemplates = {
     "!非商用使用权仅允许本平台发歌，上传歌曲需要绑定25%播放收益分成!\n" +
     "不允许: 发布其他音乐或短视频平台，以及拍摄MV, 演出等盈利行为\n" +
     "如需完整使用权请进行购买，感谢支持！",
+  album_description: "{publish date} Prod.{prod}",
   prod: "Averatec x Redketch",
+  prod_separator: " x ",
 };
 
 interface State {
