@@ -18,10 +18,14 @@ export interface FieldSpec {
   type: FieldType;
 }
 
+// fields may hold native specs (above) OR interaction specs (typed in
+// interaction-fill.ts). The common shape is just a `type` tag + arbitrary keys.
 export interface FormMap {
   match: string[];
-  fields: Record<string, FieldSpec>;
+  fields: Record<string, { type: string } & Record<string, unknown>>;
 }
+
+const NATIVE_TYPES = new Set<string>(["text", "textarea", "select", "tags"]);
 
 export interface FillReport {
   filled: string[];
@@ -58,11 +62,15 @@ export function fillForm(doc: Document, result: ExportResult, formMap: FormMap):
   const byKey = new Map(result.fields.map((f) => [f.key, f]));
 
   for (const [key, spec] of Object.entries(formMap.fields)) {
+    if (!NATIVE_TYPES.has(spec.type)) continue; // interaction field — handled by fillInteractions
+    const selector = (spec as { selector?: string }).selector;
+    if (!selector) continue;
+
     const field = byKey.get(key);
     const value = field?.value ?? "";
     if (!value) continue; // nothing to fill (incl. multi-option left for manual pick)
 
-    const el = doc.querySelector(spec.selector) as Fillable | null;
+    const el = doc.querySelector(selector) as Fillable | null;
     if (!el) {
       missed.push(key);
       continue;

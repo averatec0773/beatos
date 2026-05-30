@@ -94,4 +94,18 @@ describe("fillForm", () => {
     );
     expect(report.filled).toEqual(["title"]);
   });
+
+  it("ignores interaction-type fields (no selector, non-native type)", () => {
+    document.body.innerHTML = `<input id="title">`;
+    const map = {
+      match: ["x"],
+      fields: {
+        title: { selector: "#title", type: "text" },
+        genre: { type: "antv3-select", trigger: "#g" }, // interaction — must be skipped, not thrown on
+      },
+    } as unknown as FormMap;
+    const report = fillForm(document, mkResult([["title", "A"], ["genre", "中文说唱"]]), map);
+    expect(report.filled).toEqual(["title"]);
+    expect(report.missed).toEqual([]); // genre is NOT reported missed by fillForm
+  });
 });
