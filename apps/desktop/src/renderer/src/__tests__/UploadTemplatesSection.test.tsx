@@ -25,6 +25,7 @@ describe("UploadTemplatesSection", () => {
     render(<UploadTemplatesSection />);
     expect(screen.getByLabelText("专辑名模板")).toHaveValue(DEFAULT_TEMPLATES.album_name);
     expect(screen.getByLabelText("Beat 名称模板")).toHaveValue(DEFAULT_TEMPLATES.beat_name);
+    expect(screen.getByLabelText("Beat 说明模板")).toHaveValue(DEFAULT_TEMPLATES.beat_description);
     expect(screen.getByLabelText("制作人署名")).toHaveValue(DEFAULT_TEMPLATES.prod);
   });
 
