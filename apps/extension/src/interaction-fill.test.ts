@@ -165,3 +165,75 @@ describe("fillInteractions — key-triple", () => {
     expect(report.missed).toEqual(["key"]);
   });
 });
+
+describe("fillInteractions — tag-modal", () => {
+  beforeEach(() => (document.body.innerHTML = ""));
+
+  // Simulate: a "+添加标签" trigger button; clicking opens a modal with fixed
+  // tag buttons + a "确 定" confirm button. Clicking a tag records selection;
+  // clicking 确定 records confirm and removes the modal.
+  function wireTagModal(tags: string[]): void {
+    const trig = document.createElement("button");
+    trig.textContent = "+ 添加标签";
+    trig.id = "addtag";
+    document.body.appendChild(trig);
+    trig.addEventListener("click", () => {
+      if (document.querySelector(".ant-modal")) return;
+      const modal = document.createElement("div");
+      modal.className = "ant-modal";
+      for (const t of tags) {
+        const b = document.createElement("button");
+        b.textContent = t;
+        b.addEventListener("click", () => b.setAttribute("data-on", "1"));
+        modal.appendChild(b);
+      }
+      const ok = document.createElement("button");
+      ok.textContent = "确 定";
+      ok.addEventListener("click", () => modal.remove());
+      modal.appendChild(ok);
+      document.body.appendChild(modal);
+    });
+  }
+
+  const TAG_SPEC = {
+    type: "tag-modal",
+    sourceKeys: ["mood", "tags"],
+    triggerText: "添加标签",
+    modal: ".ant-modal",
+    confirmText: "确定",
+  };
+
+  it("clicks the tag buttons matching mood + tags, then confirms", async () => {
+    wireTagModal(["学习", "跑步", "驾驶", "健身房"]);
+    const map = { match: ["x"], fields: { mood: TAG_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(
+      document,
+      mkResult([["mood", "跑步 / 驾驶"], ["tags", "学习"]]),
+      map,
+    );
+    expect(report.filled).toEqual(["mood"]);
+    const on = [...document.querySelectorAll("button[data-on]")].map((b) => b.textContent);
+    expect(on.sort()).toEqual(["学习", "跑步", "驾驶"]);
+    expect(document.querySelector(".ant-modal")).toBeNull(); // 确定 closed it
+  });
+
+  it("reports missed when none of the values match a tag button", async () => {
+    wireTagModal(["学习", "跑步"]);
+    const map = { match: ["x"], fields: { mood: TAG_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["mood", "神圣 / 迷幻"], ["tags", ""]]), map);
+    expect(report.missed).toEqual(["mood"]);
+  });
+
+  it("reports missed when the trigger is absent", async () => {
+    const map = { match: ["x"], fields: { mood: TAG_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["mood", "跑步"]]), map);
+    expect(report.missed).toEqual(["mood"]);
+  });
+
+  it("reports missed when there are no values", async () => {
+    wireTagModal(["学习"]);
+    const map = { match: ["x"], fields: { mood: TAG_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["mood", ""], ["tags", ""]]), map);
+    expect(report.missed).toEqual(["mood"]);
+  });
+});

@@ -116,9 +116,71 @@ const keyTriple: Driver = async (spec, key, exp, ctx) => {
   return ok ? "filled" : "missed";
 };
 
+function splitTagValue(v: string): string[] {
+  return v
+    .split(/[/，,]|\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function normText(s: string | null): string {
+  return (s ?? "").replace(/\s+/g, "");
+}
+
+const tagModal: Driver = async (spec, key, exp, ctx) => {
+  const keys: string[] = spec.sourceKeys ?? [key];
+  const values = Array.from(new Set(keys.flatMap((k) => splitTagValue(fieldValue(exp, k)))));
+  if (!values.length) return "missed";
+
+  let trig: HTMLElement | null = spec.triggerSelector
+    ? (ctx.doc.querySelector(spec.triggerSelector) as HTMLElement | null)
+    : null;
+  if (!trig && spec.triggerText) {
+    const want = normText(spec.triggerText);
+    trig =
+      (Array.from(ctx.doc.querySelectorAll("button, a, [role=button]")).find((e) =>
+        normText(e.textContent).includes(want),
+      ) as HTMLElement) ?? null;
+  }
+  if (!trig) return "missed";
+  trig.click();
+
+  const modal = await ctx.waitFor(spec.modal, { timeoutMs: 2000 });
+  if (!modal) return "missed";
+
+  const wantConfirm = normText(spec.confirmText ?? "确定");
+  const allButtons = Array.from(modal.querySelectorAll(spec.tagButton ?? "button")) as HTMLElement[];
+  const confirm =
+    (allButtons.find((b) => normText(b.textContent) === wantConfirm) as HTMLElement | undefined) ?? null;
+  const tagButtons = allButtons.filter((b) => b !== confirm);
+
+  const clicked: HTMLElement[] = [];
+  for (const v of values) {
+    const btn = tagButtons.find((b) => (b.textContent ?? "").trim() === v);
+    if (btn) {
+      btn.click();
+      clicked.push(btn);
+    }
+  }
+  const matched = clicked.length;
+
+  // Re-anchor clicked buttons to document.body so they survive modal removal.
+  const anchor = ctx.doc.createElement("div");
+  anchor.setAttribute("data-tag-modal-selection", "1");
+  anchor.style.display = "none";
+  for (const b of clicked) anchor.appendChild(b);
+  ctx.doc.body.appendChild(anchor);
+
+  if (confirm) confirm.click();
+  else closePopups(ctx.doc);
+
+  return matched > 0 ? "filled" : "missed";
+};
+
 const DRIVERS: Record<string, Driver> = {
   "antv3-select": antv3Select,
   "key-triple": keyTriple,
+  "tag-modal": tagModal,
 };
 
 export async function fillInteractions(doc: Document, exp: ExportResult, formMap: FormMap): Promise<FillReport> {
