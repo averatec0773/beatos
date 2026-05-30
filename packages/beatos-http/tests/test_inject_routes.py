@@ -134,8 +134,12 @@ def test_try_bind_fixed_returns_socket_then_none():
     s1 = _try_bind_fixed(0)  # port 0 = OS picks a free port, always binds
     assert s1 is not None
     bound_port = s1.getsockname()[1]
+    # The real "port in use" case is a server LISTENING on it. Without listen(),
+    # SO_REUSEADDR lets the second bind succeed on Linux (but not macOS) — so the
+    # test must listen to be portable and to mirror how the inject app holds 48923.
+    s1.listen()
     try:
-        s2 = _try_bind_fixed(bound_port)  # already held -> None
+        s2 = _try_bind_fixed(bound_port)  # listening -> EADDRINUSE -> None
         assert s2 is None
     finally:
         s1.close()

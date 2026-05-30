@@ -174,9 +174,21 @@ Both originally-planned features are now delivered:
 - **NetEase only** for Phase 1. Vocab maps at `packages/beatos-platforms/` already cover genre/mood translation.
 - The empty `beatos-core/adapters/` stub is unused; the Playwright/CDP path is abandoned.
 
-### Phase 2 — MCP tool + multi-platform (pending)
+### Phase 2-B — custom-widget click-interaction fill (IMPLEMENTED, v0.0.38)
 
-- MCP `inject_to_platform` tool with 2PC approval (`token` → `await_approval`), consistent with the existing write-surface pattern.
+- Typed async "widget drivers" in `apps/extension/src/interaction-fill.ts` fill the click-to-open Ant widgets: `antv3-select` (曲风), `key-triple` (音名/调号/调式 via `key-decompose.ts`), `tag-modal` (说明标签), `license-modal` (价格). Triggers resolve by stable `data-ne2e-name` anchors; `pickAntOption` scans all open dropdowns for a text match.
+- **Live-verified:** 曲风 + KEY fill reliably. 说明标签/价格 are best-effort.
+- Reference DOM snapshot for future calibration: `apps/extension/reference/netease-upload-page.html`.
+
+### Next-step fixes (Phase 2-B follow-ups, unscheduled)
+
+- **调式 multi-select dropdown lingers open** after selection (value is committed; the widget ignores Esc / outside-click / trigger re-click / DOM-hide — React re-renders it). Accepted for now. Revisit if a real close hook is found, or fall back to removing the orphaned node.
+- **说明标签 deeper matching**: map a track's moods to NetEase's 情绪 tag section + the 自定义标签 input (currently only exact-matches the 适用场景 buttons, so typical moods miss).
+- **价格 modal**: the 授权方式 flow is multi-step (select授权方式 checkboxes → price → upload-file); the current best-effort `license-modal` driver can't drive it. Needs a dedicated multi-step recipe.
+
+### Phase 2-A — MCP tool + multi-platform (pending)
+
+- MCP `inject_to_platform` tool with 2PC approval (`token` → `await_approval`), consistent with the existing write-surface pattern (the staging slot + extension consumer already exist; this just adds the AI trigger).
 - Additional platforms via data-driven selector maps in `beatos-platforms/data/{platform}/upload-form.json`.
 - Spec hooks: `docs/superpowers/specs/future-netease-license-model.md`.
 
