@@ -90,7 +90,8 @@ const antv3Select: Driver = async (spec, key, exp, ctx) => {
   const target = (fieldValue(exp, key).split(" / ")[0] ?? "").trim();
   if (!target) return "missed";
   const ok = await pickAntOption(ctx, spec, target);
-  if (ok) closePopups(ctx.doc); // multi-selects don't auto-close
+  // Single-selects auto-close on pick; multi-selects stay open — only then send Esc.
+  if (ok && ctx.doc.querySelector(spec.optionContainer)) closePopups(ctx.doc);
   return ok ? "filled" : "missed";
 };
 

@@ -27,6 +27,9 @@ function wireAntSelect(trigger: HTMLElement, options: string[], opts: { multi?: 
       dd.appendChild(li);
     }
     document.body.appendChild(dd);
+    document.addEventListener("keydown", function onEsc(e) {
+      if ((e as KeyboardEvent).key === "Escape") { dd.remove(); document.removeEventListener("keydown", onEsc); }
+    });
   });
 }
 
@@ -96,5 +99,15 @@ describe("fillInteractions — antv3-select (genre)", () => {
     const report = await fillInteractions(document, mkResult([["title", "A"]]), map);
     expect(report.filled).toEqual([]);
     expect(report.missed).toEqual([]);
+  });
+
+  it("closes a multi-select dropdown after picking (it does not auto-close)", async () => {
+    document.body.innerHTML = `<div class="row"><span class="lbl">曲风</span><div class="ant-select" id="g"></div></div>`;
+    wireAntSelect(document.getElementById("g")!, ["流行 Pop", "中文说唱 Chinese Hip Hop"], { multi: true });
+    const map = { match: ["x"], fields: { genre: GENRE_SPEC } } as unknown as FormMap;
+    const report = await fillInteractions(document, mkResult([["genre", "中文说唱"]]), map);
+    expect(report.filled).toEqual(["genre"]);
+    expect(document.getElementById("g")!.getAttribute("data-selected")).toBe("中文说唱 Chinese Hip Hop");
+    expect(document.querySelector(".ant-select-dropdown")).toBeNull(); // closePopups removed it
   });
 });
