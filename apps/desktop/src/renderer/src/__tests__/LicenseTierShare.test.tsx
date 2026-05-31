@@ -27,7 +27,7 @@ describe("LicenseTiersSection share input", () => {
 
   it("edits share and persists it as a number", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<LicenseTiersSection trackId={1} />);
+    render(<LicenseTiersSection trackId={1} isFree={false} />);
     const inputs = await screen.findAllByLabelText(/分成/);
     // first 分成 input belongs to the filled MP3 tier
     await user.type(inputs[0], "25");
@@ -44,7 +44,7 @@ describe("LicenseTiersSection share input", () => {
       id: 2, track_id: 1, position: 1, name: "WAV", deliverables: ["wav"], prices: {}, notes: null, share: 30,
     });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<LicenseTiersSection trackId={1} />);
+    render(<LicenseTiersSection trackId={1} isFree={false} />);
     // empty preset rows (WAV/STEMS) now expose a 分成 input too — there are 3 total
     const inputs = await screen.findAllByLabelText(/分成/);
     expect(inputs.length).toBe(3); // MP3 (filled) + WAV + STEMS (empty)
@@ -63,7 +63,7 @@ describe("LicenseTiersSection share input", () => {
       id: 3, track_id: 1, position: 2, name: "MIDI", deliverables: ["midi"], prices: {}, notes: null, share: 40,
     });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<LicenseTiersSection trackId={1} />);
+    render(<LicenseTiersSection trackId={1} isFree={false} />);
     await screen.findByText("MP3"); // loaded
     await user.click(screen.getByText("Add tier"));
     await user.type(screen.getByLabelText("Tier name"), "MIDI");

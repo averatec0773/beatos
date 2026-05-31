@@ -3,6 +3,7 @@ import { Check, Plus, Trash2, X } from "lucide-react";
 
 import { licenseTiers as api, type LicenseTier, type LicenseTierUpdate } from "@/api/license-tiers";
 import { useToastStore } from "@/stores/toast";
+import { useTrackStore } from "@/stores/tracks";
 import {
   PRESET_SLOTS,
   PRESET_KEYS,
@@ -18,6 +19,7 @@ import {
 
 interface Props {
   trackId: number;
+  isFree: boolean;
 }
 
 const AUTOSAVE_MS = 600;
@@ -116,7 +118,21 @@ function emptyPresetDefaults(): Record<PresetKey, EmptyPresetState> {
   };
 }
 
-export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
+export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Element {
+  const [free, setFree] = useState(isFree);
+  useEffect(() => { setFree(isFree); }, [trackId, isFree]);
+
+  async function onToggleFree(next: boolean): Promise<void> {
+    setFree(next); // optimistic
+    try {
+      await useTrackStore.getState().update(trackId, { is_free: next });
+    } catch (e) {
+      setFree(!next);
+      useToastStore.getState().show("error",
+        `设置免费失败: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
   const [tiers, setTiers] = useState<DraftTier[]>([]);
   const [loading, setLoading] = useState(true);
   const [emptySlots, setEmptySlots] =
@@ -392,9 +408,20 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
   return (
     <section data-license-tiers className="space-y-2">
       <header className="flex items-center justify-between">
-        <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-          License Tiers
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
+            License Tiers
+          </h3>
+          <label className="flex items-center gap-1.5 text-xs text-text-secondary" title="开启后 beat 名称带 [FREE] 前缀,NetEase 导出勾免费授权">
+            <input
+              type="checkbox"
+              aria-label="免费非商用授权 (FREE)"
+              checked={free}
+              onChange={(e) => void onToggleFree(e.target.checked)}
+            />
+            免费 (FREE)
+          </label>
+        </div>
         <button
           type="button"
           onClick={openPendingCustom}

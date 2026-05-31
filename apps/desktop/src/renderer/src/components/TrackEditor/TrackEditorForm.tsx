@@ -258,7 +258,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
 
         <FileRowsSection trackId={track.id} />
 
-        <LicenseTiersSection trackId={track.id} />
+        <LicenseTiersSection trackId={track.id} isFree={track.is_free} />
 
         <div className="flex items-center gap-3">
           <button
