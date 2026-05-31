@@ -3,7 +3,7 @@ import { fillInteractions } from "./interaction-fill";
 
 const POLL_MS = 2000;
 
-function overlay(report: { filled: string[]; missed: string[] }, audioHint: string, coverHint = "", freeHint = false): void {
+function overlay(report: { filled: string[]; missed: string[] }, audioHint: string, coverHint = "", freeHint = false, albumFilled = false): void {
   const id = "beatos-overlay";
   document.getElementById(id)?.remove();
   const box = document.createElement("div");
@@ -25,7 +25,11 @@ function overlay(report: { filled: string[]; missed: string[] }, audioHint: stri
   }
   box.appendChild(line(`请拖入音频文件 ${audioHint}`, "margin-top:6px;color:#9cf"));
   if (coverHint) box.appendChild(line(`请拖入封面图 ${coverHint}`, "margin-top:2px;color:#9cf"));
-  box.appendChild(line("专辑请手动新建/选择并填写专辑名+描述（可从 BeatOS 导出对话框复制）", "margin-top:2px;color:#fc9"));
+  if (albumFilled) {
+    box.appendChild(line("专辑已自动新建并填入名称/描述 — 请拖入专辑封面后再提交", "margin-top:2px;color:#9cf"));
+  } else {
+    box.appendChild(line("专辑请手动新建/选择并填写专辑名+描述（可从 BeatOS 导出对话框复制）", "margin-top:2px;color:#fc9"));
+  }
   if (freeHint) box.appendChild(line("已尝试勾选「免费使用」授权,请核对", "margin-top:2px;color:#fc9"));
   box.appendChild(line("核对后由你手动点提交", "margin-top:2px;color:#888"));
 
@@ -46,6 +50,7 @@ async function apply(exp: ExportResult, formMap: FormMap): Promise<void> {
     hint,
     coverHint,
     free,
+    interactive.filled.includes("album"),
   ); // update with interaction results
 }
 
