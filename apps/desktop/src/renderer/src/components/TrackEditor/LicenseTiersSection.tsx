@@ -124,8 +124,11 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
   // Latest committed empty-slot state, read by the debounced create path so it
   // doesn't act on a stale render closure (state updates are async — a debounce
   // fired right after a keystroke would otherwise see the pre-update value).
+  // Synced in an effect (writing a ref during render is disallowed by lint).
   const emptySlotsRef = useRef(emptySlots);
-  emptySlotsRef.current = emptySlots;
+  useEffect(() => {
+    emptySlotsRef.current = emptySlots;
+  }, [emptySlots]);
   const [pendingCustom, setPendingCustom] = useState<PendingCustom | null>(null);
   const savingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const createTimers = useRef<Map<PresetKey, ReturnType<typeof setTimeout>>>(new Map());
