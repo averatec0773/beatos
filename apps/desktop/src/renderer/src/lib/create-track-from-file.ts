@@ -78,7 +78,7 @@ export async function importAsNewTracks(files: File[], tag: AudioTag): Promise<I
       result.created++;
     } catch (e) {
       try {
-        await tracks.remove(created.id);
+        await tracks.purge(created.id); // hard-purge so cascade clears copied tiers
       } catch {
         /* best-effort rollback */
       }
