@@ -81,4 +81,4 @@ def test_album_description_default_template():
 
 
 def test_default_templates_have_all_keys():
-    assert set(DEFAULT_TEMPLATES) == {"album_name", "beat_name", "beat_description", "album_description", "prod", "prod_separator"}
+    assert set(DEFAULT_TEMPLATES) == {"album_name", "beat_name", "beat_description", "album_description", "prod_separator"}

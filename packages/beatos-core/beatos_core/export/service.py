@@ -33,12 +33,13 @@ def _current_date() -> str:
     return _dt.datetime.now().strftime("%Y-%m-%d")
 
 
-def _resolve_prod(track: Track, templates: dict[str, str]) -> str:
-    producers = track.producer or []
+def _resolve_prod(track: Track, *, primary: str, separator: str) -> str:
+    producers = list(track.producer or [])
     if producers:
-        sep = templates.get("prod_separator", " x ")
-        return sep.join(producers)
-    return templates.get("prod", "")
+        if primary and primary in producers:
+            producers = [primary] + [p for p in producers if p != primary]
+        return separator.join(producers)
+    return primary or ""
 
 
 async def _resolve_templates() -> dict[str, str]:
@@ -60,11 +61,14 @@ async def export_metadata(track_id: int, platform: str) -> ExportResult:
         raise ValueError(f"Track {track_id} not found")
     tiers = await list_tiers_for_track(track_id)
     templates = await _resolve_templates()
+    primary = await get_setting("primary_producer")
+    primary_str = primary if isinstance(primary, str) else ""
+    separator = templates.get("prod_separator", " x ")
     return renderer(
         track,
         tiers,
         templates,
-        prod=_resolve_prod(track, templates),
+        prod=_resolve_prod(track, primary=primary_str, separator=separator),
         year=_current_year(),
         publish_date=_current_date(),
     )

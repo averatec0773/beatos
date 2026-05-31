@@ -16,7 +16,6 @@ DEFAULT_TEMPLATES: dict[str, str] = {
         "如需完整使用权请进行购买，感谢支持！"
     ),
     "album_description": "{publish date} Prod.{prod}",
-    "prod": "Averatec x Redketch",
     "prod_separator": " x ",
 }
 

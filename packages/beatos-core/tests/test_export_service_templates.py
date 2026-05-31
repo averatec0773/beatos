@@ -73,10 +73,34 @@ async def test_prod_custom_separator(db):
 
 
 @pytest.mark.asyncio
-async def test_prod_falls_back_to_setting_when_no_producer(db):
-    await set_setting("upload_templates", {"beat_description": "Prod.{prod}", "prod": "Fallback"})
-    r = await export_metadata(1, "netease")
-    assert _fields(r)["description"].value == "Prod.Fallback"
+async def test_prod_falls_back_to_primary_producer_when_no_producer(db):
+    await set_setting("primary_producer", "Averatec")
+    await set_setting("upload_templates", {"beat_description": "Prod.{prod}"})
+    r = await export_metadata(1, "netease")  # track 1 has no producer
+    assert _fields(r)["description"].value == "Prod.Averatec"
+
+
+@pytest.mark.asyncio
+async def test_prod_empty_when_no_producer_and_no_primary(db):
+    await set_setting("upload_templates", {"beat_description": "Prod.{prod}"})
+    r = await export_metadata(1, "netease")  # no producer, no primary set
+    assert _fields(r)["description"].value == "Prod."
+
+
+@pytest.mark.asyncio
+async def test_prod_puts_primary_producer_first(db):
+    await set_setting("primary_producer", "Redketch")
+    await set_setting("upload_templates", {"beat_description": "Prod.{prod}"})
+    r = await export_metadata(2, "netease")  # producer ["Averatec","Redketch"]
+    assert _fields(r)["description"].value == "Prod.Redketch x Averatec"
+
+
+@pytest.mark.asyncio
+async def test_prod_order_unchanged_when_primary_absent_from_list(db):
+    await set_setting("primary_producer", "Ghost")  # not on track 2
+    await set_setting("upload_templates", {"beat_description": "Prod.{prod}"})
+    r = await export_metadata(2, "netease")
+    assert _fields(r)["description"].value == "Prod.Averatec x Redketch"
 
 
 @pytest.mark.asyncio
@@ -86,3 +110,20 @@ async def test_publish_date_injected(db, monkeypatch):
     await set_setting("upload_templates", {"album_description": "{publish date}"})
     r = await export_metadata(1, "netease")
     assert _fields(r)["album_description"].value == "2030-01-02"
+
+
+def test_resolve_prod_unit():
+    import datetime as dt
+    from beatos_core.export.service import _resolve_prod
+    from beatos_core.models.track import Track
+
+    _now = dt.datetime.now(dt.timezone.utc)
+
+    def mk(producers):
+        return Track(id=1, title="t", producer=producers, created_at=_now, updated_at=_now)
+
+    assert _resolve_prod(mk(["A", "B", "C"]), primary="B", separator=" x ") == "B x A x C"
+    assert _resolve_prod(mk(["A", "B"]), primary="Z", separator=" x ") == "A x B"
+    assert _resolve_prod(mk([]), primary="A", separator=" x ") == "A"
+    assert _resolve_prod(mk([]), primary="", separator=" x ") == ""
+    assert _resolve_prod(mk(["A", "B"]), primary="", separator=" & ") == "A & B"
