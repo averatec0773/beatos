@@ -4,6 +4,16 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.42] — 2026-05-31 — License-tier revenue share + multi-row NetEase price fill
+
+### Added
+
+- **Revenue-share (编曲分润比例) per license tier** — each tier now carries an optional `share` percentage (0–100) alongside its prices. Edit it in the track editor's license tiers (and preset a default in Settings → default license tiers); it persists on the tier (migration 017, append-only) and flows through the HTTP + MCP write paths.
+
+### Changed
+
+- **NetEase price auto-fill now fills every mapped tier row, with its share** — instead of just the first 售价. Export emits a structured `price_tiers` mapping (by deliverables: only-mp3 → MP3 row, +wav → MP3+WAV, +stem → MP3+WAV+分轨), and the extension checks each rental row and fills its 售价 + 编曲分润比例. CNY-priced tiers only; null share leaves 分润 blank; 永久独家 and the unlimited rental row stay manual (no BeatOS concept maps to them). Never auto-submits. Verified live on the real NetEase rental matrix.
+
 ## [0.0.41] — 2026-05-30 — Template refinements: producer from track, album description, publish date
 
 ### Changed
