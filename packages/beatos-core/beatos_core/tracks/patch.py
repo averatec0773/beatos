@@ -11,8 +11,9 @@ FIELD_TO_COL: dict[str, str] = {
     "producer": "producer",
     "genre": "genre",
     "mood": "mood",
+    "is_free": "is_free",
 }
-SCALAR_FIELDS: set[str] = {"title", "bpm", "key", "description"}
+SCALAR_FIELDS: set[str] = {"title", "bpm", "key", "description", "is_free"}
 MULTI_FIELDS: set[str] = set(FIELD_TO_COL) - SCALAR_FIELDS
 
 

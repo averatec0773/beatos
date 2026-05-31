@@ -2,6 +2,7 @@
 
 `update_tracks` patch fields:
   - title (str | None), bpm (int | None), key (str | None), description (str | None)
+  - is_free (bool): mark track as offering a free non-commercial lease
   - producer / genre / mood: list[str] (replace) OR {"add": [str,...], "remove": [str,...]} (delta)
 Tool-level field name `key` maps to DB column `key_signature` (mapping happens
 in the http handler — payload stores the tool-facing name `key`)."""
@@ -16,7 +17,7 @@ from beatos_mcp.db import connect_writable
 from beatos_mcp.preview import build_preview, format_track_sample
 from beatos_mcp.validate import validate_ids
 
-_SCALAR_FIELDS = {"title", "bpm", "key", "description"}
+_SCALAR_FIELDS = {"title", "bpm", "key", "description", "is_free"}
 _MULTI_FIELDS = {"producer", "genre", "mood"}
 _ALLOWED_FIELDS = _SCALAR_FIELDS | _MULTI_FIELDS
 _MAX_FROM = 20
@@ -37,6 +38,9 @@ def _validate_patch(patch: dict[str, Any]) -> None:
             if field == "bpm":
                 if not isinstance(v, (int, float)) or isinstance(v, bool):
                     raise ValueError(f"{field} must be a number or null")
+            elif field == "is_free":
+                if not isinstance(v, bool):
+                    raise ValueError("is_free must be a boolean")
             elif not isinstance(v, str):
                 raise ValueError(f"{field} must be a string or null")
     # Multi-value field shape

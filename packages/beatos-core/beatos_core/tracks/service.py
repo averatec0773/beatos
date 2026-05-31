@@ -28,6 +28,7 @@ _WRITABLE_FIELDS = {
     "tags",
     "description",
     "producer",
+    "is_free",
 }
 
 SORTABLE_FIELDS = frozenset({
@@ -64,7 +65,7 @@ _SELECT_COLS = (
     "id, title, bpm, key_signature, genre, mood, "
     "tags, description, "
     "producer, "
-    "created_at, updated_at, deleted_at"
+    "created_at, updated_at, deleted_at, is_free"
 )
 
 # Subquery rendered after _SELECT_COLS to populate Track.cover_asset_id.
@@ -117,8 +118,8 @@ def _deserialize(row: tuple) -> Track:
     # Row layout (0-based) — v0.0.26 dropped license_type + price:
     # 0:id, 1:title, 2:bpm, 3:key_signature, 4:genre, 5:mood,
     # 6:tags, 7:description,
-    # 8:producer, 9:created_at, 10:updated_at, 11:deleted_at,
-    # 12:cover_asset_id (optional), 13:has_audio (optional)
+    # 8:producer, 9:created_at, 10:updated_at, 11:deleted_at, 12:is_free,
+    # 13:cover_asset_id (optional), 14:has_audio (optional)
     tags = json.loads(row[6]) if row[6] else None
     deleted_at_raw = row[11] if len(row) > 11 else None
     return Track(
@@ -134,8 +135,9 @@ def _deserialize(row: tuple) -> Track:
         created_at=_dt.datetime.fromisoformat(row[9]),
         updated_at=_dt.datetime.fromisoformat(row[10]),
         deleted_at=_dt.datetime.fromisoformat(deleted_at_raw) if deleted_at_raw else None,
-        cover_asset_id=row[12] if len(row) > 12 else None,
-        has_audio=bool(row[13]) if len(row) > 13 else False,
+        is_free=bool(row[12]) if len(row) > 12 else False,
+        cover_asset_id=row[13] if len(row) > 13 else None,
+        has_audio=bool(row[14]) if len(row) > 14 else False,
     )
 
 

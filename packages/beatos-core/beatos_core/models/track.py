@@ -17,6 +17,7 @@ class Track(BaseModel):
     tags: Optional[list[str]] = None
     description: Optional[str] = None
     producer: Optional[list[str]] = None
+    is_free: bool = False
     cover_asset_id: Optional[int] = Field(
         default=None,
         description="Id of the cover asset (asset.role='cover'); NULL if none.",
