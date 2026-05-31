@@ -16,7 +16,7 @@ vi.mock("@/api/app-settings", () => ({
 vi.mock("@/api/distinct", () => ({
   distinct: { values: vi.fn(async () => ["Averatec", "Redketch"]) },
 }));
-vi.mock("@/api/producers", () => ({ producers: { rewrite: vi.fn() } }));
+vi.mock("@/api/producers", () => ({ producers: { rewrite: vi.fn(async () => {}) } }));
 vi.mock("@/stores/tracks", () => ({ useTrackStore: (sel: any) => sel({ refresh: vi.fn() }) }));
 
 import { ProducersSection } from "@/components/Settings/ProducersSection";
@@ -42,6 +42,16 @@ describe("ProducersSection primary marker", () => {
     render(<ProducersSection />);
     const starBtn = await screen.findByRole("button", { name: /unset Averatec as primary/i });
     await user.click(starBtn);
+    await waitFor(() => expect(settings["primary_producer"]).toBe(""));
+  });
+
+  it("clears primary when the starred producer is removed", async () => {
+    settings["primary_producer"] = "Averatec";
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const user = userEvent.setup();
+    render(<ProducersSection />);
+    const removeBtn = await screen.findByRole("button", { name: /Remove Averatec/i });
+    await user.click(removeBtn);
     await waitFor(() => expect(settings["primary_producer"]).toBe(""));
   });
 });

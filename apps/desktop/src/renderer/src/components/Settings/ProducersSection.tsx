@@ -65,6 +65,9 @@ export function ProducersSection(): React.JSX.Element {
         await trackRefresh();
       }
       await removeKnownProducer(name);
+      if (primary === name) {
+        await savePrimaryProducer("");
+      }
       await refresh();
     } catch (e) {
       useToastStore
