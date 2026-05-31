@@ -132,16 +132,10 @@ describe("recipe vs real saved NetEase DOM", () => {
     expect(picked).toContain("Major");
   });
 
-  it("album_name native field selector resolves on the real page", () => {
+  it("album fields are NOT auto-filled (no-op disabled inputs removed)", () => {
     const f = RECIPE.fields as Record<string, any>;
-    expect(f.album_name, "album_name in recipe").toBeTruthy();
-    expect(document.querySelector(f.album_name.selector), "album_name input").toBeTruthy();
-  });
-
-  it("album_description native field selector resolves on the real page", () => {
-    const f = RECIPE.fields as Record<string, any>;
-    expect(f.album_description, "album_description in recipe").toBeTruthy();
-    expect(document.querySelector(f.album_description.selector), "album_description textarea").toBeTruthy();
+    expect(f.album_name, "album_name removed from recipe").toBeUndefined();
+    expect(f.album_description, "album_description removed from recipe").toBeUndefined();
   });
 
   it("price field carries the rental row-match config", () => {

@@ -25,6 +25,7 @@ function overlay(report: { filled: string[]; missed: string[] }, audioHint: stri
   }
   box.appendChild(line(`请拖入音频文件 ${audioHint}`, "margin-top:6px;color:#9cf"));
   if (coverHint) box.appendChild(line(`请拖入封面图 ${coverHint}`, "margin-top:2px;color:#9cf"));
+  box.appendChild(line("专辑请手动新建/选择并填写专辑名+描述（可从 BeatOS 导出对话框复制）", "margin-top:2px;color:#fc9"));
   box.appendChild(line("核对后由你手动点提交", "margin-top:2px;color:#888"));
 
   document.body.appendChild(box);
