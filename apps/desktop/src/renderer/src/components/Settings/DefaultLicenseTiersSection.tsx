@@ -38,6 +38,7 @@ interface DraftRow {
   /** Per-currency string-form input state. */
   priceInputs: Record<string, string>;
   otherCurrency: string | null;
+  shareInput: string;
   /** Internal id used as a React key — not persisted. */
   uid: number;
 }
@@ -60,6 +61,7 @@ function templateToDraft(t: DefaultLicenseTierTemplate, uid: number): DraftRow {
     deliverable,
     priceInputs,
     otherCurrency: other,
+    shareInput: t.share != null ? String(t.share) : "",
     uid,
   };
 }
@@ -67,18 +69,21 @@ function templateToDraft(t: DefaultLicenseTierTemplate, uid: number): DraftRow {
 function draftToTemplate(d: DraftRow): DefaultLicenseTierTemplate | null {
   const prices = inputsToPrices(d.priceInputs, d.otherCurrency);
   if (Object.keys(prices).length === 0) return null;
+  const shareStr = d.shareInput.trim();
+  const shareNum = shareStr === "" ? null : Number(shareStr);
   return {
     name: d.name,
     deliverables: [d.deliverable],
     prices,
+    share: shareNum != null && Number.isFinite(shareNum) ? shareNum : null,
   };
 }
 
 export function DefaultLicenseTiersSection(): React.JSX.Element {
   const [presets, setPresets] = useState<Record<PresetKey, DraftRow>>(() => ({
-    mp3: { name: "MP3", deliverable: "mp3", priceInputs: {}, otherCurrency: null, uid: 1 },
-    wav: { name: "WAV", deliverable: "wav", priceInputs: {}, otherCurrency: null, uid: 2 },
-    stem: { name: "STEMS", deliverable: "stem", priceInputs: {}, otherCurrency: null, uid: 3 },
+    mp3: { name: "MP3", deliverable: "mp3", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 1 },
+    wav: { name: "WAV", deliverable: "wav", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 2 },
+    stem: { name: "STEMS", deliverable: "stem", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 3 },
   }));
   const [customs, setCustoms] = useState<DraftRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,9 +96,9 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
     void (async () => {
       const list = await loadDefaultLicenseTiers();
       const presetMap: Record<PresetKey, DraftRow> = {
-        mp3: { name: "MP3", deliverable: "mp3", priceInputs: {}, otherCurrency: null, uid: 1 },
-        wav: { name: "WAV", deliverable: "wav", priceInputs: {}, otherCurrency: null, uid: 2 },
-        stem: { name: "STEMS", deliverable: "stem", priceInputs: {}, otherCurrency: null, uid: 3 },
+        mp3: { name: "MP3", deliverable: "mp3", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 1 },
+        wav: { name: "WAV", deliverable: "wav", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 2 },
+        stem: { name: "STEMS", deliverable: "stem", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 3 },
       };
       const customList: DraftRow[] = [];
       for (const t of list) {
@@ -164,6 +169,7 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
         deliverable: "",
         priceInputs: {},
         otherCurrency: null,
+        shareInput: "",
         uid: uidCounter.current++,
       },
     ]);
@@ -224,6 +230,9 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
                     return { ...r, otherCurrency: c, priceInputs: next };
                   })
                 }
+                onShareChange={(v) =>
+                  updatePreset(slot.key, (r) => ({ ...r, shareInput: v }))
+                }
               />
             );
           })}
@@ -255,6 +264,9 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
                   return { ...r, otherCurrency: c, priceInputs: next };
                 })
               }
+              onShareChange={(v) =>
+                updateCustom(row.uid, (r) => ({ ...r, shareInput: v }))
+              }
               onDelete={() => removeCustom(row.uid)}
             />
           ))}
@@ -281,6 +293,7 @@ interface RowEditorProps {
   onNameChange?: (name: string) => void;
   onPriceChange: (currency: string, raw: string) => void;
   onOtherCurrencyChange: (currency: string | null) => void;
+  onShareChange: (raw: string) => void;
   onDelete?: () => void;
 }
 
@@ -292,6 +305,7 @@ function RowEditor({
   onNameChange,
   onPriceChange,
   onOtherCurrencyChange,
+  onShareChange,
   onDelete,
 }: RowEditorProps): React.JSX.Element {
   const borderClass = emptyStyle
@@ -375,6 +389,24 @@ function RowEditor({
           aria-label="Other currency price"
         />
       </div>
+      <label
+        className={`inline-flex items-center min-w-0 rounded-md border border-border-subtle ${inputBg} pl-2 pr-1 focus-within:border-accent`}
+      >
+        <span className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary shrink-0">
+          %
+        </span>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={row.shareInput}
+          onChange={(e) => onShareChange(e.target.value)}
+          placeholder="—"
+          className="w-14 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
+          aria-label="分成 %"
+        />
+      </label>
       <div className="flex-1" />
       {onDelete && (
         <button
