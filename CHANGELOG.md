@@ -4,6 +4,18 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.44] — 2026-05-31 — Free-track concept (FREE prefix + NetEase 免费使用)
+
+### Added
+
+- **Per-track 免费 (FREE) flag.** Toggle it in the track editor's License Tiers section header, and preset a default for new tracks in Settings → default license tiers ("新建 track 默认免费"). A free beat offers a free non-commercial lease **while its paid license tiers still apply** (it does not zero out pricing).
+- **`{free}` template token.** A free track's beat name gets a configurable prefix (default `[FREE] `, editable in Settings → 上传模板 → 免费前缀); non-free tracks render no prefix. The old hardcoded `[FREE]` literal in the beat-name template is gone — it's now conditional on the flag.
+- **NetEase 免费使用 auto-select.** On export, a free track has the **免费使用** option checked in the 授权设置 drawer, in addition to the paid 租赁授权 tiers (the drawer is multi-select; the two coexist). Verified live on the logged-in upload page — the option is labeled 免费使用 (不可商用), alongside 租赁授权 and 永久独家. The extension never submits. (extension 0.2.6)
+
+### Notes
+
+- New track column `is_free` (migration 018) + app-setting `default_is_free`; accepted across the HTTP, bulk, and MCP track-write paths.
+
 ## [0.0.43] — 2026-05-31 — Dogfood batch 1: reliable default tiers, primary producer, no-op album fill removed
 
 ### Added

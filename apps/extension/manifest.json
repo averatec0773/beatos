@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BeatOS Uploader",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Auto-fill platform upload forms with metadata staged from BeatOS. You drag the audio file and submit yourself.",
   "host_permissions": [
     "http://127.0.0.1:48923/*",
