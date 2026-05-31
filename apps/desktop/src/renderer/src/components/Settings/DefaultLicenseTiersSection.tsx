@@ -292,7 +292,7 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
           checked={defaultFree}
           onChange={(e) => { const v = e.target.checked; setDefaultFree(v); void saveDefaultIsFree(v); }}
         />
-        新建 track 默认免费(自动带 [FREE] 前缀 + NetEase 勾免费授权)
+        新建 track 默认免费(自动带 [FREE] 前缀 + NetEase 勾免费使用)
       </label>
     </section>
   );
