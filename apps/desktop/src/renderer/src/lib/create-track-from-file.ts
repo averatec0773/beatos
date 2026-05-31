@@ -2,6 +2,7 @@ import { tracks } from "@/api/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { useTrackStore } from "@/stores/tracks";
 import { applyDefaultLicenseTiers } from "@/lib/default-license-tiers";
+import { applyDefaultIsFree } from "@/lib/default-free";
 
 export type AudioTag = "tagged" | "untagged";
 
@@ -73,6 +74,7 @@ export async function importAsNewTracks(files: File[], tag: AudioTag): Promise<I
     // Best-effort: copy the user's default license tiers onto the new
     // track in the background. Failures never block the import flow.
     await applyDefaultLicenseTiers(created.id);
+    await applyDefaultIsFree(created.id);
     try {
       await useAssetStore.getState().attach(created.id, role as any, f.absPath);
       result.created++;

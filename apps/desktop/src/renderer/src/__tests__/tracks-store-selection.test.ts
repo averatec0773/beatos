@@ -13,6 +13,7 @@ function track(id: number, title = `T${id}`): Track {
     tags: null,
     description: null,
     producer: null,
+    is_free: false,
     has_audio: false,
     cover_asset_id: null,
     created_at: "2026-05-16",

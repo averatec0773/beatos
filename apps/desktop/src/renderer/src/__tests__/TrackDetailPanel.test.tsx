@@ -25,6 +25,7 @@ function makeTrack(): Track {
     mood: ["Dark"],
     bpm: 140,
     key_signature: "Am",
+    is_free: false,
     has_audio: false,
     cover_asset_id: null,
     tags: [],

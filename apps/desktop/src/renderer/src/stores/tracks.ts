@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { Track, TrackUpdate, tracks as api } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
 import { applyDefaultLicenseTiers } from "@/lib/default-license-tiers";
+import { applyDefaultIsFree, loadDefaultIsFree } from "@/lib/default-free";
 import { useAssetStore } from "./assets";
 import { useTrackQueryStore } from "./track-query";
 import { useTrashStore } from "./trash";
@@ -129,6 +130,10 @@ export const useTrackStore = create<TrackState>((set, get) => ({
     // intentionally does NOT pull defaults (agents typically want full
     // control over the tier set they're importing).
     await applyDefaultLicenseTiers(t.id);
+    await applyDefaultIsFree(t.id);
+    if (await loadDefaultIsFree()) {
+      set({ list: get().list.map((x) => (x.id === t.id ? { ...x, is_free: true } : x)) });
+    }
     void get().refreshTotal();
     return t;
   },

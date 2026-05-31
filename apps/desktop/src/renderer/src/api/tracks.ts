@@ -10,6 +10,7 @@ export interface Track {
   tags: string[] | null;
   description: string | null;
   producer: string[] | null;
+  is_free: boolean;
   has_audio: boolean;
   cover_asset_id: number | null;
   created_at: string;
