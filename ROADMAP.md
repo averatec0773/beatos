@@ -192,13 +192,17 @@ All three reported failures were root-caused by driving the real logged-in NetEa
 - **价格 multi-tier**: map BeatOS's multiple tiers onto NetEase's fixed sub-tier matrix (MP3 / MP3+WAV / +分轨) rather than filling only the first 售价 row.
 - **说明标签 自定义 tab**: also push unmatched moods into the 自定义标签 free-text input (currently only matches the fixed 适用场景 + 情绪表达 buttons).
 
-### Phase 2-C — upload templates + single-track album (templates SHIPPED v0.0.40)
+### Phase 2-C — upload templates + single-track album (templates SHIPPED v0.0.40, refined v0.0.41)
 
 **Templates + single-album name shipped in v0.0.40** — see CHANGELOG. Three `{}` templates (专辑名 / Beat 名称 / Beat 说明) + producer credit, configured in Settings → 上传模板, stored in `app_setting["upload_templates"]`, rendered by the pure `beatos-core/export/templates.py` and threaded through `netease.render`; the extension fills 专辑名 as a native field + shows a cover reminder. Decided during brainstorming: **every beat = a single-track album**, so NO album entity / migration / new track field — the album name is just another template. The `{ARTIST}` idea was dropped (the producer writes the reference artist into `{title}` or the template literal).
 
+**Refined in v0.0.41** (Subproject B): `{prod}` now resolves from `track.producer` (joined by a configurable `prod_separator`, default ` x `; the Settings `prod` field is fallback-only). Added a `album_description` template (default `{publish date} Prod.{prod}`, filled into the 专辑描述 textarea) and a `{publish date}` token (`YYYY-MM-DD`, export day, service-injected). Token regex widened to allow spaces in `{...}`.
+
+**Subproject A — license-tier price + share (NEXT, brainstormed separately):** give `license_tier` a share/分成 field (append-only migration; price already exists as `prices: dict`). Render price + share per NetEase sub-tier row (MP3 / MP3+WAV / +分轨) in the 授权设置 drawer — the drawer's matrix is `selectorSubItem--1vBQj` rows, each with a 售价 `input` + a 编曲分润比例 `input` (confirmed live 2026-05-30). The `default_license_tiers` setting continues to seed new tracks.
+
 Remaining Phase 2-C follow-ups (future):
 - **Album cover auto-carry**: BeatOS knows the track's `cover_asset_id` but the extension can't inject a local file into a file input (and must never auto-submit) — today it's a manual drag + overlay reminder. A future path could expose the cover file to the producer more directly.
-- **Album type / 版本 / 发行日期 / 专辑描述**: still filled manually on the page; could be added to the recipe/templates if they turn out to need automation.
+- **Album type / 版本 / 发行日期**: still filled manually on the page; could be added to the recipe/templates if they turn out to need automation.
 
 ### Phase 2-A — MCP tool + multi-platform (pending)
 

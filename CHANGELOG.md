@@ -4,6 +4,17 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.41] — 2026-05-30 — Template refinements: producer from track, album description, publish date
+
+### Changed
+
+- **`{prod}` now comes from the track's producer**, not just a Settings string. Multiple producers join with a configurable separator (default ` x ` → `Averatec x Redketch`); the Settings field becomes a fallback used only when a track has no producer. Configure the separator in Settings → 上传模板 → 制作人连接符.
+
+### Added
+
+- **Album-description template** (`{publish date} Prod.{prod}` by default) — rendered into the NetEase 专辑描述 field and filled by the extension.
+- **`{publish date}` placeholder** (`YYYY-MM-DD`, the export-day date; NetEase defaults 发布时间 to 立即发布). Usable in any template. The token regex now allows spaces inside `{...}`, so `{ title }` also resolves.
+
 ## [0.0.40] — 2026-05-30 — Upload templates (album name / Beat 名称 / Beat 说明)
 
 ### Added
