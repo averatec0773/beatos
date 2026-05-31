@@ -10,11 +10,13 @@ export interface UploadTemplates {
   beat_description: string;
   album_description: string;
   prod_separator: string;
+  free_prefix: string;
 }
 
 export const DEFAULT_TEMPLATES: UploadTemplates = {
   album_name: "{year} {title}",
-  beat_name: '[FREE] "{title}" - {genre} TYPE BEAT',
+  beat_name: '{free}"{title}" - {genre} TYPE BEAT',
+  free_prefix: "[FREE] ",
   beat_description:
     "Prod.{prod}\n评论+关注+歌名后缀获取非商用使用权\n" +
     "!非商用使用权仅允许本平台发歌，上传歌曲需要绑定25%播放收益分成!\n" +

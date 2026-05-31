@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/api/app-settings", () => ({
@@ -50,6 +50,15 @@ describe("UploadTemplatesSection", () => {
     await user.type(input, " & ");
     const lastCall = setMock.mock.calls.at(-1);
     expect((lastCall?.[1] as { prod_separator: string }).prod_separator).toContain("&");
+  });
+
+  it("edits the free prefix template field", async () => {
+    const user = userEvent.setup();
+    render(<UploadTemplatesSection />);
+    const input = await screen.findByLabelText("免费前缀");
+    await user.clear(input);
+    await user.type(input, "【免费】");
+    await waitFor(() => expect(screen.getByLabelText("免费前缀")).toHaveValue("【免费】"));
   });
 
   it("reset restores defaults", async () => {

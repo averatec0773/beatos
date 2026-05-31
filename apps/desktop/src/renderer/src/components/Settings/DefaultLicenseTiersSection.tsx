@@ -6,6 +6,7 @@ import {
   saveDefaultLicenseTiers,
   type DefaultLicenseTierTemplate,
 } from "@/lib/default-license-tiers";
+import { loadDefaultIsFree, saveDefaultIsFree } from "@/lib/default-free";
 import { useToastStore } from "@/stores/toast";
 import {
   PRESET_SLOTS,
@@ -86,6 +87,7 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
     stem: { name: "STEMS", deliverable: "stem", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 3 },
   }));
   const [customs, setCustoms] = useState<DraftRow[]>([]);
+  const [defaultFree, setDefaultFree] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -114,6 +116,8 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
       setLoading(false);
     })();
   }, []);
+
+  useEffect(() => { void loadDefaultIsFree().then(setDefaultFree); }, []);
 
   const scheduleSave = useCallback(
     (nextPresets: Record<PresetKey, DraftRow>, nextCustoms: DraftRow[]) => {
@@ -281,6 +285,15 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
           </button>
         </div>
       )}
+      <label className="flex items-center gap-2 mt-3 text-sm">
+        <input
+          type="checkbox"
+          aria-label="新建 track 默认免费"
+          checked={defaultFree}
+          onChange={(e) => { const v = e.target.checked; setDefaultFree(v); void saveDefaultIsFree(v); }}
+        />
+        新建 track 默认免费(自动带 [FREE] 前缀 + NetEase 勾免费授权)
+      </label>
     </section>
   );
 }
