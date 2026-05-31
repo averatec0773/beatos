@@ -40,6 +40,7 @@ interface DraftTier {
 interface EmptyPresetState {
   priceInputs: Record<string, string>;
   otherCurrency: string | null;
+  shareInput: string;
   creating: boolean;
 }
 
@@ -47,6 +48,7 @@ interface PendingCustom {
   name: string;
   priceInputs: Record<string, string>;
   otherCurrency: string | null;
+  shareInput: string;
 }
 
 function pickOtherCurrency(prices: Record<string, number>): string | null {
@@ -81,25 +83,36 @@ function deliverablesKey(deliverables: string[]): string {
   return JSON.stringify(Array.from(new Set(deliverables.map((d) => d.toLowerCase()))).sort());
 }
 
+/** Parse a 分成 input string to a tier share. Empty / non-numeric / out-of-
+ *  range [0,100] all map to null (unset) — so a stray "150" is silently
+ *  dropped rather than sent to the API (which would 400 and, on the
+ *  auto-create path, retry-loop). The `<input max={100}>` is the first guard;
+ *  this is the backstop. */
+function parseShare(raw: string): number | null {
+  const s = raw.trim();
+  if (s === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
 function draftToUpdate(d: DraftTier): LicenseTierUpdate {
   const prices = inputsToPrices(d.priceInputs, d.otherCurrency);
   const effectiveName = d.name.trim() === "" ? deriveAutoName(d.deliverables) : d.name;
-  const shareStr = d.shareInput.trim();
-  const shareNum = shareStr === "" ? null : Number(shareStr);
   return {
     name: effectiveName || "Untitled tier",
     deliverables: d.deliverables,
     prices,
     notes: d.notes.trim() === "" ? null : d.notes,
-    share: shareNum != null && Number.isFinite(shareNum) ? shareNum : null,
+    share: parseShare(d.shareInput),
   };
 }
 
 function emptyPresetDefaults(): Record<PresetKey, EmptyPresetState> {
   return {
-    mp3: { priceInputs: {}, otherCurrency: null, creating: false },
-    wav: { priceInputs: {}, otherCurrency: null, creating: false },
-    stem: { priceInputs: {}, otherCurrency: null, creating: false },
+    mp3: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
+    wav: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
+    stem: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
   };
 }
 
@@ -108,6 +121,11 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [emptySlots, setEmptySlots] =
     useState<Record<PresetKey, EmptyPresetState>>(emptyPresetDefaults());
+  // Latest committed empty-slot state, read by the debounced create path so it
+  // doesn't act on a stale render closure (state updates are async — a debounce
+  // fired right after a keystroke would otherwise see the pre-update value).
+  const emptySlotsRef = useRef(emptySlots);
+  emptySlotsRef.current = emptySlots;
   const [pendingCustom, setPendingCustom] = useState<PendingCustom | null>(null);
   const savingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const createTimers = useRef<Map<PresetKey, ReturnType<typeof setTimeout>>>(new Map());
@@ -262,11 +280,28 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
     });
   }
 
+  function onEmptyPresetShareChange(preset: PresetKey, raw: string): void {
+    setEmptySlots((prev) => ({
+      ...prev,
+      [preset]: { ...prev[preset], shareInput: raw },
+    }));
+    const existing = createTimers.current.get(preset);
+    if (existing) clearTimeout(existing);
+    const handle = setTimeout(() => {
+      void maybeCreatePresetTier(preset);
+    }, AUTOSAVE_MS);
+    createTimers.current.set(preset, handle);
+  }
+
   async function maybeCreatePresetTier(preset: PresetKey): Promise<void> {
-    const slot = emptySlots[preset];
+    const slot = emptySlotsRef.current[preset];
     if (!slot || slot.creating) return;
     const prices = inputsToPrices(slot.priceInputs, slot.otherCurrency);
-    if (Object.keys(prices).length === 0) return;
+    const share = parseShare(slot.shareInput);
+    // Create the tier once the producer has set anything worth saving — a
+    // price OR a share. (A share-only tier still won't map to NetEase without
+    // a CNY price, but it's the producer's data to keep.)
+    if (Object.keys(prices).length === 0 && share == null) return;
     setEmptySlots((prev) => ({
       ...prev,
       [preset]: { ...prev[preset], creating: true },
@@ -276,16 +311,20 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
         name: preset.toUpperCase(),
         deliverables: [preset],
         prices,
+        share,
       });
       setTiers((prev) => [...prev, toDraft(created)]);
       setEmptySlots((prev) => ({
         ...prev,
-        [preset]: { priceInputs: {}, otherCurrency: null, creating: false },
+        [preset]: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
       }));
     } catch (e) {
+      // Reset the whole slot (incl. priceInputs + shareInput) so a failed
+      // create can't leave a stuck value that re-fires the debounce on the
+      // next keystroke.
       setEmptySlots((prev) => ({
         ...prev,
-        [preset]: { ...prev[preset], creating: false },
+        [preset]: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
       }));
       useToastStore
         .getState()
@@ -298,7 +337,7 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
 
   function openPendingCustom(): void {
     if (pendingCustom) return;
-    setPendingCustom({ name: "", priceInputs: {}, otherCurrency: null });
+    setPendingCustom({ name: "", priceInputs: {}, otherCurrency: null, shareInput: "" });
     setTimeout(() => pendingNameRef.current?.focus(), 0);
   }
 
@@ -334,6 +373,7 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
         name,
         deliverables: [deliverable],
         prices,
+        share: parseShare(pendingCustom.shareInput),
       });
       setTiers((prev) => [...prev, toDraft(created)]);
       setPendingCustom(null);
@@ -390,9 +430,11 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
                 label={slot.label}
                 priceInputs={empty.priceInputs}
                 otherCurrency={empty.otherCurrency}
+                shareInput={empty.shareInput}
                 creating={empty.creating}
                 onPriceChange={(c, v) => onEmptyPresetPriceChange(slot.key, c, v)}
                 onOtherCurrencyChange={(c) => onEmptyPresetOtherCurrencyChange(slot.key, c)}
+                onShareChange={(v) => onEmptyPresetShareChange(slot.key, v)}
               />
             );
           })}
@@ -592,18 +634,22 @@ interface EmptyTierRowProps {
   label: string;
   priceInputs: Record<string, string>;
   otherCurrency: string | null;
+  shareInput: string;
   creating: boolean;
   onPriceChange: (currency: string, raw: string) => void;
   onOtherCurrencyChange: (currency: string | null) => void;
+  onShareChange: (raw: string) => void;
 }
 
 function EmptyTierRow({
   label,
   priceInputs,
   otherCurrency,
+  shareInput,
   creating,
   onPriceChange,
   onOtherCurrencyChange,
+  onShareChange,
 }: EmptyTierRowProps): React.JSX.Element {
   return (
     <div
@@ -624,6 +670,23 @@ function EmptyTierRow({
         onPriceChange={onPriceChange}
         onOtherCurrencyChange={onOtherCurrencyChange}
       />
+      <label className="inline-flex items-center min-w-0 rounded-md border border-dashed border-border-subtle bg-bg-base pl-2 pr-1 focus-within:border-accent">
+        <span className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary shrink-0">
+          %
+        </span>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={shareInput}
+          disabled={creating}
+          onChange={(e) => onShareChange(e.target.value)}
+          placeholder="—"
+          className="w-14 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
+          aria-label="分成 %"
+        />
+      </label>
       <div className="flex-1" />
       <div className="w-7 shrink-0" aria-hidden />
     </div>
@@ -686,6 +749,23 @@ function PendingCustomRow({
           onChange({ otherCurrency: c, priceInputs: nextInputs });
         }}
       />
+      <label className="inline-flex items-center min-w-0 rounded-md border border-border-subtle bg-bg-base pl-2 pr-1 focus-within:border-accent">
+        <span className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary shrink-0">
+          %
+        </span>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={value.shareInput}
+          onChange={(e) => onChange({ shareInput: e.target.value })}
+          onKeyDown={onKeyDown}
+          placeholder="—"
+          className="w-14 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
+          aria-label="分成 %"
+        />
+      </label>
       <div className="flex-1" />
       <button
         type="button"
