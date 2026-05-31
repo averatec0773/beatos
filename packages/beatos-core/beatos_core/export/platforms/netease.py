@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from beatos_platforms import load_vocab_map
 
 from beatos_core.export.models import ExportField, ExportResult
@@ -27,6 +29,34 @@ def _price_line(tier: LicenseTier) -> str:
             continue
         parts.append(f"{cur} {_fmt_amount(amt)}")
     return f"{label}: {' / '.join(parts)}"
+
+
+def _price_tiers(tiers: list[LicenseTier]) -> list[dict]:
+    """Map each tier onto a NetEase 租赁授权 row key by deliverables.
+
+    stem > wav > mp3 priority; only-mp3 → "mp3", has-wav-no-stem → "wav",
+    has-stem → "stem". CNY-priced only (NetEase 售价 is RMB); first tier per
+    row key wins. share passes through (may be None)."""
+    out: list[dict] = []
+    seen: set[str] = set()
+    for t in tiers:
+        d = {x.lower() for x in (t.deliverables or [])}
+        if "stem" in d:
+            row = "stem"
+        elif "wav" in d:
+            row = "wav"
+        elif "mp3" in d:
+            row = "mp3"
+        else:
+            continue
+        if row in seen:
+            continue
+        cny = t.prices.get("CNY")
+        if cny is None:
+            continue
+        seen.add(row)
+        out.append({"row": row, "price": float(cny), "share": t.share})
+    return out
 
 
 def render(
@@ -78,5 +108,7 @@ def render(
 
     price_value = "\n".join(_price_line(t) for t in tiers)
     fields.append(ExportField(key="price", label="价格", value=price_value))
+    fields.append(ExportField(key="price_tiers", label="价格档位",
+                              value=json.dumps(_price_tiers(tiers))))
 
     return ExportResult(platform=PLATFORM, fields=fields)

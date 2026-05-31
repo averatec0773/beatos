@@ -1,4 +1,5 @@
 import datetime as dt
+import json as _json
 
 from beatos_core.models.track import Track
 from beatos_core.models.license_tier import LicenseTier
@@ -96,3 +97,46 @@ def test_album_description_field_rendered():
 def test_render_ignores_templates_prod_key():
     r = render(_track(title="仙泉"), [], _tmpl(prod="SHOULD_NOT_APPEAR", beat_description="Prod.{prod}"), prod="Neo")
     assert _fields(r)["description"].value == "Prod.Neo"
+
+
+def _tier(**kw):
+    base = dict(id=1, track_id=1, position=0, name="", deliverables=[], prices={},
+                notes=None, share=None, created_at=_NOW, updated_at=_NOW)
+    base.update(kw)
+    return LicenseTier(**base)
+
+
+def test_price_tiers_maps_deliverables_to_rows():
+    tiers = [
+        _tier(deliverables=["mp3"], prices={"CNY": 50}, share=25),
+        _tier(deliverables=["mp3", "wav"], prices={"CNY": 150}),
+        _tier(deliverables=["mp3", "wav", "stem"], prices={"CNY": 400}, share=10),
+    ]
+    r = render(_track(), tiers, _tmpl())
+    pt = _json.loads(_fields(r)["price_tiers"].value)
+    assert pt == [
+        {"row": "mp3", "price": 50.0, "share": 25.0},
+        {"row": "wav", "price": 150.0, "share": None},
+        {"row": "stem", "price": 400.0, "share": 10.0},
+    ]
+
+
+def test_price_tiers_skips_tier_without_cny():
+    tiers = [_tier(deliverables=["mp3"], prices={"USD": 8})]
+    r = render(_track(), tiers, _tmpl())
+    assert _json.loads(_fields(r)["price_tiers"].value) == []
+
+
+def test_price_tiers_dedupes_same_row_first_wins():
+    tiers = [
+        _tier(deliverables=["mp3"], prices={"CNY": 50}),
+        _tier(deliverables=["mp3"], prices={"CNY": 99}),
+    ]
+    r = render(_track(), tiers, _tmpl())
+    pt = _json.loads(_fields(r)["price_tiers"].value)
+    assert pt == [{"row": "mp3", "price": 50.0, "share": None}]
+
+
+def test_price_text_field_still_present():
+    r = render(_track(), [_tier(deliverables=["mp3"], prices={"CNY": 50})], _tmpl())
+    assert "price" in _fields(r)
