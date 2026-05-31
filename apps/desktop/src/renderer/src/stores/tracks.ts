@@ -128,7 +128,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
     // own errors and logs them. Renderer-only flow; MCP create_tracks
     // intentionally does NOT pull defaults (agents typically want full
     // control over the tier set they're importing).
-    void applyDefaultLicenseTiers(t.id);
+    await applyDefaultLicenseTiers(t.id);
     void get().refreshTotal();
     return t;
   },

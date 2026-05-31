@@ -72,7 +72,7 @@ export async function importAsNewTracks(files: File[], tag: AudioTag): Promise<I
     }
     // Best-effort: copy the user's default license tiers onto the new
     // track in the background. Failures never block the import flow.
-    void applyDefaultLicenseTiers(created.id);
+    await applyDefaultLicenseTiers(created.id);
     try {
       await useAssetStore.getState().attach(created.id, role as any, f.absPath);
       result.created++;

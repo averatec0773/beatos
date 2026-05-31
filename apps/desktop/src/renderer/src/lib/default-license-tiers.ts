@@ -1,5 +1,6 @@
 import { appSettings } from "@/api/app-settings";
 import { licenseTiers, type LicenseTierCreate } from "@/api/license-tiers";
+import { useToastStore } from "@/stores/toast";
 
 /**
  * App-setting key holding the array of tier templates copied onto every
@@ -39,11 +40,13 @@ export async function applyDefaultLicenseTiers(trackId: number): Promise<void> {
     try {
       await licenseTiers.create(trackId, tpl);
     } catch (e) {
-      console.warn(
-        "[default-license-tiers] apply tier failed:",
-        tpl,
-        e instanceof Error ? e.message : e,
-      );
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("same deliverables already exists")) {
+        console.warn("[default-license-tiers] skip duplicate tier:", tpl.deliverables);
+        continue;
+      }
+      console.warn("[default-license-tiers] apply tier failed:", tpl, msg);
+      useToastStore.getState().show("error", `默认价格档复制失败 (${tpl.name ?? tpl.deliverables?.join("+")}): ${msg}`);
     }
   }
 }
