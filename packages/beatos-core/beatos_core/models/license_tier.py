@@ -26,6 +26,7 @@ class LicenseTier(BaseModel):
     name: str
     deliverables: list[str] = Field(default_factory=list)
     prices: dict[str, float] = Field(default_factory=dict)
+    share: Optional[float] = None
     notes: Optional[str] = None
     created_at: _dt.datetime
     updated_at: _dt.datetime
@@ -42,6 +43,7 @@ class LicenseTierCreate(BaseModel):
     name: str = ""
     deliverables: list[str] = Field(default_factory=list)
     prices: dict[str, float] = Field(default_factory=dict)
+    share: Optional[float] = None
     notes: Optional[str] = None
 
 
@@ -54,4 +56,5 @@ class LicenseTierUpdate(BaseModel):
     name: Optional[str] = None
     deliverables: Optional[list[str]] = None
     prices: Optional[dict[str, float]] = None
+    share: Optional[float] = None
     notes: Optional[str] = None
