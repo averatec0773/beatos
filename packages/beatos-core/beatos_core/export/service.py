@@ -14,7 +14,7 @@ from beatos_core.tracks.service import get_track
 
 _TEMPLATES_KEY = "upload_templates"
 
-# Renderer signature: (track, tiers, templates, *, year) -> ExportResult
+# Renderer signature: (track, tiers, templates, *, prod, year, publish_date) -> ExportResult
 _Renderer = Callable[..., ExportResult]
 _RENDERERS: dict[str, _Renderer] = {
     "netease": netease.render,
