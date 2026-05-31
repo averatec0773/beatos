@@ -445,3 +445,18 @@ def test_query_unions_with_discrete_filter(tmp_path):
     # discrete genres=trap UNION query genre:drill -> both returned
     rows = client.get("/api/tracks", params=[("genres", "trap"), ("query", "genre:drill")]).json()
     assert sorted(t["title"] for t in rows) == ["A", "B"]
+
+
+def test_update_is_free_via_http(tmp_path):
+    """PUT /api/tracks/{id} with is_free=true succeeds and returns is_free True."""
+    client = TestClient(create_app())
+    track_id = client.post("/api/tracks", json={"title": "FreeBeats"}).json()["id"]
+
+    res = client.put(f"/api/tracks/{track_id}", json={"is_free": True})
+    assert res.status_code == 200
+    assert res.json()["is_free"] is True
+
+    # confirm persisted
+    get_res = client.get(f"/api/tracks/{track_id}")
+    assert get_res.status_code == 200
+    assert get_res.json()["is_free"] is True

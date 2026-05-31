@@ -55,3 +55,4 @@ class TrackUpdate(BaseModel):
     tags: Optional[list[str]] = None
     description: Optional[str] = None
     producer: Optional[list[str]] = None
+    is_free: Optional[bool] = None
