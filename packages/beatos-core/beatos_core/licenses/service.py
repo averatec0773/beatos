@@ -21,10 +21,10 @@ from beatos_core.models import LicenseTier
 
 _SELECT_COLS = (
     "id, track_id, position, name, deliverables, prices_json, notes, "
-    "created_at, updated_at"
+    "created_at, updated_at, share"
 )
 
-_WRITABLE_FIELDS = {"name", "deliverables", "prices", "notes"}
+_WRITABLE_FIELDS = {"name", "deliverables", "prices", "notes", "share"}
 
 _MAX_CURRENCY_CODE_LEN = 8
 
@@ -64,6 +64,18 @@ def _normalize_prices(raw: Any) -> dict[str, float]:
             raise ValueError(f"prices[{code!r}] must be >= 0")
         out[code.upper().strip()] = float(amount)
     return out
+
+
+def _normalize_share(raw: Any) -> Optional[float]:
+    """Validate a tier's revenue-share percentage. None → None (unset).
+    Must be a number in [0, 100]; bool/non-number/out-of-range → ValueError."""
+    if raw is None:
+        return None
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        raise ValueError("share must be a number or null")
+    if raw < 0 or raw > 100:
+        raise ValueError("share must be between 0 and 100")
+    return float(raw)
 
 
 async def _find_duplicate_tier(
@@ -119,6 +131,7 @@ def _row_to_tier(row: tuple) -> LicenseTier:
         }
     except (json.JSONDecodeError, TypeError):
         prices = {}
+    share = row[9]
     return LicenseTier(
         id=row[0],
         track_id=row[1],
@@ -127,6 +140,7 @@ def _row_to_tier(row: tuple) -> LicenseTier:
         deliverables=deliverables,
         prices=prices,
         notes=row[6],
+        share=float(share) if share is not None else None,
         created_at=_dt.datetime.fromisoformat(row[7]),
         updated_at=_dt.datetime.fromisoformat(row[8]),
     )
@@ -179,12 +193,14 @@ async def create_tier(
     deliverables: Optional[list[str]] = None,
     prices: Optional[dict[str, float]] = None,
     notes: Optional[str] = None,
+    share: Optional[float] = None,
 ) -> LicenseTier:
     # name is intentionally allowed empty: the renderer auto-derives a
     # display label from `deliverables` when name is blank.
     if not isinstance(name, str):
         raise ValueError("name must be a string")
     normalized_prices = _normalize_prices(prices)
+    normalized_share = _normalize_share(share)
     now = _now()
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
@@ -199,8 +215,8 @@ async def create_tier(
         async with conn.execute(
             "INSERT INTO license_tier "
             "(track_id, position, name, deliverables, prices_json, notes, "
-            " created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            " share, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 track_id,
                 position,
@@ -208,6 +224,7 @@ async def create_tier(
                 json.dumps(deliverables or []),
                 json.dumps(normalized_prices),
                 notes,
+                normalized_share,
                 now,
                 now,
             ),
@@ -243,6 +260,10 @@ async def update_tier(tier_id: int, updates: dict[str, Any]) -> LicenseTier:
             normalized = _normalize_prices(value)
             sets.append("prices_json = ?")
             values.append(json.dumps(normalized))
+            continue
+        if field == "share":
+            sets.append("share = ?")
+            values.append(_normalize_share(value))
             continue
         if field == "name":
             if value is None:
@@ -330,7 +351,7 @@ async def replace_tiers_for_track(
         if not await _track_exists(conn, track_id):
             raise ValueError(f"Track {track_id} not found.")
         seen_keys: set[str] = set()
-        normalized_batch: list[tuple[str, list[str], dict[str, float], Optional[str]]] = []
+        normalized_batch: list[tuple[str, list[str], dict[str, float], Optional[str], Optional[float]]] = []
         for tier in tiers:
             name = tier.get("name", "")
             if not isinstance(name, str):
@@ -347,14 +368,15 @@ async def replace_tiers_for_track(
                 seen_keys.add(key)
             normalized_prices = _normalize_prices(tier.get("prices"))
             notes = tier.get("notes")
-            normalized_batch.append((name, deliverables, normalized_prices, notes))
+            normalized_share = _normalize_share(tier.get("share"))
+            normalized_batch.append((name, deliverables, normalized_prices, notes, normalized_share))
         await conn.execute("DELETE FROM license_tier WHERE track_id = ?", (track_id,))
-        for position, (name, deliverables, prices, notes) in enumerate(normalized_batch):
+        for position, (name, deliverables, prices, notes, share) in enumerate(normalized_batch):
             await conn.execute(
                 "INSERT INTO license_tier "
                 "(track_id, position, name, deliverables, prices_json, notes, "
-                " created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                " share, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     track_id,
                     position,
@@ -362,6 +384,7 @@ async def replace_tiers_for_track(
                     json.dumps(deliverables),
                     json.dumps(prices),
                     notes,
+                    share,
                     now,
                     now,
                 ),
