@@ -21,6 +21,23 @@ import { distinct } from "@/api/distinct";
  */
 
 export const KNOWN_PRODUCERS_KEY = "known_producers";
+export const PRIMARY_PRODUCER_KEY = "primary_producer";
+
+/** The single producer name marked "me" (★). Empty string when unset. */
+export async function loadPrimaryProducer(): Promise<string> {
+  try {
+    const r = await appSettings.get<string>(PRIMARY_PRODUCER_KEY);
+    return typeof r.value === "string" ? r.value : "";
+  } catch (e) {
+    console.warn("[known-producers] load primary failed:", e);
+    return "";
+  }
+}
+
+/** Set (or, with an empty string, clear) the primary producer. */
+export async function savePrimaryProducer(name: string): Promise<void> {
+  await appSettings.set(PRIMARY_PRODUCER_KEY, name.trim());
+}
 
 export async function loadKnownProducers(): Promise<string[]> {
   try {

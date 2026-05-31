@@ -21,14 +21,14 @@ describe("UploadTemplatesSection", () => {
     setMock.mockClear();
   });
 
-  it("renders the three templates + prod with current values", () => {
+  it("renders the four templates with current values", () => {
     render(<UploadTemplatesSection />);
     expect(screen.getByLabelText("专辑名模板")).toHaveValue(DEFAULT_TEMPLATES.album_name);
     expect(screen.getByLabelText("Beat 名称模板")).toHaveValue(DEFAULT_TEMPLATES.beat_name);
     expect(screen.getByLabelText("Beat 说明模板")).toHaveValue(DEFAULT_TEMPLATES.beat_description);
-    expect(screen.getByLabelText("制作人署名")).toHaveValue(DEFAULT_TEMPLATES.prod);
     expect(screen.getByLabelText("专辑描述模板")).toHaveValue(DEFAULT_TEMPLATES.album_description);
     expect(screen.getByLabelText("制作人连接符")).toHaveValue(DEFAULT_TEMPLATES.prod_separator);
+    expect(screen.queryByLabelText("制作人署名")).toBeNull();
   });
 
   it("editing a template persists to app_setting", async () => {
@@ -54,10 +54,10 @@ describe("UploadTemplatesSection", () => {
 
   it("reset restores defaults", async () => {
     const user = userEvent.setup();
-    act(() => useUploadTemplatesStore.setState({ templates: { ...DEFAULT_TEMPLATES, prod: "changed" } }));
+    act(() => useUploadTemplatesStore.setState({ templates: { ...DEFAULT_TEMPLATES, prod_separator: " & " } }));
     render(<UploadTemplatesSection />);
     await user.click(screen.getByRole("button", { name: "重置默认" }));
-    expect(useUploadTemplatesStore.getState().templates.prod).toBe(DEFAULT_TEMPLATES.prod);
+    expect(useUploadTemplatesStore.getState().templates.prod_separator).toBe(DEFAULT_TEMPLATES.prod_separator);
     expect(setMock).toHaveBeenCalledWith("upload_templates", DEFAULT_TEMPLATES);
   });
 });

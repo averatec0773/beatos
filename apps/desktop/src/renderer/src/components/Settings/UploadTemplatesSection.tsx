@@ -40,15 +40,6 @@ export function UploadTemplatesSection(): React.JSX.Element {
           </label>
         ))}
         <label className="block">
-          <span className="text-sm text-text-secondary">制作人署名(track 未填时的 fallback)</span>
-          <input
-            aria-label="制作人署名"
-            value={templates.prod}
-            onChange={(e) => void setField("prod", e.target.value)}
-            className="mt-1 w-full rounded-md bg-bg-elevated p-2 text-sm"
-          />
-        </label>
-        <label className="block">
           <span className="text-sm text-text-secondary">制作人连接符</span>
           <input
             aria-label="制作人连接符"
