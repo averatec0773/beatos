@@ -1,8 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, Star, X } from "lucide-react";
 
 import { producers as producersApi } from "@/api/producers";
-import { addKnownProducer, loadAllProducerNames, removeKnownProducer } from "@/lib/known-producers";
+import {
+  addKnownProducer,
+  loadAllProducerNames,
+  loadPrimaryProducer,
+  removeKnownProducer,
+  savePrimaryProducer,
+} from "@/lib/known-producers";
 import { useToastStore } from "@/stores/toast";
 import { useTrackStore } from "@/stores/tracks";
 
@@ -25,6 +31,7 @@ export function ProducersSection(): React.JSX.Element {
   const [knownOnly, setKnownOnly] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [primary, setPrimary] = useState<string>("");
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -34,6 +41,7 @@ export function ProducersSection(): React.JSX.Element {
     const { used: u, knownOnly: k } = await loadAllProducerNames();
     setUsed(u);
     setKnownOnly(k);
+    setPrimary(await loadPrimaryProducer());
     setLoaded(true);
   }, []);
 
@@ -64,6 +72,19 @@ export function ProducersSection(): React.JSX.Element {
         .show("error", `Failed to remove "${name}": ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function onTogglePrimary(name: string): Promise<void> {
+    const next = primary === name ? "" : name;
+    setPrimary(next); // optimistic
+    try {
+      await savePrimaryProducer(next);
+    } catch (e) {
+      useToastStore
+        .getState()
+        .show("error", `Failed to set primary: ${e instanceof Error ? e.message : String(e)}`);
+      await refresh();
     }
   }
 
@@ -130,7 +151,9 @@ export function ProducersSection(): React.JSX.Element {
                   name={name}
                   variant="used"
                   busy={busy === name}
+                  isPrimary={primary === name}
                   onRemove={() => void onRemove(name, false)}
+                  onTogglePrimary={() => void onTogglePrimary(name)}
                 />
               ))}
               {knownOnly.map((name) => (
@@ -139,7 +162,9 @@ export function ProducersSection(): React.JSX.Element {
                   name={name}
                   variant="known"
                   busy={busy === name}
+                  isPrimary={primary === name}
                   onRemove={() => void onRemove(name, true)}
+                  onTogglePrimary={() => void onTogglePrimary(name)}
                 />
               ))}
               {adding ? (
@@ -172,7 +197,8 @@ export function ProducersSection(): React.JSX.Element {
       )}
       <p className="mt-2 text-xs text-text-tertiary">
         Dashed-outline chips are names you added here but no track uses yet. Solid chips are in use
-        on at least one track — removing them clears the name from every track.
+        on at least one track — removing them clears the name from every track. 点击 ★
+        标记你自己为主制作人 —— 导出 {"{prod}"} 时它排在最前。
       </p>
     </section>
   );
@@ -182,10 +208,19 @@ interface ProducerChipProps {
   name: string;
   variant: "used" | "known";
   busy: boolean;
+  isPrimary: boolean;
   onRemove: () => void;
+  onTogglePrimary: () => void;
 }
 
-function ProducerChip({ name, variant, busy, onRemove }: ProducerChipProps): React.JSX.Element {
+function ProducerChip({
+  name,
+  variant,
+  busy,
+  isPrimary,
+  onRemove,
+  onTogglePrimary,
+}: ProducerChipProps): React.JSX.Element {
   const baseStyle =
     variant === "used"
       ? "bg-accent/20 text-text-primary"
@@ -195,8 +230,19 @@ function ProducerChip({ name, variant, busy, onRemove }: ProducerChipProps): Rea
       data-testid="producer-chip"
       data-producer-name={name}
       data-variant={variant}
+      data-primary={isPrimary ? "1" : undefined}
       className={`group inline-flex h-7 items-center gap-1 rounded-full px-3 text-sm leading-none font-medium ${baseStyle} ${busy ? "opacity-50" : ""}`}
     >
+      <button
+        type="button"
+        onClick={onTogglePrimary}
+        disabled={busy}
+        className="rounded-full p-0.5 text-text-tertiary hover:text-amber-400 focus:outline-none disabled:opacity-50"
+        aria-label={`${isPrimary ? "unset" : "set"} ${name} as primary`}
+        title={isPrimary ? "主制作人(点击取消)" : "设为主制作人"}
+      >
+        {isPrimary ? <span aria-hidden="true">★</span> : <Star className="h-3 w-3" />}
+      </button>
       {name}
       <button
         type="button"
