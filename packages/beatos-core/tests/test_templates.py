@@ -51,8 +51,9 @@ def test_literal_brace_text_not_crashing():
 
 
 def test_beat_name_default_template():
+    # {free} renders empty when no free kwarg — the prefix is supplied by netease.render
     out = _render(DEFAULT_TEMPLATES["beat_name"])
-    assert out == '[FREE] "仙泉" - 中国风 TYPE BEAT'
+    assert out == '"仙泉" - 中国风 TYPE BEAT'
 
 
 def test_empty_template_renders_empty():
@@ -81,4 +82,18 @@ def test_album_description_default_template():
 
 
 def test_default_templates_have_all_keys():
-    assert set(DEFAULT_TEMPLATES) == {"album_name", "beat_name", "beat_description", "album_description", "prod_separator"}
+    assert set(DEFAULT_TEMPLATES) == {"album_name", "beat_name", "beat_description", "album_description", "prod_separator", "free_prefix"}
+
+
+def test_free_token_renders_prefix_or_empty():
+    import datetime as dt
+    from beatos_core.export.templates import render_template
+    from beatos_core.models.track import Track
+    now = dt.datetime.now(dt.timezone.utc)
+    t = Track(id=1, title="X", created_at=now, updated_at=now)
+    out_free = render_template('{free}"{title}"', t, prod="", year=2026,
+                               publish_date="", genre_zh="", free="[FREE] ")
+    out_paid = render_template('{free}"{title}"', t, prod="", year=2026,
+                               publish_date="", genre_zh="", free="")
+    assert out_free == '[FREE] "X"'
+    assert out_paid == '"X"'

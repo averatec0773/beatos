@@ -37,7 +37,8 @@ def _fields(result):
 async def test_defaults_used_when_setting_absent(db):
     r = await export_metadata(1, "netease")
     f = _fields(r)
-    assert f["title"].value == '[FREE] "仙泉" - 国风 TYPE BEAT'
+    # track 1 is not free, so no [FREE] prefix
+    assert f["title"].value == '"仙泉" - 国风 TYPE BEAT'
     assert "album_name" in f
 
 
@@ -110,6 +111,26 @@ async def test_publish_date_injected(db, monkeypatch):
     await set_setting("upload_templates", {"album_description": "{publish date}"})
     r = await export_metadata(1, "netease")
     assert _fields(r)["album_description"].value == "2030-01-02"
+
+
+@pytest.mark.asyncio
+async def test_free_prefix_only_on_free_track(db):
+    import aiosqlite, datetime as dt
+    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    async with aiosqlite.connect(db) as conn:
+        await conn.execute(
+            "INSERT INTO track (id,title,genre,is_free,created_at,updated_at) "
+            "VALUES (50,'自由','[\"Trap Rap\"]',1,?,?)", (now, now))
+        await conn.execute(
+            "INSERT INTO track (id,title,genre,is_free,created_at,updated_at) "
+            "VALUES (51,'收费','[\"Trap Rap\"]',0,?,?)", (now, now))
+        await conn.commit()
+    free = {f.key: f for f in (await export_metadata(50, "netease")).fields}
+    paid = {f.key: f for f in (await export_metadata(51, "netease")).fields}
+    assert free["title"].value.startswith("[FREE] ")
+    assert free["is_free"].value == "1"
+    assert not paid["title"].value.startswith("[FREE]")
+    assert paid["is_free"].value == ""
 
 
 def test_resolve_prod_unit():

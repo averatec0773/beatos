@@ -71,9 +71,9 @@ def test_price_lines_cny_first():
 
 
 def test_beat_name_rendered_into_title():
-    # "Chinese Style" -> "国风" per netease genre-map.json
+    # "Chinese Style" -> "国风" per netease genre-map.json; is_free=False so no [FREE] prefix
     r = render(_track(title="仙泉", genre=["Chinese Style"]), [], _tmpl())
-    assert _fields(r)["title"].value == '[FREE] "仙泉" - 国风 TYPE BEAT'
+    assert _fields(r)["title"].value == '"仙泉" - 国风 TYPE BEAT'
 
 
 def test_album_name_field_present_and_rendered():

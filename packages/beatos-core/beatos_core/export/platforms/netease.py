@@ -78,9 +78,11 @@ def render(
     # in the selector — that mismatch is intentional, not a bug.
     genre_zh = genres[0] if genres else ""
 
+    free = templates.get("free_prefix", "[FREE] ") if track.is_free else ""
+
     def _tmpl(key: str) -> str:
         return render_template(
-            templates.get(key, ""), track, prod=prod, year=year, publish_date=publish_date, genre_zh=genre_zh
+            templates.get(key, ""), track, prod=prod, year=year, publish_date=publish_date, genre_zh=genre_zh, free=free
         )
 
     fields: list[ExportField] = []
@@ -105,6 +107,8 @@ def render(
     fields.append(ExportField(key="key", label="调性", value=track.key_signature or ""))
     fields.append(ExportField(key="description", label="简介", value=_tmpl("beat_description")))
     fields.append(ExportField(key="tags", label="标签", value=" ".join(track.tags or [])))
+    fields.append(ExportField(key="is_free", label="免费授权",
+                              value="1" if track.is_free else ""))
 
     price_value = "\n".join(_price_line(t) for t in tiers)
     fields.append(ExportField(key="price", label="价格", value=price_value))

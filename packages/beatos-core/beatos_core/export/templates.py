@@ -7,7 +7,8 @@ from beatos_core.models.track import Track
 # Producer credit default is interpolated into beat_description's "Prod.{prod}".
 DEFAULT_TEMPLATES: dict[str, str] = {
     "album_name": "{year} {title}",
-    "beat_name": '[FREE] "{title}" - {genre} TYPE BEAT',
+    "free_prefix": "[FREE] ",
+    "beat_name": '{free}"{title}" - {genre} TYPE BEAT',
     "beat_description": (
         "Prod.{prod}\n"
         "评论+关注+歌名后缀获取非商用使用权\n"
@@ -23,7 +24,7 @@ _TOKEN_RE = re.compile(r"\{([\w ]+)\}")
 
 
 def render_template(
-    tmpl: str, track: Track, *, prod: str, year: int, publish_date: str, genre_zh: str
+    tmpl: str, track: Track, *, prod: str, year: int, publish_date: str, genre_zh: str, free: str = ""
 ) -> str:
     """Substitute {title}/{genre}/{year}/{publish date}/{prod}/{bpm}/{key}.
 
@@ -40,6 +41,7 @@ def render_template(
         "prod": prod or "",
         "bpm": str(track.bpm) if track.bpm is not None else "",
         "key": track.key_signature or "",
+        "free": free,
     }
 
     def _sub(m: re.Match[str]) -> str:
