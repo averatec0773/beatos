@@ -282,11 +282,12 @@ describe("fillInteractions — tag-modal", () => {
 describe("fillInteractions — license-modal (drawer)", () => {
   beforeEach(() => (document.body.innerHTML = ""));
 
-  // Simulate NetEase's 授权设置 RIGHT-SIDE DRAWER (verified live 2026-05-30):
-  // a "添加授权方式" trigger opens an .ant-drawer-open holding three checkbox
-  // options (免费使用/租赁授权/永久独家); checking 租赁授权 reveals its 售价
-  // input[type=number]. Footer is 取消/保存 — the driver NEVER clicks 保存.
-  function wireLicenseDrawer(): void {
+  // Simulate NetEase's 授权设置 RIGHT-SIDE DRAWER with the 4-row rental matrix
+  // (verified live 2026-05-30): clicking "添加授权方式" opens .ant-drawer-open;
+  // clicking the 租赁授权 label expands .multiSelectorView--21Ufr with 4 rows
+  // (MP3, MP3+WAV, MP3+WAV+分轨文件, MP3+WAV+分轨文件). Each row has a 售价
+  // input and a 编曲分润比例 input. The driver NEVER clicks 保存.
+  function wireRentalDrawer(): void {
     const trig = document.createElement("button");
     trig.id = "addlic";
     trig.textContent = "+ 添加授权方式";
@@ -295,28 +296,28 @@ describe("fillInteractions — license-modal (drawer)", () => {
       if (document.querySelector(".ant-drawer-open")) return;
       const drawer = document.createElement("div");
       drawer.className = "ant-drawer ant-drawer-open";
-      for (const name of ["免费使用", "租赁授权", "永久独家"]) {
-        const opt = document.createElement("div");
-        opt.className = "defaultView--2Kp-o";
-        const label = document.createElement("label");
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        const span = document.createElement("span");
-        span.textContent = name;
-        label.append(cb, span);
-        opt.appendChild(label);
-        // 租赁授权's price input appears only after its checkbox is checked.
-        if (name === "租赁授权") {
-          label.addEventListener("click", () => {
-            if (opt.querySelector("input[type=number]")) return;
-            const price = document.createElement("input");
-            price.type = "number";
-            price.setAttribute("placeholder", "输入售价");
-            opt.appendChild(price);
-          });
+      const rental = document.createElement("div");
+      rental.className = "defaultView--2Kp-o";
+      const rlabel = document.createElement("label");
+      const rcb = document.createElement("input"); rcb.type = "checkbox";
+      rlabel.append(rcb, document.createTextNode("租赁授权"));
+      rental.appendChild(rlabel);
+      rlabel.addEventListener("click", () => {
+        if (drawer.querySelector(".multiSelectorView--21Ufr")) return;
+        const msv = document.createElement("div");
+        msv.className = "multiSelectorView--21Ufr";
+        for (const title of ["MP3", "MP3+WAV", "MP3+WAV+分轨文件", "MP3+WAV+分轨文件"]) {
+          const row = document.createElement("div");
+          row.className = "selectorSubItem--1vBQj";
+          const t = document.createElement("span"); t.className = "rowTitle"; t.textContent = title;
+          const price = document.createElement("input"); price.type = "number"; price.setAttribute("placeholder", "输入售价");
+          const share = document.createElement("input"); share.type = "number"; share.setAttribute("placeholder", "编曲分润比例（选填）");
+          row.append(t, price, share);
+          msv.appendChild(row);
         }
-        drawer.appendChild(opt);
-      }
+        drawer.appendChild(msv);
+      });
+      drawer.appendChild(rental);
       document.body.appendChild(drawer);
     });
   }
@@ -327,32 +328,43 @@ describe("fillInteractions — license-modal (drawer)", () => {
     drawer: ".ant-drawer-open",
     optionSelector: ".defaultView--2Kp-o",
     licenseType: "租赁授权",
+    tiersKey: "price_tiers",
+    rowContainer: ".multiSelectorView--21Ufr",
+    rowItem: ".selectorSubItem--1vBQj",
+    rowTitles: { mp3: "MP3", wav: "MP3+WAV", stem: "MP3+WAV+分轨文件" },
     priceInput: "input[type='number'][placeholder*='售价']",
+    shareInput: "input[type='number'][placeholder*='编曲分润比例']",
   };
 
-  it("checks 租赁授权 and fills the first tier's price (best-effort, never saves)", async () => {
-    wireLicenseDrawer();
+  it("fills each mapped rental row's price + share from price_tiers", async () => {
+    wireRentalDrawer();
     const map = { match: ["x"], fields: { price: PRICE_SPEC } } as unknown as FormMap;
-    const report = await fillInteractions(
-      document,
-      mkResult([["price", "租赁: ¥199\nPremium: ¥300"]]),
-      map,
-    );
+    const tiers = JSON.stringify([
+      { row: "mp3", price: 50, share: 25 },
+      { row: "stem", price: 400, share: null },
+    ]);
+    const report = await fillInteractions(document, mkResult([["price_tiers", tiers]]), map);
     expect(report.filled).toEqual(["price"]);
-    const priceEl = document.querySelector("input[type='number'][placeholder*='售价']") as HTMLInputElement;
-    expect(priceEl.value).toBe("199"); // first tier's CNY amount
+    const rows = [...document.querySelectorAll(".selectorSubItem--1vBQj")];
+    const mp3Row = rows.find((r) => r.querySelector(".rowTitle")!.textContent === "MP3")!;
+    const stemRow = rows.find((r) => r.querySelector(".rowTitle")!.textContent === "MP3+WAV+分轨文件")!;
+    expect((mp3Row.querySelector("input[placeholder*='售价']") as HTMLInputElement).value).toBe("50");
+    expect((mp3Row.querySelector("input[placeholder*='编曲分润比例']") as HTMLInputElement).value).toBe("25");
+    expect((stemRow.querySelector("input[placeholder*='售价']") as HTMLInputElement).value).toBe("400");
+    expect((stemRow.querySelector("input[placeholder*='编曲分润比例']") as HTMLInputElement).value).toBe("");
   });
 
-  it("reports missed when there is no price", async () => {
-    wireLicenseDrawer();
+  it("reports missed when price_tiers is empty", async () => {
+    wireRentalDrawer();
     const map = { match: ["x"], fields: { price: PRICE_SPEC } } as unknown as FormMap;
-    const report = await fillInteractions(document, mkResult([["price", ""]]), map);
+    const report = await fillInteractions(document, mkResult([["price_tiers", "[]"]]), map);
     expect(report.missed).toEqual(["price"]);
   });
 
   it("reports missed when the trigger is absent", async () => {
     const map = { match: ["x"], fields: { price: PRICE_SPEC } } as unknown as FormMap;
-    const report = await fillInteractions(document, mkResult([["price", "租赁: ¥199"]]), map);
+    const tiers = JSON.stringify([{ row: "mp3", price: 50, share: null }]);
+    const report = await fillInteractions(document, mkResult([["price_tiers", tiers]]), map);
     expect(report.missed).toEqual(["price"]);
   });
 });

@@ -2,7 +2,6 @@ import { waitFor, sleep } from "./dom-wait";
 import type { ExportResult, FillReport, FormMap } from "./fill-form";
 import { setNativeValue } from "./fill-form";
 import { decomposeKey } from "./key-decompose";
-import { parsePrice } from "./price-parse";
 
 export type DriverResult = "filled" | "missed";
 
@@ -252,19 +251,23 @@ const tagModal: Driver = async (spec, key, exp, ctx) => {
 
 /**
  * NetEase 授权设置 is a RIGHT-SIDE DRAWER (.ant-drawer), not a modal, and it's
- * multi-step (verified live): click "添加授权方式" → drawer opens with three
- * fixed checkbox options (免费使用 / 租赁授权 / 永久独家) → checking 租赁授权
- * expands a sub-tier matrix (MP3 / MP3+WAV / …) each with its own 售价
- * input[type=number] → footer is 取消 / 保存. NetEase's fixed taxonomy doesn't
- * map 1:1 onto BeatOS's free-form tiers, so this is honest BEST-EFFORT: open the
- * drawer, check the configured license type, and fill the first visible 售价
- * with the first tier's amount. It NEVER clicks 保存 — the producer reviews the
- * sub-tier matrix and saves manually (human-in-the-loop, per the no-auto-submit
- * rule). Reports "filled" only if a price actually landed in an input.
+ * multi-step (verified live): click "添加授权方式" → drawer opens → checking
+ * 租赁授权 expands a 4-row sub-tier matrix (MP3 / MP3+WAV / MP3+WAV+分轨文件 ×2)
+ * each with its own 售价 input + 编曲分润比例 input. Consumes the structured
+ * `price_tiers` export field ([{row, price, share}]) and fills each mapped row.
+ * Exact-first row matching prevents "MP3" from grabbing the "MP3+WAV" row.
+ * It NEVER clicks 保存 — human-in-the-loop, per the no-auto-submit rule.
  */
 const licenseModal: Driver = async (spec, key, exp, ctx) => {
-  const tiers = parsePrice(fieldValue(exp, key));
-  if (!tiers.length) return "missed";
+  // Structured tiers: [{row:"mp3"|"wav"|"stem", price:number, share:number|null}]
+  const tiersKey: string = spec.tiersKey ?? "price_tiers";
+  let tiers: Array<{ row: string; price: number; share: number | null }> = [];
+  try {
+    tiers = JSON.parse(fieldValue(exp, tiersKey) || "[]");
+  } catch {
+    tiers = [];
+  }
+  if (!Array.isArray(tiers) || tiers.length === 0) return "missed";
 
   let trig: HTMLElement | null = spec.triggerSelector
     ? (ctx.doc.querySelector(spec.triggerSelector) as HTMLElement | null)
@@ -279,30 +282,52 @@ const licenseModal: Driver = async (spec, key, exp, ctx) => {
   if (!trig) return "missed";
   trig.click();
 
-  const drawer = (await ctx.waitFor(spec.drawer ?? ".ant-drawer", { timeoutMs: 2000 })) as HTMLElement | null;
+  const drawer = (await ctx.waitFor(spec.drawer ?? ".ant-drawer-open", { timeoutMs: 2000 })) as HTMLElement | null;
   if (!drawer) return "missed";
 
-  // Check the license-type option (免费使用 / 租赁授权 / 永久独家). Which one is
-  // configured in the recipe; default 租赁授权 (the paid type that exposes 售价).
   const optionText = normText(spec.licenseType ?? "租赁授权");
-  const options = Array.from(drawer.querySelectorAll(spec.optionSelector ?? ".defaultView--2Kp-o")) as HTMLElement[];
-  const option = options.find((o) => normText(o.textContent).includes(optionText));
+  const option = (Array.from(drawer.querySelectorAll(spec.optionSelector ?? ".defaultView--2Kp-o")) as HTMLElement[])
+    .find((o) => normText(o.textContent).includes(optionText));
   if (option) {
     const cb = option.querySelector("input[type=checkbox]") as HTMLInputElement | null;
     const label = option.querySelector("label") as HTMLElement | null;
     if (cb && !cb.checked && label) label.click();
-    await sleep(120); // let the sub-tier price rows expand
   }
 
-  const amt = tiers[0].amounts["CNY"] ?? Object.values(tiers[0].amounts)[0];
-  if (amt == null) return "missed";
-  const priceEl = drawer.querySelector(
-    spec.priceInput ?? "input[type=number][placeholder*='售价']",
-  ) as HTMLInputElement | null;
-  if (!priceEl) return "missed";
-  setNativeValue(priceEl, String(amt));
+  const container = (await ctx.waitFor(spec.rowContainer ?? ".multiSelectorView--21Ufr", { timeoutMs: 2000 })) as HTMLElement | null;
+  if (!container) return "missed";
+
+  const rowTitles: Record<string, string> = spec.rowTitles ?? {};
+  const rowEls = Array.from(container.querySelectorAll(spec.rowItem ?? ".selectorSubItem--1vBQj")) as HTMLElement[];
+  const titleOf = (el: HTMLElement): string => {
+    const t = el.querySelector(".rowTitle, [class*=title], [class*=Title]");
+    return (t?.textContent ?? el.textContent ?? "").trim();
+  };
+
+  let filled = 0;
+  for (const tier of tiers) {
+    const wantTitle = rowTitles[tier.row];
+    if (!wantTitle) continue;
+    // exact-first (so "MP3" doesn't grab the "MP3+WAV" row), then prefix fallback
+    const row =
+      rowEls.find((el) => titleOf(el) === wantTitle) ??
+      rowEls.find((el) => titleOf(el).startsWith(wantTitle));
+    if (!row) continue;
+    const cb = row.querySelector("input[type=checkbox]") as HTMLInputElement | null;
+    const cbLabel = row.querySelector("label") as HTMLElement | null;
+    if (cb && !cb.checked && cbLabel) cbLabel.click();
+    const priceEl = row.querySelector(spec.priceInput ?? "input[type=number][placeholder*='售价']") as HTMLInputElement | null;
+    if (priceEl && tier.price != null) {
+      setNativeValue(priceEl, String(tier.price));
+      filled++;
+    }
+    if (tier.share != null) {
+      const shareEl = row.querySelector(spec.shareInput ?? "input[type=number][placeholder*='编曲分润比例']") as HTMLInputElement | null;
+      if (shareEl) setNativeValue(shareEl, String(tier.share));
+    }
+  }
   // No 保存 click — human reviews + submits.
-  return "filled";
+  return filled > 0 ? "filled" : "missed";
 };
 
 const DRIVERS: Record<string, Driver> = {
