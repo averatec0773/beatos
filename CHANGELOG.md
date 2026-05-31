@@ -4,6 +4,17 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.43] — 2026-05-31 — Dogfood batch 1: reliable default tiers, primary producer, no-op album fill removed
+
+### Added
+
+- **Primary producer (★)** — mark which producer is "you" in Settings → Producers (click the star on a chip). The exported `{prod}` credit now lists that name **first**, and falls back to it when a track has no producer. This replaces the old standalone 制作人署名 fallback field (`upload_templates.prod`), which is removed; the primary name lives in `app_setting["primary_producer"]`. Removing the starred producer also clears the setting so `{prod}` never points at a deleted name.
+
+### Fixed
+
+- **New tracks now reliably copy the default license tiers (price + share).** The copy is awaited at create/import time instead of fire-and-forget, so the create-vs-copy race is gone; a tier whose deliverables already exist is skipped silently (idempotent), and a genuine failure surfaces a toast instead of a buried console warning. On an import where the audio attach fails, the just-created track is now hard-purged so its copied tiers cascade away (no orphaned trash ghost).
+- **Stopped auto-filling NetEase's disabled 专辑名/专辑描述 inputs** — those inputs are bound through NetEase's separate album create/select flow, so filling them was a guaranteed no-op that falsely reported "filled". The two fields are removed from the extension recipe; the overlay now reminds you to create/select the album and fill its name+description manually (copy from the BeatOS export dialog, which still lists them). (extension 0.2.5)
+
 ## [0.0.42.1] — 2026-05-31 — Dogfood fix: 分成 input on unpriced tier rows
 
 ### Fixed

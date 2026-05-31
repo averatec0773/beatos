@@ -7,6 +7,7 @@ vi.mock("@/api/tracks", () => ({
   tracks: {
     create: vi.fn(),
     remove: vi.fn(),
+    purge: vi.fn(),
   },
 }));
 
@@ -73,9 +74,9 @@ describe("importAsNewTracks", () => {
     expect(tracks.create).toHaveBeenCalledWith("beat2");
   });
 
-  it("rolls back via tracks.remove when attach fails", async () => {
+  it("hard-purges the just-created track via tracks.purge when attach fails", async () => {
     vi.mocked(tracks.create).mockResolvedValue({ id: 42, title: "bad" } as any);
-    vi.mocked(tracks.remove).mockResolvedValue(undefined);
+    vi.mocked(tracks.purge).mockResolvedValue(undefined);
     vi.mocked(useAssetStore.getState).mockReturnValue({
       attach: vi.fn().mockRejectedValue(new Error("attach error")),
     } as any);
@@ -84,7 +85,9 @@ describe("importAsNewTracks", () => {
 
     expect(result.created).toBe(0);
     expect(result.errors[0]).toContain("attach failed");
-    expect(tracks.remove).toHaveBeenCalledWith(42);
+    // Hard purge (not soft remove) so the copied default tiers cascade away.
+    expect(tracks.purge).toHaveBeenCalledWith(42);
+    expect(tracks.remove).not.toHaveBeenCalled();
   });
 
   it("records error and skips track when getPathForFile throws", async () => {

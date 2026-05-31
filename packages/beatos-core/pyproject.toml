@@ -1,6 +1,6 @@
 [project]
 name = "beatos-core"
-version = "0.0.42.1"
+version = "0.0.43"
 description = "BeatOS business logic — no web / RPC / Electron dependencies."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
