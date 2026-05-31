@@ -137,6 +137,40 @@ async def test_approve_empty_clears_all(client, db_path):
 
 
 @pytest.mark.asyncio
+async def test_approve_persists_share(client, db_path):
+    """Gap 1: the approve INSERT must carry the share value from the token
+    payload into the database row."""
+    async with aiosqlite.connect(db_path) as conn:
+        tok = await create_token(
+            conn,
+            "set_license_tiers",
+            {
+                "track_id": 1,
+                "tiers": [
+                    {
+                        "name": "MP3",
+                        "deliverables": ["mp3"],
+                        "prices": {"CNY": 50.0},
+                        "notes": None,
+                        "share": 30.0,
+                    }
+                ],
+            },
+        )
+
+    res = await client.post(f"/api/tokens/{tok}/approve")
+    assert res.status_code == 200, res.text
+
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT share FROM license_tier WHERE track_id=1"
+        ) as cur:
+            rows = await cur.fetchall()
+    assert len(rows) == 1
+    assert rows[0][0] == 30.0
+
+
+@pytest.mark.asyncio
 async def test_approve_404_when_track_vanished(client, db_path):
     """Token was issued against an existing track; track gets deleted before
     approval. The handler must surface RowVanishedError, which the route

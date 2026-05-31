@@ -94,11 +94,18 @@ def _validate_tier(tier: Any, index: int) -> None:
             raise ValueError(f"tiers[{index}].notes must be a string or null")
         if len(notes) > _MAX_NOTES:
             raise ValueError(f"tiers[{index}].notes too long (>{_MAX_NOTES} chars)")
+    share = tier.get("share")
+    if share is not None:
+        if isinstance(share, bool) or not isinstance(share, (int, float)):
+            raise ValueError(f"tiers[{index}].share must be a number or null")
+        if share < 0 or share > 100:
+            raise ValueError(f"tiers[{index}].share must be between 0 and 100")
     unknown = set(tier.keys()) - {
         "name",
         "deliverables",
         "prices",
         "notes",
+        "share",
     }
     if unknown:
         raise ValueError(f"tiers[{index}] has unknown fields: {sorted(unknown)}")
@@ -106,11 +113,13 @@ def _validate_tier(tier: Any, index: int) -> None:
 
 def _normalize_tier(tier: dict[str, Any]) -> dict[str, Any]:
     """Whitelist + default the fields stored in the token payload."""
+    share = tier.get("share")
     return {
         "name": tier.get("name", "") or "",
         "deliverables": list(tier.get("deliverables") or []),
         "prices": _validate_prices(tier.get("prices"), index=0),
         "notes": tier.get("notes"),
+        "share": float(share) if share is not None else None,
     }
 
 

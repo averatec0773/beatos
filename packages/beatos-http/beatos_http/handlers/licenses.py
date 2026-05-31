@@ -46,8 +46,8 @@ async def _approve_set_license_tiers(
         await conn.execute(
             "INSERT INTO license_tier "
             "(track_id, position, name, deliverables, prices_json, notes, "
-            " created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            " share, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 track_id,
                 position,
@@ -55,6 +55,7 @@ async def _approve_set_license_tiers(
                 json.dumps(tier.get("deliverables") or []),
                 json.dumps(tier.get("prices") or {}),
                 tier.get("notes"),
+                tier.get("share"),
                 now,
                 now,
             ),

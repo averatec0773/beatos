@@ -107,3 +107,34 @@ def test_reorder_set_mismatch_400():
         json={"ids": [a]},  # missing B
     )
     assert res.status_code == 400
+
+
+# --- Gap 3 test: share must round-trip through POST /api/tracks/{id}/license_tiers ---
+
+def test_create_with_share_round_trips():
+    """POST a tier with share=30.0; GET must return share=30.0."""
+    client = TestClient(create_app())
+    tid = _new_track(client)
+    res = client.post(
+        f"/api/tracks/{tid}/license_tiers",
+        json={"name": "MP3", "deliverables": ["mp3"], "prices": {"CNY": 50.0}, "share": 30.0},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["share"] == 30.0
+
+    tiers = client.get(f"/api/tracks/{tid}/license_tiers").json()
+    assert len(tiers) == 1
+    assert tiers[0]["share"] == 30.0
+
+
+def test_create_with_share_null_round_trips():
+    """POST a tier with share=null; GET must return share=null."""
+    client = TestClient(create_app())
+    tid = _new_track(client)
+    res = client.post(
+        f"/api/tracks/{tid}/license_tiers",
+        json={"name": "WAV", "share": None},
+    )
+    assert res.status_code == 200
+    assert res.json()["share"] is None

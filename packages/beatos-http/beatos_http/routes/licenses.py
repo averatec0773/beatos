@@ -44,6 +44,7 @@ async def create(track_id: int, payload: LicenseTierCreate) -> LicenseTier:
             deliverables=payload.deliverables,
             prices=payload.prices,
             notes=payload.notes,
+            share=payload.share,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
