@@ -107,7 +107,7 @@ def render(
     fields.append(ExportField(key="key", label="调性", value=track.key_signature or ""))
     fields.append(ExportField(key="description", label="简介", value=_tmpl("beat_description")))
     fields.append(ExportField(key="tags", label="标签", value=" ".join(track.tags or [])))
-    fields.append(ExportField(key="is_free", label="免费授权",
+    fields.append(ExportField(key="is_free", label="免费使用",
                               value="1" if track.is_free else ""))
 
     price_value = "\n".join(_price_line(t) for t in tiers)

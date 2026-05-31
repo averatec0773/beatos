@@ -399,12 +399,12 @@ describe("fillInteractions — license-modal (drawer)", () => {
         }
         drawer.appendChild(msv);
       });
-      // 免费授权 option (a sibling defaultView with its own checkbox)
+      // 免费使用 option (a sibling defaultView with its own checkbox)
       const free = document.createElement("div");
       free.className = "defaultView--2Kp-o";
       const flabel = document.createElement("label");
       const fcb = document.createElement("input"); fcb.type = "checkbox";
-      flabel.append(fcb, document.createTextNode("免费授权"));
+      flabel.append(fcb, document.createTextNode("免费使用"));
       free.appendChild(flabel);
       flabel.addEventListener("click", () => { fcb.checked = !fcb.checked; });
       drawer.append(rental, free);
@@ -412,26 +412,26 @@ describe("fillInteractions — license-modal (drawer)", () => {
     });
   }
 
-  const FREE_SPEC = { ...PRICE_SPEC, freeLicenseType: "免费授权" };
+  const FREE_SPEC = { ...PRICE_SPEC, freeLicenseType: "免费使用" };
 
-  it("checks 免费授权 when is_free=1 (alongside rental tiers)", async () => {
+  it("checks 免费使用 when is_free=1 (alongside rental tiers)", async () => {
     wireDrawerWithFree();
     const map = { match: ["x"], fields: { price: FREE_SPEC } } as unknown as FormMap;
     const tiers = JSON.stringify([{ row: "mp3", price: 50, share: 25 }]);
     const report = await fillInteractions(document, mkResult([["price_tiers", tiers], ["is_free", "1"]]), map);
     expect(report.filled).toContain("price");
     const freeOpt = [...document.querySelectorAll(".defaultView--2Kp-o")]
-      .find((o) => (o.textContent ?? "").includes("免费授权"))!;
+      .find((o) => (o.textContent ?? "").includes("免费使用"))!;
     expect((freeOpt.querySelector("input[type=checkbox]") as HTMLInputElement).checked).toBe(true);
   });
 
-  it("does NOT check 免费授权 when is_free is empty", async () => {
+  it("does NOT check 免费使用 when is_free is empty", async () => {
     wireDrawerWithFree();
     const map = { match: ["x"], fields: { price: FREE_SPEC } } as unknown as FormMap;
     const tiers = JSON.stringify([{ row: "mp3", price: 50, share: null }]);
     await fillInteractions(document, mkResult([["price_tiers", tiers], ["is_free", ""]]), map);
     const freeOpt = [...document.querySelectorAll(".defaultView--2Kp-o")]
-      .find((o) => (o.textContent ?? "").includes("免费授权"))!;
+      .find((o) => (o.textContent ?? "").includes("免费使用"))!;
     expect((freeOpt.querySelector("input[type=checkbox]") as HTMLInputElement).checked).toBe(false);
   });
 });

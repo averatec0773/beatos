@@ -38,7 +38,7 @@
       "drawer": ".ant-drawer-open",
       "optionSelector": ".defaultView--2Kp-o",
       "licenseType": "租赁授权",
-      "freeLicenseType": "免费授权",
+      "freeLicenseType": "免费使用",
       "tiersKey": "price_tiers",
       "rowContainer": ".multiSelectorView--21Ufr",
       "rowItem": ".selectorSubItem--1vBQj",
