@@ -250,6 +250,42 @@ const tagModal: Driver = async (spec, key, exp, ctx) => {
 };
 
 /**
+ * NetEase 专辑 is a custom selector (#common-album-selector), not a native input.
+ * Open it, click 创建新专辑, fill 专辑名称 + 专辑描述. 专辑类型/版本 default to 专辑/Beat;
+ * cover + 发行日期 + the final 提交 stay with the human (we NEVER submit). Always
+ * creates a NEW album (no existing-album matching). Open requires the full
+ * focus+mousedown+mouseup+click sequence (bare click is insufficient) — confirmed live.
+ */
+const albumCreate: Driver = async (spec, key, exp, ctx) => {
+  const albumName = fieldValue(exp, spec.sourceKeys?.name ?? "album_name");
+  if (!albumName) return "missed";
+
+  const trigger = spec.triggerSelector
+    ? (ctx.doc.querySelector(spec.triggerSelector) as HTMLElement | null)
+    : null;
+  if (!trigger) return "missed";
+  trigger.focus?.();
+  trigger.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  trigger.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  trigger.click();
+
+  const createOpt = (await ctx.waitFor(spec.createOption, { timeoutMs: 2000 })) as HTMLElement | null;
+  if (!createOpt) return "missed";
+  createOpt.click();
+
+  const nameInput = (await ctx.waitFor(spec.nameInput, { timeoutMs: 2000 })) as HTMLInputElement | null;
+  if (!nameInput) return "missed";
+  setNativeValue(nameInput, albumName);
+
+  const desc = fieldValue(exp, spec.sourceKeys?.desc ?? "album_description");
+  if (desc.length >= 10) {
+    const descInput = ctx.doc.querySelector(spec.descInput) as HTMLTextAreaElement | null;
+    if (descInput) setNativeValue(descInput, desc);
+  }
+  return "filled";
+};
+
+/**
  * NetEase 授权设置 is a RIGHT-SIDE DRAWER (.ant-drawer), not a modal, and it's
  * multi-step (verified live): click "添加授权方式" → drawer opens → checking
  * 租赁授权 expands a 4-row sub-tier matrix (MP3 / MP3+WAV / MP3+WAV+分轨文件 ×2)
@@ -351,6 +387,7 @@ const DRIVERS: Record<string, Driver> = {
   "key-triple": keyTriple,
   "tag-modal": tagModal,
   "license-modal": licenseModal,
+  "album-create": albumCreate,
 };
 
 export async function fillInteractions(doc: Document, exp: ExportResult, formMap: FormMap): Promise<FillReport> {

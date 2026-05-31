@@ -31,6 +31,14 @@
       "selectedClass": "beatButtonChoose",
       "confirmText": "确定"
     },
+    "album": {
+      "type": "album-create",
+      "triggerSelector": "input[placeholder*='选择专辑']",
+      "createOption": "div.albumselector-option-item[data-log*='mod_web_create_album']",
+      "nameInput": "input[placeholder*='输入专辑名称']",
+      "descInput": "textarea[placeholder*='输入专辑描述']",
+      "sourceKeys": { "name": "album_name", "desc": "album_description" }
+    },
     "price": {
       "type": "license-modal",
       "triggerSelector": "[data-ne2e-name='beatAuthConfig'] [class*='buttonContainer']",

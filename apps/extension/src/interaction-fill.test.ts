@@ -435,3 +435,68 @@ describe("fillInteractions — license-modal (drawer)", () => {
     expect((freeOpt.querySelector("input[type=checkbox]") as HTMLInputElement).checked).toBe(false);
   });
 });
+
+describe("fillInteractions — album-create", () => {
+  beforeEach(() => (document.body.innerHTML = ""));
+
+  const ALBUM_SPEC = {
+    type: "album-create",
+    triggerSelector: "input[placeholder*='选择专辑']",
+    createOption: "div.albumselector-option-item[data-log*='mod_web_create_album']",
+    nameInput: "input[placeholder*='输入专辑名称']",
+    descInput: "textarea[placeholder*='输入专辑描述']",
+    sourceKeys: { name: "album_name", desc: "album_description" },
+  };
+
+  function wireAlbumSelector(): void {
+    const trig = document.createElement("input");
+    trig.setAttribute("placeholder", "选择专辑");
+    document.body.appendChild(trig);
+    trig.addEventListener("click", () => {
+      if (document.querySelector(".albumselector-option-item")) return;
+      const opt = document.createElement("div");
+      opt.className = "albumselector-option-item";
+      opt.setAttribute("data-log", '{"oid":"mod_web_create_album"}');
+      opt.textContent = "创建新专辑";
+      document.body.appendChild(opt);
+      opt.addEventListener("click", () => {
+        if (document.querySelector("input[placeholder*='输入专辑名称']")) return;
+        const name = document.createElement("input");
+        name.setAttribute("placeholder", "输入专辑名称，50字以内");
+        const desc = document.createElement("textarea");
+        desc.setAttribute("placeholder", "输入专辑描述，内容控制在10-2000字之间");
+        document.body.append(name, desc);
+      });
+    });
+  }
+
+  const map = (spec: unknown) => ({ match: ["x"], fields: { album: spec } }) as unknown as FormMap;
+
+  it("opens the selector, creates a new album, fills name + description", async () => {
+    wireAlbumSelector();
+    const exp = mkResult([
+      ["album_name", "2026 寒江雪"],
+      ["album_description", "2026-05-31 Prod.averatec x yusician"],
+    ]);
+    const report = await fillInteractions(document, exp, map(ALBUM_SPEC));
+    expect(report.filled).toContain("album");
+    expect((document.querySelector("input[placeholder*='输入专辑名称']") as HTMLInputElement).value).toBe("2026 寒江雪");
+    expect((document.querySelector("textarea[placeholder*='输入专辑描述']") as HTMLTextAreaElement).value).toBe("2026-05-31 Prod.averatec x yusician");
+  });
+
+  it("skips a too-short description (<10 字) but still fills the name", async () => {
+    wireAlbumSelector();
+    const exp = mkResult([["album_name", "X"], ["album_description", "短"]]);
+    const report = await fillInteractions(document, exp, map(ALBUM_SPEC));
+    expect(report.filled).toContain("album");
+    expect((document.querySelector("input[placeholder*='输入专辑名称']") as HTMLInputElement).value).toBe("X");
+    expect((document.querySelector("textarea[placeholder*='输入专辑描述']") as HTMLTextAreaElement).value).toBe("");
+  });
+
+  it("returns missed and never opens the selector when album_name is empty", async () => {
+    wireAlbumSelector();
+    const report = await fillInteractions(document, mkResult([["album_name", ""]]), map(ALBUM_SPEC));
+    expect(report.missed).toContain("album");
+    expect(document.querySelector(".albumselector-option-item")).toBeNull();
+  });
+});
