@@ -4,6 +4,12 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [0.0.42.1] — 2026-05-31 — Dogfood fix: 分成 input on unpriced tier rows
+
+### Fixed
+
+- **The 分成 (revenue-share %) input now shows on every license-tier row**, not just already-priced ones. Previously an unpriced preset row (MP3/WAV/STEMS) and a new custom tier (Add tier) had no share field, so you couldn't set a share until the tier had a price. Typing a share into an empty preset row now auto-creates the tier carrying that share (mirroring the price behavior). Also hardened: out-of-range share (e.g. 150) is dropped client-side instead of failing the create, a failed auto-create no longer leaves a stuck value that retry-loops, and the preset auto-create reads the latest input via a ref (fixing a one-keystroke-stale debounce). (Price auto-fill on the NetEase page was never broken — it needs the track to have CNY-priced tiers, which this UX fix makes easy to set.)
+
 ## [0.0.42] — 2026-05-30 — License-tier revenue share + multi-row NetEase price fill
 
 ### Added
