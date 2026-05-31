@@ -367,4 +367,71 @@ describe("fillInteractions — license-modal (drawer)", () => {
     const report = await fillInteractions(document, mkResult([["price_tiers", tiers]]), map);
     expect(report.missed).toEqual(["price"]);
   });
+
+  function wireDrawerWithFree(): void {
+    const trig = document.createElement("button");
+    trig.id = "addlic2";
+    trig.textContent = "+ 添加授权方式";
+    document.body.appendChild(trig);
+    trig.addEventListener("click", () => {
+      if (document.querySelector(".ant-drawer-open")) return;
+      const drawer = document.createElement("div");
+      drawer.className = "ant-drawer ant-drawer-open";
+      // 租赁授权 option (expands matrix on label click)
+      const rental = document.createElement("div");
+      rental.className = "defaultView--2Kp-o";
+      const rlabel = document.createElement("label");
+      const rcb = document.createElement("input"); rcb.type = "checkbox";
+      rlabel.append(rcb, document.createTextNode("租赁授权"));
+      rental.appendChild(rlabel);
+      rlabel.addEventListener("click", () => {
+        if (drawer.querySelector(".multiSelectorView--21Ufr")) return;
+        const msv = document.createElement("div");
+        msv.className = "multiSelectorView--21Ufr";
+        for (const title of ["MP3", "MP3+WAV", "MP3+WAV+分轨文件"]) {
+          const row = document.createElement("div");
+          row.className = "selectorSubItem--1vBQj";
+          const t = document.createElement("span"); t.className = "rowTitle"; t.textContent = title;
+          const price = document.createElement("input"); price.type = "number"; price.setAttribute("placeholder", "输入售价");
+          const share = document.createElement("input"); share.type = "number"; share.setAttribute("placeholder", "编曲分润比例（选填）");
+          row.append(t, price, share);
+          msv.appendChild(row);
+        }
+        drawer.appendChild(msv);
+      });
+      // 免费授权 option (a sibling defaultView with its own checkbox)
+      const free = document.createElement("div");
+      free.className = "defaultView--2Kp-o";
+      const flabel = document.createElement("label");
+      const fcb = document.createElement("input"); fcb.type = "checkbox";
+      flabel.append(fcb, document.createTextNode("免费授权"));
+      free.appendChild(flabel);
+      flabel.addEventListener("click", () => { fcb.checked = !fcb.checked; });
+      drawer.append(rental, free);
+      document.body.appendChild(drawer);
+    });
+  }
+
+  const FREE_SPEC = { ...PRICE_SPEC, freeLicenseType: "免费授权" };
+
+  it("checks 免费授权 when is_free=1 (alongside rental tiers)", async () => {
+    wireDrawerWithFree();
+    const map = { match: ["x"], fields: { price: FREE_SPEC } } as unknown as FormMap;
+    const tiers = JSON.stringify([{ row: "mp3", price: 50, share: 25 }]);
+    const report = await fillInteractions(document, mkResult([["price_tiers", tiers], ["is_free", "1"]]), map);
+    expect(report.filled).toContain("price");
+    const freeOpt = [...document.querySelectorAll(".defaultView--2Kp-o")]
+      .find((o) => (o.textContent ?? "").includes("免费授权"))!;
+    expect((freeOpt.querySelector("input[type=checkbox]") as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("does NOT check 免费授权 when is_free is empty", async () => {
+    wireDrawerWithFree();
+    const map = { match: ["x"], fields: { price: FREE_SPEC } } as unknown as FormMap;
+    const tiers = JSON.stringify([{ row: "mp3", price: 50, share: null }]);
+    await fillInteractions(document, mkResult([["price_tiers", tiers], ["is_free", ""]]), map);
+    const freeOpt = [...document.querySelectorAll(".defaultView--2Kp-o")]
+      .find((o) => (o.textContent ?? "").includes("免费授权"))!;
+    expect((freeOpt.querySelector("input[type=checkbox]") as HTMLInputElement).checked).toBe(false);
+  });
 });

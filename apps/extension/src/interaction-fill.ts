@@ -267,7 +267,8 @@ const licenseModal: Driver = async (spec, key, exp, ctx) => {
   } catch {
     tiers = [];
   }
-  if (!Array.isArray(tiers) || tiers.length === 0) return "missed";
+  const isFree = (fieldValue(exp, "is_free") || "") === "1";
+  if ((!Array.isArray(tiers) || tiers.length === 0) && !isFree) return "missed";
 
   let trig: HTMLElement | null = spec.triggerSelector
     ? (ctx.doc.querySelector(spec.triggerSelector) as HTMLElement | null)
@@ -285,49 +286,64 @@ const licenseModal: Driver = async (spec, key, exp, ctx) => {
   const drawer = (await ctx.waitFor(spec.drawer ?? ".ant-drawer-open", { timeoutMs: 2000 })) as HTMLElement | null;
   if (!drawer) return "missed";
 
-  const optionText = normText(spec.licenseType ?? "租赁授权");
-  const option = (Array.from(drawer.querySelectorAll(spec.optionSelector ?? ".defaultView--2Kp-o")) as HTMLElement[])
-    .find((o) => normText(o.textContent).includes(optionText));
-  if (option) {
-    const cb = option.querySelector("input[type=checkbox]") as HTMLInputElement | null;
-    const label = option.querySelector("label") as HTMLElement | null;
-    if (cb && !cb.checked && label) label.click();
-  }
-
-  const container = (await ctx.waitFor(spec.rowContainer ?? ".multiSelectorView--21Ufr", { timeoutMs: 2000 })) as HTMLElement | null;
-  if (!container) return "missed";
-
-  const rowTitles: Record<string, string> = spec.rowTitles ?? {};
-  const rowEls = Array.from(container.querySelectorAll(spec.rowItem ?? ".selectorSubItem--1vBQj")) as HTMLElement[];
-  const titleOf = (el: HTMLElement): string => {
-    const t = el.querySelector(".rowTitle, [class*=title], [class*=Title]");
-    return (t?.textContent ?? el.textContent ?? "").trim();
-  };
-
   let filled = 0;
-  for (const tier of tiers) {
-    const wantTitle = rowTitles[tier.row];
-    if (!wantTitle) continue;
-    // exact-first (so "MP3" doesn't grab the "MP3+WAV" row), then prefix fallback
-    const row =
-      rowEls.find((el) => titleOf(el) === wantTitle) ??
-      rowEls.find((el) => titleOf(el).startsWith(wantTitle));
-    if (!row) continue;
-    const cb = row.querySelector("input[type=checkbox]") as HTMLInputElement | null;
-    const cbLabel = row.querySelector("label") as HTMLElement | null;
-    if (cb && !cb.checked && cbLabel) cbLabel.click();
-    const priceEl = row.querySelector(spec.priceInput ?? "input[type=number][placeholder*='售价']") as HTMLInputElement | null;
-    if (priceEl && tier.price != null) {
-      setNativeValue(priceEl, String(tier.price));
-      filled++;
+
+  if (tiers.length > 0) {
+    const optionText = normText(spec.licenseType ?? "租赁授权");
+    const option = (Array.from(drawer.querySelectorAll(spec.optionSelector ?? ".defaultView--2Kp-o")) as HTMLElement[])
+      .find((o) => normText(o.textContent).includes(optionText));
+    if (option) {
+      const cb = option.querySelector("input[type=checkbox]") as HTMLInputElement | null;
+      const label = option.querySelector("label") as HTMLElement | null;
+      if (cb && !cb.checked && label) label.click();
     }
-    if (tier.share != null) {
-      const shareEl = row.querySelector(spec.shareInput ?? "input[type=number][placeholder*='编曲分润比例']") as HTMLInputElement | null;
-      if (shareEl) setNativeValue(shareEl, String(tier.share));
+
+    const container = (await ctx.waitFor(spec.rowContainer ?? ".multiSelectorView--21Ufr", { timeoutMs: 2000 })) as HTMLElement | null;
+    if (!container) return "missed";
+
+    const rowTitles: Record<string, string> = spec.rowTitles ?? {};
+    const rowEls = Array.from(container.querySelectorAll(spec.rowItem ?? ".selectorSubItem--1vBQj")) as HTMLElement[];
+    const titleOf = (el: HTMLElement): string => {
+      const t = el.querySelector(".rowTitle, [class*=title], [class*=Title]");
+      return (t?.textContent ?? el.textContent ?? "").trim();
+    };
+
+    for (const tier of tiers) {
+      const wantTitle = rowTitles[tier.row];
+      if (!wantTitle) continue;
+      // exact-first (so "MP3" doesn't grab the "MP3+WAV" row), then prefix fallback
+      const row =
+        rowEls.find((el) => titleOf(el) === wantTitle) ??
+        rowEls.find((el) => titleOf(el).startsWith(wantTitle));
+      if (!row) continue;
+      const cb = row.querySelector("input[type=checkbox]") as HTMLInputElement | null;
+      const cbLabel = row.querySelector("label") as HTMLElement | null;
+      if (cb && !cb.checked && cbLabel) cbLabel.click();
+      const priceEl = row.querySelector(spec.priceInput ?? "input[type=number][placeholder*='售价']") as HTMLInputElement | null;
+      if (priceEl && tier.price != null) {
+        setNativeValue(priceEl, String(tier.price));
+        filled++;
+      }
+      if (tier.share != null) {
+        const shareEl = row.querySelector(spec.shareInput ?? "input[type=number][placeholder*='编曲分润比例']") as HTMLInputElement | null;
+        if (shareEl) setNativeValue(shareEl, String(tier.share));
+      }
     }
   }
+
+  if (isFree && spec.freeLicenseType) {
+    const freeText = normText(spec.freeLicenseType);
+    const freeOpt = (Array.from(drawer.querySelectorAll(spec.optionSelector ?? ".defaultView--2Kp-o")) as HTMLElement[])
+      .find((o) => normText(o.textContent).includes(freeText));
+    if (freeOpt) {
+      const fcb = freeOpt.querySelector("input[type=checkbox]") as HTMLInputElement | null;
+      const flabel = freeOpt.querySelector("label") as HTMLElement | null;
+      if (fcb && !fcb.checked && flabel) flabel.click();
+    }
+  }
+
   // No 保存 click — human reviews + submits.
-  return filled > 0 ? "filled" : "missed";
+  return filled > 0 || isFree ? "filled" : "missed";
 };
 
 const DRIVERS: Record<string, Driver> = {

@@ -3,7 +3,7 @@ import { fillInteractions } from "./interaction-fill";
 
 const POLL_MS = 2000;
 
-function overlay(report: { filled: string[]; missed: string[] }, audioHint: string, coverHint = ""): void {
+function overlay(report: { filled: string[]; missed: string[] }, audioHint: string, coverHint = "", freeHint = false): void {
   const id = "beatos-overlay";
   document.getElementById(id)?.remove();
   const box = document.createElement("div");
@@ -26,6 +26,7 @@ function overlay(report: { filled: string[]; missed: string[] }, audioHint: stri
   box.appendChild(line(`请拖入音频文件 ${audioHint}`, "margin-top:6px;color:#9cf"));
   if (coverHint) box.appendChild(line(`请拖入封面图 ${coverHint}`, "margin-top:2px;color:#9cf"));
   box.appendChild(line("专辑请手动新建/选择并填写专辑名+描述（可从 BeatOS 导出对话框复制）", "margin-top:2px;color:#fc9"));
+  if (freeHint) box.appendChild(line("已尝试勾选免费授权,请核对", "margin-top:2px;color:#fc9"));
   box.appendChild(line("核对后由你手动点提交", "margin-top:2px;color:#888"));
 
   document.body.appendChild(box);
@@ -36,13 +37,15 @@ async function apply(exp: ExportResult, formMap: FormMap): Promise<void> {
   const title = exp.fields.find((f) => f.key === "title")?.value ?? "";
   const hint = title ? `"${title}"` : "";
   const coverHint = "（用作品封面）";
+  const free = exp.fields.find((f) => f.key === "is_free")?.value === "1";
   const native = fillForm(document, exp, formMap);
-  overlay(native, hint, coverHint); // instant feedback for the native text fields
+  overlay(native, hint, coverHint, free); // instant feedback for the native text fields
   const interactive = await fillInteractions(document, exp, formMap);
   overlay(
     { filled: [...native.filled, ...interactive.filled], missed: [...native.missed, ...interactive.missed] },
     hint,
     coverHint,
+    free,
   ); // update with interaction results
 }
 
