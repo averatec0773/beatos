@@ -143,4 +143,12 @@ describe("recipe vs real saved NetEase DOM", () => {
     expect(f.album_description, "album_description in recipe").toBeTruthy();
     expect(document.querySelector(f.album_description.selector), "album_description textarea").toBeTruthy();
   });
+
+  it("price field carries the rental row-match config", () => {
+    const p = (RECIPE.fields as Record<string, any>).price;
+    expect(p.rowContainer).toBe(".multiSelectorView--21Ufr");
+    expect(p.rowItem).toBe(".selectorSubItem--1vBQj");
+    expect(p.rowTitles).toEqual({ mp3: "MP3", wav: "MP3+WAV", stem: "MP3+WAV+分轨文件" });
+    expect(p.shareInput).toContain("编曲分润比例");
+  });
 });

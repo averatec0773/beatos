@@ -40,7 +40,12 @@
       "drawer": ".ant-drawer-open",
       "optionSelector": ".defaultView--2Kp-o",
       "licenseType": "租赁授权",
-      "priceInput": "input[type='number'][placeholder*='售价']"
+      "tiersKey": "price_tiers",
+      "rowContainer": ".multiSelectorView--21Ufr",
+      "rowItem": ".selectorSubItem--1vBQj",
+      "rowTitles": { "mp3": "MP3", "wav": "MP3+WAV", "stem": "MP3+WAV+分轨文件" },
+      "priceInput": "input[type='number'][placeholder*='售价']",
+      "shareInput": "input[type='number'][placeholder*='编曲分润比例']"
     }
   }
 }
