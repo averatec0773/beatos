@@ -34,6 +34,7 @@ interface DraftTier {
    *  prices map that isn't CNY/USD, when one exists. */
   otherCurrency: string | null;
   notes: string;
+  shareInput: string;
 }
 
 interface EmptyPresetState {
@@ -67,6 +68,7 @@ function toDraft(t: LicenseTier): DraftTier {
     priceInputs,
     otherCurrency: pickOtherCurrency(t.prices),
     notes: t.notes ?? "",
+    shareInput: t.share != null ? String(t.share) : "",
   };
 }
 
@@ -82,11 +84,14 @@ function deliverablesKey(deliverables: string[]): string {
 function draftToUpdate(d: DraftTier): LicenseTierUpdate {
   const prices = inputsToPrices(d.priceInputs, d.otherCurrency);
   const effectiveName = d.name.trim() === "" ? deriveAutoName(d.deliverables) : d.name;
+  const shareStr = d.shareInput.trim();
+  const shareNum = shareStr === "" ? null : Number(shareStr);
   return {
     name: effectiveName || "Untitled tier",
     deliverables: d.deliverables,
     prices,
     notes: d.notes.trim() === "" ? null : d.notes,
+    share: shareNum != null && Number.isFinite(shareNum) ? shareNum : null,
   };
 }
 
@@ -201,6 +206,10 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
       }
       return { ...t, otherCurrency: nextCurrency, priceInputs: nextInputs };
     });
+  }
+
+  function onTierShareChange(tierId: number, raw: string): void {
+    updateLocal(tierId, (t) => ({ ...t, shareInput: raw }));
   }
 
   async function onDelete(tierId: number): Promise<void> {
@@ -369,6 +378,7 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
                   tier={tier}
                   onPriceChange={(c, v) => onTierPriceChange(tier.id, c, v)}
                   onOtherCurrencyChange={(c) => onTierOtherCurrencyChange(tier.id, c)}
+                  onShareChange={(v) => onTierShareChange(tier.id, v)}
                   onDelete={() => void onDelete(tier.id)}
                 />
               );
@@ -394,6 +404,7 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
               tier={tier}
               onPriceChange={(c, v) => onTierPriceChange(tier.id, c, v)}
               onOtherCurrencyChange={(c) => onTierOtherCurrencyChange(tier.id, c)}
+              onShareChange={(v) => onTierShareChange(tier.id, v)}
               onDelete={() => void onDelete(tier.id)}
             />
           ))}
@@ -405,6 +416,7 @@ export function LicenseTiersSection({ trackId }: Props): React.JSX.Element {
               tier={tier}
               onPriceChange={(c, v) => onTierPriceChange(tier.id, c, v)}
               onOtherCurrencyChange={(c) => onTierOtherCurrencyChange(tier.id, c)}
+              onShareChange={(v) => onTierShareChange(tier.id, v)}
               onDelete={() => void onDelete(tier.id)}
             />
           ))}
@@ -516,6 +528,7 @@ interface FilledTierRowProps {
   tier: DraftTier;
   onPriceChange: (currency: string, raw: string) => void;
   onOtherCurrencyChange: (currency: string | null) => void;
+  onShareChange: (raw: string) => void;
   onDelete: () => void;
 }
 
@@ -524,6 +537,7 @@ function FilledTierRow({
   tier,
   onPriceChange,
   onOtherCurrencyChange,
+  onShareChange,
   onDelete,
 }: FilledTierRowProps): React.JSX.Element {
   return (
@@ -544,6 +558,22 @@ function FilledTierRow({
         onPriceChange={onPriceChange}
         onOtherCurrencyChange={onOtherCurrencyChange}
       />
+      <label className="inline-flex items-center min-w-0 rounded-md border border-border-subtle bg-bg-base pl-2 pr-1 focus-within:border-accent">
+        <span className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary shrink-0">
+          %
+        </span>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={tier.shareInput}
+          onChange={(e) => onShareChange(e.target.value)}
+          placeholder="—"
+          className="w-14 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
+          aria-label="分成 %"
+        />
+      </label>
       <div className="flex-1" />
       <button
         type="button"

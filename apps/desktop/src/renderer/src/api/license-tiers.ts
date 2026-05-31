@@ -11,6 +11,7 @@ export interface LicenseTier {
    *  `price + currency` pair. */
   prices: Record<string, number>;
   notes: string | null;
+  share?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +21,7 @@ export interface LicenseTierCreate {
   deliverables?: string[];
   prices?: Record<string, number>;
   notes?: string | null;
+  share?: number | null;
 }
 
 export type LicenseTierUpdate = Partial<LicenseTierCreate>;
