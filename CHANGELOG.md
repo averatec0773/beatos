@@ -4,6 +4,12 @@ All notable changes to BeatOS will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting at `0.0.1`.
 
+## [Unreleased]
+
+### Changed
+
+- **Right detail panel — realistic vinyl redesign.** The "Now Focused" cover is now a tactile record: an album jacket rendered as a thin 3D box (lit right side + top faces) with a vinyl disc tucked behind it that slides out of the sleeve on hover and, while the focused track plays, spins in the jacket's plane (label flips to "Now Playing"; `prefers-reduced-motion` disables the spin). The jacket + disc share one tilt that turns to face the cursor as it moves over the panel; at rest they sit straight-on. Metadata below was rebuilt to match: BPM/Key as LCD stat bars (mono + glow), genre/mood/tags as square chips, sections split by etched dividers. Square corners throughout (the disc/label circles excepted). Renderer-only; the panel stays the user-resizable `TrackDetailPanel`. `CoverImage` gained an opt-out `rounded` prop for the square jacket and circular label.
+
 ## [extension 0.2.7] — 2026-05-31 — NetEase album auto-create
 
 - feat: the extension now auto-fills NetEase's **创建新专辑** form. It opens 选择专辑 (via a focus+mousedown+mouseup+click sequence — the custom selector ignores a bare click), clicks 创建新专辑, and fills **专辑名称** + **专辑描述** from the BeatOS export (专辑类型/版本 already default to 专辑/Beat). It always creates a NEW album, skips a description shorter than 10 字 (NetEase's minimum), and **never clicks 提交** — the album is created by your own submit. Drag the 专辑封面 yourself; the overlay confirms the album was filled and reminds you. App/sidecar unchanged (the export already carried `album_name`/`album_description`). Verified live on the logged-in upload page.

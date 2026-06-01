@@ -156,6 +156,8 @@ Start from Spotify's dark palette, then nudge toward BeatOS personality. **These
 - Row thumbnail: **48×48**, 4px radius, no shadow. Overlay scrim + play button on hover or when this row is the current player track.
 - When no cover: a flat `--bg-elevated` square with a centered music-note glyph in `--text-tertiary`.
 
+> **Exception (2026-06-01, right detail panel)**: the right column (`TrackDetailPanel`) uses a realistic **jacket + pulled-out vinyl** composition with **square corners** (the circular disc/label are the only round shapes) — it does NOT follow the 320×320 / 8px-radius rule above, nor the §5 "6px radius everywhere" rule. The disc slides out on hover and slides + spins while the focused track is playing (`prefers-reduced-motion` disables the spin). BPM/Key render as LCD stat bars (mono + glow), genre/mood/tags as square chips, sections split by etched dividers. See `docs/superpowers/plans/2026-06-01-right-panel-vinyl.md`.
+
 ### Empty states
 
 - Each list view has a meaningful empty state, not "No items found":

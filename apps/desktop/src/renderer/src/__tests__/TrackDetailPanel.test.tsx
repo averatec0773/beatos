@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, act } from "@testing-library/react";
+import { usePlayerStore } from "@/stores/player";
 
 // Mock window.beatos so onDragStart in the panel doesn't crash
 vi.stubGlobal("beatos", { startDragFile: vi.fn() });
@@ -35,6 +36,53 @@ function makeTrack(): Track {
     deleted_at: null,
   };
 }
+
+describe("TrackDetailPanel vinyl playing state", () => {
+  beforeEach(() => {
+    useVocabLocaleStore.setState({ locale: "both" });
+    useTrackStore.setState({ current: makeTrack() }); // id 42
+    useAssetStore.setState({ byTrack: {} });
+    usePreviewPanelStore.setState({ open: true, width: 360 });
+    usePlayerStore.setState({ currentTrackId: null, status: "idle" });
+  });
+
+  it("shows 'Now Focused' and disc not spinning when idle", () => {
+    render(<TrackDetailPanel />);
+    expect(screen.getByText("Now Focused")).toBeInTheDocument();
+    const disc = document.querySelector("[data-vinyl-disc]");
+    expect(disc).not.toHaveAttribute("data-playing", "true");
+  });
+
+  it("shows 'Now Playing' and marks disc playing when this track plays", () => {
+    act(() => usePlayerStore.setState({ currentTrackId: 42, status: "playing" }));
+    render(<TrackDetailPanel />);
+    expect(screen.getByText("Now Playing")).toBeInTheDocument();
+    const disc = document.querySelector("[data-vinyl-disc]");
+    expect(disc).toHaveAttribute("data-playing", "true");
+  });
+});
+
+describe("TrackDetailPanel hardware metadata", () => {
+  beforeEach(() => {
+    useVocabLocaleStore.setState({ locale: "both" });
+    useAssetStore.setState({ byTrack: {} });
+    usePreviewPanelStore.setState({ open: true, width: 360 });
+    usePlayerStore.setState({ currentTrackId: null, status: "idle" });
+  });
+
+  it("renders em-dash in the BPM LCD when bpm is null", () => {
+    useTrackStore.setState({ current: { ...makeTrack(), bpm: null } });
+    render(<TrackDetailPanel />);
+    const bpm = document.querySelector('[data-stat="BPM"]');
+    expect(bpm?.textContent).toContain("—");
+  });
+
+  it("renders one chip per genre + mood", () => {
+    useTrackStore.setState({ current: makeTrack() }); // 1 genre + 1 mood, 0 tags
+    render(<TrackDetailPanel />);
+    expect(document.querySelectorAll("[data-chip]").length).toBe(2);
+  });
+});
 
 describe("TrackDetailPanel genre/mood locale", () => {
   beforeEach(() => {
