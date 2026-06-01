@@ -20,13 +20,12 @@ NOTES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 NOTES_FLAT = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
 
 
-def analyze_bpm(audio_path: str) -> tuple[float | None, float]:
-    """Returns (bpm, confidence) in [0,1]. (None, 0.0) on failure."""
-    try:
-        y, sr = librosa.load(audio_path, sr=DEFAULT_SAMPLE_RATE, mono=True, duration=MAX_DURATION_SECONDS)
-    except Exception:
-        return None, 0.0
+def _load(audio_path: str):
+    """Decode mono audio at the analysis sample rate, capped at MAX_DURATION_SECONDS."""
+    return librosa.load(audio_path, sr=DEFAULT_SAMPLE_RATE, mono=True, duration=MAX_DURATION_SECONDS)
 
+
+def _bpm_from_audio(y, sr) -> tuple[float | None, float]:
     if len(y) == 0:
         return None, 0.0
 
@@ -51,13 +50,16 @@ def analyze_bpm(audio_path: str) -> tuple[float | None, float]:
     return tempo_val, float(confidence)
 
 
-def analyze_key(audio_path: str) -> tuple[str | None, float]:
-    """Returns (key, confidence) in [0,1]. (None, 0.0) on failure."""
+def analyze_bpm(audio_path: str) -> tuple[float | None, float]:
+    """Returns (bpm, confidence) in [0,1]. (None, 0.0) on failure."""
     try:
-        y, sr = librosa.load(audio_path, sr=DEFAULT_SAMPLE_RATE, mono=True, duration=MAX_DURATION_SECONDS)
+        y, sr = _load(audio_path)
     except Exception:
         return None, 0.0
+    return _bpm_from_audio(y, sr)
 
+
+def _key_from_audio(y, sr) -> tuple[str | None, float]:
     if len(y) == 0:
         return None, 0.0
 
@@ -92,3 +94,23 @@ def analyze_key(audio_path: str) -> tuple[str | None, float]:
     key_str = f"{notes[best_tonic]} {best_mode}"
     confidence = max(0.0, min(1.0, float(best_score)))
     return key_str, confidence
+
+
+def analyze_key(audio_path: str) -> tuple[str | None, float]:
+    """Returns (key, confidence) in [0,1]. (None, 0.0) on failure."""
+    try:
+        y, sr = _load(audio_path)
+    except Exception:
+        return None, 0.0
+    return _key_from_audio(y, sr)
+
+
+def analyze(audio_path: str) -> tuple[float | None, float, str | None, float]:
+    """Decode once, compute both bpm and key. Returns (bpm, bpm_conf, key, key_conf)."""
+    try:
+        y, sr = _load(audio_path)
+    except Exception:
+        return None, 0.0, None, 0.0
+    bpm, bpm_conf = _bpm_from_audio(y, sr)
+    key, key_conf = _key_from_audio(y, sr)
+    return bpm, bpm_conf, key, key_conf

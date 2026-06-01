@@ -32,11 +32,11 @@ def _price_line(tier: LicenseTier) -> str:
 
 
 def _price_tiers(tiers: list[LicenseTier]) -> list[dict]:
-    """Map each tier onto a NetEase 租赁授权 row key by deliverables.
+    """Map each tier onto a NetEase lease-license (租赁授权) row key by deliverables.
 
     stem > wav > mp3 priority; only-mp3 → "mp3", has-wav-no-stem → "wav",
-    has-stem → "stem". CNY-priced only (NetEase 售价 is RMB); first tier per
-    row key wins. share passes through (may be None)."""
+    has-stem → "stem". CNY-priced only (NetEase sale-price 售价 is RMB); first tier
+    per row key wins. share passes through (may be None)."""
     out: list[dict] = []
     seen: set[str] = set()
     for t in tiers:

@@ -6,7 +6,8 @@ One codebase, one switch: the active engine is whichever is installed.
 
 `BEATOS_ANALYSIS_ENGINE=librosa|essentia` forces a choice (dev/test escape valve).
 Each backend exposes `analyze_bpm(path)` and `analyze_key(path)` returning the
-same `(value, confidence)` contract, so callers never know which engine ran.
+same `(value, confidence)` contract, plus `analyze(path)` which decodes once and
+returns `(bpm, bpm_conf, key, key_conf)`, so callers never know which engine ran.
 """
 import os
 

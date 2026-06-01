@@ -85,7 +85,7 @@ function deliverablesKey(deliverables: string[]): string {
   return JSON.stringify(Array.from(new Set(deliverables.map((d) => d.toLowerCase()))).sort());
 }
 
-/** Parse a 分成 input string to a tier share. Empty / non-numeric / out-of-
+/** Parse a revenue-share (分成) input string to a tier share. Empty / non-numeric / out-of-
  *  range [0,100] all map to null (unset) — so a stray "150" is silently
  *  dropped rather than sent to the API (which would 400 and, on the
  *  auto-create path, retry-loop). The `<input max={100}>` is the first guard;

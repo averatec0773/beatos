@@ -74,6 +74,7 @@ async def attach_asset(
 
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
+        await conn.execute("PRAGMA foreign_keys = ON")  # cascade analysis_cache on replace; see purge_track
         async with conn.execute(
             "SELECT id FROM asset WHERE track_id = ? AND role = ?", (track_id, role)
         ) as cur:
@@ -145,6 +146,7 @@ async def list_assets_for_track(track_id: int) -> list[Asset]:
 async def detach_asset(asset_id: int) -> None:
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
+        await conn.execute("PRAGMA foreign_keys = ON")  # cascade analysis_cache; see purge_track
         await conn.execute("DELETE FROM asset WHERE id = ?", (asset_id,))
         await conn.commit()
 

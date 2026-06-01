@@ -349,23 +349,30 @@ async def bulk_update_tracks(ids: list[int], patch: dict) -> dict:
     now = _now()
     db_path = resolve_db_path()
     updated = 0
+    scalar_fields = [(FIELD_TO_COL[f], spec) for f, spec in patch.items() if f in SCALAR_FIELDS]
+    array_fields = [(FIELD_TO_COL[f], spec) for f, spec in patch.items() if f not in SCALAR_FIELDS]
     async with aiosqlite.connect(db_path) as conn:
+        # Pre-fetch every array-field column for all ids in one query (avoid N+1:
+        # the per-id SELECT-then-UPDATE loop scaled at 2N round-trips on a bulk edit).
+        current_arrays: dict[int, tuple] = {}
+        if array_fields and ids:
+            cols = ", ".join(col for col, _ in array_fields)
+            placeholders = ",".join("?" * len(ids))
+            async with conn.execute(
+                f"SELECT id, {cols} FROM track WHERE id IN ({placeholders})", tuple(ids)
+            ) as c0:
+                async for r in c0:
+                    current_arrays[r[0]] = r[1:]
         for tid in ids:
             sets: list[str] = []
             params: list = []
-            for field, spec in patch.items():
-                col = FIELD_TO_COL[field]
-                if field in SCALAR_FIELDS:
-                    sets.append(f"{col}=?")
-                    params.append(spec)
-                else:
-                    async with conn.execute(
-                        f"SELECT {col} FROM track WHERE id=?", (tid,)
-                    ) as c0:
-                        row = await c0.fetchone()
-                    if row is None:
-                        continue
-                    new_arr = apply_array_patch(row[0], spec)
+            for col, spec in scalar_fields:
+                sets.append(f"{col}=?")
+                params.append(spec)
+            row = current_arrays.get(tid)
+            if row is not None:
+                for i, (col, spec) in enumerate(array_fields):
+                    new_arr = apply_array_patch(row[i], spec)
                     sets.append(f"{col}=?")
                     params.append(json.dumps(new_arr))
             if not sets:

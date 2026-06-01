@@ -20,17 +20,15 @@ KEY_PROFILE = "bgate"
 RHYTHM_CONFIDENCE_GOOD = 1.5
 
 
-def analyze_bpm(audio_path: str) -> tuple[float | None, float]:
-    """Returns (bpm, confidence) in [0,1]. (None, 0.0) on failure."""
-    try:
-        audio = es.MonoLoader(filename=audio_path, sampleRate=ANALYSIS_SAMPLE_RATE)()
-    except Exception:
-        return None, 0.0
+def _load(audio_path: str):
+    """Decode mono audio at 44.1 kHz, capped at MAX_DURATION_SECONDS."""
+    audio = es.MonoLoader(filename=audio_path, sampleRate=ANALYSIS_SAMPLE_RATE)()
+    return audio[: int(ANALYSIS_SAMPLE_RATE * MAX_DURATION_SECONDS)]
 
+
+def _bpm_from_audio(audio) -> tuple[float | None, float]:
     if len(audio) == 0:
         return None, 0.0
-
-    audio = audio[: int(ANALYSIS_SAMPLE_RATE * MAX_DURATION_SECONDS)]
 
     try:
         bpm, _beats, confidence, _estimates, _intervals = es.RhythmExtractor2013(
@@ -43,17 +41,9 @@ def analyze_bpm(audio_path: str) -> tuple[float | None, float]:
     return float(bpm), conf
 
 
-def analyze_key(audio_path: str) -> tuple[str | None, float]:
-    """Returns (key, confidence) in [0,1]. (None, 0.0) on failure. Key formatted 'F# minor'."""
-    try:
-        audio = es.MonoLoader(filename=audio_path, sampleRate=ANALYSIS_SAMPLE_RATE)()
-    except Exception:
-        return None, 0.0
-
+def _key_from_audio(audio) -> tuple[str | None, float]:
     if len(audio) == 0:
         return None, 0.0
-
-    audio = audio[: int(ANALYSIS_SAMPLE_RATE * MAX_DURATION_SECONDS)]
 
     try:
         key, scale, strength = es.KeyExtractor(
@@ -66,3 +56,32 @@ def analyze_key(audio_path: str) -> tuple[str | None, float]:
         return None, 0.0
 
     return f"{key} {scale}", max(0.0, min(1.0, float(strength)))
+
+
+def analyze_bpm(audio_path: str) -> tuple[float | None, float]:
+    """Returns (bpm, confidence) in [0,1]. (None, 0.0) on failure."""
+    try:
+        audio = _load(audio_path)
+    except Exception:
+        return None, 0.0
+    return _bpm_from_audio(audio)
+
+
+def analyze_key(audio_path: str) -> tuple[str | None, float]:
+    """Returns (key, confidence) in [0,1]. (None, 0.0) on failure. Key formatted 'F# minor'."""
+    try:
+        audio = _load(audio_path)
+    except Exception:
+        return None, 0.0
+    return _key_from_audio(audio)
+
+
+def analyze(audio_path: str) -> tuple[float | None, float, str | None, float]:
+    """Decode once, compute both bpm and key. Returns (bpm, bpm_conf, key, key_conf)."""
+    try:
+        audio = _load(audio_path)
+    except Exception:
+        return None, 0.0, None, 0.0
+    bpm, bpm_conf = _bpm_from_audio(audio)
+    key, key_conf = _key_from_audio(audio)
+    return bpm, bpm_conf, key, key_conf

@@ -20,7 +20,7 @@ export function fieldValue(exp: ExportResult, key: string): string {
 
 export function closePopups(doc: Document): void {
   // Best-effort dismissal for Ant popups: Esc closes modals; an outside pointer
-  // event closes most dropdowns; blur drops focus. NOTE: NetEase's KEY 调式
+  // event closes most dropdowns; blur drops focus. NOTE: NetEase's KEY (调式)
   // multi-select dropdown ignores all of these and may linger open (its value is
   // still correctly committed) — a known, accepted limitation.
   const body = doc.body;
@@ -81,7 +81,7 @@ function optionMatches(text: string, target: string, mode: string): boolean {
  * untrusted events, so none of our close attempts work and dropdowns ACCUMULATE
  * across fields. A previous field's stale dropdown then satisfies a naive
  * "wait for any .ant-select-dropdown" instantly, so the option scan races ahead
- * of the new dropdown's render and finds nothing (this was the 调式-left-empty
+ * of the new dropdown's render and finds nothing (this was the KEY/调式-left-empty
  * bug). Scoping to the trigger's own dropdown removes the race entirely.
  */
 function ownDropdown(doc: Document, trig: HTMLElement): HTMLElement | null {
@@ -201,9 +201,10 @@ const tagModal: Driver = async (spec, key, exp, ctx) => {
   const modal = (await ctx.waitFor(spec.modal, { timeoutMs: 2000 })) as HTMLElement | null;
   if (!modal) return "missed";
 
-  // The 添加标签 modal is a vertical ant-tabs widget: 适用场景 / 情绪表达 / 自定义.
+  // The "Add Tags" (添加标签) modal is a vertical ant-tabs widget with tabs:
+  // Scene (适用场景) / Mood (情绪表达) / Custom (自定义).
   // Each panel's tag buttons only register clicks while its tab is active, and
-  // moods live under 情绪表达 — so click each named tab, then match buttons in
+  // moods live under the Mood (情绪表达) tab — so click each named tab, then match buttons in
   // the active panel. (Earlier the driver only saw the default tab, so no mood
   // ever matched — verified live on the NetEase page.) `tabTexts` is configured
   // in the recipe; falls back to the two stock tabs.
@@ -250,11 +251,12 @@ const tagModal: Driver = async (spec, key, exp, ctx) => {
 };
 
 /**
- * NetEase 专辑 is a custom selector (#common-album-selector), not a native input.
- * Open it, click 创建新专辑, fill 专辑名称 + 专辑描述. 专辑类型/版本 default to 专辑/Beat;
- * cover + 发行日期 + the final 提交 stay with the human (we NEVER submit). Always
- * creates a NEW album (no existing-album matching). Open requires the full
- * focus+mousedown+mouseup+click sequence (bare click is insufficient) — confirmed live.
+ * NetEase album field (专辑, #common-album-selector) is a custom selector, not a native input.
+ * Open it, click "Create New Album" (创建新专辑), fill album name (专辑名称) + description (专辑描述).
+ * Album type/version (专辑类型/版本) default to Album/Beat; cover + release date (发行日期) + the
+ * final submit (提交) stay with the human (we NEVER submit). Always creates a NEW album (no
+ * existing-album matching). Open requires the full focus+mousedown+mouseup+click sequence
+ * (bare click is insufficient) — confirmed live.
  */
 const albumCreate: Driver = async (spec, key, exp, ctx) => {
   const albumName = fieldValue(exp, spec.sourceKeys?.name ?? "album_name");
@@ -286,13 +288,14 @@ const albumCreate: Driver = async (spec, key, exp, ctx) => {
 };
 
 /**
- * NetEase 授权设置 is a RIGHT-SIDE DRAWER (.ant-drawer), not a modal, and it's
- * multi-step (verified live): click "添加授权方式" → drawer opens → checking
- * 租赁授权 expands a 4-row sub-tier matrix (MP3 / MP3+WAV / MP3+WAV+分轨文件 ×2)
- * each with its own 售价 input + 编曲分润比例 input. Consumes the structured
- * `price_tiers` export field ([{row, price, share}]) and fills each mapped row.
- * Exact-first row matching prevents "MP3" from grabbing the "MP3+WAV" row.
- * It NEVER clicks 保存 — human-in-the-loop, per the no-auto-submit rule.
+ * NetEase license settings (授权设置) is a RIGHT-SIDE DRAWER (.ant-drawer), not a modal,
+ * and it's multi-step (verified live): click "Add License Type" (添加授权方式) → drawer opens →
+ * checking "Lease License" (租赁授权) expands a 4-row sub-tier matrix (MP3 / MP3+WAV /
+ * MP3+WAV+stems 分轨文件 ×2) each with its own sale-price (售价) input + revenue-share
+ * (编曲分润比例) input. Consumes the structured `price_tiers` export field
+ * ([{row, price, share}]) and fills each mapped row. Exact-first row matching prevents
+ * "MP3" from grabbing the "MP3+WAV" row. It NEVER clicks "Save" (保存) — human-in-the-loop,
+ * per the no-auto-submit rule.
  */
 const licenseModal: Driver = async (spec, key, exp, ctx) => {
   // Structured tiers: [{row:"mp3"|"wav"|"stem", price:number, share:number|null}]
@@ -378,7 +381,7 @@ const licenseModal: Driver = async (spec, key, exp, ctx) => {
     }
   }
 
-  // No 保存 click — human reviews + submits.
+  // No "Save" (保存) click — human reviews + submits.
   return filled > 0 || isFree ? "filled" : "missed";
 };
 

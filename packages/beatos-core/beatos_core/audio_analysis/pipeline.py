@@ -1,7 +1,6 @@
 from mutagen import File as MutagenFile
 
-from .bpm import analyze_bpm
-from .key import analyze_key
+from .backends import get_backend
 from .models import AnalysisRaw
 
 
@@ -11,8 +10,8 @@ def analyze(audio_path: str) -> AnalysisRaw:
         duration = float(mf.info.length) if mf is not None and mf.info else None
     except Exception:
         duration = None
-    bpm, bpm_conf = analyze_bpm(audio_path)
-    key, key_conf = analyze_key(audio_path)
+    # Single decode for both bpm + key (was two full decodes of the same file).
+    bpm, bpm_conf, key, key_conf = get_backend().analyze(audio_path)
     return AnalysisRaw(
         bpm=bpm,
         bpm_confidence=bpm_conf,
