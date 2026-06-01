@@ -39,6 +39,14 @@
   --danger: #f15e6c;
   --success: #3ecf8e;
   --warning: #f5b800;
+
+  /* Right-panel vinyl / LCD (2026-06-01) */
+  --vinyl-label: #3a2c66;
+  --lcd-bg: #0a0a0a;
+  --lcd-green: #c8f9d8;
+  --lcd-green-glow: rgba(62, 207, 142, 0.35);
+  --lcd-violet: #d8ccff;
+  --lcd-violet-glow: rgba(124, 92, 255, 0.4);
 }
 
 html,
@@ -71,4 +79,144 @@ body,
 }
 .beatos-scroll {
   scrollbar-width: none;
+}
+
+/* Right-panel realistic vinyl (2026-06-01).
+   Grooves + import-groove ring + center sheen. The disc rotates only while
+   the focused track is playing (.beatos-vinyl-spinning); reduced-motion off. */
+.beatos-vinyl-disc {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 17%, rgba(0, 0, 0, 0.9) 17% 17.4%, transparent 17.4% 18%),
+    repeating-radial-gradient(circle at 50% 50%, #1c1c1c 0 1.1px, #060606 1.1px 2.4px),
+    radial-gradient(circle at 50% 50%, #2b2b2b 0 18%, #0c0c0c 60%, #000 100%);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+}
+.beatos-vinyl-disc::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  background: conic-gradient(
+    from 210deg,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.17) 22deg,
+    transparent 64deg,
+    transparent 200deg,
+    rgba(255, 255, 255, 0.1) 232deg,
+    transparent 276deg
+  );
+  pointer-events: none;
+}
+@keyframes beatos-vinyl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.beatos-vinyl-spinning {
+  animation: beatos-vinyl-spin 3.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .beatos-vinyl-spinning {
+    animation: none;
+  }
+}
+
+/* Right-panel record assembly. Jacket (a thin 3D box) and the vinyl disc share
+   ONE tilt on .beatos-vinyl-inner, so they stay coplanar; the disc slides out of
+   the sleeve to the right and (when playing) spins in that tilted plane. The
+   tilt follows the cursor (set inline via JS). Only the disc animates per-frame;
+   the jacket faces and contact shadow are static. */
+.beatos-vinyl-scene {
+  perspective: 1100px;
+}
+.beatos-vinyl-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(0deg) rotateY(0deg);
+  transition: transform 0.25s ease-out;
+}
+
+/* Disc sits just behind the front face (translateZ) so it reads as tucked
+   inside the sleeve when retracted, then slides right on hover / while playing. */
+.beatos-disc-slide {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 264px;
+  height: 264px;
+  transform: translateX(0) translateZ(-3px);
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.beatos-vinyl-scene:hover .beatos-disc-slide,
+.beatos-disc-slide.is-out {
+  transform: translateX(61px) translateZ(-3px);
+}
+
+/* Jacket as a thin 3D box: front + lit right side + lit top. */
+.beatos-jacket-box {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 264px;
+  height: 264px;
+  transform-style: preserve-3d;
+}
+.beatos-jacket-front,
+.beatos-jacket-side,
+.beatos-jacket-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.beatos-jacket-front {
+  /* subtle bevel + brighter highlight down the right corner edge so the fold
+     between front face and side face stays legible against the dark disc. */
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset -2px 0 0 rgba(255, 255, 255, 0.22);
+}
+.beatos-jacket-side {
+  /* thin right side face, lit bright where it meets the front edge, darkening
+     as it recedes — this is what makes the volume read. */
+  width: 24px;
+  left: 100%;
+  transform-origin: left center;
+  transform: rotateY(90deg);
+  background: linear-gradient(90deg, #5a5a5a 0%, #2a2a2a 42%, #0b0b0b 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.beatos-jacket-top {
+  /* thin top face, brightest (catches the most light) to sell the downward angle. */
+  height: 24px;
+  transform-origin: center top;
+  transform: rotateX(-90deg);
+  background: linear-gradient(180deg, #6a6a6a 0%, #2c2c2c 45%, #101010 100%);
+}
+
+/* Static contact shadow grounding the whole assembly (no per-frame cost). */
+.beatos-vinyl-shadow {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 2px;
+  height: 36px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6), transparent 72%);
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+/* Section divider — etched 1px line, fades at both ends (token color). */
+.beatos-etch-divider {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--bg-row-selected) 20%,
+    var(--bg-row-selected) 80%,
+    transparent
+  );
 }

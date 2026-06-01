@@ -7,6 +7,8 @@ interface Props {
   /** Fill parent width and stay square. Overrides `size` for layout. */
   responsive?: boolean;
   className?: string;
+  /** Apply 4px corner radius. Set false for square jacket / circular label clip. */
+  rounded?: boolean;
 }
 
 /**
@@ -24,13 +26,14 @@ export function CoverImage({
   size,
   responsive = false,
   className = "",
+  rounded = true,
 }: Props): React.JSX.Element {
   const [errored, setErrored] = useState(false);
 
   const wrapperStyle: React.CSSProperties | undefined = responsive
     ? undefined
     : { width: size, height: size };
-  const wrapperClass = `relative ${responsive ? "w-full " : ""}aspect-square overflow-hidden rounded ${className}`;
+  const wrapperClass = `relative ${responsive ? "w-full " : ""}aspect-square overflow-hidden ${rounded ? "rounded" : ""} ${className}`;
 
   if (assetId == null || errored) {
     return (

@@ -8,6 +8,7 @@ import { formatRowDate } from "@/lib/format-row-date";
 import { PREVIEW_MAX_WIDTH, PREVIEW_MIN_WIDTH, usePreviewPanelStore } from "@/stores/preview-panel";
 import { formatVocabLabel } from "@/data/vocab-label";
 import { useVocabLocaleStore } from "@/stores/vocab-locale";
+import { usePlayerStore } from "@/stores/player";
 
 function PreviewResizer(): React.JSX.Element {
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
@@ -57,12 +58,142 @@ function CloseButton(): React.JSX.Element {
     <button
       type="button"
       onClick={() => setOpen(false)}
-      className="absolute top-3 right-3 z-10 text-text-tertiary hover:text-text-primary p-1 rounded-md hover:bg-bg-row-hover"
+      className="absolute top-3 right-3 z-10 text-text-tertiary hover:text-text-primary p-1 hover:bg-bg-row-hover"
       aria-label="Close preview"
       data-preview-close
     >
       <X size={14} />
     </button>
+  );
+}
+
+// Resting tilt of the record assembly (straight-on); the cursor turns it to
+// face the pointer within ±TILT_RANGE degrees.
+const VINYL_REST_RX = 0;
+const VINYL_REST_RY = 0;
+const VINYL_TILT_RANGE = 20;
+
+function VinylStage({
+  coverAsset,
+  playing,
+}: {
+  coverAsset: { id: number } | null;
+  playing: boolean;
+}): React.JSX.Element {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
+
+  function setTilt(rx: number, ry: number): void {
+    const el = innerRef.current;
+    if (el) el.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+  }
+
+  // Turn the jacket+disc to face the cursor while it hovers the panel.
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>): void {
+    const r = e.currentTarget.getBoundingClientRect();
+    const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+    const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+    const rx = VINYL_REST_RX - dy * VINYL_TILT_RANGE;
+    const ry = VINYL_REST_RY + dx * VINYL_TILT_RANGE;
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => setTilt(rx, ry));
+  }
+
+  function onPointerLeave(): void {
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    setTilt(VINYL_REST_RX, VINYL_REST_RY);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  return (
+    <div
+      className="beatos-vinyl-scene group relative mx-auto h-[272px] w-[325px]"
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
+    >
+      <div className="beatos-vinyl-shadow" />
+      <div ref={innerRef} className="beatos-vinyl-inner">
+        <div className={`beatos-disc-slide${playing ? " is-out" : ""}`}>
+          <div
+            data-vinyl-disc
+            data-playing={playing ? "true" : undefined}
+            className={`beatos-vinyl-disc relative h-full w-full${playing ? " beatos-vinyl-spinning" : ""}`}
+          >
+            <div className="absolute inset-[32%] overflow-hidden rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,.5)]">
+              {coverAsset ? (
+                <CoverImage assetId={coverAsset.id} size={80} responsive rounded={false} />
+              ) : (
+                <div className="h-full w-full bg-[var(--vinyl-label)]" />
+              )}
+            </div>
+            <div className="absolute left-1/2 top-1/2 z-[2] h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black shadow-[inset_0_0_2px_rgba(255,255,255,.25)]" />
+          </div>
+        </div>
+        <div data-vinyl-jacket className="beatos-jacket-box">
+          <div className="beatos-jacket-front overflow-hidden">
+            <CoverImage assetId={coverAsset?.id ?? null} size={244} responsive rounded={false} />
+          </div>
+          <div className="beatos-jacket-side" />
+          <div className="beatos-jacket-top" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LcdStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "green" | "violet";
+}): React.JSX.Element {
+  const has = value !== "—";
+  const color = tone === "green" ? "var(--lcd-green)" : "var(--lcd-violet)";
+  const glow = tone === "green" ? "var(--lcd-green-glow)" : "var(--lcd-violet-glow)";
+  return (
+    <div
+      data-stat={label}
+      className="flex-1 border border-border-subtle bg-[var(--lcd-bg)] px-3 py-2 shadow-[inset_0_1px_3px_#000]"
+    >
+      <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-text-tertiary">
+        {label}
+      </div>
+      <div
+        className="mt-1.5 font-mono text-[19px] leading-none"
+        style={
+          has
+            ? { color, textShadow: `0 0 6px ${glow}` }
+            : { color: "var(--text-tertiary)" }
+        }
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Chip({ children }: { children: React.ReactNode }): React.JSX.Element {
+  return (
+    <span
+      data-chip
+      className="border border-border-subtle bg-bg-elevated-hover px-2 py-1 font-mono text-[11px] text-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,.05)]"
+    >
+      {children}
+    </span>
+  );
+}
+
+function EtchDivider(): React.JSX.Element {
+  return (
+    <div className="my-4 h-px beatos-etch-divider" />
   );
 }
 
@@ -72,6 +203,9 @@ export function TrackDetailPanel(): React.JSX.Element | null {
   const current = useTrackStore((s) => s.current);
   const byTrack = useAssetStore((s) => s.byTrack);
   const vocabLocale = useVocabLocaleStore((s) => s.locale);
+  const playerTrackId = usePlayerStore((s) => s.currentTrackId);
+  const playerStatus = usePlayerStore((s) => s.status);
+  const playingThis = current != null && playerTrackId === current.id && playerStatus === "playing";
 
   // Selecting a track while the panel is closed shouldn't silently open it —
   // user explicitly closed it. They re-open via the TopBar toggle.
@@ -115,7 +249,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
       <PreviewResizer />
       <CloseButton />
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-        Now Focused
+        {playingThis ? "Now Playing" : "Now Focused"}
       </div>
       <div
         draggable={coverAsset != null && !coverAsset.missing}
@@ -127,7 +261,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         data-cover-drag-source
         className="w-full"
       >
-        <CoverImage assetId={coverAsset?.id ?? null} size={320} responsive />
+        <VinylStage coverAsset={coverAsset ? { id: coverAsset.id } : null} playing={playingThis} />
       </div>
       <div>
         <div className="text-2xl font-bold leading-tight">{current.title}</div>
@@ -139,56 +273,67 @@ export function TrackDetailPanel(): React.JSX.Element | null {
           )}
         </div>
       </div>
-      <dl className="grid grid-cols-2 gap-2 text-sm">
-        <dt className="text-text-tertiary">BPM</dt>
-        <dd className="font-mono">{current.bpm ?? "—"}</dd>
-        <dt className="text-text-tertiary">Key</dt>
-        <dd>{current.key_signature ?? "—"}</dd>
-        <dt className="text-text-tertiary">Genre</dt>
-        <dd>{current.genre && current.genre.length > 0 ? current.genre.map((g) => formatVocabLabel(g, "genre", vocabLocale)).join(", ") : "—"}</dd>
-        <dt className="text-text-tertiary">Mood</dt>
-        <dd>{current.mood && current.mood.length > 0 ? current.mood.map((m) => formatVocabLabel(m, "mood", vocabLocale)).join(", ") : "—"}</dd>
-      </dl>
-      <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-t border-border-subtle pt-3">
-        Credits
+      <div className="flex gap-2.5">
+        <LcdStat label="BPM" value={current.bpm != null ? String(current.bpm) : "—"} tone="green" />
+        <LcdStat label="Key" value={current.key_signature ?? "—"} tone="violet" />
       </div>
-      <dl className="grid grid-cols-[80px_1fr] gap-x-3 gap-y-2 text-sm">
-        <dt className="text-text-tertiary">Producer</dt>
-        <dd>
-          {current.producer && current.producer.length > 0 ? (
-            current.producer.join(", ")
-          ) : (
-            <span className="text-text-tertiary">—</span>
-          )}
-        </dd>
-        <dt className="text-text-tertiary">Tags</dt>
-        <dd>
-          {current.tags && current.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
+
+      <div>
+        <EtchDivider />
+        <div className="mb-3 text-[9px] uppercase tracking-[0.13em] font-semibold text-text-tertiary">
+          Genre / Mood
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {(current.genre ?? []).map((g) => (
+            <Chip key={`g-${g}`}>{formatVocabLabel(g, "genre", vocabLocale)}</Chip>
+          ))}
+          {(current.mood ?? []).map((m) => (
+            <Chip key={`m-${m}`}>{formatVocabLabel(m, "mood", vocabLocale)}</Chip>
+          ))}
+          {(current.genre == null || current.genre.length === 0) &&
+            (current.mood == null || current.mood.length === 0) && (
+              <span className="text-sm text-text-tertiary">—</span>
+            )}
+        </div>
+      </div>
+
+      <div>
+        <EtchDivider />
+        <div className="mb-3 text-[9px] uppercase tracking-[0.13em] font-semibold text-text-tertiary">
+          Credits
+        </div>
+        <div className="flex flex-col gap-1.5 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-text-tertiary">Producer</span>
+            <span className="text-text-primary">
+              {current.producer && current.producer.length > 0 ? current.producer.join(", ") : "—"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-text-tertiary">Added</span>
+            <span className="font-mono text-text-secondary">{formatRowDate(current.created_at)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-text-tertiary">Updated</span>
+            <span className="font-mono text-text-secondary">{formatRowDate(current.updated_at)}</span>
+          </div>
+          {current.tags && current.tags.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1.5">
               {current.tags.map((t) => (
-                <span
-                  key={t}
-                  className="text-[11px] px-1.5 py-0.5 rounded bg-bg-row-hover text-text-secondary"
-                >
-                  {t}
-                </span>
+                <Chip key={`t-${t}`}>{t}</Chip>
               ))}
             </div>
-          ) : (
-            <span className="text-text-tertiary">—</span>
           )}
-        </dd>
-        <dt className="text-text-tertiary">Added</dt>
-        <dd className="font-mono text-text-secondary">{formatRowDate(current.created_at)}</dd>
-        <dt className="text-text-tertiary">Updated</dt>
-        <dd className="font-mono text-text-secondary">{formatRowDate(current.updated_at)}</dd>
-      </dl>
+        </div>
+      </div>
+
       {current.description && current.description.trim().length > 0 && (
         <div>
-          <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary border-t border-border-subtle pt-3 mb-2">
+          <EtchDivider />
+          <div className="mb-2 text-[9px] uppercase tracking-[0.13em] font-semibold text-text-tertiary">
             Description
           </div>
-          <div className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">
             {current.description}
           </div>
         </div>
