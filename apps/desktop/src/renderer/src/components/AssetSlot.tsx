@@ -19,6 +19,10 @@ interface Props {
   extensions: string[];
 }
 
+// Stable reference for the empty case (see useAssetSlot) — avoids a fresh []
+// re-render when an unrelated track mutates byTrack.
+const EMPTY: Asset[] = [];
+
 function roleIcon(role: string): React.JSX.Element {
   if (role === "cover") return <ImageIconLucide size={14} />;
   if (role === "stems") return <Layers size={14} />;
@@ -32,7 +36,7 @@ function formatSize(bytes: number | null): string {
 }
 
 export function AssetSlot({ trackId, role, label, extensions }: Props): React.JSX.Element {
-  const assetsForTrack = useAssetStore((s) => s.byTrack[trackId] ?? []);
+  const assetsForTrack = useAssetStore((s) => s.byTrack[trackId] ?? EMPTY);
   const attach = useAssetStore((s) => s.attach);
   const detach = useAssetStore((s) => s.detach);
   const relocate = useAssetStore((s) => s.relocate);

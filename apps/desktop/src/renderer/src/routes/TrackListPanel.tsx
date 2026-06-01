@@ -19,6 +19,7 @@ import { ImportAudioDialog } from "@/components/ImportAudioDialog";
 import { BulkActionBar, type BulkAction } from "@/components/BulkActionBar";
 import { AddToListPopover } from "@/components/AddToListPopover";
 import { BulkEditDialog } from "@/components/BulkEditDialog";
+import { ExportDialog } from "@/components/ExportDialog";
 import { tracks as tracksApi } from "@/api/tracks";
 import { analysis } from "@/api/analysis";
 import { useAnalysisJobStore } from "@/stores/analysis-job";
@@ -96,6 +97,9 @@ export function TrackListPanel(): React.JSX.Element {
   }, [visible, current, select]);
 
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  // One ExportDialog for the whole list, opened by any row's context menu — was
+  // one mounted dialog per visible row.
+  const [exportTrackId, setExportTrackId] = useState<number | null>(null);
   const [unanalyzed, setUnanalyzed] = useState(0);
   const [dropping, setDropping] = useState(false);
   const [importFiles, setImportFiles] = useState<File[]>([]);
@@ -397,6 +401,7 @@ export function TrackListPanel(): React.JSX.Element {
                 currentListId={listId}
                 onEdit={() => navigate(`/tracks/${t.id}/edit`)}
                 onDelete={() => remove(t.id)}
+                onExport={() => setExportTrackId(t.id)}
                 onRemoveFromList={() => refresh(listId != null ? { list_id: listId } : undefined)}
               >
                 <div className="data-[state=open]:ring-2 data-[state=open]:ring-inset data-[state=open]:ring-accent">
@@ -430,6 +435,11 @@ export function TrackListPanel(): React.JSX.Element {
             ids={Array.from(selectedIds)}
             onClose={() => setBulkEditOpen(false)}
             onDone={() => { setBulkEditOpen(false); clearSelection(); }}
+          />
+          <ExportDialog
+            open={exportTrackId != null}
+            trackId={exportTrackId ?? 0}
+            onClose={() => setExportTrackId(null)}
           />
         </div>
       </section>

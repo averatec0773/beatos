@@ -21,7 +21,7 @@ interface Props {
   onDelete?: () => void;
 }
 
-export function TrackRow({
+function TrackRowImpl({
   track,
   coverAssetId,
   selected,
@@ -109,3 +109,17 @@ export function TrackRow({
     </div>
   );
 }
+
+// `visible = list` (the track store array) keeps each track object referentially
+// stable across selection / search / player-tick re-renders of TrackListPanel, so
+// a reference compare on `track` plus the scalar props is enough. The `onSelect` /
+// `onOpen` closures are recreated every parent render but TrackRow only invokes
+// them — never renders from them — so we deliberately ignore them here.
+export const TrackRow = React.memo(
+  TrackRowImpl,
+  (prev, next) =>
+    prev.track === next.track &&
+    prev.coverAssetId === next.coverAssetId &&
+    prev.selected === next.selected &&
+    prev.isMultiSelected === next.isMultiSelected,
+);

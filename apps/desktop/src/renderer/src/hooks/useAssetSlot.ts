@@ -1,6 +1,10 @@
 import { useAssetStore } from "@/stores/assets";
 import type { Asset } from "@/api/assets";
 
+// Stable reference for the empty case so the selector doesn't return a fresh []
+// (and force a re-render) whenever an unrelated track's assets mutate byTrack.
+const EMPTY: Asset[] = [];
+
 interface UseAssetSlotResult {
   asset: Asset | null;
   /** If `explicitPath` is provided, bypass the OS file picker. */
@@ -16,7 +20,7 @@ export function useAssetSlot(
   label: string,
   extensions: string[],
 ): UseAssetSlotResult {
-  const assetsForTrack = useAssetStore((s) => s.byTrack[trackId] ?? []);
+  const assetsForTrack = useAssetStore((s) => s.byTrack[trackId] ?? EMPTY);
   const attachAction = useAssetStore((s) => s.attach);
   const detachAction = useAssetStore((s) => s.detach);
   const relocateAction = useAssetStore((s) => s.relocate);
