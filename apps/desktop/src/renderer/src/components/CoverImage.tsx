@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Image as ImageIcon } from "lucide-react";
 
 interface Props {
@@ -33,9 +33,15 @@ export function CoverImage({
   // track switching) instead of sticking on the placeholder forever. Reset on
   // assetId change so a reused instance always re-attempts the new cover.
   const [attempt, setAttempt] = useState(0);
+  const retryTimer = useRef<number | null>(null);
   useEffect(() => {
     setErrored(false);
     setAttempt(0);
+    // Cancel a pending retry from the previous cover so it can't fire
+    // setAttempt after unmount or bump the new cover's retry count.
+    return () => {
+      if (retryTimer.current != null) window.clearTimeout(retryTimer.current);
+    };
   }, [assetId]);
 
   const wrapperStyle: React.CSSProperties | undefined = responsive
@@ -62,7 +68,7 @@ export function CoverImage({
         src={`beatos-asset://cover/${assetId}`}
         onError={() => {
           if (attempt < 2) {
-            window.setTimeout(() => setAttempt((a) => a + 1), 250);
+            retryTimer.current = window.setTimeout(() => setAttempt((a) => a + 1), 250);
           } else {
             setErrored(true);
           }

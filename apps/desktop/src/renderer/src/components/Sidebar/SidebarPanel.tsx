@@ -73,7 +73,7 @@ export function SidebarPanel(): React.JSX.Element {
 
   return (
     <aside
-      className="glass flex-shrink-0 border-r border-border-subtle overflow-y-auto py-3 flex flex-col gap-4 relative"
+      className="glass-solid flex-shrink-0 border-r border-border-subtle overflow-y-auto py-3 flex flex-col gap-4 relative"
       style={{ width: sidebarWidth }}
     >
       <SidebarResizer />

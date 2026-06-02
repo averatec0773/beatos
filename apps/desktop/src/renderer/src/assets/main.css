@@ -17,6 +17,16 @@
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  /* Keep the blurred backdrop layer promoted so the compositor doesn't
+     re-promote it every frame as the list scrolls under the bar. */
+  will-change: backdrop-filter;
+}
+
+/* Same tint, no blur. For opaque side panels (e.g. the sidebar) that are their
+   own scroll container — backdrop-filter there would re-blur on every scroll
+   tick for no visual gain (nothing meaningful sits behind them). */
+.glass-solid {
+  background: var(--glass-bg);
 }
 
 /* Softened primary action: glass fill + hairline, bright text. Replaces the
@@ -66,7 +76,7 @@
 
   /* glass */
   --glass-bg:     rgba(16,18,22,.55);
-  --glass-blur:   34px;
+  --glass-blur:   18px;
 
   /* motion */
   --ease:   cubic-bezier(.2,.7,.2,1);
