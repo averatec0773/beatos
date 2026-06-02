@@ -6,6 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+## [0.0.45] — 2026-06-02 — UI redesign: monochrome → Spotify-style cards, Coverflow, collapsible sidebar
+
 ### Fixed
 
 - **Asset detach/replace now cascades the analysis cache.** Removing or replacing a track's audio/cover went through a DB connection that never enabled `PRAGMA foreign_keys`, so the `analysis_cache` row's `ON DELETE CASCADE` silently no-op'd and orphan rows accumulated (same class of bug fixed for track purge in v0.0.31, missed on the asset path). `attach_asset`/`detach_asset` now enable the pragma.
