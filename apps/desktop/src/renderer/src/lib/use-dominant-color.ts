@@ -23,8 +23,14 @@ export function useDominantColor(assetId: number | null): string | null {
       return;
     }
     let cancelled = false;
+    // Debounce: while the user rapidly switches tracks, don't fire a cover
+    // request per switch (that storm starves the visible <img> loads). Only
+    // extract once focus settles for ~150ms.
     const img = new Image();
     img.crossOrigin = "anonymous";
+    const timer = window.setTimeout(() => {
+      img.src = `beatos-asset://cover/${assetId}`;
+    }, 150);
     img.onload = () => {
       if (cancelled) return;
       try {
@@ -64,9 +70,10 @@ export function useDominantColor(assetId: number | null): string | null {
     img.onerror = () => {
       if (!cancelled) setChannels(null);
     };
-    img.src = `beatos-asset://cover/${assetId}`;
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
+      img.src = "";
     };
   }, [assetId]);
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Image as ImageIcon } from "lucide-react";
 
 interface Props {
@@ -29,6 +29,14 @@ export function CoverImage({
   rounded = true,
 }: Props): React.JSX.Element {
   const [errored, setErrored] = useState(false);
+  // Retry transient load failures (e.g. an aborted protocol fetch during rapid
+  // track switching) instead of sticking on the placeholder forever. Reset on
+  // assetId change so a reused instance always re-attempts the new cover.
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    setErrored(false);
+    setAttempt(0);
+  }, [assetId]);
 
   const wrapperStyle: React.CSSProperties | undefined = responsive
     ? undefined
@@ -50,8 +58,15 @@ export function CoverImage({
   return (
     <div style={wrapperStyle} className={wrapperClass}>
       <img
+        key={attempt}
         src={`beatos-asset://cover/${assetId}`}
-        onError={() => setErrored(true)}
+        onError={() => {
+          if (attempt < 2) {
+            window.setTimeout(() => setAttempt((a) => a + 1), 250);
+          } else {
+            setErrored(true);
+          }
+        }}
         className="w-full h-full object-cover"
         alt=""
       />
