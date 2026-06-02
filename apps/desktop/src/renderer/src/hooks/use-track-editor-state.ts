@@ -228,7 +228,9 @@ export function useTrackEditorState(): TrackEditorState {
   // Navigating away without ESC/Cancel (e.g. clicking a sidebar item) unmounts
   // the editor — discard an untouched new row on that path too.
   const maybeDiscardRef = useRef(maybeDiscardNew);
-  maybeDiscardRef.current = maybeDiscardNew;
+  useEffect(() => {
+    maybeDiscardRef.current = maybeDiscardNew;
+  });
   useEffect(() => {
     return () => {
       maybeDiscardRef.current();

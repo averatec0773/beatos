@@ -49,7 +49,12 @@ export function AsciiSeekWaveform({
   const status = usePlayerStore((s) => s.status);
   const progress = max > 0 ? Math.min(1, Math.max(0, value[0] / max)) : 0;
   const progressRef = useRef(progress);
-  progressRef.current = progress;
+  // Keep the rAF/draw closures' progress current without writing the ref during
+  // render (react-hooks/refs). This effect runs before the paused-seek redraw
+  // effect below, so the bright/dim split is up to date when it repaints.
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
 
   // Setup keyed on `status` only (NOT `value`) — re-running per position tick
   // would tear down the rAF/observer every frame.

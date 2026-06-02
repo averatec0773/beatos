@@ -38,9 +38,11 @@ export function AsciiBackdrop(): React.JSX.Element {
   const speed = useAppearanceStore((s) => s.backdropSpeed);
   // Live refs so intensity/speed changes apply without tearing down the loop.
   const intensityRef = useRef(intensity);
-  intensityRef.current = intensity;
   const speedRef = useRef(speed);
-  speedRef.current = speed;
+  useEffect(() => {
+    intensityRef.current = intensity;
+    speedRef.current = speed;
+  }, [intensity, speed]);
 
   useEffect(() => {
     const el = ref.current;
