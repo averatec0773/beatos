@@ -17,6 +17,27 @@ export function buildPayload(t: Track): TrackUpdate {
   };
 }
 
+/**
+ * True when a freshly-created "Untitled" row was never given any content — no
+ * real title, no audio, no metadata, no assets. Used to auto-discard junk
+ * tracks when the user exits the editor without touching a misclicked new row.
+ */
+export function isPristineNewTrack(track: Track, assetCount: number): boolean {
+  const t = track.title.trim();
+  return (
+    (t === "" || t === "Untitled") &&
+    track.bpm == null &&
+    !track.key_signature &&
+    !(track.genre && track.genre.length) &&
+    !(track.mood && track.mood.length) &&
+    !(track.tags && track.tags.length) &&
+    !(track.producer && track.producer.length) &&
+    !(track.description && track.description.trim()) &&
+    !track.has_audio &&
+    assetCount === 0
+  );
+}
+
 export function formatSavedAgo(ms: number | null): string {
   if (ms == null) return "";
   const delta = Math.max(0, Math.floor((Date.now() - ms) / 1000));

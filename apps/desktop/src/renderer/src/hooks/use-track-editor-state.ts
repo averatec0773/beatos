@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { tracks } from "@/api/tracks";
 import type { Track } from "@/api/tracks";
@@ -11,7 +11,12 @@ import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { useAnalyzingStore } from "@/lib/auto-analyze";
 import { shallowEqualEditable } from "@/lib/shallow-equal-track";
-import { AUTOSAVE_DEBOUNCE_MS, buildPayload, type SaveState } from "@/lib/track-editor-helpers";
+import {
+  AUTOSAVE_DEBOUNCE_MS,
+  buildPayload,
+  isPristineNewTrack,
+  type SaveState,
+} from "@/lib/track-editor-helpers";
 
 export type ProducerOption = { value: string; label: string };
 
@@ -39,9 +44,11 @@ export interface TrackEditorState {
 export function useTrackEditorState(): TrackEditorState {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const updateInStore = useTrackStore((s) => s.update);
   const removeInStore = useTrackStore((s) => s.remove);
   const setAssetsForTrack = useAssetStore((s) => s.setForTrack);
+  const assetsByTrack = useAssetStore((s) => s.byTrack);
   const trackList = useTrackStore((s) => s.list);
 
   const [track, setTrack] = useState<Track | null>(null);
@@ -176,16 +183,57 @@ export function useTrackEditorState(): TrackEditorState {
     return () => window.clearInterval(id);
   }, [saveState]);
 
+  // Remember which track id was created via "Add Track" (navigation state),
+  // so we can auto-discard it on exit if left untouched.
+  const isNewIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const st = location.state as { isNew?: boolean } | null;
+    if (st?.isNew && track && isNewIdRef.current == null) {
+      isNewIdRef.current = track.id;
+    }
+  }, [location.state, track]);
+
+  // Discard an untouched freshly-created row (misclick / quick back-out).
+  // Returns true if it discarded, so callers skip the normal save/flush.
+  const discardedRef = useRef(false);
+  const maybeDiscardNew = useCallback((): boolean => {
+    if (discardedRef.current) return true;
+    if (
+      track &&
+      isNewIdRef.current === track.id &&
+      isPristineNewTrack(track, assetsByTrack[track.id]?.length ?? 0)
+    ) {
+      discardedRef.current = true;
+      void removeInStore(track.id);
+      return true;
+    }
+    return false;
+  }, [track, assetsByTrack, removeInStore]);
+
   // Flush a pending save before navigating away. Fire-and-forget — by the
   // time the promise resolves the editor has unmounted, but the API call
   // still lands in the store. Skips if save is in-flight (it'll complete
   // on its own) or if title is empty (would error out).
   const flushAndClose = useCallback(() => {
+    if (maybeDiscardNew()) {
+      navigate("/");
+      return;
+    }
     if (track && isDirty && saveState === "idle" && track.title.trim()) {
       void performSave(track);
     }
     navigate("/");
-  }, [track, isDirty, saveState, performSave, navigate]);
+  }, [maybeDiscardNew, track, isDirty, saveState, performSave, navigate]);
+
+  // Navigating away without ESC/Cancel (e.g. clicking a sidebar item) unmounts
+  // the editor — discard an untouched new row on that path too.
+  const maybeDiscardRef = useRef(maybeDiscardNew);
+  maybeDiscardRef.current = maybeDiscardNew;
+  useEffect(() => {
+    return () => {
+      maybeDiscardRef.current();
+    };
+  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {

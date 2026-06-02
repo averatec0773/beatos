@@ -272,11 +272,12 @@ export function TrackListPanel(): React.JSX.Element {
   );
 
   async function onAddTrack(): Promise<void> {
-    // Eager creation: POST the row immediately so the editor has a real
-    // track id to attach assets against. ESC/Cancel leaves an 'Untitled'
-    // row, which the user can clean up via right-click → Delete.
+    // Eager creation: POST the row immediately so the editor has a real track
+    // id to attach assets against. The `isNew` flag lets the editor auto-discard
+    // the row on exit if the user never touched it (nothing typed, no audio) —
+    // so a misclick or quick back-out doesn't leave a junk 'Untitled' track.
     const t = await createTrack("Untitled");
-    navigate(`/tracks/${t.id}/edit`);
+    navigate(`/tracks/${t.id}/edit`, { state: { isNew: true } });
   }
 
   if (list.length === 0) {
