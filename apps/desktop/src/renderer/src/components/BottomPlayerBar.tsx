@@ -116,14 +116,14 @@ export function BottomPlayerBar() {
     <footer
       data-bottom-player
       data-playing={playing ? "true" : "false"}
-      className="flex h-[72px] shrink-0 items-center gap-4 border-t border-zinc-800 bg-zinc-950 px-4"
+      className="glass flex h-[72px] shrink-0 items-center gap-4 border-t border-border-subtle px-4"
     >
       {/* Left: cover + meta */}
       <div className="flex w-[28%] min-w-0 items-center gap-3">
         <CoverImage assetId={track?.cover_asset_id ?? null} size={40} />
         <div className="min-w-0">
-          <div className="truncate text-sm font-medium text-zinc-100">{track?.title ?? "—"}</div>
-          <div className="truncate text-xs text-zinc-400">
+          <div className="truncate text-sm font-medium text-text-primary">{track?.title ?? "—"}</div>
+          <div className="truncate text-xs text-text-secondary">
             {formatPlayerSubtitle({
               producer: track?.producer ?? null,
               bpm: track?.bpm ?? null,
@@ -169,7 +169,7 @@ export function BottomPlayerBar() {
           </Button>
         </div>
         <div className="flex w-full items-center gap-2">
-          <span className="w-10 text-right text-[10px] tabular-nums text-zinc-500">
+          <span className="w-10 text-right text-[10px] tabular-nums text-text-tertiary">
             {formatTime(position)}
           </span>
           <Slider
@@ -181,7 +181,7 @@ export function BottomPlayerBar() {
             onValueChange={([v]) => usePlayerStore.getState().seek(v)}
             className="flex-1"
           />
-          <span className="w-10 text-[10px] tabular-nums text-zinc-500">
+          <span className="w-10 text-[10px] tabular-nums text-text-tertiary">
             {formatTime(duration)}
           </span>
         </div>

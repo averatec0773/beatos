@@ -35,7 +35,7 @@ export function TopBar(): React.JSX.Element {
 
   return (
     <header
-      className="h-14 flex-shrink-0 border-b border-border-subtle pr-3 pb-2 flex items-center gap-3 select-none bg-bg-base"
+      className="glass h-14 flex-shrink-0 border-b border-border-subtle pr-3 pb-2 flex items-center gap-3 select-none"
       style={{ paddingLeft: "88px", WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <button

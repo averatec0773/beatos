@@ -13,6 +13,12 @@
 @tailwind components;
 @tailwind utilities;
 
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+
 :root {
   /* tier 1 — primitives (raw; never referenced by components) */
   --c-void:        #08090b;
