@@ -9,12 +9,15 @@ This is **direction**, not pixel-perfect spec. It tells you the shape of the rig
 
 ## 1. North star
 
-**Visual reference**: **Spotify desktop app, dark theme.** When in doubt, ask "what would Spotify do here?" then adapt for BeatOS's producer use case.
+**Visual reference**: **Obsidian-void aesthetic** — UI surfaces emerge as backlit glass panels floating over a near-black void. Depth comes from shadow-layering, not colour. References: Raycast, unveil.fr. When in doubt, ask "does this surface feel instrument-grade and weightless, or does it feel like a website?"
 
-**Mood keywords**: *darkroom · focused · dense-but-breathing · tactile · pro-tool*.
+**Mood keywords**: *darkroom · tactile · weightless · instrument-grade · monochrome*.
 
 **Anti-patterns** (what BeatOS must NOT look like):
-- Avoid: shadcn beige, Bootstrap drop-shadows, Material ripples, glassmorphism, pastel marketing palettes
+- Avoid: shadcn beige, Bootstrap drop-shadows, Material ripples, glassmorphism-as-pastel, pastel marketing palettes
+- No chromatic accent — the palette is monochrome; the only hues are the semantic status colours (danger red / success green / warning amber).
+
+> **Glass clarification**: the `.glass` utility is the Raycast "backlit panel" kind — a dark-tinted blur over deeper dark content. This is distinct from pastel glassmorphism (rejected above), which lightens surfaces and adds colour tints.
 
 ---
 
@@ -73,24 +76,53 @@ A Beattape is just a user-created list whose membership the user curates manuall
 
 ## 3. Color tokens
 
-Start from Spotify's dark palette, then nudge toward BeatOS personality. **These are defaults. Tune the accent later; do not tune the dark grays.**
+The palette is **monochrome** — no chromatic accent. Tokens follow a 3-tier structure: tier-1 primitives (`--c-*`) are raw values; tier-2 semantic tokens (`--bg-*`, `--text-*`, `--accent`, etc.) are what components touch; tier-3 would be component-specific tokens (none yet). **Only remap tier-2 for future theme variants — primitives and components stay unchanged.** The tier-2 seam is the designated extension point for multi-theme support.
 
-| Token | Value | Used for |
+### Tier 1 — primitives (never referenced by components directly)
+
+| Token | Value | Note |
 |---|---|---|
-| `--bg-base` | `#121212` | Window background, middle column |
-| `--bg-elevated` | `#181818` | Cards, right-column panel |
-| `--bg-elevated-hover` | `#1f1f1f` | Hovered card / row |
+| `--c-void` | `#08090b` | Near-black base |
+| `--c-graphite-800` | `#111317` | Elevated surfaces |
+| `--c-graphite-700` | `#171a1f` | Elevated-hover |
+| `--c-white` | `#ffffff` | Full white |
+| `--c-ash` | `#e8e8ea` | Near-white; the accent colour |
+| `--c-slate-200` | `#a4a6ab` | Secondary text |
+| `--c-slate-300` | `#6c6f76` | Tertiary text / disabled |
+| `--c-hair` | `rgba(255,255,255,.07)` | Hairline dividers |
+
+### Tier 2 — semantic (components reference only these)
+
+| Token | Maps to | Used for |
+|---|---|---|
+| `--bg-base` | `var(--c-void)` | Window background, middle column |
+| `--bg-elevated` | `var(--c-graphite-800)` | Cards, right-column panel |
+| `--bg-elevated-hover` | `var(--c-graphite-700)` | Hovered card / row |
 | `--bg-sidebar` | `#000000` | Left column |
-| `--bg-row-hover` | `#1a1a1a` | Track row hover |
-| `--bg-row-selected` | `#2a2a2a` | Track row selected |
-| `--border-subtle` | `#282828` | Column dividers, table separators |
-| `--text-primary` | `#ffffff` | Titles, primary metadata |
-| `--text-secondary` | `#b3b3b3` | Subtitles, secondary metadata, labels |
-| `--text-tertiary` | `#6a6a6a` | Disabled, placeholder, hint |
-| `--accent` | `#7c5cff` (violet) — locked since v0.0.1 in `apps/desktop/src/renderer/src/assets/main.css`. | Primary CTAs, selection ring, "Now Playing"-style highlights |
-| `--accent-soft` | `<accent>` at 18% alpha | Subtle accent backgrounds, hover trails |
+| `--bg-row-hover` | `rgba(255,255,255,.04)` | Track row hover |
+| `--bg-row-selected` | `rgba(255,255,255,.07)` | Track row selected |
+| `--bg-row-active` | `rgba(255,255,255,.10)` | Track row active (playing) |
+| `--border-subtle` | `var(--c-hair)` | Column dividers, table separators |
+| `--text-primary` | `var(--c-white)` | Titles, primary metadata |
+| `--text-secondary` | `var(--c-slate-200)` | Subtitles, secondary metadata, labels |
+| `--text-tertiary` | `var(--c-slate-300)` | Disabled, placeholder, hint |
+| `--accent` | `var(--c-ash)` | Primary CTAs, selection ring, highlights — near-white, NOT violet |
+| `--accent-soft` | `rgba(255,255,255,.10)` | Subtle accent backgrounds, hover trails |
 | `--danger` | `#f15e6c` | Destructive actions, missing-asset warning |
 | `--success` | `#3ecf8e` | "Inject succeeded", confirmed states |
+| `--warning` | `#f5b800` | Caution states |
+
+### Glass & motion tokens
+
+| Token | Value | Note |
+|---|---|---|
+| `--glass-bg` | `rgba(16,18,22,.55)` | Backlit panel fill (top bar, sidebar, player) |
+| `--glass-border` | `rgba(255,255,255,.09)` | Glass panel edge |
+| `--glass-blur` | `34px` | Backdrop blur amount |
+| `--ease` | `cubic-bezier(.2,.7,.2,1)` | Standard easing |
+| `--spring` | `cubic-bezier(.34,1.56,.64,1)` | Springy/overshoot easing |
+| `--dur-hover` | `260ms` | Hover transition duration |
+| `--dur-cover` | `550ms` | Cover/hero transition duration |
 
 **Rule**: every color used in code must come from a token. Inline hex in JSX is a smell. The token names above are the canonical CSS variable names.
 
@@ -156,7 +188,7 @@ Start from Spotify's dark palette, then nudge toward BeatOS personality. **These
 - Row thumbnail: **48×48**, 4px radius, no shadow. Overlay scrim + play button on hover or when this row is the current player track.
 - When no cover: a flat `--bg-elevated` square with a centered music-note glyph in `--text-tertiary`.
 
-> **Exception (2026-06-01, right detail panel)**: the right column (`TrackDetailPanel`) uses a realistic **jacket + pulled-out vinyl** composition with **square corners** (the circular disc/label are the only round shapes) — it does NOT follow the 320×320 / 8px-radius rule above, nor the §5 "6px radius everywhere" rule. The disc slides out on hover and slides + spins while the focused track is playing (`prefers-reduced-motion` disables the spin). BPM/Key render as LCD stat bars (mono + glow), genre/mood/tags as square chips, sections split by etched dividers. See `docs/superpowers/plans/2026-06-01-right-panel-vinyl.md`.
+> **Right detail panel hero (2026-06-01, replaces vinyl)**: the right column (`TrackDetailPanel`) uses a **3D Coverflow** carousel as its hero. The focused track's cover is centered and full-depth; neighbours are rotated back (~−45°) and dimmed. Clicking a side cover or pressing ArrowLeft/ArrowRight moves focus; the carousel is two-way synced with the middle list. Width-responsive across the panel's 280–600px resize range. `prefers-reduced-motion` falls back to a center cross-fade. The center cover is the native OS drag-out source (same as the editor's 200×200 cover — drag into Finder / another app to export the file). BPM/Key render as **frameless white-phosphor mono numerals** (no LCD box, no glow border). Genre/mood/tags as square chips; sections split by etched dividers. See `docs/superpowers/plans/2026-06-01-beatos-aesthetic-redesign.md`.
 
 ### Empty states
 
