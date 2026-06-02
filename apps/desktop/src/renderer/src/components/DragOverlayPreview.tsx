@@ -14,7 +14,7 @@ export function DragOverlayPreview({ count, title }: Props): React.JSX.Element {
     );
   }
   return (
-    <div className="bg-accent text-white rounded-full px-3 py-1 text-xs font-medium shadow-lg">
+    <div className="bg-bg-elevated text-text-primary border border-white/15 rounded-full px-3 py-1 text-xs font-medium shadow-lg">
       {count} tracks
     </div>
   );

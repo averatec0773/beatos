@@ -123,7 +123,7 @@ export function KeyPickerPopover({ initialValue, onCommit, onClear, onClose }: P
           type="button"
           aria-label="Save"
           onClick={handleClose}
-          className="px-4 py-1.5 rounded-md bg-accent text-white text-sm font-medium hover:opacity-90"
+          className="px-4 py-1.5 rounded-md text-sm font-medium btn-primary"
         >
           Save
         </button>

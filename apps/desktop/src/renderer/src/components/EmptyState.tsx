@@ -17,7 +17,7 @@ export function EmptyState(props: Props): React.JSX.Element {
           <p className="mt-2 text-text-secondary text-sm">Add your first track to get started.</p>
           <button
             onClick={props.onAddTrack}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-accent text-white font-medium hover:opacity-90"
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium btn-primary"
           >
             <Plus size={14} /> Add Track
           </button>

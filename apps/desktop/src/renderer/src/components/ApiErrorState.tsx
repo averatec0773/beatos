@@ -20,7 +20,7 @@ export function ApiErrorState({ error, onRetry }: Props): React.JSX.Element {
         </pre>
         <button
           onClick={onRetry}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-accent text-white font-medium hover:opacity-90"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium btn-primary"
         >
           <RotateCcw size={14} /> Retry
         </button>

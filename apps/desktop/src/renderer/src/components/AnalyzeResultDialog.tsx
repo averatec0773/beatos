@@ -166,7 +166,7 @@ export function AnalyzeResultDialog({
           <button
             type="button"
             onClick={handleApply}
-            className="px-4 py-2 rounded-md bg-accent text-white font-medium hover:opacity-90 text-sm"
+            className="px-4 py-2 rounded-md font-medium text-sm btn-primary"
           >
             Apply
           </button>

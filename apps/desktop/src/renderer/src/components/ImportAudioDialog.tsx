@@ -141,7 +141,7 @@ export function ImportAudioDialog({
           <button
             type="button"
             onClick={() => onConfirm({ destination, tag })}
-            className="px-4 py-2 rounded-md bg-accent text-white text-sm hover:opacity-90"
+            className="px-4 py-2 rounded-md text-sm btn-primary"
           >
             Import
           </button>

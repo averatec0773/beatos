@@ -395,7 +395,7 @@ export function ChipMultiSelect({
               <button
                 type="button"
                 onClick={handleApply}
-                className="rounded bg-accent px-3 py-1 text-xs text-white hover:opacity-90 focus:outline-none"
+                className="rounded px-3 py-1 text-xs focus:outline-none btn-primary"
               >
                 Apply
               </button>
