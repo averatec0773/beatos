@@ -1,6 +1,6 @@
 [project]
 name = "beatos-http"
-version = "0.0.45"
+version = "0.0.46"
 description = "BeatOS FastAPI facade — thin HTTP surface for the Electron renderer."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"

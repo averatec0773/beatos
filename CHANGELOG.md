@@ -6,6 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+## [0.0.46] — 2026-06-02 — ASCII backdrop + waveform seek, floating top bar, panel opacity, player persistence
+
 ### Added
 
 - **ASCII glyph-rain backdrop.** An ambient monochrome character field is painted behind the (now translucent) panels — texture in the gutters and behind the floating top bar, softened through the cards. Settings → Appearance controls it: on/off, intensity, speed, and **panel opacity** (0–100, drives the `--card-alpha` token live). Preferences persist across restarts (`beatos.appearance.v1`). Respects `prefers-reduced-motion` (static frame) and pauses while the window is hidden/blurred.
