@@ -117,7 +117,6 @@ The palette is **monochrome** — no chromatic accent. Tokens follow a 3-tier st
 | Token | Value | Note |
 |---|---|---|
 | `--glass-bg` | `rgba(16,18,22,.55)` | Backlit panel fill (top bar, sidebar, player) |
-| `--glass-border` | `rgba(255,255,255,.09)` | Glass panel edge |
 | `--glass-blur` | `34px` | Backdrop blur amount |
 | `--ease` | `cubic-bezier(.2,.7,.2,1)` | Standard easing |
 | `--spring` | `cubic-bezier(.34,1.56,.64,1)` | Springy/overshoot easing |

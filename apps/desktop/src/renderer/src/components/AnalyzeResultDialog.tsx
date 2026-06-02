@@ -103,7 +103,7 @@ export function AnalyzeResultDialog({
                 checked={bpmChecked}
                 disabled={result.bpm == null}
                 onChange={(e) => setBpmChecked(e.target.checked)}
-                className="h-4 w-4 accent-[var(--color-accent)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-4 w-4 accent-[var(--accent)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
               />
               <div className="flex items-center gap-2">
                 <span className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary w-8">
@@ -127,7 +127,7 @@ export function AnalyzeResultDialog({
                 checked={keyChecked}
                 disabled={result.key == null}
                 onChange={(e) => setKeyChecked(e.target.checked)}
-                className="h-4 w-4 accent-[var(--color-accent)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-4 w-4 accent-[var(--accent)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
               />
               <div className="flex items-center gap-2">
                 <span className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary w-8">
@@ -149,7 +149,7 @@ export function AnalyzeResultDialog({
             type="checkbox"
             checked={replaceExisting}
             onChange={(e) => setReplaceExisting(e.target.checked)}
-            className="h-4 w-4 accent-[var(--color-accent)] cursor-pointer"
+            className="h-4 w-4 accent-[var(--accent)] cursor-pointer"
             data-replace-existing
           />
           Replace existing values

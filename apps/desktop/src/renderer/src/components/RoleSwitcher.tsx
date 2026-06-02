@@ -55,7 +55,7 @@ export function RoleSwitcher() {
             onClick={() => usePlayerStore.getState().setPreferredRole(role)}
           >
             {AUDIO_ROLE_LABEL[role]}
-            {role === currentRole && <span className="ml-2 text-violet-400">✓</span>}
+            {role === currentRole && <span className="ml-2 text-accent">✓</span>}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

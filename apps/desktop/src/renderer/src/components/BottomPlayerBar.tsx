@@ -198,7 +198,7 @@ export function BottomPlayerBar() {
           aria-label="Shuffle"
           data-active={shuffle ? "true" : "false"}
         >
-          <Shuffle className={`h-4 w-4 ${shuffle ? "text-violet-400" : ""}`} />
+          <Shuffle className={`h-4 w-4 ${shuffle ? "text-accent" : ""}`} />
         </Button>
         <Button
           size="icon"
@@ -209,9 +209,9 @@ export function BottomPlayerBar() {
           data-mode={repeat}
         >
           {repeat === "one" ? (
-            <Repeat1 className="h-4 w-4 text-violet-400" />
+            <Repeat1 className="h-4 w-4 text-accent" />
           ) : (
-            <Repeat className={`h-4 w-4 ${repeat === "all" ? "text-violet-400" : ""}`} />
+            <Repeat className={`h-4 w-4 ${repeat === "all" ? "text-accent" : ""}`} />
           )}
         </Button>
         <Button
