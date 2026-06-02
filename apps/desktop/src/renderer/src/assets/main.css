@@ -1,6 +1,6 @@
 /* BeatOS renderer global stylesheet.
    Tokens mirror conventions/design-direction.md §3.
-   Accent placeholder is Spotify green; revisit in v0.0.2 before first real button. */
+   3-tier: primitives (--c-*) -> semantic (--bg-*, --text-*, --accent, glass, motion). */
 
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/500.css";
@@ -14,39 +14,44 @@
 @tailwind utilities;
 
 :root {
-  /* Surfaces */
-  --bg-base: #121212;
-  --bg-elevated: #181818;
-  --bg-elevated-hover: #1f1f1f;
-  --bg-sidebar: #000000;
-  --bg-row-hover: #1a1a1a;
-  --bg-row-selected: #2e2e2e;
-  --bg-row-active: rgba(124, 92, 255, 0.18);
+  /* tier 1 — primitives (raw; never referenced by components) */
+  --c-void:        #08090b;
+  --c-graphite-800:#111317;
+  --c-graphite-700:#171a1f;
+  --c-white:       #ffffff;
+  --c-ash:         #e8e8ea;
+  --c-slate-200:   #a4a6ab;
+  --c-slate-300:   #6c6f76;
+  --c-hair:        rgba(255,255,255,.07);
 
-  /* Borders */
-  --border-subtle: #282828;
+  /* tier 2 — semantic (the only layer components touch) */
+  --bg-base:           var(--c-void);
+  --bg-elevated:       var(--c-graphite-800);
+  --bg-elevated-hover: var(--c-graphite-700);
+  --bg-sidebar:        #000000;
+  --bg-row-hover:      rgba(255,255,255,.04);
+  --bg-row-selected:   rgba(255,255,255,.07);
+  --bg-row-active:     rgba(255,255,255,.10);
+  --border-subtle:     var(--c-hair);
+  --text-primary:      var(--c-white);
+  --text-secondary:    var(--c-slate-200);
+  --text-tertiary:     var(--c-slate-300);
+  --accent:            var(--c-ash);
+  --accent-soft:       rgba(255,255,255,.10);
+  --danger:            #f15e6c;
+  --success:           #3ecf8e;
+  --warning:           #f5b800;
 
-  /* Text */
-  --text-primary: #ffffff;
-  --text-secondary: #b3b3b3;
-  --text-tertiary: #6a6a6a;
+  /* glass */
+  --glass-bg:     rgba(16,18,22,.55);
+  --glass-border: rgba(255,255,255,.09);
+  --glass-blur:   34px;
 
-  /* Accent — BeatOS violet (finalized 2026-05-14) */
-  --accent: #7c5cff;
-  --accent-soft: rgba(124, 92, 255, 0.18);
-
-  /* Semantic */
-  --danger: #f15e6c;
-  --success: #3ecf8e;
-  --warning: #f5b800;
-
-  /* Right-panel vinyl / LCD (2026-06-01) */
-  --vinyl-label: #3a2c66;
-  --lcd-bg: #0a0a0a;
-  --lcd-green: #c8f9d8;
-  --lcd-green-glow: rgba(62, 207, 142, 0.35);
-  --lcd-violet: #d8ccff;
-  --lcd-violet-glow: rgba(124, 92, 255, 0.4);
+  /* motion */
+  --ease:   cubic-bezier(.2,.7,.2,1);
+  --spring: cubic-bezier(.34,1.56,.64,1);
+  --dur-hover: 260ms;
+  --dur-cover: 550ms;
 }
 
 html,
