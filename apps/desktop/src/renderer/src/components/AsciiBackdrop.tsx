@@ -154,17 +154,16 @@ export function AsciiBackdrop(): React.JSX.Element {
       // Static single frame only — honour reduced motion.
     } else {
       start();
+      // Pause ONLY when the window is actually hidden/minimized — NOT on mere
+      // focus loss (clicking another app while BeatOS stays visible would
+      // freeze the rain and look broken).
       document.addEventListener("visibilitychange", onVisibility);
-      window.addEventListener("blur", stop);
-      window.addEventListener("focus", start);
     }
 
     return () => {
       stop();
       ro.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("blur", stop);
-      window.removeEventListener("focus", start);
     };
   }, [enabled]);
 
