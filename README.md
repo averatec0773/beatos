@@ -13,6 +13,7 @@ A local-first desktop library that holds every beat on your hard drive — catal
 [![license](https://img.shields.io/badge/license-Apache--2.0-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
 [![MCP](https://img.shields.io/badge/MCP-Claude%20Code%20%E2%80%A2%20Claude%20Desktop-7c5cff?style=flat-square)](#ai-integration)
+[![SafeSkill 50/100](https://img.shields.io/badge/SafeSkill-50%2F100_Use%20with%20Caution-orange)](https://safeskill.dev/scan/averatec0773-beatos)
 
 </div>
 
