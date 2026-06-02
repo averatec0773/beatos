@@ -3,6 +3,7 @@ export const AUDIO_ROLES = [
   "audio_untagged_wav",
   "audio_tagged_mp3",
   "audio_untagged_mp3",
+  "loop",
 ] as const;
 
 // Keep in sync with packages/beatos-core/beatos_core/audio_analysis/constants.py

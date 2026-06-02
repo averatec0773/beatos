@@ -216,52 +216,61 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                 />
               </div>
             </div>
-
-            <div>
-              <label
-                htmlFor="track-tags"
-                className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-              >
-                Tags (comma-separated)
-              </label>
-              <input
-                id="track-tags"
-                type="text"
-                value={track.tags ? track.tags.join(", ") : ""}
-                onChange={(e) =>
-                  patch(
-                    "tags",
-                    e.target.value
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  )
-                }
-                className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="track-description"
-                className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
-              >
-                Description
-              </label>
-              <textarea
-                id="track-description"
-                value={track.description ?? ""}
-                onChange={(e) => patch("description", e.target.value || null)}
-                rows={4}
-                className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 resize-y"
-              />
-            </div>
           </div>
         </div>
 
-        <FileRowsSection trackId={track.id} />
+        <FileRowsSection
+          trackId={track.id}
+          projectPath={track.project_path}
+          onChangeProjectPath={(p) => patch("project_path", p)}
+        />
 
         <LicenseTiersSection trackId={track.id} isFree={track.is_free} />
+
+        <section className="space-y-4">
+          <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
+            备注
+          </h3>
+          <div>
+            <label
+              htmlFor="track-tags"
+              className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+            >
+              Tags (comma-separated)
+            </label>
+            <input
+              id="track-tags"
+              type="text"
+              value={track.tags ? track.tags.join(", ") : ""}
+              onChange={(e) =>
+                patch(
+                  "tags",
+                  e.target.value
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                )
+              }
+              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="track-description"
+              className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
+            >
+              Description
+            </label>
+            <textarea
+              id="track-description"
+              value={track.description ?? ""}
+              onChange={(e) => patch("description", e.target.value || null)}
+              rows={4}
+              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 resize-y"
+            />
+          </div>
+        </section>
 
         <div className="flex items-center gap-3">
           <button

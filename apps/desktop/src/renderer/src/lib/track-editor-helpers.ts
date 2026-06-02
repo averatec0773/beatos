@@ -14,6 +14,7 @@ export function buildPayload(t: Track): TrackUpdate {
     tags: t.tags,
     description: t.description,
     producer: t.producer,
+    project_path: t.project_path,
   };
 }
 
@@ -33,6 +34,7 @@ export function isPristineNewTrack(track: Track, assetCount: number): boolean {
     !(track.tags && track.tags.length) &&
     !(track.producer && track.producer.length) &&
     !(track.description && track.description.trim()) &&
+    !track.project_path &&
     !track.has_audio &&
     assetCount === 0
   );

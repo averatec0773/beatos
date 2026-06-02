@@ -76,7 +76,7 @@ function Stat({
     <div data-stat={label} className="flex-1">
       <div className="beatos-eyebrow">{label}</div>
       <div
-        className="mt-2 font-mono text-[22px] leading-none"
+        className="mt-1.5 font-mono text-[19px] leading-none"
         style={
           has
             ? { color: "var(--text-primary)", textShadow: `0 0 8px rgba(${tint}, .12)` }
@@ -101,7 +101,7 @@ function Chip({ children }: { children: React.ReactNode }): React.JSX.Element {
 }
 
 function EtchDivider(): React.JSX.Element {
-  return <div className="my-4 h-px beatos-etch-divider" />;
+  return <div className="my-2 h-px beatos-etch-divider" />;
 }
 
 export function TrackDetailPanel(): React.JSX.Element | null {
@@ -172,7 +172,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
   return (
     <aside
-      className="relative beatos-scroll beatos-card rounded-xl p-4 flex flex-col gap-4 overflow-y-auto flex-shrink-0"
+      className="relative beatos-scroll beatos-card rounded-xl p-4 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0"
       style={{ width }}
     >
       <DetailHeader label={playingThis ? "Now Playing" : "Now Focused"} />
@@ -203,7 +203,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
       <div>
         <EtchDivider />
-        <div className="beatos-eyebrow mb-3">Genre / Mood</div>
+        <div className="beatos-eyebrow mb-2">Genre / Mood</div>
         <div className="flex flex-wrap gap-1.5">
           {(current.genre ?? []).map((g) => (
             <Chip key={`g-${g}`}>{formatVocabLabel(g, "genre", vocabLocale)}</Chip>
@@ -220,7 +220,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
       <div>
         <EtchDivider />
-        <div className="beatos-eyebrow mb-3">Credits</div>
+        <div className="beatos-eyebrow mb-2">Credits</div>
         <div className="flex flex-col gap-1.5 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-text-tertiary">Producer</span>

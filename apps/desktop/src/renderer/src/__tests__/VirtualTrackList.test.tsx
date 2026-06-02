@@ -17,6 +17,7 @@ function makeTracks(n: number): Track[] {
     description: null,
     producer: null,
     is_free: false,
+    project_path: null,
     has_audio: false,
     cover_asset_id: null,
     platform_data: null,

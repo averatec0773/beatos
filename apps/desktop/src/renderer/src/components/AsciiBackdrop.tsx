@@ -25,10 +25,31 @@ const CELL_H = 14;
 const FRAME_MS = 45; // ~22fps — a calm "terminal" cadence, easy on the CPU
 const SPEED_BASELINE = 7; // store speed that maps to the original 1× cadence
 
+// ─── Easter egg ──────────────────────────────────────────────────────────────
+// A small fraction of falling columns spell out a producer tag instead of random
+// glyphs. To add your own, just append strings here (lowercase reads best):
+const PRODUCER_TAGS = [
+  "averatec", // ← your tag; copy this line to add more
+];
+// Chance a respawning column becomes a tag column. 0 (incl. empty TAGS) = off.
+const TAG_CHANCE = 0.05;
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface Drop {
   y: number;
   len: number;
   sp: number;
+  tag?: string; // when set, this column renders the word letter-by-letter
+}
+
+// Build a fresh column. Rolls the easter-egg dice: most columns are random
+// glyph rain, a few spell a tag (and fall a touch slower so it's readable).
+function spawnDrop(startY: number): Drop {
+  if (PRODUCER_TAGS.length > 0 && Math.random() < TAG_CHANCE) {
+    const tag = PRODUCER_TAGS[Math.floor(Math.random() * PRODUCER_TAGS.length)];
+    return { y: startY, len: tag.length, sp: 0.3 + Math.random() * 0.5, tag };
+  }
+  return { y: startY, len: 6 + Math.random() * 18, sp: 0.3 + Math.random() * 0.9 };
 }
 
 export function AsciiBackdrop(): React.JSX.Element {
@@ -83,11 +104,7 @@ export function AsciiBackdrop(): React.JSX.Element {
       ctx.font = '12px "JetBrains Mono", ui-monospace, monospace';
       cols = Math.ceil(w / CELL_W);
       rows = Math.ceil(h / CELL_H);
-      drops = Array.from({ length: cols }, () => ({
-        y: Math.random() * rows,
-        len: 6 + Math.random() * 18,
-        sp: 0.3 + Math.random() * 0.9,
-      }));
+      drops = Array.from({ length: cols }, () => spawnDrop(Math.random() * rows));
     }
 
     function paint(advance: boolean): void {
@@ -104,16 +121,16 @@ export function AsciiBackdrop(): React.JSX.Element {
           const fade = 1 - i / d.len;
           const a = Math.min(maxAlpha * fade * (i === 0 ? 2.2 : 1), 0.6);
           ctx.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`;
-          const ch = RAMP[2 + ((Math.floor(d.y) + c + i) % (RAMP.length - 2))];
-          ctx.fillText(ch || ".", c * CELL_W, yy * CELL_H);
+          // Tag columns render the word top→bottom (tail = first letter); all
+          // others use the density ramp. Both cost the same per cell.
+          const ch = d.tag
+            ? (d.tag[d.len - 1 - i] ?? " ")
+            : RAMP[2 + ((Math.floor(d.y) + c + i) % (RAMP.length - 2))] || ".";
+          ctx.fillText(ch, c * CELL_W, yy * CELL_H);
         }
         if (advance) {
           d.y += d.sp * speedMul;
-          if (d.y - d.len > rows) {
-            d.y = 0;
-            d.len = 6 + Math.random() * 18;
-            d.sp = 0.3 + Math.random() * 0.9;
-          }
+          if (d.y - d.len > rows) drops[c] = spawnDrop(0); // reroll (may become a tag)
         }
       }
     }

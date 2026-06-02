@@ -302,6 +302,11 @@ app.whenReady().then(async () => {
     shell.showItemInFolder(path);
   });
 
+  // Open a folder/file in its default OS handler (Finder for a directory).
+  // Returns "" on success or an error string (shell.openPath contract) so the
+  // renderer can surface a missing/moved project folder.
+  ipcMain.handle(IPC_CHANNELS.SHELL_OPEN_PATH, (_e, path: string) => shell.openPath(path));
+
   ipcMain.handle(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, (_e, url: string) => {
     if (!/^https?:\/\//i.test(url)) {
       throw new Error(`Refused to open non-http(s) URL: ${url}`);

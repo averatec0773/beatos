@@ -6,6 +6,11 @@ interface ListState {
   all: List[];
   currentListId: number | null;
   loading: boolean;
+  // Bumped whenever a list's track membership changes (add/remove). Components
+  // that derive from membership but key only on listId — the sidebar cover
+  // mosaic (`useListCovers`) and the playlist track fetch (`TrackListPanel`) —
+  // depend on this so a 0→1 (or any) membership change forces a refetch.
+  membershipVersion: number;
   refresh(): Promise<void>;
   create(name: string, kind?: ListKind): Promise<List>;
   remove(id: number): Promise<void>;
@@ -14,12 +19,14 @@ interface ListState {
   selectList(id: number | null): void;
   addTrack(listId: number, trackId: number): Promise<void>;
   removeTrack(listId: number, trackId: number): Promise<void>;
+  bumpMembership(): void;
 }
 
 export const useListStore = create<ListState>((set, get) => ({
   all: [],
   currentListId: null,
   loading: false,
+  membershipVersion: 0,
   async refresh() {
     set({ loading: true });
     try {
@@ -67,8 +74,13 @@ export const useListStore = create<ListState>((set, get) => ({
   },
   async addTrack(listId, trackId) {
     await api.addTrack(listId, trackId);
+    get().bumpMembership();
   },
   async removeTrack(listId, trackId) {
     await api.removeTrack(listId, trackId);
+    get().bumpMembership();
+  },
+  bumpMembership() {
+    set({ membershipVersion: get().membershipVersion + 1 });
   },
 }));

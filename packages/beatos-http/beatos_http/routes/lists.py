@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel
 
+from beatos_core.lists.export import build_export_manifest, package_list
 from beatos_core.lists.membership import add_track_to_list, remove_track_from_list
 from beatos_core.lists.service import (
     create_list,
@@ -23,6 +24,17 @@ class AddTrackPayload(BaseModel):
 
 class ReorderPayload(BaseModel):
     ids: list[int]
+
+
+class ExportItem(BaseModel):
+    track_id: int
+    asset_ids: list[int]
+
+
+class ExportPackagePayload(BaseModel):
+    mode: str  # "zip" | "folder"
+    dest: str  # absolute destination folder (picked in the renderer)
+    items: list[ExportItem]
 
 
 @router.get("", response_model=list[ListModel])
@@ -75,3 +87,23 @@ async def add_track(list_id: int, payload: AddTrackPayload) -> dict:
 async def remove_track(list_id: int, track_id: int) -> Response:
     await remove_track_from_list(track_id, list_id)
     return Response(status_code=204)
+
+
+@router.get("/{list_id}/export/manifest")
+async def export_manifest(list_id: int) -> list[dict]:
+    """Per-track packageable files (for the export dialog's checkboxes)."""
+    return await build_export_manifest(list_id)
+
+
+@router.post("/{list_id}/export/package")
+async def export_package(list_id: int, payload: ExportPackagePayload) -> dict:
+    """Bundle the selected files into a ZIP or folder under `dest`."""
+    try:
+        return await package_list(
+            list_id,
+            [it.model_dump() for it in payload.items],
+            mode=payload.mode,
+            dest=payload.dest,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

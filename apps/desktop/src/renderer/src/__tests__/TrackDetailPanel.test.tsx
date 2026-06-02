@@ -27,6 +27,7 @@ function makeTrack(): Track {
     bpm: 140,
     key_signature: "Am",
     is_free: false,
+    project_path: null,
     has_audio: false,
     cover_asset_id: null,
     tags: [],

@@ -11,6 +11,7 @@ AssetRole = Literal[
     "audio_untagged_mp3",
     "audio_tagged_wav",
     "audio_untagged_wav",
+    "loop",
     "stems",
     "cover",
 ]

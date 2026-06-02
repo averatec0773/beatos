@@ -219,11 +219,11 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
         <button
           type="button"
           onClick={onAddListClick}
-          className="text-text-tertiary hover:text-text-primary"
+          className="text-text-tertiary hover:text-text-primary p-1.5 -mr-1 rounded-md hover:bg-bg-row-hover"
           aria-label="Add List"
-          title="Add List"
+          title="New playlist"
         >
-          <Plus size={collapsed ? 18 : 12} />
+          <Plus size={18} />
         </button>
       </header>
       {addingList && (

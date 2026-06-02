@@ -4,13 +4,17 @@ export type AudioRole =
   | "audio_tagged_wav"
   | "audio_untagged_wav"
   | "audio_tagged_mp3"
-  | "audio_untagged_mp3";
+  | "audio_untagged_mp3"
+  | "loop";
 
+// Play-priority order. `loop` sits LAST so a full beat is preferred when both
+// exist; a loop-only track still resolves to its loop (loop-only producers).
 export const AUDIO_ROLES: readonly AudioRole[] = [
   "audio_tagged_wav",
   "audio_untagged_wav",
   "audio_tagged_mp3",
   "audio_untagged_mp3",
+  "loop",
 ] as const;
 
 export const AUDIO_ROLE_LABEL: Record<AudioRole, string> = {
@@ -18,6 +22,7 @@ export const AUDIO_ROLE_LABEL: Record<AudioRole, string> = {
   audio_untagged_wav: "WAV (untagged)",
   audio_tagged_mp3: "MP3 (tagged)",
   audio_untagged_mp3: "MP3 (untagged)",
+  loop: "Loop",
 };
 
 export function resolveAudioAsset(assets: Asset[], preferred?: AudioRole | null): Asset | null {

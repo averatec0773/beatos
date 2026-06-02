@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Package, Plus, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { attachAudioToTrack, importAsNewTracks } from "@/lib/create-track-from-file";
@@ -22,6 +22,7 @@ import { BulkActionBar, type BulkAction } from "@/components/BulkActionBar";
 import { AddToListPopover } from "@/components/AddToListPopover";
 import { BulkEditDialog } from "@/components/BulkEditDialog";
 import { ExportDialog } from "@/components/ExportDialog";
+import { PlaylistExportDialog } from "@/components/PlaylistExportDialog";
 import { tracks as tracksApi } from "@/api/tracks";
 import { analysis } from "@/api/analysis";
 import { useAnalysisJobStore } from "@/stores/analysis-job";
@@ -39,6 +40,7 @@ export function TrackListPanel(): React.JSX.Element {
   const createTrack = useTrackStore((s) => s.create);
   const searchQuery = useTrackQueryStore((s) => s.q);
   const allLists = useListStore((s) => s.all);
+  const membershipVersion = useListStore((s) => s.membershipVersion);
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -46,9 +48,11 @@ export function TrackListPanel(): React.JSX.Element {
   const listId = params.id ? Number(params.id) : null;
   const currentList = listId ? allLists.find((l) => l.id === listId) : null;
 
+  // `membershipVersion` is a dep so adding a track to the list you're viewing
+  // (0→1, listId unchanged) re-fetches and the hero/table/cover update at once.
   useEffect(() => {
     refresh(listId != null ? { list_id: listId } : undefined);
-  }, [refresh, listId]);
+  }, [refresh, listId, membershipVersion]);
 
   // Defensive: if the underlying list goes empty (e.g. all selected tracks
   // were trashed via MCP, or the user emptied a list) while a multi-select
@@ -99,6 +103,7 @@ export function TrackListPanel(): React.JSX.Element {
   }, [visible, current, select]);
 
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [playlistExportOpen, setPlaylistExportOpen] = useState(false);
   // One ExportDialog for the whole list, opened by any row's context menu — was
   // one mounted dialog per visible row.
   const [exportTrackId, setExportTrackId] = useState<number | null>(null);
@@ -322,7 +327,9 @@ export function TrackListPanel(): React.JSX.Element {
           {/* An empty *list* still shows its hero (mosaic + name) — only the
               track area below reads as empty. Other empty states (no tracks at
               all, no search results) fill the whole card. */}
-          {currentList && <PlaylistHero name={currentList.name} tracks={[]} />}
+          {currentList && (
+            <PlaylistHero name={currentList.name} tracks={[]} listId={currentList.id} />
+          )}
           <div className="flex-1 flex items-center justify-center">{emptyEl}</div>
         </section>
         <PreviewGutter />
@@ -357,7 +364,9 @@ export function TrackListPanel(): React.JSX.Element {
             </span>
           </div>
         )}
-        {currentList && <PlaylistHero name={currentList.name} tracks={visible} />}
+        {currentList && (
+          <PlaylistHero name={currentList.name} tracks={visible} listId={currentList.id} />
+        )}
         <header className="px-4 py-2.5 border-b border-border-subtle flex items-center gap-3">
           <button
             type="button"
@@ -377,6 +386,18 @@ export function TrackListPanel(): React.JSX.Element {
               className="rounded-md border border-border-subtle px-2 py-1 text-xs hover:bg-bg-row-hover"
             >
               分析全部未分析 ({unanalyzed})
+            </button>
+          )}
+          {currentList && (
+            <button
+              type="button"
+              data-export-playlist
+              onClick={() => setPlaylistExportOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle px-2 py-1 text-xs hover:bg-bg-row-hover"
+              title="打包导出歌单文件"
+            >
+              <Package size={13} />
+              导出歌单
             </button>
           )}
           <div className="h-4 w-px bg-border-subtle" />
@@ -460,6 +481,14 @@ export function TrackListPanel(): React.JSX.Element {
             trackId={exportTrackId ?? 0}
             onClose={() => setExportTrackId(null)}
           />
+          {currentList && (
+            <PlaylistExportDialog
+              open={playlistExportOpen}
+              listId={currentList.id}
+              listName={currentList.name}
+              onClose={() => setPlaylistExportOpen(false)}
+            />
+          )}
         </div>
       </section>
       <PreviewGutter />

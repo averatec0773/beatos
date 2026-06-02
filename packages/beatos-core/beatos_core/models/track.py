@@ -18,6 +18,10 @@ class Track(BaseModel):
     description: Optional[str] = None
     producer: Optional[list[str]] = None
     is_free: bool = False
+    project_path: Optional[str] = Field(
+        default=None,
+        description="Absolute path to the beat's DAW project folder; NULL if unset. Local-only.",
+    )
     cover_asset_id: Optional[int] = Field(
         default=None,
         description="Id of the cover asset (asset.role='cover'); NULL if none.",
@@ -56,3 +60,4 @@ class TrackUpdate(BaseModel):
     description: Optional[str] = None
     producer: Optional[list[str]] = None
     is_free: Optional[bool] = None
+    project_path: Optional[str] = None

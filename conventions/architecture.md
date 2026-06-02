@@ -11,7 +11,7 @@ BeatOS is a local-first desktop app for beat producers — catalog beats and the
 | Term | Meaning |
 |---|---|
 | **Track** | Beat record with metadata + 0+ assets; globally unique. |
-| **Asset** | File attached to a Track via `role` (`audio_tagged_wav`, `audio_untagged_mp3`, `cover`, `stems`). Stored with absolute path; `missing: bool` reflects on-disk presence (sweeper-maintained). |
+| **Asset** | File attached to a Track via `role` (`audio_tagged_wav`, `audio_untagged_mp3`, `loop`, `cover`, `stems`). Stored with absolute path; `missing: bool` reflects on-disk presence (sweeper-maintained). `loop` counts as audio (playable + analyzable). |
 | **List** | User-curated playlist; membership preserved across soft-delete / restore. |
 | **Adapter** | Per-platform upload integration. As of v0.0.37 implemented (Phase 1) as a browser extension that fills the platform form from a sidecar fixed-port (48923) staging slot — see the v0.0.37 section. The earlier Playwright/CDP `inject(page, track_data)` sketch is superseded. |
 | **Inject** | User action running an adapter against an open browser page; code fills form, user submits. Never auto-submit. |
@@ -339,6 +339,16 @@ Auto-fills a platform (NetEase) upload form with metadata staged from BeatOS. Hu
 | `pid` in handshake | `packages/beatos-http/beatos_http/handshake.py` | Launcher uses pid for staleness detection (stale file from crashed sidecar). |
 | Tool annotations | `server.py` `@mcp.tool(annotations=...)` | `readOnlyHint` + `idempotentHint` on all read tools and `await_approval`. |
 | `await_approval(token)` | `beatos_mcp/tools/await_approval.py` | Unified 2PC status-check tool; tool-agnostic envelope `{token, tool_name, status, result?}`. `confirm_create_list` alias removed in v0.0.24. |
+
+### v0.0.47 (unreleased) — Project Folder + Loop Role + Playlist Export
+
+| Capability | Location | Purpose |
+|---|---|---|
+| `track.project_path` | `packages/beatos-core/beatos_core/migrations/019_track_project_path.sql` (+ `models/track.py`, `tracks/service.py` `_WRITABLE_FIELDS`/`_SELECT_COLS`/`_deserialize`) | Nullable TEXT path to the beat's DAW project folder. `_SELECT_COLS` appends it before `cover_asset_id`/`has_audio`, so `_deserialize` row indices shift +1 (13/14/15). Editor row `components/ProjectFolderRow.tsx` picks via `window.beatos.pickFolder()`, opens via the new `shell:open-path` IPC (`shell.openPath`, `IPC_CHANNELS.SHELL_OPEN_PATH`). |
+| `loop` asset role | `packages/beatos-core/beatos_core/assets/_constants.py` (`ASSET_ROLES` + `AUDIO_ROLES`) + `models/asset.py` AssetRole | A playable, analyzable audio role for loop-only producers. **All `has_audio` SQL lists derive from the canonical `AUDIO_ROLES`** — `tracks/sql_filter.py` and `tracks/service.py` build their `IN (...)` clause from it (single source of truth); `audio_analysis/service.py` imports it instead of a local copy. Asset mime fallback (`routes/assets.py`) is extension-based since `loop` may be `.wav` or `.mp3`. |
+| Playlist export | `packages/beatos-core/beatos_core/lists/export.py` (`build_export_manifest`, `package_list`) + `routes/lists.py` (`GET /{id}/export/manifest`, `POST /{id}/export/package`) | Package a list's track files to **ZIP or folder-copy**, one subfolder per track (`_plan_track_filenames` role-suffixes on title collision; `_PACKAGEABLE` excludes cover). zip/copy run via `asyncio.to_thread`. UI: `components/PlaylistExportDialog.tsx` (per-track + per-file checkboxes, `ROLE_GROUPS` bulk-select). |
+| Playlist cover refresh | `stores/lists.ts` (`membershipVersion` + `bumpMembership`), `lib/add-tracks-to-list.ts`, `Sidebar/ListCoverMosaic.tsx`, `routes/TrackListPanel.tsx` | List cover mosaic / hero were keyed only on `listId`, so a 0→1 membership change never re-fetched. A monotonically-bumped `membershipVersion` (incremented by add/remove) is added to the cover-fetch effect deps. |
+| Backdrop producer-tag easter egg | `components/AsciiBackdrop.tsx` (`PRODUCER_TAGS`, `TAG_CHANCE`) | A small fraction of glyph-rain columns spell a producer tag (vertical, top→bottom) instead of random glyphs. Editable constant; `[]` or `TAG_CHANCE = 0` disables. |
 
 ## MCP surface
 

@@ -96,4 +96,9 @@ async def audio_stream(asset_id: int) -> FileResponse:
     p = pathlib.Path(asset.abs_path)
     if not p.exists():
         raise HTTPException(status_code=404, detail="Audio file missing.")
-    return FileResponse(p, media_type=asset.mime_type or _AUDIO_MIME[asset.role])
+    # `loop` can be wav OR mp3, so it has no fixed entry in _AUDIO_MIME — fall
+    # back to the file extension (and finally mpeg) when mime_type is unset.
+    fallback = _AUDIO_MIME.get(asset.role) or (
+        "audio/wav" if p.suffix.lower() == ".wav" else "audio/mpeg"
+    )
+    return FileResponse(p, media_type=asset.mime_type or fallback)

@@ -20,6 +20,7 @@ describe("IPC_CHANNELS", () => {
         "PATH_ENSURE_DIR": "path:ensure-dir",
         "PATH_HOME": "path:home",
         "SHELL_OPEN_EXTERNAL": "shell:open-external",
+        "SHELL_OPEN_PATH": "shell:open-path",
         "SHELL_REVEAL_IN_FINDER": "shell:reveal-in-finder",
         "SIDECAR_CRASHED": "sidecar-crashed",
         "STORAGE_GET_DB_PATH": "storage:get-db-path",

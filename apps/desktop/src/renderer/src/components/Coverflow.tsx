@@ -4,6 +4,13 @@ import { useTrackStore } from "@/stores/tracks";
 import { CoverImage } from "@/components/CoverImage";
 
 const WINDOW = 4; // covers shown each side of the focused one
+const PERSPECTIVE = 1400;
+const Z_CENTER = 220; // how far the focused cover is pushed toward the viewer
+// Under `perspective`, translateZ(Z_CENTER) visually magnifies the focused
+// cover by this factor. The stage must reserve room for the magnified extent or
+// the cover overflows downward onto the title below it (worst at wide panels /
+// the first focused track) — the bug this constant fixes.
+const CENTER_MAGNIFY = PERSPECTIVE / (PERSPECTIVE - Z_CENTER);
 
 interface CoverflowProps {
   panelWidth: number;
@@ -41,6 +48,10 @@ export function Coverflow({
 
   const size = Math.max(120, Math.min(232, Math.round(panelWidth * 0.56)));
   const step = Math.round(size * 0.64);
+  // Fit the magnified center cover plus a small gap before the title (its
+  // glow/shadow needs to clear the title beneath it). Kept tight to save the
+  // detail panel's vertical budget so a medium window fits without scrolling.
+  const stageHeight = Math.round(size * CENTER_MAGNIFY) + 24;
   // Snapshot at render time — Electron users effectively never toggle
   // prefers-reduced-motion mid-session, so no MediaQueryList subscription needed.
   const reduced =
@@ -67,8 +78,14 @@ export function Coverflow({
           focusBy(-1);
         }
       }}
-      className="relative w-full outline-none"
-      style={{ height: size + 32, perspective: 1400 }}
+      // `shrink-0` is load-bearing: the detail panel is a flex column, so without
+      // it this fixed-height stage (whose covers are absolutely positioned, i.e.
+      // ~0 min-content height) gets compressed when the track has taller content
+      // below (e.g. a 2-line Genre/Mood block). The magnified center cover then
+      // overflows the squeezed stage and paints over the title. Verified: removing
+      // shrink-0 reproduces a ~100px title overlap.
+      className="relative w-full shrink-0 outline-none"
+      style={{ height: stageHeight, perspective: PERSPECTIVE }}
     >
       <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
         {list.map((t, i) => {
@@ -78,7 +95,7 @@ export function Coverflow({
           const isCenter = off === 0;
           const scale = isCenter ? 1 : Math.max(0.55, 1 - abs * 0.16);
           const rotY = isCenter ? 0 : off < 0 ? 28 : -28;
-          const z = isCenter ? 220 : 120 - abs * 40;
+          const z = isCenter ? Z_CENTER : 120 - abs * 40;
           const transform = reduced
             ? `translate(-50%,-50%)`
             : `translate(-50%,-50%) translateX(${off * step}px) translateZ(${z}px) rotateY(${rotY}deg) scale(${scale})`;

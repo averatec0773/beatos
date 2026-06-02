@@ -11,6 +11,7 @@ from typing import Any, Optional
 
 import aiosqlite
 
+from beatos_core.assets._constants import AUDIO_ROLES
 from beatos_core.db import resolve_db_path
 from beatos_core.models import Track
 from beatos_core.tracks.patch import apply_array_patch, FIELD_TO_COL, SCALAR_FIELDS
@@ -29,6 +30,7 @@ _WRITABLE_FIELDS = {
     "description",
     "producer",
     "is_free",
+    "project_path",
 }
 
 SORTABLE_FIELDS = frozenset({
@@ -65,7 +67,7 @@ _SELECT_COLS = (
     "id, title, bpm, key_signature, genre, mood, "
     "tags, description, "
     "producer, "
-    "created_at, updated_at, deleted_at, is_free"
+    "created_at, updated_at, deleted_at, is_free, project_path"
 )
 
 # Subquery rendered after _SELECT_COLS to populate Track.cover_asset_id.
@@ -78,11 +80,15 @@ _COVER_SUBQUERY_TEMPLATE = (
 
 # Subquery to derive has_audio: EXISTS over non-missing audio assets.
 # Uses alias `ax2` to avoid collision with the cover subquery alias `ax`.
+# Role list derived from the canonical AUDIO_ROLES set (single source of truth);
+# string concat (not f-string) keeps the literal `{prefix}` placeholder intact
+# for the later .format(prefix=...) call.
+_AUDIO_ROLES_SQL = "(" + ",".join(f"'{r}'" for r in sorted(AUDIO_ROLES)) + ")"
 _HAS_AUDIO_SUBQUERY_TEMPLATE = (
     "EXISTS (SELECT 1 FROM asset ax2 "
     "WHERE ax2.track_id = {prefix}id "
     "AND ax2.missing = 0 "
-    "AND ax2.role IN ('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav')"
+    "AND ax2.role IN " + _AUDIO_ROLES_SQL +
     ") AS has_audio"
 )
 
@@ -119,7 +125,8 @@ def _deserialize(row: tuple) -> Track:
     # 0:id, 1:title, 2:bpm, 3:key_signature, 4:genre, 5:mood,
     # 6:tags, 7:description,
     # 8:producer, 9:created_at, 10:updated_at, 11:deleted_at, 12:is_free,
-    # 13:cover_asset_id (optional), 14:has_audio (optional)
+    # 13:project_path,
+    # 14:cover_asset_id (optional), 15:has_audio (optional)
     tags = json.loads(row[6]) if row[6] else None
     deleted_at_raw = row[11] if len(row) > 11 else None
     return Track(
@@ -136,8 +143,9 @@ def _deserialize(row: tuple) -> Track:
         updated_at=_dt.datetime.fromisoformat(row[10]),
         deleted_at=_dt.datetime.fromisoformat(deleted_at_raw) if deleted_at_raw else None,
         is_free=bool(row[12]) if len(row) > 12 else False,
-        cover_asset_id=row[13] if len(row) > 13 else None,
-        has_audio=bool(row[14]) if len(row) > 14 else False,
+        project_path=row[13] if len(row) > 13 else None,
+        cover_asset_id=row[14] if len(row) > 14 else None,
+        has_audio=bool(row[15]) if len(row) > 15 else False,
     )
 
 

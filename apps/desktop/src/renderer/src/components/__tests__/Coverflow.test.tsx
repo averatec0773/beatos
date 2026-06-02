@@ -17,6 +17,7 @@ function track(id: number, title: string): Track {
     description: null,
     producer: null,
     is_free: false,
+    project_path: null,
     has_audio: true,
     cover_asset_id: id * 10,
     created_at: "2026-01-01",

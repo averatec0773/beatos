@@ -11,6 +11,7 @@ export interface Track {
   description: string | null;
   producer: string[] | null;
   is_free: boolean;
+  project_path: string | null;
   has_audio: boolean;
   cover_asset_id: number | null;
   created_at: string;

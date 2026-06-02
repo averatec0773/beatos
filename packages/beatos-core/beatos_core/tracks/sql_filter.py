@@ -11,6 +11,7 @@ Callers own the `track.deleted_at IS NULL` predicate and the final join.
 """
 from __future__ import annotations
 
+from beatos_core.assets._constants import AUDIO_ROLES
 from beatos_core.tracks.query_parser import escape_like
 
 # Fields stored as JSON-array TEXT (one track → many values), matched with a
@@ -27,9 +28,10 @@ TEXT_SEARCH_COLS = (
     "track.producer", "track.genre", "track.mood", "track.key_signature",
 )
 
-_AUDIO_ROLES_SQL = (
-    "('audio_tagged_mp3','audio_untagged_mp3','audio_tagged_wav','audio_untagged_wav')"
-)
+# Derived from the canonical AUDIO_ROLES set (single source of truth) so a new
+# audio role (e.g. 'loop' in v0.0.46) flows into has_audio filtering with no edit
+# here. Sorted for a deterministic SQL string.
+_AUDIO_ROLES_SQL = "(" + ",".join(f"'{r}'" for r in sorted(AUDIO_ROLES)) + ")"
 
 
 def build_filter_clauses(

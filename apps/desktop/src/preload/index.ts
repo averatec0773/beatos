@@ -9,6 +9,10 @@ const beatos = {
     ipcRenderer.invoke(IPC_CHANNELS.DIALOG_OPEN_FILE, filters),
   revealInFinder: (path: string): Promise<void> =>
     ipcRenderer.invoke(IPC_CHANNELS.SHELL_REVEAL_IN_FINDER, path),
+  /** Open a folder (or file) with the OS default handler. Resolves to "" on
+   *  success or a non-empty error string on failure (electron shell.openPath). */
+  openPath: (path: string): Promise<string> =>
+    ipcRenderer.invoke(IPC_CHANNELS.SHELL_OPEN_PATH, path),
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, url),
   quitApp: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.APP_QUIT),

@@ -47,5 +47,9 @@ export async function addTracksToList(
     );
   }
   await useListStore.getState().refresh();
+  // Membership changed → force the sidebar mosaic + playlist track fetch to
+  // refetch even when listId is unchanged (e.g. dropping into the list you're
+  // already viewing, 0→1 tracks — the cover used to stay empty).
+  useListStore.getState().bumpMembership();
   return { addedNew, alreadyIn, failed };
 }

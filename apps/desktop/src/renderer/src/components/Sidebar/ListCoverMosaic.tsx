@@ -3,6 +3,7 @@ import { Music2 } from "lucide-react";
 
 import { tracks as tracksApi } from "@/api/tracks";
 import { CoverImage } from "@/components/CoverImage";
+import { useListStore } from "@/stores/lists";
 
 /**
  * Fetches a list's member tracks once per listId and returns the first 4 cover
@@ -13,6 +14,9 @@ import { CoverImage } from "@/components/CoverImage";
 export function useListCovers(listId: number): { covers: number[]; count: number } {
   const [covers, setCovers] = useState<number[]>([]);
   const [count, setCount] = useState(0);
+  // Re-fetch when this list's membership changes (e.g. a track dropped in),
+  // not only when listId changes — otherwise a 0→1 add never refreshes covers.
+  const membershipVersion = useListStore((s) => s.membershipVersion);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +41,7 @@ export function useListCovers(listId: number): { covers: number[]; count: number
     return () => {
       cancelled = true;
     };
-  }, [listId]);
+  }, [listId, membershipVersion]);
 
   return { covers, count };
 }

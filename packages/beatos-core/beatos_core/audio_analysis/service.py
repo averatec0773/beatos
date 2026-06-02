@@ -4,18 +4,12 @@ import pathlib
 
 import aiosqlite
 
+from beatos_core.assets._constants import AUDIO_ROLES
 from beatos_core.assets.service import get_asset
 from beatos_core.db import resolve_db_path
 
 from .models import AudioAnalysisResult
 from .pipeline import analyze
-
-AUDIO_ROLES = frozenset({
-    "audio_tagged_mp3",
-    "audio_untagged_mp3",
-    "audio_tagged_wav",
-    "audio_untagged_wav",
-})
 
 
 def _has_result(bpm: float | None, key: str | None) -> bool:
