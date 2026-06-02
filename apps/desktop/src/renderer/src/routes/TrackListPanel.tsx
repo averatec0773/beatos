@@ -346,13 +346,13 @@ export function TrackListPanel(): React.JSX.Element {
             </span>
           </div>
         )}
-        <header className="px-4 py-3 border-b border-border-subtle flex items-center gap-3">
+        <header className="px-4 py-2.5 border-b border-border-subtle flex items-center gap-3">
           <button
             type="button"
             onClick={onAddTrack}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-accent text-white font-medium text-sm hover:opacity-90"
+            className="btn-primary inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
           >
-            <Plus size={14} />
+            <Plus size={13} />
             Add Track
           </button>
           {listId == null && unanalyzed > 0 && (
@@ -367,12 +367,13 @@ export function TrackListPanel(): React.JSX.Element {
               分析全部未分析 ({unanalyzed})
             </button>
           )}
-          <span className="text-text-tertiary text-sm ml-auto">
+          <div className="h-4 w-px bg-border-subtle" />
+          <FilterChipBar inline />
+          <span className="text-text-tertiary text-sm ml-auto whitespace-nowrap">
             {currentList ? `${currentList.name} · ` : ""}
             {visible.length} track{visible.length === 1 ? "" : "s"}
           </span>
         </header>
-        <FilterChipBar />
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header wrapper: invisible native X-scroll so we can mirror the
               body's scrollLeft into it via JS. `beatos-scroll` hides the

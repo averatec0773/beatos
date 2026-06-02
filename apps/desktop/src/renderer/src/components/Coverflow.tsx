@@ -9,13 +9,17 @@ interface CoverflowProps {
   panelWidth: number;
   centerDraggable?: boolean;
   onCenterDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
+  /** "r, g, b" channels for the focused cover's glow; defaults to neutral white. */
+  glowColor?: string | null;
 }
 
 export function Coverflow({
   panelWidth,
   centerDraggable = false,
   onCenterDragStart,
+  glowColor,
 }: CoverflowProps): React.JSX.Element {
+  const glow = glowColor ?? "255, 255, 255";
   const list = useTrackStore((s) => s.list);
   const current = useTrackStore((s) => s.current);
   const select = useTrackStore((s) => s.select);
@@ -91,7 +95,7 @@ export function Coverflow({
                   ? "opacity .35s var(--ease)"
                   : "transform var(--dur-cover) var(--ease), opacity .45s var(--ease), filter .45s var(--ease)",
                 boxShadow: isCenter
-                  ? "0 30px 60px -24px rgba(0,0,0,.9), 0 0 0 2px var(--accent), 0 0 40px -4px var(--accent)"
+                  ? `0 30px 60px -24px rgba(0,0,0,.9), 0 0 0 1.5px rgba(${glow}, .5), 0 0 22px -6px rgba(${glow}, .55)`
                   : undefined,
               }}
             >

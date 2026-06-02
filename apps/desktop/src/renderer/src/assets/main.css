@@ -19,6 +19,22 @@
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
 }
 
+/* Softened primary action: glass fill + hairline, bright text. Replaces the
+   old solid near-white `bg-accent text-white` (unreadable white-on-white). */
+.btn-primary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: background-color 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+.btn-primary:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+}
+
 :root {
   /* tier 1 — primitives (raw; never referenced by components) */
   --c-void:        #08090b;

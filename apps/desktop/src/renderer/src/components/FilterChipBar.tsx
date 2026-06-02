@@ -26,7 +26,7 @@ const FIELD_OPTIONS: { field: FieldType; label: string }[] = [
 
 type PopoverView = "field-list" | FieldType;
 
-export function FilterChipBar(): React.JSX.Element {
+export function FilterChipBar({ inline = false }: { inline?: boolean } = {}): React.JSX.Element {
   const filters = useTrackQueryStore((s) => s.filters);
   const clearAllFilters = useTrackQueryStore((s) => s.clearAllFilters);
   const removeFilter = useTrackQueryStore((s) => s.removeFilter);
@@ -123,7 +123,13 @@ export function FilterChipBar(): React.JSX.Element {
   }
 
   return (
-    <div className="px-4 py-2 flex items-center gap-2 flex-wrap border-b border-border-subtle bg-bg-base min-h-[40px]">
+    <div
+      className={
+        inline
+          ? "flex items-center gap-2 flex-wrap"
+          : "px-4 py-2 flex items-center gap-2 flex-wrap border-b border-border-subtle bg-bg-base min-h-[40px]"
+      }
+    >
       {chips.map((chip) => (
         <button
           key={chip.field}
@@ -188,7 +194,7 @@ export function FilterChipBar(): React.JSX.Element {
         <button
           type="button"
           onClick={clearAllFilters}
-          className="ml-auto text-xs text-text-tertiary hover:text-text-secondary"
+          className={`${inline ? "" : "ml-auto "}text-xs text-text-tertiary hover:text-text-secondary`}
         >
           Clear all
         </button>

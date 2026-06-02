@@ -9,6 +9,7 @@ import { formatVocabLabel } from "@/data/vocab-label";
 import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { usePlayerStore } from "@/stores/player";
 import { Coverflow } from "@/components/Coverflow";
+import { useDominantColor } from "@/lib/use-dominant-color";
 
 function PreviewResizer(): React.JSX.Element {
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
@@ -67,8 +68,18 @@ function CloseButton(): React.JSX.Element {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }): React.JSX.Element {
+function Stat({
+  label,
+  value,
+  glow,
+}: {
+  label: string;
+  value: string;
+  glow?: string | null;
+}): React.JSX.Element {
   const has = value !== "—";
+  // Half the previous brightness (.25 -> .12), tinted by the cover's colour.
+  const tint = glow ?? "255, 255, 255";
   return (
     <div data-stat={label} className="flex-1">
       <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-text-tertiary">
@@ -78,7 +89,7 @@ function Stat({ label, value }: { label: string; value: string }): React.JSX.Ele
         className="mt-1.5 font-mono text-[19px] leading-none"
         style={
           has
-            ? { color: "var(--text-primary)", textShadow: "0 0 10px rgba(255,255,255,.25)" }
+            ? { color: "var(--text-primary)", textShadow: `0 0 8px rgba(${tint}, .12)` }
             : { color: "var(--text-tertiary)" }
         }
       >
@@ -126,6 +137,8 @@ export function TrackDetailPanel(): React.JSX.Element | null {
     return list.find((a) => a.role === "cover") ?? null;
   }, [byTrack, current]);
 
+  const glow = useDominantColor(current?.cover_asset_id ?? null);
+
   if (!open) return null;
 
   if (!current) {
@@ -156,6 +169,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
       </div>
       <Coverflow
         panelWidth={width}
+        glowColor={glow}
         centerDraggable={coverAsset != null && !coverAsset.missing}
         onCenterDragStart={(e) => {
           if (!coverAsset || coverAsset.missing) return;
@@ -174,8 +188,8 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         </div>
       </div>
       <div className="flex gap-2.5">
-        <Stat label="BPM" value={current.bpm != null ? String(current.bpm) : "—"} />
-        <Stat label="Key" value={current.key_signature ?? "—"} />
+        <Stat label="BPM" value={current.bpm != null ? String(current.bpm) : "—"} glow={glow} />
+        <Stat label="Key" value={current.key_signature ?? "—"} glow={glow} />
       </div>
 
       <div>
