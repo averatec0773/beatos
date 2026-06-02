@@ -1,14 +1,14 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useMemo, useRef } from "react";
 import { X } from "lucide-react";
 
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
-import { CoverImage } from "@/components/CoverImage";
 import { formatRowDate } from "@/lib/format-row-date";
 import { PREVIEW_MAX_WIDTH, PREVIEW_MIN_WIDTH, usePreviewPanelStore } from "@/stores/preview-panel";
 import { formatVocabLabel } from "@/data/vocab-label";
 import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { usePlayerStore } from "@/stores/player";
+import { Coverflow } from "@/components/Coverflow";
 
 function PreviewResizer(): React.JSX.Element {
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
@@ -67,102 +67,10 @@ function CloseButton(): React.JSX.Element {
   );
 }
 
-// Resting tilt of the record assembly (straight-on); the cursor turns it to
-// face the pointer within ±TILT_RANGE degrees.
-const VINYL_REST_RX = 0;
-const VINYL_REST_RY = 0;
-const VINYL_TILT_RANGE = 20;
-
-function VinylStage({
-  coverAsset,
-  playing,
-}: {
-  coverAsset: { id: number } | null;
-  playing: boolean;
-}): React.JSX.Element {
-  const innerRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number | null>(null);
-
-  function setTilt(rx: number, ry: number): void {
-    const el = innerRef.current;
-    if (el) el.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
-  }
-
-  // Turn the jacket+disc to face the cursor while it hovers the panel.
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>): void {
-    const r = e.currentTarget.getBoundingClientRect();
-    const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
-    const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
-    const rx = VINYL_REST_RX - dy * VINYL_TILT_RANGE;
-    const ry = VINYL_REST_RY + dx * VINYL_TILT_RANGE;
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => setTilt(rx, ry));
-  }
-
-  function onPointerLeave(): void {
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    setTilt(VINYL_REST_RX, VINYL_REST_RY);
-  }
-
-  useEffect(() => {
-    return () => {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
-  return (
-    <div
-      className="beatos-vinyl-scene group relative mx-auto h-[272px] w-[325px]"
-      onPointerMove={onPointerMove}
-      onPointerLeave={onPointerLeave}
-    >
-      <div className="beatos-vinyl-shadow" />
-      <div ref={innerRef} className="beatos-vinyl-inner">
-        <div className={`beatos-disc-slide${playing ? " is-out" : ""}`}>
-          <div
-            data-vinyl-disc
-            data-playing={playing ? "true" : undefined}
-            className={`beatos-vinyl-disc relative h-full w-full${playing ? " beatos-vinyl-spinning" : ""}`}
-          >
-            <div className="absolute inset-[32%] overflow-hidden rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,.5)]">
-              {coverAsset ? (
-                <CoverImage assetId={coverAsset.id} size={80} responsive rounded={false} />
-              ) : (
-                <div className="h-full w-full bg-[var(--vinyl-label)]" />
-              )}
-            </div>
-            <div className="absolute left-1/2 top-1/2 z-[2] h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black shadow-[inset_0_0_2px_rgba(255,255,255,.25)]" />
-          </div>
-        </div>
-        <div data-vinyl-jacket className="beatos-jacket-box">
-          <div className="beatos-jacket-front overflow-hidden">
-            <CoverImage assetId={coverAsset?.id ?? null} size={244} responsive rounded={false} />
-          </div>
-          <div className="beatos-jacket-side" />
-          <div className="beatos-jacket-top" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LcdStat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: "green" | "violet";
-}): React.JSX.Element {
+function Stat({ label, value }: { label: string; value: string }): React.JSX.Element {
   const has = value !== "—";
-  const color = tone === "green" ? "var(--lcd-green)" : "var(--lcd-violet)";
-  const glow = tone === "green" ? "var(--lcd-green-glow)" : "var(--lcd-violet-glow)";
   return (
-    <div
-      data-stat={label}
-      className="flex-1 border border-border-subtle bg-[var(--lcd-bg)] px-3 py-2 shadow-[inset_0_1px_3px_#000]"
-    >
+    <div data-stat={label} className="flex-1">
       <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-text-tertiary">
         {label}
       </div>
@@ -170,7 +78,7 @@ function LcdStat({
         className="mt-1.5 font-mono text-[19px] leading-none"
         style={
           has
-            ? { color, textShadow: `0 0 6px ${glow}` }
+            ? { color: "var(--text-primary)", textShadow: "0 0 10px rgba(255,255,255,.25)" }
             : { color: "var(--text-tertiary)" }
         }
       >
@@ -218,17 +126,12 @@ export function TrackDetailPanel(): React.JSX.Element | null {
     return list.find((a) => a.role === "cover") ?? null;
   }, [byTrack, current]);
 
-  useEffect(() => {
-    // No-op; keeps lint happy when the panel is mounted-but-hidden mode is
-    // considered in the future.
-  }, []);
-
   if (!open) return null;
 
   if (!current) {
     return (
       <aside
-        className="relative beatos-scroll bg-bg-elevated border-l border-border-subtle p-4 flex-shrink-0"
+        className="relative beatos-scroll overflow-y-auto bg-bg-elevated border-l border-border-subtle p-4 flex-shrink-0"
         style={{ width }}
       >
         <PreviewResizer />
@@ -251,18 +154,15 @@ export function TrackDetailPanel(): React.JSX.Element | null {
       <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
         {playingThis ? "Now Playing" : "Now Focused"}
       </div>
-      <div
-        draggable={coverAsset != null && !coverAsset.missing}
-        onDragStart={(e) => {
+      <Coverflow
+        panelWidth={width}
+        centerDraggable={coverAsset != null && !coverAsset.missing}
+        onCenterDragStart={(e) => {
           if (!coverAsset || coverAsset.missing) return;
           e.preventDefault();
           window.beatos.startDragFile(coverAsset.abs_path);
         }}
-        data-cover-drag-source
-        className="w-full"
-      >
-        <VinylStage coverAsset={coverAsset ? { id: coverAsset.id } : null} playing={playingThis} />
-      </div>
+      />
       <div>
         <div className="text-2xl font-bold leading-tight">{current.title}</div>
         <div className="text-text-secondary text-sm mt-1">
@@ -274,8 +174,8 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         </div>
       </div>
       <div className="flex gap-2.5">
-        <LcdStat label="BPM" value={current.bpm != null ? String(current.bpm) : "—"} tone="green" />
-        <LcdStat label="Key" value={current.key_signature ?? "—"} tone="violet" />
+        <Stat label="BPM" value={current.bpm != null ? String(current.bpm) : "—"} />
+        <Stat label="Key" value={current.key_signature ?? "—"} />
       </div>
 
       <div>

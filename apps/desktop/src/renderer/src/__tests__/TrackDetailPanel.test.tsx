@@ -5,9 +5,9 @@ import { usePlayerStore } from "@/stores/player";
 // Mock window.beatos so onDragStart in the panel doesn't crash
 vi.stubGlobal("beatos", { startDragFile: vi.fn() });
 
-// Mock CoverImage to avoid beatos-asset:// network requests
-vi.mock("@/components/CoverImage", () => ({
-  CoverImage: () => null,
+// Mock Coverflow to avoid store/transform complexity in unit tests
+vi.mock("@/components/Coverflow", () => ({
+  Coverflow: () => <div data-testid="coverflow-stage" />,
 }));
 
 import { useTrackStore } from "@/stores/tracks";
@@ -40,25 +40,31 @@ function makeTrack(): Track {
 describe("TrackDetailPanel vinyl playing state", () => {
   beforeEach(() => {
     useVocabLocaleStore.setState({ locale: "both" });
-    useTrackStore.setState({ current: makeTrack() }); // id 42
+    useTrackStore.setState({ current: makeTrack(), list: [makeTrack()] }); // id 42
     useAssetStore.setState({ byTrack: {} });
     usePreviewPanelStore.setState({ open: true, width: 360 });
     usePlayerStore.setState({ currentTrackId: null, status: "idle" });
   });
 
-  it("shows 'Now Focused' and disc not spinning when idle", () => {
+  it("shows 'Now Focused' and no vinyl disc when idle", () => {
     render(<TrackDetailPanel />);
     expect(screen.getByText("Now Focused")).toBeInTheDocument();
-    const disc = document.querySelector("[data-vinyl-disc]");
-    expect(disc).not.toHaveAttribute("data-playing", "true");
+    expect(document.querySelector("[data-vinyl-disc]")).toBeNull();
   });
 
-  it("shows 'Now Playing' and marks disc playing when this track plays", () => {
+  it("shows 'Now Playing' when this track plays", () => {
     act(() => usePlayerStore.setState({ currentTrackId: 42, status: "playing" }));
     render(<TrackDetailPanel />);
     expect(screen.getByText("Now Playing")).toBeInTheDocument();
-    const disc = document.querySelector("[data-vinyl-disc]");
-    expect(disc).toHaveAttribute("data-playing", "true");
+    expect(document.querySelector("[data-vinyl-disc]")).toBeNull();
+  });
+
+  it("renders coverflow hero and frameless stats, no vinyl", () => {
+    render(<TrackDetailPanel />);
+    expect(document.querySelector('[data-testid="coverflow-stage"]')).toBeTruthy();
+    expect(document.querySelector("[data-vinyl-disc]")).toBeNull();
+    expect(screen.getByText("BPM")).toBeTruthy();
+    expect(screen.getByText("Key")).toBeTruthy();
   });
 });
 
