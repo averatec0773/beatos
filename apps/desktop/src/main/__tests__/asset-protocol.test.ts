@@ -329,6 +329,25 @@ describe("handleAssetRequest", () => {
     });
     expect(resp.status).toBe(200);
     expect(resp.headers.get("content-type")).toBe("image/png");
+    // Covers are immutable per asset id → cacheable, so <img> remounts don't
+    // re-fetch and visibly reload on every view switch.
+    expect(resp.headers.get("cache-control")).toContain("max-age");
+    expect(resp.headers.get("cache-control")).not.toContain("no-store");
+  });
+
+  it("keeps audio uncached (no-store), unlike covers", async () => {
+    const f = mockFetch(
+      () =>
+        new Response(buildMinimalWav(), {
+          status: 200,
+          headers: { "content-type": "audio/wav" },
+        }),
+    );
+    const resp = await handleAssetRequest(new Request("beatos-asset://audio/9"), {
+      apiPort: () => 8000,
+      fetchImpl: f,
+    });
+    expect(resp.headers.get("cache-control")).toBe("no-store");
   });
 
   it("dispatches audio to /api/assets/audio/<id>", async () => {

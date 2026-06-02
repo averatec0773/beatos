@@ -166,7 +166,11 @@ export async function handleAssetRequest(
     const respHeaders: Record<string, string> = {
       "content-type": contentType,
       "content-length": String(buffer.byteLength),
-      "cache-control": "no-store",
+      // Covers are immutable per asset id (replacing a cover mints a NEW asset
+      // id, so the URL changes), so let the renderer cache them — otherwise every
+      // <img> remount (view switch, coverflow window slide) re-fetches and the
+      // cover visibly reloads. Audio stays no-store (large, buffered per play).
+      "cache-control": url.host === "cover" ? "private, max-age=86400" : "no-store",
     };
     return new Response(buffer, { status: 200, headers: respHeaders });
   } catch (e) {
