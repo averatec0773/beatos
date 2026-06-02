@@ -7,7 +7,7 @@ interface Props {
   /** Fill parent width and stay square. Overrides `size` for layout. */
   responsive?: boolean;
   className?: string;
-  /** Apply 4px corner radius. Set false for square jacket / circular label clip. */
+  /** Apply 4px corner radius. Set false for square (un-rounded) covers, e.g. the coverflow hero. */
   rounded?: boolean;
 }
 
