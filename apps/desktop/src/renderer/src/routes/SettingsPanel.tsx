@@ -1,10 +1,27 @@
 import React, { useEffect, useState } from "react";
 
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
+import { AppearanceSection } from "@/components/Settings/AppearanceSection";
 import { DefaultLicenseTiersSection } from "@/components/Settings/DefaultLicenseTiersSection";
 import { ProducersSection } from "@/components/Settings/ProducersSection";
 import { UploadTemplatesSection } from "@/components/Settings/UploadTemplatesSection";
 import { VocabLocaleSection } from "@/components/Settings/VocabLocaleSection";
+
+/** A top-level settings group: an eyebrow header over a cluster of sections. */
+function SettingsGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div className="mb-12">
+      <h2 className="beatos-eyebrow mb-5 pb-2 border-b border-border-subtle">{title}</h2>
+      {children}
+    </div>
+  );
+}
 
 function StorageSection(): React.JSX.Element {
   const [dbPath, setDbPath] = useState<string>("");
@@ -106,16 +123,26 @@ export function SettingsPanel(): React.JSX.Element {
   }, []);
 
   return (
-    <main className="beatos-scroll flex-1 overflow-y-auto p-8 rounded-xl bg-bg-elevated">
+    <main className="beatos-scroll flex-1 overflow-y-auto p-8 rounded-xl beatos-card">
       <div className="max-w-2xl">
-        <h1 className="text-2xl font-bold mb-1">Settings</h1>
-        <p className="text-text-secondary text-sm mb-8">Storage location and library management.</p>
-        <StorageSection />
-        <VocabLocaleSection />
-        <DefaultLicenseTiersSection />
-        <UploadTemplatesSection />
-        <ProducersSection />
-        <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
+        <h1 className="text-2xl font-bold mb-8">Settings</h1>
+
+        <SettingsGroup title="Appearance">
+          <AppearanceSection />
+        </SettingsGroup>
+
+        <SettingsGroup title="Beats & Upload">
+          <UploadTemplatesSection />
+          <DefaultLicenseTiersSection />
+          <ProducersSection />
+        </SettingsGroup>
+
+        <SettingsGroup title="General">
+          <VocabLocaleSection />
+          <StorageSection />
+          <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
+        </SettingsGroup>
+
         <AboutSection />
       </div>
     </main>

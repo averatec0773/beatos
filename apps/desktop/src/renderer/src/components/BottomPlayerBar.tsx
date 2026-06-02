@@ -18,6 +18,7 @@ import { audioEngine } from "@/lib/audio-engine";
 import { CoverImage } from "./CoverImage";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { Slider } from "./ui/slider";
+import { AsciiSeekWaveform } from "./AsciiSeekWaveform";
 import { Button } from "./ui/button";
 import { formatPlayerSubtitle, formatTime } from "@/lib/format-player";
 
@@ -116,13 +117,15 @@ export function BottomPlayerBar() {
     <footer
       data-bottom-player
       data-playing={playing ? "true" : "false"}
-      className="glass flex h-[72px] shrink-0 items-center gap-4 border-t border-border-subtle px-4"
+      className="glass relative z-10 flex h-[72px] shrink-0 items-center gap-4 border-t border-border-subtle px-4"
     >
       {/* Left: cover + meta */}
       <div className="flex w-[28%] min-w-0 items-center gap-3">
         <CoverImage assetId={track?.cover_asset_id ?? null} size={40} />
         <div className="min-w-0">
-          <div className="truncate text-sm font-medium text-text-primary">{track?.title ?? "—"}</div>
+          <div data-player-title className="truncate text-sm font-medium text-text-primary">
+            {track?.title ?? "—"}
+          </div>
           <div className="truncate text-xs text-text-secondary">
             {formatPlayerSubtitle({
               producer: track?.producer ?? null,
@@ -172,7 +175,7 @@ export function BottomPlayerBar() {
           <span className="w-10 text-right text-[10px] tabular-nums text-text-tertiary">
             {formatTime(position)}
           </span>
-          <Slider
+          <AsciiSeekWaveform
             min={0}
             max={duration || 1}
             step={0.1}

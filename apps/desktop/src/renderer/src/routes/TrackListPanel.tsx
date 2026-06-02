@@ -300,7 +300,7 @@ export function TrackListPanel(): React.JSX.Element {
     return (
       <>
         <section
-          className="flex-1 flex flex-col relative rounded-xl bg-bg-elevated overflow-hidden"
+          className="flex-1 flex flex-col relative rounded-xl beatos-card overflow-hidden"
           onDragOver={onSectionDragOver}
           onDragLeave={onSectionDragLeave}
           onDrop={onSectionDrop}
@@ -338,7 +338,7 @@ export function TrackListPanel(): React.JSX.Element {
   return (
     <>
       <section
-        className="flex-1 flex flex-col overflow-hidden relative rounded-xl bg-bg-elevated"
+        className="flex-1 flex flex-col overflow-hidden relative rounded-xl beatos-card"
         onDragOver={onSectionDragOver}
         onDragLeave={onSectionDragLeave}
         onDrop={onSectionDrop}

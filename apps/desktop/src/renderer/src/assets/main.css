@@ -29,6 +29,58 @@
   background: var(--glass-bg);
 }
 
+/* Outer column / route card. The three main columns (sidebar, list, detail)
+   and the single-pane route surfaces (editor/settings/trash/approvals) float
+   as translucent backlit-glass cards over the AsciiBackdrop (`AsciiBackdrop`)
+   on the black canvas — the obsidian-glass "panel" of design-direction §1.
+   INNER elements keep their opaque `--bg-elevated` (table header, chips, code
+   blocks, row states) so only the card edge reveals the backdrop. */
+.beatos-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--card-blur)) saturate(1.3);
+  border: 1px solid var(--border-card);
+}
+
+/* Collapsed left rail (sidebar). Width is CSS-driven (not the inline store
+   width) so the hover-peek `:hover` rule can widen it; the parent flex makes
+   the middle column rescale via the aside's `transition-[width]`. */
+.beatos-card[data-collapsed] {
+  width: var(--rail-w-left);
+  /* Transition lives ONLY on the collapsed rail so the collapse animation and
+     hover-peek glide, while the expanded panel's resize-drag stays 1:1. */
+  transition: width 0.2s var(--ease);
+}
+.beatos-card[data-collapsed]:hover {
+  width: var(--rail-w-left-peek);
+}
+
+/* Collapsed right rail (detail panel). Same idea; the inner chevron nudges in
+   and the ghost preview fades up on hover. */
+.beatos-card[data-detail-collapsed] {
+  width: var(--rail-w-right);
+  transition: width 0.2s var(--ease);
+}
+.beatos-card[data-detail-collapsed]:hover {
+  width: var(--rail-w-right-peek);
+}
+.beatos-card[data-detail-collapsed] .rail-expand {
+  transition: transform 0.22s var(--ease), color 0.22s var(--ease);
+}
+.beatos-card[data-detail-collapsed]:hover .rail-expand {
+  transform: translateX(-4px);
+  color: var(--text-primary);
+}
+.rail-ghost {
+  opacity: 0;
+  transform: translateX(10px);
+  transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+}
+.beatos-card[data-detail-collapsed]:hover .rail-ghost {
+  opacity: var(--rail-peek-ghost);
+  transform: translateX(0);
+}
+
 /* Canonical micro-label ("eyebrow"). Section headers, field labels, stat
    captions all share this one scale (11px) so they read as one system instead
    of the prior 9/10/11px scatter. */
@@ -90,6 +142,24 @@
   /* glass */
   --glass-bg:     rgba(16,18,22,.55);
   --glass-blur:   18px;
+
+  /* card — translucent backlit-glass surface for the outer column/route cards
+     (the AsciiBackdrop shows through, softened by the blur). Inner surfaces
+     stay on the opaque `--bg-elevated`. */
+  /* `--card-alpha` is driven live by the appearance store (Settings →
+     Appearance → Panel opacity); the rest stays fixed. */
+  --card-rgb:     17,19,23;
+  --card-alpha:   .58;
+  --card-bg:      rgba(var(--card-rgb), var(--card-alpha));
+  --card-blur:    14px;
+  --border-card:  rgba(255,255,255,.06);
+
+  /* collapsed rail widths + hover-peek (left = sidebar, right = detail) */
+  --rail-w-left:        76px;
+  --rail-w-left-peek:   88px;
+  --rail-w-right:       46px;
+  --rail-w-right-peek:  56px;
+  --rail-peek-ghost:    .32;
 
   /* motion */
   --ease:   cubic-bezier(.2,.7,.2,1);

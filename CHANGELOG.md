@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+### Added
+
+- **ASCII glyph-rain backdrop.** An ambient monochrome character field is painted behind the (now translucent) panels — texture in the gutters and behind the floating top bar, softened through the cards. Settings → Appearance controls it: on/off, intensity, speed, and **panel opacity** (0–100, drives the `--card-alpha` token live). Preferences persist across restarts (`beatos.appearance.v1`). Respects `prefers-reduced-motion` (static frame) and pauses while the window is hidden/blurred.
+- **ASCII waveform seek bar.** The player's progress bar is now a fine monochrome waveform — the track's real silhouette (peaks from the decoded buffer), bright up to the playhead, with a gentle smoothed "breathing" from the live analyser while playing. It IS the seek control (Radix click/drag preserved).
+- **Player remembers state across restarts.** Volume, mute, shuffle, repeat, preferred role, and a resume point (last track + position) persist (`beatos.player.v1`). On launch the last track reloads **paused at its position**; if that track or its audio file is gone it **falls back to idle** and clears the stale pointer.
+- **Settings grouped** into Appearance / Beats & Upload / General.
+
+### Changed
+
+- **Floating top bar (Spotify-style).** The top bar's glass strip + bottom border are gone; `BeatOS`, back, and the centred search now float on the black canvas.
+- **Translucent panels over the backdrop.** The three columns and single-pane routes render as translucent backlit-glass cards (`.beatos-card`); opacity is user-adjustable (see above).
+- **Collapse keeps the gutter gap and rescales the middle.** Collapsing a side panel no longer removes the inter-card gap (it was supplied by the resizer element). The detail panel, when collapsed, now keeps a bordered rail with a `‹` expand chevron and a hover peek (slides in, fades a faint preview) instead of vanishing — reopen via the chevron, not only a row click.
+
+### Fixed
+
+- **Volume at minimum is now truly silent.** `volume = -∞ dB` was not reliably honoured by the gain, leaving playback at its last level; zero now also mutes.
+- **A finished track keeps playing.** Auto-advance paused on the next track because the engine flips to `paused` before emitting `ended`; auto-advance now forces playback (manual Next still preserves play/pause).
+
 ## [0.0.45] — 2026-06-02 — UI redesign: monochrome → Spotify-style cards, Coverflow, collapsible sidebar
 
 ### Fixed

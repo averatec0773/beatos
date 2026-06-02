@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 
 import { TopBar } from "@/components/TopBar";
@@ -6,21 +6,36 @@ import { SidebarPanel } from "@/components/Sidebar/SidebarPanel";
 import { BottomPlayerBar } from "@/components/BottomPlayerBar";
 import { Toast } from "@/components/Toast";
 import { AnalysisProgressBar } from "@/components/AnalysisProgressBar";
+import { AsciiBackdrop } from "@/components/AsciiBackdrop";
 import { GutterResizer } from "@/components/GutterResizer";
 import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH, useSidebarPanelStore } from "@/stores/sidebar-panel";
+import { useAppearanceStore } from "@/stores/appearance";
 
 export function AppShell(): React.JSX.Element {
   const setSidebarWidth = useSidebarPanelStore((s) => s.setWidth);
   const sidebarCollapsed = useSidebarPanelStore((s) => s.collapsed);
+
+  // Panel translucency is a live appearance pref → drive the `--card-alpha`
+  // CSS var (consumed by `.beatos-card`) from the store.
+  const cardOpacity = useAppearanceStore((s) => s.cardOpacity);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--card-alpha", String(cardOpacity / 100));
+  }, [cardOpacity]);
+
   return (
-    <div className="h-screen bg-bg-base text-text-primary flex flex-col">
+    <div className="relative isolate h-screen bg-bg-base text-text-primary flex flex-col overflow-hidden">
+      {/* Ambient ASCII glyph-rain, painted behind everything (negative z). The
+          translucent `.beatos-card` columns float over it; gutters + the now
+          transparent top bar reveal it directly. */}
+      <AsciiBackdrop />
       <TopBar />
       <AnalysisProgressBar />
-      {/* Spotify-style canvas: pure-black gutter with the three regions floating
-          as rounded cards, the resize handles living in the gutters between. */}
-      <div className="flex-1 flex px-2 py-2 overflow-hidden min-h-0 bg-black">
+      {/* Spotify-style canvas: the three regions float as rounded cards over the
+          backdrop, the resize handles (or a spacer when collapsed) living in the
+          gutters between so the inter-card gap survives collapse. */}
+      <div className="relative z-10 flex-1 flex px-2 py-2 overflow-hidden min-h-0">
         <SidebarPanel />
-        {!sidebarCollapsed && (
+        {!sidebarCollapsed ? (
           <GutterResizer
             ariaLabel="Resize sidebar"
             dataAttr="data-sidebar-resizer"
@@ -29,6 +44,10 @@ export function AppShell(): React.JSX.Element {
               setSidebarWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, w + dx)))
             }
           />
+        ) : (
+          // Collapsed: no resizer, but keep the gutter width so the rail does
+          // not sit flush against the middle card.
+          <div className="w-2 shrink-0" aria-hidden />
         )}
         <main className="flex-1 flex overflow-hidden min-w-0">
           <Outlet />

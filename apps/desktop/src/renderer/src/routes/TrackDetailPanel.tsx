@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { PanelRightClose } from "lucide-react";
+import { PanelRightClose, ChevronLeft } from "lucide-react";
 
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
@@ -9,6 +9,7 @@ import { formatVocabLabel } from "@/data/vocab-label";
 import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { usePlayerStore } from "@/stores/player";
 import { Coverflow } from "@/components/Coverflow";
+import { CoverImage } from "@/components/CoverImage";
 import { useDominantColor } from "@/lib/use-dominant-color";
 import { GutterResizer } from "@/components/GutterResizer";
 
@@ -17,10 +18,12 @@ import { GutterResizer } from "@/components/GutterResizer";
  * card and the detail card (not clipped inside either). Hidden when the panel
  * is closed. Drag LEFT = wider (the panel grows from its left edge → w - dx).
  */
-export function PreviewGutter(): React.JSX.Element | null {
+export function PreviewGutter(): React.JSX.Element {
   const open = usePreviewPanelStore((s) => s.open);
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
-  if (!open) return null;
+  // Collapsed: the detail panel now renders a persistent rail (not null), so the
+  // gutter must keep its width too — render a non-interactive spacer.
+  if (!open) return <div className="w-2 shrink-0" aria-hidden />;
   return (
     <GutterResizer
       ariaLabel="Resize preview panel"
@@ -105,6 +108,7 @@ function EtchDivider(): React.JSX.Element {
 
 export function TrackDetailPanel(): React.JSX.Element | null {
   const open = usePreviewPanelStore((s) => s.open);
+  const setOpen = usePreviewPanelStore((s) => s.setOpen);
   const width = usePreviewPanelStore((s) => s.width);
   const current = useTrackStore((s) => s.current);
   const byTrack = useAssetStore((s) => s.byTrack);
@@ -113,8 +117,8 @@ export function TrackDetailPanel(): React.JSX.Element | null {
   const playerStatus = usePlayerStore((s) => s.status);
   const playingThis = current != null && playerTrackId === current.id && playerStatus === "playing";
 
-  // Selecting a track while the panel is closed shouldn't silently open it —
-  // user explicitly closed it. They re-open via the TopBar toggle.
+  // Selecting a track while the panel is collapsed shouldn't silently open it —
+  // the user explicitly collapsed it. They re-open via the rail's chevron.
   // (Spotify behavior; less surprising than auto-reopen.)
 
   const coverAsset = useMemo(() => {
@@ -126,12 +130,40 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
   const glow = useDominantColor(current?.cover_asset_id ?? null);
 
-  if (!open) return null;
+  // Collapsed: a persistent bordered rail (not a disappearance). The chevron
+  // re-expands; hovering nudges it inward and fades up a faint preview of the
+  // focused cover (CSS `[data-detail-collapsed]:hover`, see main.css).
+  if (!open) {
+    return (
+      <aside
+        data-detail-collapsed=""
+        className="beatos-card rounded-xl flex-shrink-0 relative overflow-hidden"
+      >
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rail-expand absolute inset-0 flex items-center justify-center text-text-secondary hover:text-text-primary"
+          aria-label="Show preview"
+          title="Show preview"
+          data-preview-open
+        >
+          <ChevronLeft size={18} />
+        </button>
+        {current && (
+          <div className="rail-ghost pointer-events-none absolute inset-0 px-2.5 pt-4">
+            <CoverImage assetId={current.cover_asset_id ?? null} size={120} responsive />
+            <div className="mt-3 h-2 rounded bg-white/50" />
+            <div className="mt-2 h-2 w-3/5 rounded bg-white/50" />
+          </div>
+        )}
+      </aside>
+    );
+  }
 
   if (!current) {
     return (
       <aside
-        className="relative beatos-scroll overflow-y-auto bg-bg-elevated rounded-xl p-4 flex-shrink-0"
+        className="relative beatos-scroll overflow-y-auto beatos-card rounded-xl p-4 flex-shrink-0"
         style={{ width }}
       >
         <DetailHeader label="Now Focused" />
@@ -142,7 +174,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
   return (
     <aside
-      className="relative beatos-scroll bg-bg-elevated rounded-xl p-4 flex flex-col gap-4 overflow-y-auto flex-shrink-0"
+      className="relative beatos-scroll beatos-card rounded-xl p-4 flex flex-col gap-4 overflow-y-auto flex-shrink-0"
       style={{ width }}
     >
       <DetailHeader label={playingThis ? "Now Playing" : "Now Focused"} />

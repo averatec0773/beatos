@@ -16,6 +16,7 @@ import { useTrackStore } from "@/stores/tracks";
 import { useListStore } from "@/stores/lists";
 import { addTracksToList } from "@/lib/add-tracks-to-list";
 import { useVocabLocaleStore } from "@/stores/vocab-locale";
+import { usePlayerStore } from "@/stores/player";
 
 interface ActiveDrag {
   trackId: number;
@@ -30,6 +31,10 @@ export default function App(): React.JSX.Element {
   // fall back to the store's "both" default (logged in the store).
   useEffect(() => {
     void useVocabLocaleStore.getState().hydrate();
+    // Restore the persisted player resume point (last track, paused at its
+    // saved position) + volume/mute/shuffle/repeat; falls back to idle if the
+    // track or its file is gone.
+    void usePlayerStore.getState().hydrate();
   }, []);
 
   // Distance-based activation prevents click-to-select from triggering a drag.

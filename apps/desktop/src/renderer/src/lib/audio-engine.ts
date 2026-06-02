@@ -32,6 +32,8 @@
 
 import * as Tone from "tone";
 
+import { computePeaks } from "@/lib/waveform";
+
 export type EngineStatus = "idle" | "loading" | "paused" | "playing" | "error";
 
 type Listener<T> = (arg: T) => void;
@@ -72,6 +74,11 @@ class AudioEngine {
   private rafId: number | null = null;
   private bufferCacheBytes = 0;
   private listeners: { [K in keyof EventMap]?: Set<Listener<EventMap[K]>> } = {};
+  // Shared waveform analyser tapped between player and destination, feeding the
+  // live shimmer of the ASCII seek waveform. Created lazily (no AudioContext at
+  // construction time). Static per-track peaks are cached separately.
+  private analyser: Tone.Analyser | null = null;
+  private peaksCache = new Map<number, number[]>();
 
   /** Load + decode an asset. Reuses cached buffers (byte-budgeted LRU). */
   async load(assetId: number): Promise<void> {
@@ -124,7 +131,9 @@ class AudioEngine {
     this.offsetAtStart = 0;
     this.contextTimeAtStart = 0;
 
-    this.player = new Tone.Player(buf).toDestination();
+    // Route through the shared analyser (which itself reaches the destination)
+    // so the live waveform can read post-volume amplitude.
+    this.player = new Tone.Player(buf).connect(this.getAnalyser());
     this.applyAudioParams();
 
     this.emit("durationchange", this.cachedDuration);
@@ -223,6 +232,50 @@ class AudioEngine {
     return this.currentAssetId;
   }
 
+  /**
+   * Normalized per-track peak silhouette (0–1) for the seek waveform, computed
+   * once from the decoded buffer and cached per asset. Null when no track is
+   * loaded or its buffer isn't resident.
+   */
+  getPeaks(n = 72): number[] | null {
+    const id = this.currentAssetId;
+    if (id == null) return null;
+    const cached = this.peaksCache.get(id);
+    if (cached && cached.length === n) return cached;
+    const buf = this.bufferCache.get(id);
+    if (!buf) return null;
+    let channel: Float32Array;
+    try {
+      channel = buf.getChannelData(0);
+    } catch {
+      return null;
+    }
+    const peaks = computePeaks(channel, n);
+    this.peaksCache.set(id, peaks);
+    return peaks;
+  }
+
+  /** Current output amplitude (0–1, RMS) for the live shimmer; 0 when idle. */
+  getLiveLevel(): number {
+    if (!this.analyser || this.status !== "playing") return 0;
+    const values = this.analyser.getValue();
+    if (!(values instanceof Float32Array)) return 0;
+    let sum = 0;
+    for (let i = 0; i < values.length; i++) sum += values[i] * values[i];
+    return Math.min(1, Math.sqrt(sum / values.length) * 2.5);
+  }
+
+  /**
+   * Live time-domain samples (−1..1) for the playing waveform, or null when
+   * not playing / no analyser. The seek waveform downsamples this per frame so
+   * the whole field reacts to the audio.
+   */
+  getWaveform(): Float32Array | null {
+    if (!this.analyser || this.status !== "playing") return null;
+    const values = this.analyser.getValue();
+    return values instanceof Float32Array ? values : null;
+  }
+
   on<K extends keyof EventMap>(event: K, cb: Listener<EventMap[K]>): () => void {
     let set = this.listeners[event] as Set<Listener<EventMap[K]>> | undefined;
     if (!set) {
@@ -249,6 +302,7 @@ class AudioEngine {
     }
     for (const buf of this.bufferCache.values()) buf.dispose();
     this.bufferCache.clear();
+    this.peaksCache.clear();
     this.bufferCacheBytes = 0;
     this.currentAssetId = null;
     this.cachedDuration = 0;
@@ -263,10 +317,24 @@ class AudioEngine {
 
   // ─── internals ──────────────────────────────────────────────────────────
 
+  /** Lazily create the shared analyser (connected straight to destination). */
+  private getAnalyser(): Tone.Analyser {
+    if (!this.analyser) {
+      // "waveform" → time-domain samples in [-1, 1]; 1024 is plenty for an RMS.
+      this.analyser = new Tone.Analyser("waveform", 1024);
+      this.analyser.toDestination();
+    }
+    return this.analyser;
+  }
+
   private applyAudioParams(): void {
     if (!this.player) return;
-    this.player.volume.value = this.volume <= 0 ? -Infinity : Tone.gainToDb(this.volume);
-    this.player.mute = this.muted || this.forceMuted;
+    // `volume.value = -Infinity` is not reliably honoured by the underlying
+    // gain, so zero (or muted) must also flip `mute` to guarantee silence —
+    // otherwise the slider at minimum leaves playback at its last level.
+    const silent = this.volume <= 0;
+    this.player.volume.value = silent ? -60 : Tone.gainToDb(this.volume);
+    this.player.mute = this.muted || this.forceMuted || silent;
   }
 
   private cacheBuffer(assetId: number, buf: Tone.ToneAudioBuffer): void {

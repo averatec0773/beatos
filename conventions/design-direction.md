@@ -120,6 +120,9 @@ The palette is **monochrome** — no chromatic accent. Tokens follow a 3-tier st
 |---|---|---|
 | `--glass-bg` | `rgba(16,18,22,.55)` | Backlit panel fill (top bar, sidebar, player) |
 | `--glass-blur` | `34px` | Backdrop blur amount |
+| `--card-bg` | `rgba(var(--card-rgb), var(--card-alpha))` | Outer column/route card fill (`.beatos-card`) over the ASCII backdrop |
+| `--card-alpha` | `.58` | Card opacity — driven live by Settings → Appearance → Panel opacity |
+| `--card-blur` | `14px` | Card backdrop blur |
 | `--ease` | `cubic-bezier(.2,.7,.2,1)` | Standard easing |
 | `--spring` | `cubic-bezier(.34,1.56,.64,1)` | Springy/overshoot easing |
 | `--dur-hover` | `260ms` | Hover transition duration |
@@ -312,10 +315,11 @@ Several pieces of UI state are deliberately **session-scoped** — they reset on
 - Column widths in the Library table
 - Sort column + direction
 - Active filter chips
-- Player state (current track, queue, volume, shuffle, repeat)
-- Multi-select state in the track list
+- Player **queue** (contents + index) and multi-select state in the track list
 
-The catalog itself (tracks, assets, lists, sources, settings) is persisted in SQLite. The line is: **organizational data is persisted; transient view state is not.**
+**Persisted player preferences (localStorage, `beatos.player.v1`)** — by explicit user request, the player now remembers across restarts: **volume, mute, shuffle, repeat, preferred role, and a resume point (last track + position)**. On launch the last track is reloaded **paused at its saved position** (no autoplay); if that track or its audio file is gone, it **falls back to idle** and clears the stale pointer. The queue itself is NOT persisted — it rebuilds when the user next plays. Appearance prefs (ASCII backdrop on/off, intensity, speed) persist similarly via `beatos.appearance.v1`.
+
+The catalog itself (tracks, assets, lists, sources, settings) is persisted in SQLite. The line is: **organizational data + genuine preferences are persisted; transient view state (queue, selection, column widths, sort, filters) is not.**
 
 ---
 

@@ -64,7 +64,7 @@ export async function assertRowClickPopulatesBar(ctx) {
     const bar = await window.evaluate(() => {
       const footer = document.querySelector("[data-bottom-player]");
       if (!footer) return { error: "no bottom bar" };
-      const title = footer.querySelector(".text-zinc-100")?.textContent ?? "";
+      const title = footer.querySelector("[data-player-title]")?.textContent?.trim() ?? "";
       const playBtn = footer.querySelector("[data-play-button]");
       return { title, disabled: playBtn?.hasAttribute("disabled") ?? true };
     });

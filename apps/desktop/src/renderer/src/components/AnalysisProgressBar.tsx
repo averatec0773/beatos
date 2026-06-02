@@ -41,7 +41,7 @@ export function AnalysisProgressBar() {
 
   if (!jobId || !job) return null;
   return (
-    <div className="flex items-center gap-3 px-4 py-1.5 text-xs text-text-secondary border-b border-border-subtle bg-bg-row-hover">
+    <div className="relative z-10 flex items-center gap-3 px-4 py-1.5 text-xs text-text-secondary border-b border-border-subtle bg-bg-row-hover">
       <span>分析中 {job.done}/{job.total}</span>
       {job.current_title && <span className="truncate">{job.current_title}</span>}
     </div>

@@ -21,8 +21,20 @@ vi.mock("tone", () => {
       toDestination(): this {
         return this;
       }
+      connect(): this {
+        return this;
+      }
       start(): void {}
       stop(): void {}
+      dispose(): void {}
+    },
+    Analyser: class {
+      toDestination(): this {
+        return this;
+      }
+      getValue(): Float32Array {
+        return new Float32Array(0);
+      }
       dispose(): void {}
     },
     ToneAudioBuffer: class {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import { usePlayerStore } from "@/stores/player";
 
 // Mock window.beatos so onDragStart in the panel doesn't crash
@@ -87,6 +87,30 @@ describe("TrackDetailPanel hardware metadata", () => {
     useTrackStore.setState({ current: makeTrack() }); // 1 genre + 1 mood, 0 tags
     render(<TrackDetailPanel />);
     expect(document.querySelectorAll("[data-chip]").length).toBe(2);
+  });
+});
+
+describe("TrackDetailPanel collapsed rail", () => {
+  beforeEach(() => {
+    useVocabLocaleStore.setState({ locale: "both" });
+    useTrackStore.setState({ current: makeTrack(), list: [makeTrack()] });
+    useAssetStore.setState({ byTrack: {} });
+    usePreviewPanelStore.setState({ open: false, width: 360 });
+    usePlayerStore.setState({ currentTrackId: null, status: "idle" });
+  });
+
+  it("renders a rail with an expand control instead of disappearing", () => {
+    render(<TrackDetailPanel />);
+    expect(document.querySelector("[data-detail-collapsed]")).toBeTruthy();
+    expect(document.querySelector("[data-preview-open]")).toBeTruthy();
+    // The expanded content is not mounted while collapsed.
+    expect(screen.queryByText("Now Focused")).toBeNull();
+  });
+
+  it("re-expands when the rail chevron is clicked", () => {
+    render(<TrackDetailPanel />);
+    fireEvent.click(document.querySelector("[data-preview-open]")!);
+    expect(usePreviewPanelStore.getState().open).toBe(true);
   });
 });
 
