@@ -13,14 +13,17 @@ export const BACKDROP_INTENSITY_MAX = 100;
 export const BACKDROP_SPEED_MIN = 0;
 export const BACKDROP_SPEED_MAX = 20;
 
-export const BACKDROP_INTENSITY_DEFAULT = 38;
-export const BACKDROP_SPEED_DEFAULT = 7;
+// Fresh-install defaults — a calm, subtle look (the dialed-in baseline). The
+// CSS fallbacks in main.css (--card-alpha / --card-blur) mirror these so the
+// first paint matches before AppShell's effect runs.
+export const BACKDROP_INTENSITY_DEFAULT = 20;
+export const BACKDROP_SPEED_DEFAULT = 4;
 
 // Panel (card) opacity, 0–100 → `--card-alpha` = value / 100. 0 = fully
-// see-through panels (text floats on the backdrop). Default matches main.css's .58.
+// see-through panels (text floats on the backdrop). Default mirrors main.css.
 export const CARD_OPACITY_MIN = 0;
 export const CARD_OPACITY_MAX = 100;
-export const CARD_OPACITY_DEFAULT = 58;
+export const CARD_OPACITY_DEFAULT = 30;
 
 interface Persisted {
   backdropEnabled: boolean;

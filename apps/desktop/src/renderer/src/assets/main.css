@@ -155,12 +155,14 @@
   /* card — translucent backlit-glass surface for the outer column/route cards
      (the AsciiBackdrop shows through, softened by the blur). Inner surfaces
      stay on the opaque `--bg-elevated`. */
-  /* `--card-alpha` is driven live by the appearance store (Settings →
-     Appearance → Panel opacity); the rest stays fixed. */
+  /* `--card-alpha` + `--card-blur` are driven live by the appearance store
+     (Settings → Appearance → Panel opacity). These fallbacks mirror the
+     CARD_OPACITY_DEFAULT (30 → alpha .30, blur .30×14 ≈ 4.2px) so the first
+     paint matches before AppShell's effect runs. */
   --card-rgb:     17,19,23;
-  --card-alpha:   .58;
+  --card-alpha:   .3;
   --card-bg:      rgba(var(--card-rgb), var(--card-alpha));
-  --card-blur:    14px;
+  --card-blur:    4.2px;
   --border-card:  rgba(255,255,255,.06);
 
   /* collapsed rail widths + hover-peek (left = sidebar, right = detail) */

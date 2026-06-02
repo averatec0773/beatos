@@ -121,8 +121,8 @@ The palette is **monochrome** — no chromatic accent. Tokens follow a 3-tier st
 | `--glass-bg` | `rgba(16,18,22,.55)` | Backlit panel fill (top bar, sidebar, player) |
 | `--glass-blur` | `34px` | Backdrop blur amount |
 | `--card-bg` | `rgba(var(--card-rgb), var(--card-alpha))` | Outer column/route card fill (`.beatos-card`) over the ASCII backdrop |
-| `--card-alpha` | `.58` | Card opacity — driven live by Settings → Appearance → Panel opacity |
-| `--card-blur` | `14px` | Card backdrop blur |
+| `--card-alpha` | `.3` (default) | Card opacity — driven live by Settings → Appearance → Panel opacity (fresh-install default 30) |
+| `--card-blur` | `4.2px` (default) | Card backdrop blur — scales with opacity (`alpha × 14`) |
 | `--ease` | `cubic-bezier(.2,.7,.2,1)` | Standard easing |
 | `--spring` | `cubic-bezier(.34,1.56,.64,1)` | Springy/overshoot easing |
 | `--dur-hover` | `260ms` | Hover transition duration |
