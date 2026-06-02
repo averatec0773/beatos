@@ -43,7 +43,6 @@ export function SearchInput(): React.JSX.Element {
   const navigate = useNavigate();
   const setText = useTrackQueryStore((s) => s.setText);
 
-  const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [box, setBox] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -56,7 +55,7 @@ export function SearchInput(): React.JSX.Element {
   const [topKeys, setTopKeys] = useState<FacetValue[]>([]);
   const [recentlyAdded, setRecentlyAdded] = useState<{ id: number; title: string }[]>([]);
 
-  const dropdownVisible = open && focused && box.trim().length === 0;
+  const dropdownVisible = focused && box.trim().length === 0;
 
   // Append a value to a chip filter array (dedupe).
   const appendChip = useCallback((field: ChipField, value: string): void => {
@@ -127,17 +126,15 @@ export function SearchInput(): React.JSX.Element {
     if (debounceRef.current != null) window.clearTimeout(debounceRef.current);
     setBox("");
     setText("");
-    setOpen(false);
     setFocused(false);
   }, [setText]);
 
-  // ⌘F to open + focus.
+  // ⌘F to focus the (always-visible) search box.
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
         e.preventDefault();
-        setOpen(true);
-        setTimeout(() => inputRef.current?.focus(), 0);
+        inputRef.current?.focus();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -177,27 +174,10 @@ export function SearchInput(): React.JSX.Element {
     }
   }
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setOpen(true);
-          setTimeout(() => inputRef.current?.focus(), 0);
-        }}
-        className="w-7 h-7 flex items-center justify-center rounded-full text-text-tertiary hover:text-text-secondary hover:bg-bg-row-hover"
-        aria-label="Search (⌘F)"
-        title="Search (⌘F)"
-      >
-        <Search size={14} />
-      </button>
-    );
-  }
-
   return (
-    <div className="relative w-64">
-      <div className="flex items-center gap-2 bg-bg-elevated border border-border-subtle rounded-md px-2 py-1">
-        <Search size={14} className="text-text-tertiary" />
+    <div className="relative w-[460px] max-w-[46vw]">
+      <div className="flex items-center gap-2.5 bg-bg-elevated border border-border-subtle hover:border-text-tertiary focus-within:border-text-secondary rounded-full px-3.5 py-2 transition-colors">
+        <Search size={16} className="text-text-tertiary shrink-0" />
         <input
           ref={inputRef}
           value={box}
@@ -207,16 +187,18 @@ export function SearchInput(): React.JSX.Element {
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           onKeyDown={onInputKeyDown}
           placeholder="Search title / tags / genre:trap"
-          className="flex-1 bg-transparent text-sm text-text-primary focus:outline-none"
+          className="flex-1 bg-transparent text-[15px] text-text-primary focus:outline-none"
         />
-        <button
-          type="button"
-          onClick={closeAndClear}
-          className="text-text-tertiary hover:text-text-primary"
-          aria-label="Close search"
-        >
-          <X size={12} />
-        </button>
+        {box.length > 0 && (
+          <button
+            type="button"
+            onClick={closeAndClear}
+            className="text-text-tertiary hover:text-text-primary shrink-0"
+            aria-label="Clear search"
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       {dropdownVisible && (

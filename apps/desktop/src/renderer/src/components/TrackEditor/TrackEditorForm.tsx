@@ -43,7 +43,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
   } = state;
 
   return (
-    <main data-track-editor className="beatos-scroll flex-1 overflow-y-auto p-8">
+    <main data-track-editor className="beatos-scroll flex-1 overflow-y-auto p-8 rounded-xl bg-bg-elevated">
       <form className="max-w-4xl space-y-6" onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-[200px_1fr] gap-6 items-start">
           <div className="flex flex-col items-stretch gap-2">

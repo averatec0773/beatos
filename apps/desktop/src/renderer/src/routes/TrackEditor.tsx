@@ -9,10 +9,10 @@ export function TrackEditor(): React.JSX.Element {
   const { track, loadError, analyzeDialogOpen, analyzeResult, setAnalyzeDialogOpen, patch } = state;
 
   if (loadError && !track) {
-    return <main className="flex-1 p-8 text-danger">{loadError}</main>;
+    return <main className="flex-1 p-8 rounded-xl bg-bg-elevated text-danger">{loadError}</main>;
   }
   if (!track) {
-    return <main className="flex-1 p-8 text-text-tertiary">Loading…</main>;
+    return <main className="flex-1 p-8 rounded-xl bg-bg-elevated text-text-tertiary">Loading…</main>;
   }
 
   return (

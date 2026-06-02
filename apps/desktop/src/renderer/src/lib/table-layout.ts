@@ -10,14 +10,14 @@ import type { ColumnKey } from "@/stores/column-widths";
  * `width: <px>`, which we explicitly DON'T want for the auto-sized title /
  * updated columns.
  *
- * Column order: cover (48 px), title (auto or pinned), bpm (pinned), key
+ * Column order: cover (52 px), title (auto or pinned), bpm (pinned), key
  * (pinned), genre (pinned), updated (flex, min 80 px). No resizer tracks —
  * `<ColumnResizer>` overlays the right edge of each header cell via
  * `position: absolute` instead of consuming its own grid track.
  */
 export function getGridTemplateColumns(widths: Record<ColumnKey, number>): string {
   const title = widths.title === 0 ? "1fr" : `${widths.title}px`;
-  return `48px ${title} ${widths.bpm}px ${widths.key}px ${widths.genre}px minmax(${widths.updated}px, 1fr)`;
+  return `52px ${title} ${widths.bpm}px ${widths.key}px ${widths.genre}px minmax(${widths.updated}px, 1fr)`;
 }
 
 /** Horizontal gap between grid tracks. Used in both header and row. */

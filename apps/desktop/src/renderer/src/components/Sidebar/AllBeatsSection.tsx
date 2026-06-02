@@ -3,6 +3,7 @@ import { Music } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useTrackStore } from "@/stores/tracks";
+import { SidebarNavButton } from "@/components/Sidebar/SidebarNavButton";
 
 export function AllBeatsSection(): React.JSX.Element {
   const navigate = useNavigate();
@@ -11,20 +12,17 @@ export function AllBeatsSection(): React.JSX.Element {
   const active = location.pathname === "/";
 
   return (
-    <button
-      type="button"
-      data-all-beats-link
+    <SidebarNavButton
+      icon={<Music size={20} />}
+      label="All Beats"
+      active={active}
       onClick={() => navigate("/")}
-      className={[
-        "w-full px-3 py-1.5 text-left text-[15px] rounded-md flex items-center gap-2",
-        active ? "bg-bg-row-active text-accent" : "text-text-primary hover:bg-bg-row-hover",
-      ].join(" ")}
-    >
-      <Music size={14} />
-      <span className="flex-1">All Beats</span>
-      {count != null && count > 0 && (
-        <span className="text-[10px] text-text-tertiary">{count}</span>
-      )}
-    </button>
+      dataAttr="data-all-beats-link"
+      trailing={
+        count != null && count > 0 ? (
+          <span className="font-mono text-[12px] tabular-nums text-text-tertiary">{count}</span>
+        ) : undefined
+      }
+    />
   );
 }

@@ -60,9 +60,13 @@ function TrackRowImpl({
         if (e.key === "Enter") onOpen();
       }}
       style={{ gridTemplateColumns: gridCols, columnGap: TABLE_COL_GAP, minWidth: "min-content" }}
-      className={`h-16 px-4 grid items-center cursor-grab active:cursor-grabbing cursor-pointer relative select-none transition-[transform,background-color] [transition-duration:var(--dur-hover)] [transition-timing-function:var(--spring)] hover:-translate-y-[3px] hover:shadow-[0_14px_30px_-18px_rgba(0,0,0,.9)] hover:z-10 motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-none
+      className={`h-16 px-4 grid items-center cursor-grab active:cursor-grabbing cursor-pointer relative select-none transition-[transform,background-color] [transition-duration:var(--dur-hover)] [transition-timing-function:var(--spring)]
         ${isDragging ? "opacity-50" : ""}
-        ${highlighted ? "bg-accent-soft text-text-primary" : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"}`}
+        ${
+          highlighted
+            ? "bg-accent-soft text-text-primary"
+            : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary hover:-translate-y-[3px] hover:shadow-[0_14px_30px_-18px_rgba(0,0,0,.9)] hover:z-10 motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-none"
+        }`}
     >
       {highlighted && !isDragging && (
         <span className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />
@@ -70,8 +74,8 @@ function TrackRowImpl({
 
       {/* Cover + per-row play overlay. Fixed 48 × 48 — matches the cover grid
           track width exactly. */}
-      <div className="group relative w-12 h-12" data-column-cell="cover">
-        <CoverImage assetId={coverAssetId} size={48} />
+      <div className="group relative w-[52px] h-[52px]" data-column-cell="cover">
+        <CoverImage assetId={coverAssetId} size={52} />
         <TrackRowPlayButton trackId={track.id} hasAudio={track.has_audio ?? false} />
       </div>
 

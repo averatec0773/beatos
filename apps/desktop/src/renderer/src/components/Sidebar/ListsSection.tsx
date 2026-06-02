@@ -7,8 +7,10 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { type List } from "@/api/lists";
 import { useListStore } from "@/stores/lists";
+import { useSidebarPanelStore } from "@/stores/sidebar-panel";
 import { SidebarItemContextMenu } from "@/components/SidebarItemContextMenu";
 import { DeleteSidebarItemDialog } from "@/components/DeleteSidebarItemDialog";
+import { ListCoverMosaic, useListCovers } from "@/components/Sidebar/ListCoverMosaic";
 
 function SidebarListRow({
   list,
@@ -35,6 +37,8 @@ function SidebarListRow({
   });
   const rename = useListStore((s) => s.rename);
   const remove = useListStore((s) => s.remove);
+  const collapsed = useSidebarPanelStore((s) => s.collapsed);
+  const { covers, count } = useListCovers(list.id);
 
   const [renaming, setRenaming] = useState(false);
   const [draftName, setDraftName] = useState("");
@@ -103,8 +107,11 @@ function SidebarListRow({
           ref={setNodeRef}
           type="button"
           onClick={onClick}
+          title={collapsed ? list.name : undefined}
           className={[
-            "w-full px-3 py-1.5 text-left text-[15px] rounded-md flex items-center justify-between",
+            collapsed
+              ? "w-full py-1 rounded-md flex items-center justify-center"
+              : "w-full px-2 py-1.5 text-left rounded-md flex items-center gap-3",
             "data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-accent",
             isOver
               ? "bg-accent-soft border-l-2 border-accent text-text-primary"
@@ -113,8 +120,16 @@ function SidebarListRow({
                 : "text-text-primary hover:bg-bg-row-hover",
           ].join(" ")}
         >
-          <span className="truncate">{list.name}</span>
-          {isOver && <span className="text-accent">+</span>}
+          <ListCoverMosaic covers={covers} size={52} />
+          {!collapsed && (
+            <span className="flex-1 min-w-0 flex flex-col">
+              <span className="truncate text-[15px] font-medium leading-tight">{list.name}</span>
+              <span className="truncate text-[13px] text-text-tertiary leading-tight mt-0.5">
+                Playlist · {count} {count === 1 ? "track" : "tracks"}
+              </span>
+            </span>
+          )}
+          {!collapsed && isOver && <span className="text-accent">+</span>}
         </button>
       </SidebarItemContextMenu>
       <DeleteSidebarItemDialog
@@ -162,6 +177,7 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
   const [addingList, setAddingList] = useState(false);
   const [newListName, setNewListName] = useState("");
 
+  const collapsed = useSidebarPanelStore((s) => s.collapsed);
   const userLists = useMemo(() => allLists.filter((l) => l.kind !== "system"), [allLists]);
 
   function onAddListClick(): void {
@@ -192,17 +208,20 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
 
   return (
     <div>
-      <header className="px-3 mb-1 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider font-semibold text-text-tertiary">
-          Lists
-        </span>
+      <header
+        className={
+          collapsed ? "mb-1 flex items-center justify-center" : "px-3 mb-1 flex items-center justify-between"
+        }
+      >
+        {!collapsed && <span className="beatos-eyebrow">Lists</span>}
         <button
           type="button"
           onClick={onAddListClick}
           className="text-text-tertiary hover:text-text-primary"
           aria-label="Add List"
+          title="Add List"
         >
-          <Plus size={12} />
+          <Plus size={collapsed ? 18 : 12} />
         </button>
       </header>
       {addingList && (

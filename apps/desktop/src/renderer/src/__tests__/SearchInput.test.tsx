@@ -87,7 +87,6 @@ describe("SearchInput", () => {
   it("absorbs a genre token into the filters and strips it from the box", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
     renderInput();
-    await user.click(screen.getByLabelText(/Search/i));
     const input = screen.getByPlaceholderText(/Search title/i) as HTMLInputElement;
     await user.type(input, "genre:trap ");
 
@@ -98,7 +97,6 @@ describe("SearchInput", () => {
   it("debounces bare free text into q", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
     renderInput();
-    await user.click(screen.getByLabelText(/Search/i));
     const input = screen.getByPlaceholderText(/Search title/i);
     await user.type(input, "dark");
 
@@ -109,7 +107,6 @@ describe("SearchInput", () => {
   it("shows the dropdown on focus when empty and applies a recent search on click", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
     renderInput();
-    await user.click(screen.getByLabelText(/Search/i));
     const input = screen.getByPlaceholderText(/Search title/i);
     await user.click(input);
 
@@ -125,7 +122,6 @@ describe("SearchInput", () => {
     renderInput();
 
     // Open search box.
-    await user.click(screen.getByLabelText(/Search/i));
     const input = screen.getByPlaceholderText(/Search title/i) as HTMLInputElement;
 
     // Type some text — schedules a debounced setText("stale") after 250 ms.
@@ -151,9 +147,7 @@ describe("SearchInput", () => {
   });
 
   it("ignores the Enter that confirms an IME composition, submits on the next Enter", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
     renderInput();
-    await user.click(screen.getByLabelText(/Search/i));
     const input = screen.getByPlaceholderText(/Search title/i) as HTMLInputElement;
 
     // The box already holds the IME-composed English text (e.g. typed via a

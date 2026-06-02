@@ -59,10 +59,12 @@ The main window is permanently divided into three vertical columns. The proporti
 
 ### Layout rules
 
-- Columns are **always visible** at app width ≥ 1100px.
-- Below 1100px (rare for a desktop pro tool, but supported): right column collapses to a peek-bar; below 800px left column collapses to icon rail. Mobile is **out of scope**.
-- Column dividers are **1px subtle lines** (`var(--border-subtle)`), not gaps or shadows.
+- Columns **float as rounded cards** (`rounded-xl`, `bg-bg-elevated`) on a black canvas, separated by ~8px gutters — not 1px divider lines. The resize handle (`GutterResizer`) lives in the gutter and appears at **full card height** only on hover (transparent at rest).
+- The left sidebar collapses to a **76px icon-only rail** via a toggle in its own header (`useSidebarPanelStore.collapsed`, persisted); the right detail panel closes via its header toggle and **reopens on a row click** (no top-bar toggle).
+- Left/right panel headers are **symmetric**: `⇤ LIBRARY` (toggle left) mirrors `NOW FOCUSED ⇥` (toggle right).
 - Each column scrolls independently.
+
+> **3-block card layout (2026-06-01, Spotify influence)**: the obsidian-glass chrome now reads as discrete cards on a pure-black gutter rather than flush columns with hairline dividers. Sidebar/library/detail are cards; single-pane routes (editor/settings/trash/approvals) are each one card. Playlists in the sidebar show a 2×2 cover-collage thumbnail (`ListCoverMosaic`) + track-count subtitle; opening a playlist renders a `PlaylistHero` (collage + name + count over a cover-tinted gradient). The search box is always-expanded and centred in the top bar.
 
 ### What "Source" means here
 
@@ -136,7 +138,7 @@ The palette is **monochrome** — no chromatic accent. Tokens follow a 3-tier st
 | H2 / section | Inter | 18px | 600 | 1.3 |
 | Body / row title | Inter | 14px | 500 | 1.4 |
 | Metadata / sub | Inter | 13px | 400 | 1.4 |
-| Label / caption | Inter | 11px uppercase, 0.05em letter-spacing | 600 | 1.2 |
+| Label / caption (`.beatos-eyebrow`) | Inter | 12px uppercase, 0.06em letter-spacing | 600 | 1.1 |
 | Numeric (BPM, duration) | JetBrains Mono | 13px | 500 | 1.4 |
 
 - **Default font** Inter (free, broad weight range, ships well in Electron); **numeric font** JetBrains Mono for tabular figures in BPM/duration columns.
@@ -149,7 +151,7 @@ The palette is **monochrome** — no chromatic accent. Tokens follow a 3-tier st
 ### Track row (middle column)
 
 - Height: **64px** — two-line layout: title on top, `Producer` subtitle underneath.
-- Cover thumb: **48×48** at row left, 4px radius. Cover doubles as the play surface: hover or current-track state reveals a dark scrim + play button centered on the thumbnail; no standalone play column.
+- Cover thumb: **52×52** at row left, 4px radius (matches the sidebar playlist thumbnail). Cover doubles as the play surface: hover or current-track state reveals a dark scrim + play button centered on the thumbnail; no standalone play column.
 - Columns: Cover · Title/Producer · BPM · Key · Genre · Updated. All **left-aligned**.
 - `Updated` column renders absolute `YYYY-MM-DD` — relative dates were rejected as too noisy at this density.
 - Column widths are **user-resizable** via drag handles between adjacent columns. Session-scoped; not persisted across launches (see §10).

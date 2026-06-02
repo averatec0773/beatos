@@ -12,7 +12,7 @@ export function ApprovalsPanel(): React.JSX.Element {
   const empty = pending.length === 0 && history.length === 0;
 
   return (
-    <main className="beatos-scroll flex-1 overflow-y-auto p-8">
+    <main className="beatos-scroll flex-1 overflow-y-auto p-8 rounded-xl bg-bg-elevated">
       <div className="max-w-2xl">
         <h1 className="text-2xl font-bold mb-6">Approvals</h1>
 

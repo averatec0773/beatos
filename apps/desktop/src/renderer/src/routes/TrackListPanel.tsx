@@ -10,7 +10,9 @@ import { useListStore } from "@/stores/lists";
 import { useToastStore } from "@/stores/toast";
 import { TrackRow } from "@/components/TrackRow";
 import { EmptyState } from "@/components/EmptyState";
-import { TrackDetailPanel } from "@/routes/TrackDetailPanel";
+import { TrackDetailPanel, PreviewGutter } from "@/routes/TrackDetailPanel";
+import { PlaylistHero } from "@/components/PlaylistHero";
+import { usePreviewPanelStore } from "@/stores/preview-panel";
 import { TrackContextMenu } from "@/components/TrackContextMenu";
 import { VirtualTrackList } from "@/components/VirtualTrackList";
 import { TableHeader } from "@/components/TableHeader";
@@ -298,7 +300,7 @@ export function TrackListPanel(): React.JSX.Element {
     return (
       <>
         <section
-          className="flex-1 flex flex-col relative"
+          className="flex-1 flex flex-col relative rounded-xl bg-bg-elevated overflow-hidden"
           onDragOver={onSectionDragOver}
           onDragLeave={onSectionDragLeave}
           onDrop={onSectionDrop}
@@ -314,8 +316,13 @@ export function TrackListPanel(): React.JSX.Element {
               </span>
             </div>
           )}
-          {emptyEl}
+          {/* An empty *list* still shows its hero (mosaic + name) — only the
+              track area below reads as empty. Other empty states (no tracks at
+              all, no search results) fill the whole card. */}
+          {currentList && <PlaylistHero name={currentList.name} tracks={[]} />}
+          <div className="flex-1 flex items-center justify-center">{emptyEl}</div>
         </section>
+        <PreviewGutter />
         <TrackDetailPanel />
         <ImportAudioDialog
           open={importDialogOpen}
@@ -331,7 +338,7 @@ export function TrackListPanel(): React.JSX.Element {
   return (
     <>
       <section
-        className="flex-1 flex flex-col overflow-hidden relative"
+        className="flex-1 flex flex-col overflow-hidden relative rounded-xl bg-bg-elevated"
         onDragOver={onSectionDragOver}
         onDragLeave={onSectionDragLeave}
         onDrop={onSectionDrop}
@@ -347,6 +354,7 @@ export function TrackListPanel(): React.JSX.Element {
             </span>
           </div>
         )}
+        {currentList && <PlaylistHero name={currentList.name} tracks={visible} />}
         <header className="px-4 py-2.5 border-b border-border-subtle flex items-center gap-3">
           <button
             type="button"
@@ -420,6 +428,9 @@ export function TrackListPanel(): React.JSX.Element {
                       } else {
                         selectOne(t.id, "replace");
                         select(t.id);
+                        // Reopen the detail panel on a plain click — it's the
+                        // reopen path now that the TopBar toggle is gone.
+                        usePreviewPanelStore.getState().setOpen(true);
                       }
                     }}
                     onOpen={() => navigate(`/tracks/${t.id}/edit`)}
@@ -445,6 +456,7 @@ export function TrackListPanel(): React.JSX.Element {
           />
         </div>
       </section>
+      <PreviewGutter />
       <TrackDetailPanel />
       <ImportAudioDialog
         open={importDialogOpen}

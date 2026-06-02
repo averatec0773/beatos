@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useTrashStore } from "@/stores/trash";
+import { SidebarNavButton } from "@/components/Sidebar/SidebarNavButton";
 
 export function TrashSection(): React.JSX.Element {
   const navigate = useNavigate();
@@ -10,20 +11,17 @@ export function TrashSection(): React.JSX.Element {
   const trashCount = useTrashStore((s) => s.list.length);
 
   return (
-    <button
-      type="button"
-      data-trash-link
+    <SidebarNavButton
+      icon={<Trash2 size={20} />}
+      label="Trash"
+      active={location.pathname === "/trash"}
       onClick={() => navigate("/trash")}
-      className={[
-        "w-full px-3 py-1.5 text-left text-[15px] rounded-md flex items-center gap-2",
-        location.pathname === "/trash"
-          ? "bg-bg-row-active text-accent"
-          : "text-text-primary hover:bg-bg-row-hover",
-      ].join(" ")}
-    >
-      <Trash2 size={14} />
-      <span className="flex-1">Trash</span>
-      {trashCount > 0 && <span className="text-[10px] text-text-tertiary">{trashCount}</span>}
-    </button>
+      dataAttr="data-trash-link"
+      trailing={
+        trashCount > 0 ? (
+          <span className="font-mono text-[12px] tabular-nums text-text-tertiary">{trashCount}</span>
+        ) : undefined
+      }
+    />
   );
 }

@@ -23,6 +23,16 @@ export function Coverflow({
   const list = useTrackStore((s) => s.list);
   const current = useTrackStore((s) => s.current);
   const select = useTrackStore((s) => s.select);
+  const selectOne = useTrackStore((s) => s.selectOne);
+
+  // Focusing a cover both sets `current` AND collapses the multi-select set to
+  // that one track — otherwise the previously selected row (still in
+  // selectedIds) and the newly focused row (current) both highlight, showing
+  // two selected rows at once.
+  const focus = (id: number): void => {
+    selectOne(id, "replace");
+    select(id);
+  };
 
   const index = useMemo(
     () => (current ? list.findIndex((t) => t.id === current.id) : -1),
@@ -41,7 +51,7 @@ export function Coverflow({
     if (index < 0) return;
     const next = Math.max(0, Math.min(list.length - 1, index + delta));
     const t = list[next];
-    if (t && t.id !== current?.id) select(t.id);
+    if (t && t.id !== current?.id) focus(t.id);
   }
 
   return (
@@ -82,7 +92,7 @@ export function Coverflow({
               aria-label={t.title}
               draggable={isCenter && centerDraggable}
               onDragStart={isCenter ? onCenterDragStart : undefined}
-              onClick={() => !isCenter && select(t.id)}
+              onClick={() => !isCenter && focus(t.id)}
               className="absolute left-1/2 top-1/2 overflow-hidden rounded-2xl shadow-[0_30px_60px_-24px_rgba(0,0,0,.9)] cursor-pointer motion-reduce:transition-opacity"
               style={{
                 width: size,

@@ -144,7 +144,7 @@ export function TrashPanel(): React.JSX.Element {
   );
 
   return (
-    <section className="beatos-scroll flex-1 overflow-y-auto p-8 relative">
+    <section className="beatos-scroll flex-1 overflow-y-auto p-8 relative rounded-xl bg-bg-elevated">
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold select-none">Trash</h1>
         <div className="flex items-center gap-3">

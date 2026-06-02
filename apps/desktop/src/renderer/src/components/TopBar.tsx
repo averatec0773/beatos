@@ -1,10 +1,8 @@
 import React from "react";
-import { ArrowLeft, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { TopBarRouteTitle } from "@/components/TopBarRouteTitle";
 import { SearchInput } from "@/components/SearchInput";
-import { usePreviewPanelStore } from "@/stores/preview-panel";
 
 // Routes where a back-button makes sense. The library root ("/" and
 // "/lists/:id") never shows a back arrow — those are the home-level views
@@ -17,8 +15,6 @@ function shouldShowBack(pathname: string): boolean {
 export function TopBar(): React.JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
-  const previewOpen = usePreviewPanelStore((s) => s.open);
-  const togglePreview = usePreviewPanelStore((s) => s.toggle);
   const showBack = shouldShowBack(location.pathname);
 
   // history.state.idx is react-router's internal index; null when this is
@@ -35,7 +31,7 @@ export function TopBar(): React.JSX.Element {
 
   return (
     <header
-      className="glass h-14 flex-shrink-0 border-b border-border-subtle pr-3 pb-2 flex items-center gap-3 select-none"
+      className="glass relative z-50 h-14 flex-shrink-0 border-b border-border-subtle pr-3 pb-2 flex items-center gap-3 select-none"
       style={{ paddingLeft: "88px", WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <button
@@ -47,36 +43,31 @@ export function TopBar(): React.JSX.Element {
       >
         BeatOS
       </button>
-      <div className="h-5 w-px bg-border-subtle" />
       {showBack && (
-        <button
-          type="button"
-          onClick={handleBack}
-          className="text-text-secondary hover:text-text-primary hover:bg-bg-row-hover p-1.5 -ml-1 rounded-md transition-colors"
-          aria-label="Back"
-          title="Back"
-          data-topbar-back
-          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        >
-          <ArrowLeft size={18} strokeWidth={2.25} />
-        </button>
+        <>
+          <div className="h-5 w-px bg-border-subtle" />
+          <button
+            type="button"
+            onClick={handleBack}
+            className="text-text-secondary hover:text-text-primary hover:bg-bg-row-hover p-1.5 -ml-1 rounded-md transition-colors"
+            aria-label="Back"
+            title="Back"
+            data-topbar-back
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          >
+            <ArrowLeft size={18} strokeWidth={2.25} />
+          </button>
+        </>
       )}
-      <TopBarRouteTitle />
       <div className="flex-1" />
-      <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-        <SearchInput />
-      </div>
-      <button
-        type="button"
-        onClick={togglePreview}
-        className="text-text-tertiary hover:text-text-primary p-1.5"
-        aria-label={previewOpen ? "Hide preview panel" : "Show preview panel"}
-        title={previewOpen ? "Hide preview" : "Show preview"}
-        data-toggle-preview
+      {/* Centered search — absolutely positioned so it sits in the true middle
+          of the bar regardless of the left/right group widths (Spotify-style). */}
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-        {previewOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-      </button>
+        <SearchInput />
+      </div>
     </header>
   );
 }

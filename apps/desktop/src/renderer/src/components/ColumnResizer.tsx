@@ -5,6 +5,11 @@ interface Props {
   columnKey: ColumnKey;
   currentWidth: number;
   getCurrentRenderedWidth?: () => number;
+  // Called once at drag start, BEFORE startW is captured. Used to freeze the
+  // flexible `title` track to a fixed px so resizing a fixed column doesn't
+  // steal width from title and slide every column between them leftward
+  // (the "drag right, labels move left" bug). See TableHeader.freezeTitle.
+  onResizeStart?: () => void;
 }
 
 // Pixel threshold a pointer must travel before a drag is considered real.
@@ -17,6 +22,7 @@ export function ColumnResizer({
   columnKey,
   currentWidth,
   getCurrentRenderedWidth,
+  onResizeStart,
 }: Props): React.JSX.Element {
   const startX = useRef(0);
   const startW = useRef(0);
@@ -25,6 +31,9 @@ export function ColumnResizer({
 
   function onPointerDown(e: React.PointerEvent) {
     e.preventDefault();
+    // Freeze the flexible title track first (measured synchronously, before
+    // the store update re-renders), so it stops absorbing this column's growth.
+    onResizeStart?.();
     startX.current = e.clientX;
     startW.current =
       currentWidth === 0 && getCurrentRenderedWidth ? getCurrentRenderedWidth() : currentWidth;

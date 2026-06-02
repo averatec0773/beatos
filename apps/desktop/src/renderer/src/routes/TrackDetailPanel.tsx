@@ -1,5 +1,5 @@
-import React, { useMemo, useRef } from "react";
-import { X } from "lucide-react";
+import React, { useMemo } from "react";
+import { PanelRightClose } from "lucide-react";
 
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
@@ -10,61 +10,50 @@ import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { usePlayerStore } from "@/stores/player";
 import { Coverflow } from "@/components/Coverflow";
 import { useDominantColor } from "@/lib/use-dominant-color";
+import { GutterResizer } from "@/components/GutterResizer";
 
-function PreviewResizer(): React.JSX.Element {
+/**
+ * Resize handle for the preview panel, rendered in the gutter BETWEEN the list
+ * card and the detail card (not clipped inside either). Hidden when the panel
+ * is closed. Drag LEFT = wider (the panel grows from its left edge → w - dx).
+ */
+export function PreviewGutter(): React.JSX.Element | null {
+  const open = usePreviewPanelStore((s) => s.open);
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
-  const startRef = useRef<{ startX: number; startWidth: number } | null>(null);
-
-  function onPointerDown(e: React.PointerEvent<HTMLDivElement>): void {
-    e.preventDefault();
-    startRef.current = {
-      startX: e.clientX,
-      startWidth: usePreviewPanelStore.getState().width,
-    };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }
-
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>): void {
-    const s = startRef.current;
-    if (!s) return;
-    // Drag LEFT = wider (panel grows from its left edge), so subtract delta.
-    const next = s.startWidth - (e.clientX - s.startX);
-    setWidth(Math.min(PREVIEW_MAX_WIDTH, Math.max(PREVIEW_MIN_WIDTH, next)));
-  }
-
-  function onPointerUp(e: React.PointerEvent<HTMLDivElement>): void {
-    if (!startRef.current) return;
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    startRef.current = null;
-  }
-
+  if (!open) return null;
   return (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Resize preview panel"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      className="absolute top-0 bottom-0 left-0 w-1 cursor-col-resize hover:bg-accent/40 z-10"
-      data-preview-resizer
+    <GutterResizer
+      ariaLabel="Resize preview panel"
+      dataAttr="data-preview-resizer"
+      getStartWidth={() => usePreviewPanelStore.getState().width}
+      onResize={(w, dx) =>
+        setWidth(Math.min(PREVIEW_MAX_WIDTH, Math.max(PREVIEW_MIN_WIDTH, w - dx)))
+      }
     />
   );
 }
 
-function CloseButton(): React.JSX.Element {
+/**
+ * Detail-panel header — mirrors the sidebar's: the label on the left, the
+ * collapse toggle on the RIGHT (replacing the old × close button). Reopen is
+ * via the TopBar preview toggle.
+ */
+function DetailHeader({ label }: { label: string }): React.JSX.Element {
   const setOpen = usePreviewPanelStore((s) => s.setOpen);
   return (
-    <button
-      type="button"
-      onClick={() => setOpen(false)}
-      className="absolute top-3 right-3 z-10 text-text-tertiary hover:text-text-primary p-1 hover:bg-bg-row-hover"
-      aria-label="Close preview"
-      data-preview-close
-    >
-      <X size={14} />
-    </button>
+    <div className="flex items-center justify-between">
+      <div className="beatos-eyebrow">{label}</div>
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="text-text-tertiary hover:text-text-primary p-1 -mr-1 rounded-md hover:bg-bg-row-hover"
+        aria-label="Hide preview"
+        title="Hide preview"
+        data-preview-close
+      >
+        <PanelRightClose size={16} />
+      </button>
+    </div>
   );
 }
 
@@ -82,11 +71,9 @@ function Stat({
   const tint = glow ?? "255, 255, 255";
   return (
     <div data-stat={label} className="flex-1">
-      <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-text-tertiary">
-        {label}
-      </div>
+      <div className="beatos-eyebrow">{label}</div>
       <div
-        className="mt-1.5 font-mono text-[19px] leading-none"
+        className="mt-2 font-mono text-[22px] leading-none"
         style={
           has
             ? { color: "var(--text-primary)", textShadow: `0 0 8px rgba(${tint}, .12)` }
@@ -144,14 +131,10 @@ export function TrackDetailPanel(): React.JSX.Element | null {
   if (!current) {
     return (
       <aside
-        className="relative beatos-scroll overflow-y-auto bg-bg-elevated border-l border-border-subtle p-4 flex-shrink-0"
+        className="relative beatos-scroll overflow-y-auto bg-bg-elevated rounded-xl p-4 flex-shrink-0"
         style={{ width }}
       >
-        <PreviewResizer />
-        <CloseButton />
-        <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-          Now Focused
-        </div>
+        <DetailHeader label="Now Focused" />
         <div className="mt-2 text-text-tertiary text-sm">Select a track to see details.</div>
       </aside>
     );
@@ -159,14 +142,10 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
   return (
     <aside
-      className="relative beatos-scroll bg-bg-elevated border-l border-border-subtle p-4 flex flex-col gap-4 overflow-y-auto flex-shrink-0"
+      className="relative beatos-scroll bg-bg-elevated rounded-xl p-4 flex flex-col gap-4 overflow-y-auto flex-shrink-0"
       style={{ width }}
     >
-      <PreviewResizer />
-      <CloseButton />
-      <div className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-        {playingThis ? "Now Playing" : "Now Focused"}
-      </div>
+      <DetailHeader label={playingThis ? "Now Playing" : "Now Focused"} />
       <Coverflow
         panelWidth={width}
         glowColor={glow}
@@ -194,7 +173,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
       <div>
         <EtchDivider />
-        <div className="mb-3 text-[9px] uppercase tracking-[0.13em] font-semibold text-text-tertiary">
+        <div className="beatos-eyebrow mb-3">
           Genre / Mood
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -213,7 +192,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
       <div>
         <EtchDivider />
-        <div className="mb-3 text-[9px] uppercase tracking-[0.13em] font-semibold text-text-tertiary">
+        <div className="beatos-eyebrow mb-3">
           Credits
         </div>
         <div className="flex flex-col gap-1.5 text-sm">
@@ -244,7 +223,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
       {current.description && current.description.trim().length > 0 && (
         <div>
           <EtchDivider />
-          <div className="mb-2 text-[9px] uppercase tracking-[0.13em] font-semibold text-text-tertiary">
+          <div className="beatos-eyebrow mb-2">
             Description
           </div>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">
