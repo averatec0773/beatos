@@ -7,10 +7,21 @@ import type { Track } from "@/api/tracks";
 
 function track(id: number, title: string): Track {
   return {
-    id, title, bpm: null, key_signature: null, genre: null, mood: null,
-    tags: null, description: null, producer: null, is_free: false,
-    has_audio: true, cover_asset_id: id * 10, created_at: "2026-01-01",
-    updated_at: "2026-01-01", deleted_at: null,
+    id,
+    title,
+    bpm: null,
+    key_signature: null,
+    genre: null,
+    mood: null,
+    tags: null,
+    description: null,
+    producer: null,
+    is_free: false,
+    has_audio: true,
+    cover_asset_id: id * 10,
+    created_at: "2026-01-01",
+    updated_at: "2026-01-01",
+    deleted_at: null,
   };
 }
 

@@ -5,7 +5,10 @@ import userEvent from "@testing-library/user-event";
 vi.mock("@/api/license-tiers", () => ({
   licenseTiers: {
     listForTrack: vi.fn().mockResolvedValue([]),
-    create: vi.fn(), update: vi.fn(), remove: vi.fn(), reorder: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    reorder: vi.fn(),
   },
 }));
 const updateMock = vi.fn(async () => ({}));
@@ -16,7 +19,9 @@ vi.mock("@/stores/tracks", () => ({
 import { LicenseTiersSection } from "@/components/TrackEditor/LicenseTiersSection";
 
 describe("LicenseTiersSection free toggle", () => {
-  beforeEach(() => { updateMock.mockClear(); });
+  beforeEach(() => {
+    updateMock.mockClear();
+  });
 
   it("toggling 免费 patches is_free", async () => {
     const user = userEvent.setup();

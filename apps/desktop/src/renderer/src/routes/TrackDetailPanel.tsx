@@ -101,9 +101,7 @@ function Chip({ children }: { children: React.ReactNode }): React.JSX.Element {
 }
 
 function EtchDivider(): React.JSX.Element {
-  return (
-    <div className="my-4 h-px beatos-etch-divider" />
-  );
+  return <div className="my-4 h-px beatos-etch-divider" />;
 }
 
 export function TrackDetailPanel(): React.JSX.Element | null {
@@ -205,9 +203,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
       <div>
         <EtchDivider />
-        <div className="beatos-eyebrow mb-3">
-          Genre / Mood
-        </div>
+        <div className="beatos-eyebrow mb-3">Genre / Mood</div>
         <div className="flex flex-wrap gap-1.5">
           {(current.genre ?? []).map((g) => (
             <Chip key={`g-${g}`}>{formatVocabLabel(g, "genre", vocabLocale)}</Chip>
@@ -224,9 +220,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
       <div>
         <EtchDivider />
-        <div className="beatos-eyebrow mb-3">
-          Credits
-        </div>
+        <div className="beatos-eyebrow mb-3">Credits</div>
         <div className="flex flex-col gap-1.5 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-text-tertiary">Producer</span>
@@ -236,11 +230,15 @@ export function TrackDetailPanel(): React.JSX.Element | null {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-text-tertiary">Added</span>
-            <span className="font-mono text-text-secondary">{formatRowDate(current.created_at)}</span>
+            <span className="font-mono text-text-secondary">
+              {formatRowDate(current.created_at)}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-text-tertiary">Updated</span>
-            <span className="font-mono text-text-secondary">{formatRowDate(current.updated_at)}</span>
+            <span className="font-mono text-text-secondary">
+              {formatRowDate(current.updated_at)}
+            </span>
           </div>
           {current.tags && current.tags.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1.5">
@@ -255,9 +253,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
       {current.description && current.description.trim().length > 0 && (
         <div>
           <EtchDivider />
-          <div className="beatos-eyebrow mb-2">
-            Description
-          </div>
+          <div className="beatos-eyebrow mb-2">Description</div>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">
             {current.description}
           </div>

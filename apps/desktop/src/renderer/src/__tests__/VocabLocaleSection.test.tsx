@@ -3,7 +3,10 @@ import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/api/app-settings", () => ({
-  appSettings: { get: vi.fn().mockResolvedValue({ key: "vocab_locale", value: null }), set: vi.fn().mockResolvedValue({ key: "vocab_locale", value: "zh" }) },
+  appSettings: {
+    get: vi.fn().mockResolvedValue({ key: "vocab_locale", value: null }),
+    set: vi.fn().mockResolvedValue({ key: "vocab_locale", value: "zh" }),
+  },
 }));
 
 import { appSettings } from "@/api/app-settings";
@@ -22,7 +25,10 @@ describe("VocabLocaleSection", () => {
     act(() => useVocabLocaleStore.setState({ locale: "zh" }));
     render(<VocabLocaleSection />);
     expect(screen.getByRole("button", { name: "中文" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "English" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("clicking a locale persists and updates the store", async () => {

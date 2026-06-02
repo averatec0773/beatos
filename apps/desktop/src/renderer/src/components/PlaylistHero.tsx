@@ -10,7 +10,13 @@ import { useDominantColor } from "@/lib/use-dominant-color";
  * over a gradient tinted by the first cover's dominant colour. Built entirely
  * from the already-loaded list tracks — no extra fetch.
  */
-export function PlaylistHero({ name, tracks }: { name: string; tracks: Track[] }): React.JSX.Element {
+export function PlaylistHero({
+  name,
+  tracks,
+}: {
+  name: string;
+  tracks: Track[];
+}): React.JSX.Element {
   const covers = useMemo(
     () =>
       tracks

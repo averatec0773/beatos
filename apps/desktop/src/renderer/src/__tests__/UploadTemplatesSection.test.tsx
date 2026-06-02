@@ -63,10 +63,16 @@ describe("UploadTemplatesSection", () => {
 
   it("reset restores defaults", async () => {
     const user = userEvent.setup();
-    act(() => useUploadTemplatesStore.setState({ templates: { ...DEFAULT_TEMPLATES, prod_separator: " & " } }));
+    act(() =>
+      useUploadTemplatesStore.setState({
+        templates: { ...DEFAULT_TEMPLATES, prod_separator: " & " },
+      }),
+    );
     render(<UploadTemplatesSection />);
     await user.click(screen.getByRole("button", { name: "重置默认" }));
-    expect(useUploadTemplatesStore.getState().templates.prod_separator).toBe(DEFAULT_TEMPLATES.prod_separator);
+    expect(useUploadTemplatesStore.getState().templates.prod_separator).toBe(
+      DEFAULT_TEMPLATES.prod_separator,
+    );
     expect(setMock).toHaveBeenCalledWith("upload_templates", DEFAULT_TEMPLATES);
   });
 });

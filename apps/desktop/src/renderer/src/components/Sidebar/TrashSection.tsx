@@ -19,7 +19,9 @@ export function TrashSection(): React.JSX.Element {
       dataAttr="data-trash-link"
       trailing={
         trashCount > 0 ? (
-          <span className="font-mono text-[12px] tabular-nums text-text-tertiary">{trashCount}</span>
+          <span className="font-mono text-[12px] tabular-nums text-text-tertiary">
+            {trashCount}
+          </span>
         ) : undefined
       }
     />

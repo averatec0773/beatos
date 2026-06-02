@@ -17,8 +17,26 @@ describe("AnalysisProgressBar", () => {
 
   it("polls and shows progress, then clears on done", async () => {
     const statuses = [
-      { job_id: "j1", total: 2, done: 1, current_title: "A", filled_bpm: 1, filled_key: 0, errors: 0, status: "running" as const },
-      { job_id: "j1", total: 2, done: 2, current_title: null, filled_bpm: 2, filled_key: 1, errors: 0, status: "done" as const },
+      {
+        job_id: "j1",
+        total: 2,
+        done: 1,
+        current_title: "A",
+        filled_bpm: 1,
+        filled_key: 0,
+        errors: 0,
+        status: "running" as const,
+      },
+      {
+        job_id: "j1",
+        total: 2,
+        done: 2,
+        current_title: null,
+        filled_bpm: 2,
+        filled_key: 1,
+        errors: 0,
+        status: "done" as const,
+      },
     ];
     vi.spyOn(analysis, "batchStatus").mockImplementation(async () => statuses.shift()!);
 

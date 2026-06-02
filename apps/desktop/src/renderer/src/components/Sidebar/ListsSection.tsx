@@ -210,7 +210,9 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
     <div>
       <header
         className={
-          collapsed ? "mb-1 flex items-center justify-center" : "px-3 mb-1 flex items-center justify-between"
+          collapsed
+            ? "mb-1 flex items-center justify-center"
+            : "px-3 mb-1 flex items-center justify-between"
         }
       >
         {!collapsed && <span className="beatos-eyebrow">Lists</span>}

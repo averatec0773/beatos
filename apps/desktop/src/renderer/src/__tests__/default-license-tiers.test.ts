@@ -9,7 +9,9 @@ vi.mock("@/api/app-settings", () => ({
   appSettings: { get: vi.fn(async () => ({ key: "default_license_tiers", value: tiers })) },
 }));
 const createMock = vi.fn();
-vi.mock("@/api/license-tiers", () => ({ licenseTiers: { create: (...a: unknown[]) => createMock(...a) } }));
+vi.mock("@/api/license-tiers", () => ({
+  licenseTiers: { create: (...a: unknown[]) => createMock(...a) },
+}));
 const showMock = vi.fn();
 vi.mock("@/stores/toast", () => ({ useToastStore: { getState: () => ({ show: showMock }) } }));
 
@@ -32,7 +34,9 @@ describe("applyDefaultLicenseTiers", () => {
 
   it("skips a duplicate-deliverables rejection without an error toast", async () => {
     createMock
-      .mockRejectedValueOnce(new Error("POST failed: 409 — A tier with the same deliverables already exists (id=3)"))
+      .mockRejectedValueOnce(
+        new Error("POST failed: 409 — A tier with the same deliverables already exists (id=3)"),
+      )
       .mockResolvedValueOnce({});
     await applyDefaultLicenseTiers(7);
     expect(createMock).toHaveBeenCalledTimes(2);

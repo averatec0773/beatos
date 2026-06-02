@@ -132,11 +132,7 @@ function MultiValuePicker({
         >
           Cancel
         </button>
-        <button
-          type="button"
-          onClick={apply}
-          className="text-xs px-3 py-1.5 rounded btn-primary"
-        >
+        <button type="button" onClick={apply} className="text-xs px-3 py-1.5 rounded btn-primary">
           Apply
         </button>
       </div>
@@ -188,11 +184,7 @@ function BpmPicker({ onApply, onCancel }: { onApply: () => void; onCancel: () =>
         >
           Cancel
         </button>
-        <button
-          type="button"
-          onClick={apply}
-          className="text-xs px-3 py-1.5 rounded btn-primary"
-        >
+        <button type="button" onClick={apply} className="text-xs px-3 py-1.5 rounded btn-primary">
           Apply
         </button>
       </div>
@@ -248,11 +240,7 @@ function HasAudioPicker({ onApply, onCancel }: { onApply: () => void; onCancel: 
         >
           Cancel
         </button>
-        <button
-          type="button"
-          onClick={apply}
-          className="text-xs px-3 py-1.5 rounded btn-primary"
-        >
+        <button type="button" onClick={apply} className="text-xs px-3 py-1.5 rounded btn-primary">
           Apply
         </button>
       </div>

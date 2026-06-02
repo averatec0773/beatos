@@ -2,7 +2,11 @@ import React, { useEffect } from "react";
 
 import { useUploadTemplatesStore } from "@/stores/upload-templates";
 
-const FIELDS: { key: "album_name" | "beat_name" | "beat_description" | "album_description"; label: string; rows: number }[] = [
+const FIELDS: {
+  key: "album_name" | "beat_name" | "beat_description" | "album_description";
+  label: string;
+  rows: number;
+}[] = [
   { key: "album_name", label: "专辑名模板", rows: 1 },
   { key: "beat_name", label: "Beat 名称模板", rows: 1 },
   { key: "beat_description", label: "Beat 说明模板", rows: 6 },
@@ -24,7 +28,9 @@ export function UploadTemplatesSection(): React.JSX.Element {
       <h2 className="text-lg font-semibold mb-3">上传模板</h2>
       <p className="text-xs text-text-tertiary mb-3">
         发送到平台上传页时,用这些模板生成专辑名 / Beat 名称 / Beat 说明。占位符:
-        <code className="mx-1">{"{title} {genre} {year} {publish date} {prod} {bpm} {key} {free}"}</code>
+        <code className="mx-1">
+          {"{title} {genre} {year} {publish date} {prod} {bpm} {key} {free}"}
+        </code>
       </p>
       <div className="space-y-3">
         {FIELDS.map((f) => (
@@ -49,7 +55,9 @@ export function UploadTemplatesSection(): React.JSX.Element {
           />
         </label>
         <label className="block">
-          <span className="text-sm text-text-secondary">免费前缀(仅免费 track 的 {"{free}"} 处生成)</span>
+          <span className="text-sm text-text-secondary">
+            免费前缀(仅免费 track 的 {"{free}"} 处生成)
+          </span>
           <input
             aria-label="免费前缀"
             value={templates.free_prefix}

@@ -99,9 +99,7 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
     setSending(true);
     try {
       await injectApi.stage(trackId, platform);
-      useToastStore
-        .getState()
-        .show("success", "已发送，请切到浏览器上传页（需安装 BeatOS 扩展）");
+      useToastStore.getState().show("success", "已发送，请切到浏览器上传页（需安装 BeatOS 扩展）");
     } catch {
       useToastStore.getState().show("error", "发送失败");
     } finally {

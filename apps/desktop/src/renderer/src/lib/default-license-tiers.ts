@@ -46,7 +46,9 @@ export async function applyDefaultLicenseTiers(trackId: number): Promise<void> {
         continue;
       }
       console.warn("[default-license-tiers] apply tier failed:", tpl, msg);
-      useToastStore.getState().show("error", `默认价格档复制失败 (${tpl.name ?? tpl.deliverables?.join("+")}): ${msg}`);
+      useToastStore
+        .getState()
+        .show("error", `默认价格档复制失败 (${tpl.name ?? tpl.deliverables?.join("+")}): ${msg}`);
     }
   }
 }

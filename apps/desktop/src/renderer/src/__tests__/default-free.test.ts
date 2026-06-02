@@ -4,17 +4,25 @@ const store: Record<string, unknown> = {};
 vi.mock("@/api/app-settings", () => ({
   appSettings: {
     get: vi.fn(async (k: string) => ({ key: k, value: store[k] ?? null })),
-    set: vi.fn(async (k: string, v: unknown) => { store[k] = v; return { key: k, value: v }; }),
+    set: vi.fn(async (k: string, v: unknown) => {
+      store[k] = v;
+      return { key: k, value: v };
+    }),
     remove: vi.fn(),
   },
 }));
 const updateMock = vi.fn(async (_id: unknown, _payload: unknown) => ({}));
-vi.mock("@/api/tracks", () => ({ tracks: { update: (id: unknown, payload: unknown) => updateMock(id, payload) } }));
+vi.mock("@/api/tracks", () => ({
+  tracks: { update: (id: unknown, payload: unknown) => updateMock(id, payload) },
+}));
 
 import { loadDefaultIsFree, saveDefaultIsFree, applyDefaultIsFree } from "@/lib/default-free";
 
 describe("default-free", () => {
-  beforeEach(() => { for (const k of Object.keys(store)) delete store[k]; updateMock.mockClear(); });
+  beforeEach(() => {
+    for (const k of Object.keys(store)) delete store[k];
+    updateMock.mockClear();
+  });
 
   it("defaults to false when unset", async () => {
     expect(await loadDefaultIsFree()).toBe(false);

@@ -16,7 +16,12 @@ interface Props {
  * panel-width math is delegated to `onResize` so the same handle drives the
  * sidebar (grows right: +dx) and the preview panel (grows left: -dx).
  */
-export function GutterResizer({ ariaLabel, dataAttr, getStartWidth, onResize }: Props): React.JSX.Element {
+export function GutterResizer({
+  ariaLabel,
+  dataAttr,
+  getStartWidth,
+  onResize,
+}: Props): React.JSX.Element {
   const start = useRef<{ x: number; w: number } | null>(null);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>): void {

@@ -82,9 +82,30 @@ function draftToTemplate(d: DraftRow): DefaultLicenseTierTemplate | null {
 
 export function DefaultLicenseTiersSection(): React.JSX.Element {
   const [presets, setPresets] = useState<Record<PresetKey, DraftRow>>(() => ({
-    mp3: { name: "MP3", deliverable: "mp3", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 1 },
-    wav: { name: "WAV", deliverable: "wav", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 2 },
-    stem: { name: "STEMS", deliverable: "stem", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 3 },
+    mp3: {
+      name: "MP3",
+      deliverable: "mp3",
+      priceInputs: {},
+      otherCurrency: null,
+      shareInput: "",
+      uid: 1,
+    },
+    wav: {
+      name: "WAV",
+      deliverable: "wav",
+      priceInputs: {},
+      otherCurrency: null,
+      shareInput: "",
+      uid: 2,
+    },
+    stem: {
+      name: "STEMS",
+      deliverable: "stem",
+      priceInputs: {},
+      otherCurrency: null,
+      shareInput: "",
+      uid: 3,
+    },
   }));
   const [customs, setCustoms] = useState<DraftRow[]>([]);
   const [defaultFree, setDefaultFree] = useState(false);
@@ -98,9 +119,30 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
     void (async () => {
       const list = await loadDefaultLicenseTiers();
       const presetMap: Record<PresetKey, DraftRow> = {
-        mp3: { name: "MP3", deliverable: "mp3", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 1 },
-        wav: { name: "WAV", deliverable: "wav", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 2 },
-        stem: { name: "STEMS", deliverable: "stem", priceInputs: {}, otherCurrency: null, shareInput: "", uid: 3 },
+        mp3: {
+          name: "MP3",
+          deliverable: "mp3",
+          priceInputs: {},
+          otherCurrency: null,
+          shareInput: "",
+          uid: 1,
+        },
+        wav: {
+          name: "WAV",
+          deliverable: "wav",
+          priceInputs: {},
+          otherCurrency: null,
+          shareInput: "",
+          uid: 2,
+        },
+        stem: {
+          name: "STEMS",
+          deliverable: "stem",
+          priceInputs: {},
+          otherCurrency: null,
+          shareInput: "",
+          uid: 3,
+        },
       };
       const customList: DraftRow[] = [];
       for (const t of list) {
@@ -117,7 +159,9 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
     })();
   }, []);
 
-  useEffect(() => { void loadDefaultIsFree().then(setDefaultFree); }, []);
+  useEffect(() => {
+    void loadDefaultIsFree().then(setDefaultFree);
+  }, []);
 
   const scheduleSave = useCallback(
     (nextPresets: Record<PresetKey, DraftRow>, nextCustoms: DraftRow[]) => {
@@ -234,9 +278,7 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
                     return { ...r, otherCurrency: c, priceInputs: next };
                   })
                 }
-                onShareChange={(v) =>
-                  updatePreset(slot.key, (r) => ({ ...r, shareInput: v }))
-                }
+                onShareChange={(v) => updatePreset(slot.key, (r) => ({ ...r, shareInput: v }))}
               />
             );
           })}
@@ -268,9 +310,7 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
                   return { ...r, otherCurrency: c, priceInputs: next };
                 })
               }
-              onShareChange={(v) =>
-                updateCustom(row.uid, (r) => ({ ...r, shareInput: v }))
-              }
+              onShareChange={(v) => updateCustom(row.uid, (r) => ({ ...r, shareInput: v }))}
               onDelete={() => removeCustom(row.uid)}
             />
           ))}
@@ -290,7 +330,11 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
           type="checkbox"
           aria-label="新建 track 默认免费"
           checked={defaultFree}
-          onChange={(e) => { const v = e.target.checked; setDefaultFree(v); void saveDefaultIsFree(v); }}
+          onChange={(e) => {
+            const v = e.target.checked;
+            setDefaultFree(v);
+            void saveDefaultIsFree(v);
+          }}
         />
         新建 track 默认免费(自动带 [FREE] 前缀 + NetEase 勾免费使用)
       </label>

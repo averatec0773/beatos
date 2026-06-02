@@ -60,9 +60,7 @@ export function useDominantColor(assetId: number | null): string | null {
           wsum += w;
         }
         if (wsum === 0 || cancelled) return;
-        setChannels(
-          `${Math.round(r / wsum)}, ${Math.round(g / wsum)}, ${Math.round(b / wsum)}`,
-        );
+        setChannels(`${Math.round(r / wsum)}, ${Math.round(g / wsum)}, ${Math.round(b / wsum)}`);
       } catch {
         if (!cancelled) setChannels(null);
       }

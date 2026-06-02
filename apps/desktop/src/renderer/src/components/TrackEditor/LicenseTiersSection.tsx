@@ -120,7 +120,9 @@ function emptyPresetDefaults(): Record<PresetKey, EmptyPresetState> {
 
 export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Element {
   const [free, setFree] = useState(isFree);
-  useEffect(() => { setFree(isFree); }, [trackId, isFree]);
+  useEffect(() => {
+    setFree(isFree);
+  }, [trackId, isFree]);
 
   async function onToggleFree(next: boolean): Promise<void> {
     setFree(next); // optimistic
@@ -128,8 +130,9 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
       await useTrackStore.getState().update(trackId, { is_free: next });
     } catch (e) {
       setFree(!next);
-      useToastStore.getState().show("error",
-        `设置免费失败: ${e instanceof Error ? e.message : String(e)}`);
+      useToastStore
+        .getState()
+        .show("error", `设置免费失败: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -412,7 +415,10 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
           <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
             License Tiers
           </h3>
-          <label className="flex items-center gap-1.5 text-xs text-text-secondary" title="开启后 beat 名称带 [FREE] 前缀,NetEase 导出勾免费使用">
+          <label
+            className="flex items-center gap-1.5 text-xs text-text-secondary"
+            title="开启后 beat 名称带 [FREE] 前缀,NetEase 导出勾免费使用"
+          >
             <input
               type="checkbox"
               aria-label="免费非商用授权 (FREE)"

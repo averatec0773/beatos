@@ -26,7 +26,10 @@ export const analysis = {
   analyze(trackId: number): Promise<AudioAnalysisResult> {
     return apiPost<AudioAnalysisResult>(`/api/tracks/${trackId}/analyze`, {});
   },
-  startBatch(scope: "selected" | "unanalyzed", ids?: number[]): Promise<{ job_id: string; total: number }> {
+  startBatch(
+    scope: "selected" | "unanalyzed",
+    ids?: number[],
+  ): Promise<{ job_id: string; total: number }> {
     return apiPost(`/api/analysis/batch`, { scope, ids: ids ?? null });
   },
   batchStatus(jobId: string): Promise<BatchJob> {

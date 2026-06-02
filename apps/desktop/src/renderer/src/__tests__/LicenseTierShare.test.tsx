@@ -5,7 +5,16 @@ import userEvent from "@testing-library/user-event";
 vi.mock("@/api/license-tiers", () => ({
   licenseTiers: {
     listForTrack: vi.fn().mockResolvedValue([
-      { id: 1, track_id: 1, position: 0, name: "MP3", deliverables: ["mp3"], prices: { CNY: 50 }, notes: null, share: null },
+      {
+        id: 1,
+        track_id: 1,
+        position: 0,
+        name: "MP3",
+        deliverables: ["mp3"],
+        prices: { CNY: 50 },
+        notes: null,
+        share: null,
+      },
     ]),
     update: vi.fn().mockResolvedValue({}),
     create: vi.fn(),
@@ -41,7 +50,14 @@ describe("LicenseTiersSection share input", () => {
     const createMock = licenseTiers.create as unknown as ReturnType<typeof vi.fn>;
     createMock.mockClear();
     createMock.mockResolvedValue({
-      id: 2, track_id: 1, position: 1, name: "WAV", deliverables: ["wav"], prices: {}, notes: null, share: 30,
+      id: 2,
+      track_id: 1,
+      position: 1,
+      name: "WAV",
+      deliverables: ["wav"],
+      prices: {},
+      notes: null,
+      share: 30,
     });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<LicenseTiersSection trackId={1} isFree={false} />);
@@ -60,7 +76,14 @@ describe("LicenseTiersSection share input", () => {
     const createMock = licenseTiers.create as unknown as ReturnType<typeof vi.fn>;
     createMock.mockClear();
     createMock.mockResolvedValue({
-      id: 3, track_id: 1, position: 2, name: "MIDI", deliverables: ["midi"], prices: {}, notes: null, share: 40,
+      id: 3,
+      track_id: 1,
+      position: 2,
+      name: "MIDI",
+      deliverables: ["midi"],
+      prices: {},
+      notes: null,
+      share: 40,
     });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<LicenseTiersSection trackId={1} isFree={false} />);

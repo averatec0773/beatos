@@ -135,10 +135,7 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
               <span className="text-xs text-text-secondary">Mood</span>
-              <ModeToggle
-                value={mood.mode}
-                onChange={(mode) => setMood((s) => ({ ...s, mode }))}
-              />
+              <ModeToggle value={mood.mode} onChange={(mode) => setMood((s) => ({ ...s, mode }))} />
             </div>
             <ChipMultiSelect
               value={mood.values}

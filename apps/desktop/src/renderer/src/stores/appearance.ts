@@ -46,7 +46,8 @@ function loadPersisted(): Persisted {
     if (!raw) return { ...DEFAULTS };
     const p = JSON.parse(raw) as Partial<Persisted>;
     return {
-      backdropEnabled: typeof p.backdropEnabled === "boolean" ? p.backdropEnabled : DEFAULTS.backdropEnabled,
+      backdropEnabled:
+        typeof p.backdropEnabled === "boolean" ? p.backdropEnabled : DEFAULTS.backdropEnabled,
       backdropIntensity:
         typeof p.backdropIntensity === "number" && Number.isFinite(p.backdropIntensity)
           ? clamp(p.backdropIntensity, BACKDROP_INTENSITY_MIN, BACKDROP_INTENSITY_MAX)

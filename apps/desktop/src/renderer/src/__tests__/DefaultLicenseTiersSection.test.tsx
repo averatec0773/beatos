@@ -3,9 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/lib/default-license-tiers", () => ({
-  loadDefaultLicenseTiers: vi.fn().mockResolvedValue([
-    { name: "MP3", deliverables: ["mp3"], prices: { CNY: 50 }, share: null },
-  ]),
+  loadDefaultLicenseTiers: vi
+    .fn()
+    .mockResolvedValue([{ name: "MP3", deliverables: ["mp3"], prices: { CNY: 50 }, share: null }]),
   saveDefaultLicenseTiers: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -32,7 +32,10 @@ describe("DefaultLicenseTiersSection share input", () => {
     await vi.advanceTimersByTimeAsync(800);
 
     await waitFor(() => expect(saveMock).toHaveBeenCalled());
-    const savedTemplates = saveMock.mock.calls.at(-1)?.[0] as { name?: string; share?: number | null }[];
+    const savedTemplates = saveMock.mock.calls.at(-1)?.[0] as {
+      name?: string;
+      share?: number | null;
+    }[];
     const mp3Tpl = savedTemplates?.find((t) => t.name === "MP3");
     expect(mp3Tpl?.share).toBe(30);
   });
@@ -63,7 +66,10 @@ describe("DefaultLicenseTiersSection share input", () => {
     await vi.advanceTimersByTimeAsync(800);
 
     await waitFor(() => expect(saveMock).toHaveBeenCalled());
-    const savedTemplates = saveMock.mock.calls.at(-1)?.[0] as { name?: string; share?: number | null }[];
+    const savedTemplates = saveMock.mock.calls.at(-1)?.[0] as {
+      name?: string;
+      share?: number | null;
+    }[];
     const mp3Tpl = savedTemplates?.find((t) => t.name === "MP3");
     expect(mp3Tpl?.share).toBeNull();
   });

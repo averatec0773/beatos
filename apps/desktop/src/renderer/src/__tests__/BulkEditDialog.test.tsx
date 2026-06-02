@@ -10,9 +10,7 @@ describe("BulkEditDialog", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("sends an add-mode genre patch for the selected ids", async () => {
-    const update = vi
-      .spyOn(bulk, "update")
-      .mockResolvedValue({ updated_count: 2, ids: [1, 2] });
+    const update = vi.spyOn(bulk, "update").mockResolvedValue({ updated_count: 2, ids: [1, 2] });
     useTrackStore.setState({ refresh: vi.fn().mockResolvedValue(undefined) } as any);
 
     const user = userEvent.setup();

@@ -110,7 +110,10 @@ export function TrackListPanel(): React.JSX.Element {
   const analysisJobId = useAnalysisJobStore((s) => s.jobId);
   useEffect(() => {
     if (listId != null) return;
-    analysis.unanalyzedCount().then((r) => setUnanalyzed(r.count)).catch(() => {});
+    analysis
+      .unanalyzedCount()
+      .then((r) => setUnanalyzed(r.count))
+      .catch(() => {});
   }, [listId, analysisJobId]);
 
   // Single source of X-scroll: the body. The header sits in its own div with
@@ -447,7 +450,10 @@ export function TrackListPanel(): React.JSX.Element {
             open={bulkEditOpen}
             ids={Array.from(selectedIds)}
             onClose={() => setBulkEditOpen(false)}
-            onDone={() => { setBulkEditOpen(false); clearSelection(); }}
+            onDone={() => {
+              setBulkEditOpen(false);
+              clearSelection();
+            }}
           />
           <ExportDialog
             open={exportTrackId != null}

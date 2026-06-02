@@ -20,9 +20,7 @@ describe("ExportDialog", () => {
 
   it("renders fields and copies a field value", async () => {
     const user = userEvent.setup();
-    const writeText = vi
-      .spyOn(navigator.clipboard, "writeText")
-      .mockResolvedValue(undefined);
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
 
     render(<ExportDialog open trackId={1} onClose={() => {}} />);
 
