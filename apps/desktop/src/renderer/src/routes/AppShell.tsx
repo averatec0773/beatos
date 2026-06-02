@@ -16,14 +16,19 @@ export function AppShell(): React.JSX.Element {
   const sidebarCollapsed = useSidebarPanelStore((s) => s.collapsed);
 
   // Panel translucency is a live appearance pref → drive the `--card-alpha`
-  // CSS var (consumed by `.beatos-card`) from the store.
+  // CSS var (consumed by `.beatos-card`) from the store. Blur scales with
+  // opacity so a more-transparent panel also un-blurs, letting the ASCII
+  // backdrop read crisply through it instead of as mush.
   const cardOpacity = useAppearanceStore((s) => s.cardOpacity);
   useEffect(() => {
-    document.documentElement.style.setProperty("--card-alpha", String(cardOpacity / 100));
+    const alpha = cardOpacity / 100;
+    const root = document.documentElement.style;
+    root.setProperty("--card-alpha", String(alpha));
+    root.setProperty("--card-blur", `${(alpha * 14).toFixed(1)}px`);
   }, [cardOpacity]);
 
   return (
-    <div className="relative isolate h-screen bg-bg-base text-text-primary flex flex-col overflow-hidden">
+    <div className="app-canvas relative isolate h-screen text-text-primary flex flex-col overflow-hidden">
       {/* Ambient ASCII glyph-rain, painted behind everything (negative z). The
           translucent `.beatos-card` columns float over it; gutters + the now
           transparent top bar reveal it directly. */}

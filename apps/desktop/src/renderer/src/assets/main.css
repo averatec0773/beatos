@@ -42,6 +42,15 @@
   border: 1px solid var(--border-card);
 }
 
+/* App canvas behind the floating cards + ASCII backdrop. A whisper of depth
+   over the obsidian void so transparent (low-opacity) panels reveal more than
+   dead-flat black. */
+.app-canvas {
+  background:
+    radial-gradient(130% 90% at 50% -8%, rgba(40, 45, 56, 0.3), transparent 55%),
+    var(--bg-base);
+}
+
 /* Collapsed left rail (sidebar). Width is CSS-driven (not the inline store
    width) so the hover-peek `:hover` rule can widen it; the parent flex makes
    the middle column rescale via the aside's `transition-[width]`. */
