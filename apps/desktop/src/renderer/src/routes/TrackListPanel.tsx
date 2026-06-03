@@ -95,6 +95,13 @@ export function TrackListPanel(): React.JSX.Element {
   // (clicking the empty list background) actually clear the highlight instead
   // of immediately bouncing back to row 1 the moment `current` goes null.
   const didAutoSelect = useRef(false);
+  // Re-arm the one-shot when the view changes (route stays mounted across
+  // /lists/:id ↔ / — rule 6). If `refresh` dropped `current` (it wasn't a member
+  // of the new list), this lets the first row of the new view auto-focus instead
+  // of leaving the panel empty.
+  useEffect(() => {
+    didAutoSelect.current = false;
+  }, [listId]);
   useEffect(() => {
     if (!didAutoSelect.current && visible.length > 0 && current == null) {
       didAutoSelect.current = true;

@@ -46,6 +46,15 @@ export function Coverflow({
     [list, current],
   );
 
+  // Identity of the underlying view. When it changes (switching a list ↔ all
+  // beats, filtering) the covers are a different set, so we remount the stage
+  // (key below) to SNAP into the new layout. Without this, a cover shared
+  // between views keeps its element and CSS-transitions across the screen from
+  // its old slot — caught mid-flight it reads as "cover floating off-center,
+  // empty middle". Within one view the signature is stable, so navigating
+  // tracks still animates normally.
+  const listSig = `${list.length}:${list[0]?.id ?? 0}:${list[list.length - 1]?.id ?? 0}`;
+
   const size = Math.max(120, Math.min(232, Math.round(panelWidth * 0.56)));
   const step = Math.round(size * 0.64);
   // Fit the magnified center cover plus a small gap before the title (its
@@ -87,7 +96,7 @@ export function Coverflow({
       className="relative w-full shrink-0 outline-none"
       style={{ height: stageHeight, perspective: PERSPECTIVE }}
     >
-      <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
+      <div key={listSig} className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
         {list.map((t, i) => {
           const off = i - index;
           const abs = Math.abs(off);

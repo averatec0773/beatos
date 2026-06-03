@@ -62,7 +62,16 @@ export const useTrackStore = create<TrackState>((set, get) => ({
         has_audio: filters.has_audio,
         q: queryState.q || undefined,
       });
-      set({ list, loading: false, selectedIds: new Set(), anchorId: null });
+      // Reconcile `current` against the new list. Switching views (a list ↔ all
+      // beats) replaces `list` but `current` is a stale object from the previous
+      // view: if its track isn't in the new list the coverflow computes index
+      // -1 and renders nothing (and the detail panel shows an out-of-view
+      // track); if it IS present we must swap in the fresh object so downstream
+      // memos don't hold a stale reference. Drop to null when it's gone — the
+      // route re-auto-selects the first row.
+      const cur = get().current;
+      const current = cur ? (list.find((t) => t.id === cur.id) ?? null) : null;
+      set({ list, loading: false, selectedIds: new Set(), anchorId: null, current });
     } catch {
       set({ list: [], loading: false });
     }

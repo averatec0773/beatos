@@ -24,6 +24,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 - **Dropping a track into an empty playlist updates its cover immediately.** The cover mosaic / hero were keyed only on the list id, so a 0→1 membership change didn't re-fetch; they now track a membership version.
 - **Coverflow no longer overlaps the title.** The magnified focused cover could paint over the track title (worst with a two-line Genre/Mood block) because the fixed-height stage was being compressed inside the flex column; it's now `shrink-0`.
+- **Cover/focus no longer breaks when switching between a list and All Beats.** The focused track was kept stale across view changes, so the coverflow either rendered nothing or caught the focused cover mid-flight (floating off-center with an empty middle). The focused track is now reconciled against the new view (kept if present, else the first row auto-focuses), and the coverflow snaps to the new layout instead of animating covers across from their old slots.
 
 ## [0.0.46] — 2026-06-02 — ASCII backdrop + waveform seek, floating top bar, panel opacity, player persistence
 
