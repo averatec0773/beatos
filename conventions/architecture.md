@@ -15,8 +15,11 @@ BeatOS is a local-first desktop app for beat producers — catalog beats and the
 | **List** | User-curated playlist; membership preserved across soft-delete / restore. |
 | **Adapter** | Per-platform upload integration. As of v0.0.37 implemented (Phase 1) as a browser extension that fills the platform form from a sidecar fixed-port (48923) staging slot — see the v0.0.37 section. The earlier Playwright/CDP `inject(page, track_data)` sketch is superseded. |
 | **Inject** | User action running an adapter against an open browser page; code fills form, user submits. Never auto-submit. |
+| **Publish (Pro)** | Per-platform publishing — a Pro feature in the private `packages/pro/` submodule (engine `beatos-publish`). The public build degrades gracefully (`pro_available()`). |
 | **Sidecar** | Python backend (`packages/beatos-*`), launched as child process by Electron main. |
 | **MCP** | Model Context Protocol facade. Since v0.0.23: FastMCP server runs inside the sidecar (`beatos-http`), mounted at `/mcp` (Streamable HTTP). Claude Desktop reaches it via the `beatos-mcp` launcher → `mcp-proxy` stdio bridge. Writes require two-phase `await_approval` commit. |
+
+Open-core: the publish moat lives in the private `packages/pro/` submodule; the public repo works without it.
 
 ## Data model: flat catalog of tracks
 

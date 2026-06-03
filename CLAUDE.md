@@ -35,6 +35,8 @@
 
 14. **The ASCII backdrop sits BEHIND translucent `.beatos-card` panels via stacking, not `-z-10`.** A negative-z canvas gets painted over by the AppShell root's own `bg-bg-base`; instead the root is `relative isolate`, the canvas is `z-0`, and every in-flow chrome region (top bar, progress bar, body, player) is lifted to `relative z-10`. Card translucency is the live `--card-alpha` token (Settings → Appearance → Panel opacity); leave inner `bg-bg-elevated` surfaces (rows, table header, chips) opaque so only the card edge reveals the backdrop. Canvas visuals (backdrop, seek waveform) aren't assertable in jsdom — pure helpers (`lib/waveform.ts`) carry the unit tests; verify the canvas in the real app.
 
+15. **Publishing is a BeatOS Pro feature in the private `packages/pro/` submodule.** The public repo holds only the free core; the publish engine (`beatos-publish`) and platform upload recipes live in the private `beatos-pro` repo, mounted at `packages/pro/` (absent in the free build). The public side degrades gracefully: `beatos_http.pro.pro_available()` / `beatos_mcp.pro.pro_available()` gate everything — the `/api/publish` route returns 402, the MCP `publish_track` tool isn't registered, and the renderer greys out the publish entry. **Never add engine internals or platform recipes to this public repo** — they belong in the private repo. When the submodule is mounted, install the engine with `uv pip install -e packages/pro/beatos-publish` after `uv sync` (the public workspace does not glob it).
+
 For per-file context (which columns, which patterns) read [conventions/architecture.md](conventions/architecture.md) §"What NOT to change without reading context first".
 
 ## Commands
