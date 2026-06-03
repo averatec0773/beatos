@@ -17,6 +17,7 @@ import { useListStore } from "@/stores/lists";
 import { addTracksToList } from "@/lib/add-tracks-to-list";
 import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { usePlayerStore } from "@/stores/player";
+import { useProStore } from "@/stores/pro";
 
 interface ActiveDrag {
   trackId: number;
@@ -35,6 +36,9 @@ export default function App(): React.JSX.Element {
     // saved position) + volume/mute/shuffle/repeat; falls back to idle if the
     // track or its file is gone.
     void usePlayerStore.getState().hydrate();
+    // Probe the Pro engine once: the publish UI greys out unless the buyout
+    // build answers /api/pro/status with {publish: true}.
+    void useProStore.getState().loadProStatus();
   }, []);
 
   // Distance-based activation prevents click-to-select from triggering a drag.

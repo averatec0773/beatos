@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Copy, Send } from "lucide-react";
+import { Check, Copy, Rocket } from "lucide-react";
 
 import {
   Dialog,
@@ -9,8 +9,9 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { exportApi, type ExportField, type ExportResult } from "@/api/export";
-import { injectApi } from "@/api/inject";
 import { useToastStore } from "@/stores/toast";
+import { useProStore } from "@/stores/pro";
+import { PublishDialog } from "@/components/PublishDialog";
 
 interface Props {
   open: boolean;
@@ -70,7 +71,9 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
   const [platforms, setPlatforms] = useState<string[]>([]);
   const [platform, setPlatform] = useState<string>("netease");
   const [result, setResult] = useState<ExportResult | null>(null);
-  const [sending, setSending] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  // Select the boolean directly (no derivation inside the selector — rule 4).
+  const publishAvailable = useProStore((s) => s.publishAvailable);
 
   useEffect(() => {
     if (!open) return;
@@ -95,18 +98,6 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
     };
   }, [open, trackId, platform]);
 
-  async function handleSend(): Promise<void> {
-    setSending(true);
-    try {
-      await injectApi.stage(trackId, platform);
-      useToastStore.getState().show("success", "已发送，请切到浏览器上传页（需安装 BeatOS 扩展）");
-    } catch {
-      useToastStore.getState().show("error", "发送失败");
-    } finally {
-      setSending(false);
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -129,11 +120,12 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
           </select>
           <button
             type="button"
-            onClick={handleSend}
-            disabled={sending || platforms.length === 0}
+            onClick={() => setPublishOpen(true)}
+            disabled={!publishAvailable || platforms.length === 0}
+            title={publishAvailable ? undefined : "Pro 功能 · 购买解锁"}
             className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-sm text-text-primary hover:bg-bg-row-hover disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Send className="h-3.5 w-3.5" /> 发送到上传页
+            <Rocket className="h-3.5 w-3.5" /> 发布到平台
           </button>
         </div>
         <div className="max-h-[60vh] overflow-y-auto beatos-scroll">
@@ -141,6 +133,14 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
             <FieldRow key={f.key} field={f} />
           ))}
         </div>
+        {publishAvailable && (
+          <PublishDialog
+            open={publishOpen}
+            trackId={trackId}
+            platform={platform}
+            onClose={() => setPublishOpen(false)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
