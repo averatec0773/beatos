@@ -95,16 +95,18 @@ async def test_stage_unknown_platform_400(client):
 
 
 @pytest.mark.asyncio
-async def test_form_map_netease(client):
+async def test_form_map_returns_empty(client):
+    # Recipes are private; the legacy endpoint returns {} for all platforms.
     res = await client.get("/api/inject/form-map/netease")
     assert res.status_code == 200
-    assert "fields" in res.json()
+    assert res.json() == {}
 
 
 @pytest.mark.asyncio
-async def test_form_map_unknown_404(client):
+async def test_form_map_unknown_also_empty(client):
     res = await client.get("/api/inject/form-map/myspace")
-    assert res.status_code == 404
+    assert res.status_code == 200
+    assert res.json() == {}
 
 
 @pytest.mark.asyncio
@@ -119,7 +121,9 @@ async def test_inject_app_serves_ping_and_formmap():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         assert (await c.get("/api/inject/ping")).json() == {"beatos_inject": True}
-        assert (await c.get("/api/inject/form-map/netease")).status_code == 200
+        res = await c.get("/api/inject/form-map/netease")
+        assert res.status_code == 200
+        assert res.json() == {}
 
 
 def test_inject_app_has_no_mcp_mount():
