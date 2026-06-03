@@ -1,28 +1,33 @@
-# Pro submodule: engine install for mounted builds
+# Pro submodule — build notes
 
-When the private `pro` submodule is mounted at `packages/pro/`, the public
-uv workspace does **not** include it via a glob.
+Publishing is a BeatOS **Pro** feature. The engine (`beatos-publish`) and platform
+recipes live in the private repo `beatos-pro`, mounted here as a git submodule at
+`packages/pro/`. The free build works without it (`pro_available()` → greyed-out UI,
+`/api/publish` → 402, MCP `publish_track` not registered).
 
-**Why:** uv requires every path matched by a `members` glob to contain a
-`pyproject.toml`.  `packages/pro/` holds non-package files (`MEMORY.md`,
-`specs/`) alongside the actual Python package directory — so a glob
-`packages/pro/*` causes uv to error on the non-package paths even when the
-submodule is absent.
+## Buyout / Pro dev build (submodule present)
 
-## Installing the engine (pro / paid build)
-
-After the submodule is initialised (`git submodule update --init packages/pro`)
-and `uv sync` has completed, install the engine directly into the project venv:
+The public uv workspace does **not** include the engine as a member: a `packages/pro/*`
+glob makes uv error because the submodule root also holds non-package dirs (`specs/`,
+`MEMORY.md`) — uv requires every glob-matched path to contain a `pyproject.toml`. So
+after the normal sync, install the engine into the venv explicitly:
 
 ```bash
-uv pip install -e packages/pro/beatos-publish
+git submodule update --init packages/pro
+uv sync
+# Install the engine editable. --no-deps because beatos-core + pydantic are already in
+# the venv (public workspace members), and beatos-pro's own pyproject carries a
+# standalone-testing path source for beatos-core that resolves wrong when nested.
+uv pip install -e packages/pro/beatos-publish --no-deps
+uv pip install patchright
+patchright install chromium   # once per machine — the browser the engine drives
 ```
 
-This makes `beatos_publish` importable and `beatos_http.pro.pro_available()`
-returns `True`.
+After this, `pro_available()` returns `True`, `/api/publish` works, the MCP
+`publish_track` tool registers, and the renderer enables the publish entry.
 
-## Free / open build (default)
+## Free build (no submodule)
 
-No extra steps.  `uv sync` installs only the four public workspace packages.
-`beatos_http.pro.pro_available()` returns `False` and all engine-gated
-features are hidden in the UI.
+```bash
+uv sync   # engine absent; everything degrades gracefully
+```
