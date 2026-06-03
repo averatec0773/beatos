@@ -1,6 +1,6 @@
-# Archived: BeatOS browser extension
+# Retired: BeatOS browser extension
 
-Retired and superseded by the BeatOS publish engine (a Pro feature in the private
-`packages/pro/` submodule). Content scripts cannot set `<input type=file>`, so this
-extension could only fill metadata and never upload audio/cover. Kept for reference.
-Not built, not loaded, not maintained.
+The browser extension that BeatOS used for platform publishing has been retired and
+superseded by the publish engine, which is a **Pro** feature in the private
+`packages/pro/` submodule. The extension's source has been removed from this public
+repo (it remains in git history). Nothing here is built, loaded, or maintained.
