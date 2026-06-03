@@ -31,6 +31,7 @@ from beatos_http.routes import (
     inject,
     licenses,
     lists,
+    pro,
     producers,
     sweep,
     tokens,
@@ -162,6 +163,7 @@ def create_app() -> FastAPI:
     app.include_router(inject.router)
     app.include_router(inject.read_router)
     app.include_router(producers.router)
+    app.include_router(pro.router)
     app.include_router(app_settings.router)
     app.include_router(tokens.router)
     app.include_router(batch_analysis.router)
