@@ -190,6 +190,7 @@ packages/
   beatos-http/             FastAPI facade for the renderer
   beatos-mcp/              stdio MCP server for AI agents
   beatos-platforms/        Per-platform vocab maps (v0.1+ adapters)
+packages/pro/             Private submodule — Pro features (platform publishing). Absent in the free build.
 conventions/               Architecture and design references
 screenshots/               README assets
 ```

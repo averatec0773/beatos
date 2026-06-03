@@ -14,6 +14,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from beatos_mcp.db import DBNotConfigured
+from beatos_mcp.pro import pro_available
 from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
 from beatos_mcp.tools.ingest import (
@@ -385,6 +386,28 @@ async def detach_assets(
     """Batch-detach assets from tracks. Removes the asset row(s); the source
     audio file on disk is not touched. Returns a 2PC token."""
     return await _detach_assets_impl(items=items)
+
+
+# --- Pro tools (registered only when the beatos-publish engine is present) ---
+
+if pro_available():
+    @mcp.tool(
+        annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=True),
+    )
+    async def publish_track(
+        track_id: Annotated[int, Field(description="Track id to publish.")],
+        platform: Annotated[str, Field(description="Platform key (e.g. 'netease').")],
+        audio_asset_id: Annotated[int, Field(description="Asset id of the audio file (untagged).")],
+        cover_asset_id: Annotated[int | None, Field(description="Cover image asset id, optional.")] = None,
+        account: Annotated[str, Field(description="Session account; default 'default'.")] = "default",
+    ) -> dict:
+        """Publish a track to a platform (Pro). Drives the browser to the platform's
+        human verification gate (e.g. NetEase SMS) and pauses. Returns the engine result."""
+        from beatos_publish.models import PublishRequest
+        from beatos_publish.service import run_publish
+        req = PublishRequest(track_id=track_id, platform=platform,
+                             audio_asset_id=audio_asset_id, cover_asset_id=cover_asset_id, account=account)
+        return (await run_publish(req)).model_dump()
 
 
 # --- ASGI app for FastAPI mount ---

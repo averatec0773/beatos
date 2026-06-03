@@ -15,7 +15,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from beatos_core.export.service import export_metadata
-from beatos_platforms import load_form_map
 
 router = APIRouter(tags=["inject"])
 read_router = APIRouter(tags=["inject"])
@@ -62,10 +61,9 @@ async def pending_inject(platform: str | None = None) -> dict:
 
 @read_router.get("/api/inject/form-map/{platform}")
 async def form_map(platform: str) -> dict:
-    fm = load_form_map(platform)
-    if not fm:
-        raise HTTPException(404, f"No form map for platform {platform!r}")
-    return fm
+    # Legacy: the browser extension is archived and platform recipes are private.
+    # The form-map served here is intentionally empty.
+    return {}
 
 
 def _reset_slot() -> None:

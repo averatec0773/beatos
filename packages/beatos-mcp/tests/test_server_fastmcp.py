@@ -9,6 +9,8 @@ async def test_mcp_instance_is_fastmcp() -> None:
 
 
 async def test_registered_tool_names() -> None:
+    from beatos_mcp.pro import pro_available
+
     tools = await mcp.list_tools()
     names = {t.name for t in tools}
     expected = {
@@ -37,6 +39,8 @@ async def test_registered_tool_names() -> None:
         "list_export_platforms",
         "export_metadata",
     }
+    if pro_available():
+        expected.add("publish_track")
     assert names == expected
 
 
