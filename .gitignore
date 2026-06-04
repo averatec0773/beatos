@@ -5,9 +5,13 @@
 TODO.md
 
 # AI harness, project memory, and planning/thinking documents.
-# .claude/ is tracked (shared harness). Personal Claude overrides stay
-# local via settings.local.json.
-.claude/settings.local.json
+# Kept local-only: these stay on disk for Claude to read, but are not
+# published to this public repo. Cloud sync is handled separately via a
+# private repo (TODO); do NOT re-track them here.
+/.claude/
+/CLAUDE.md
+/AGENTS.md
+/conventions/
 /.codex/
 /memory/
 /docs/

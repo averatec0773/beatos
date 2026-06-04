@@ -196,11 +196,8 @@ packages/
   beatos-mcp/              stdio MCP server for AI agents
   beatos-platforms/        Per-platform vocab maps
   pro/                     Private submodule — Pro features (platform publishing); absent in the free build
-conventions/               Architecture and design references
 screenshots/               README assets
 ```
-
-Full architecture notes live in [`conventions/architecture.md`](conventions/architecture.md).
 
 ## Roadmap
 
