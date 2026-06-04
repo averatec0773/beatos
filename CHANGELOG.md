@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 ### Added
 
 - **Platform publishing (Pro).** Publish beats to platforms straight from BeatOS — the engine drives a real browser and pauses at the platform's human verification step. Available in the Pro build (private `packages/pro/` submodule); the free build greys it out.
+- **发布中心 dashboard (Pro).** A sidebar entry below All Beats shows per-platform login/session health — backed by a real headless validity check, not just whether a saved-session file exists — with an in-app **登录/重新登录** button that opens the browser to log in (no more terminal command), plus a live view of in-progress publishes that surfaces the "finish it in the browser" hand-off (short-code / final submit). Real-time only (no history persistence). The free build shows the entry as a locked Pro upsell.
 - **Project folder per track.** The track editor's Files section gets a 工程文件夹 row — set a path to the beat's DAW project folder, then open it in Finder. Stored on the track (`project_path`).
 - **Loop file role.** Tracks can carry a dedicated `loop` audio file (for loop-only producers); it's playable, analyzable, and counts toward "has audio" like the other audio roles.
 - **Playlist export.** A list can be packaged for sending out (beat pack for a singer, a loopkit): pick per-track and per-file what to include (with bulk-select by type — all WAVs, all MP3s, etc.), then export as a **ZIP** or a **plain folder copy**, one subfolder per track.
