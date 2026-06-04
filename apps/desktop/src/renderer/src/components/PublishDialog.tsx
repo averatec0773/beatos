@@ -119,6 +119,9 @@ export function PublishDialog({
   const [job, setJob] = useState<PublishJob | null>(null);
   const [publishing, setPublishing] = useState(false);
   const pollRef = useRef<number | null>(null);
+  const loginPollRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const audioAssets = useMemo(
     () => trackAssets.filter((a) => isAudioRole(a.role)),
@@ -141,19 +144,33 @@ export function PublishDialog({
   );
 
   async function startLogin(): Promise<void> {
+    if (loginPollRef.current) {
+      window.clearInterval(loginPollRef.current);
+      loginPollRef.current = null;
+    }
     setLoggingIn(true);
     try {
       const { login_id } = await publishApi.login(platform);
-      const timer = window.setInterval(async () => {
+      if (!mountedRef.current) return;
+      loginPollRef.current = window.setInterval(async () => {
         try {
           const { status } = await publishApi.loginStatus(login_id);
           if (status === "success") {
-            window.clearInterval(timer);
+            if (loginPollRef.current) {
+              window.clearInterval(loginPollRef.current);
+              loginPollRef.current = null;
+            }
+            if (!mountedRef.current) return;
             setLoggingIn(false);
             const s = await publishApi.sessions();
+            if (!mountedRef.current) return;
             setSessionOk(Boolean(s.sessions?.[platform]));
           } else if (status === "failed" || status === "timeout") {
-            window.clearInterval(timer);
+            if (loginPollRef.current) {
+              window.clearInterval(loginPollRef.current);
+              loginPollRef.current = null;
+            }
+            if (!mountedRef.current) return;
             setLoggingIn(false);
             useToastStore.getState().show("error", "登录未完成");
           }
@@ -162,6 +179,7 @@ export function PublishDialog({
         }
       }, 2000);
     } catch {
+      if (!mountedRef.current) return;
       setLoggingIn(false);
       useToastStore.getState().show("error", "无法开始登录");
     }
@@ -171,6 +189,10 @@ export function PublishDialog({
     if (pollRef.current != null) {
       window.clearInterval(pollRef.current);
       pollRef.current = null;
+    }
+    if (loginPollRef.current != null) {
+      window.clearInterval(loginPollRef.current);
+      loginPollRef.current = null;
     }
   };
 
