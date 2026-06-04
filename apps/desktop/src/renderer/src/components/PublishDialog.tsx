@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Rocket } from "lucide-react";
+import { Rocket, Loader2, CheckCircle2, AlertCircle, MonitorSmartphone } from "lucide-react";
 
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { exportApi, type ExportResult } from "@/api/export";
 import { assets as assetsApi, type Asset } from "@/api/assets";
@@ -29,22 +28,29 @@ const STAGE_LABELS: Record<string, string> = {
   filling_metadata: "填写元数据",
   uploading_deliverables: "上传交付文件",
   submitting: "提交中",
-  awaiting_review: "已填好，请在浏览器核对",
-  awaiting_sms: "等待手机短信验证码",
+  awaiting_review: "等待人工完成",
+  awaiting_sms: "等待人工完成",
   done: "已完成",
   failed: "失败",
 };
 
-// The streamable PREVIEW (public試聽). Prefer the tagged version so the clean
-// file can't be ripped for free; fall back to untagged if no tagged exists.
+// A publish stops polling on any of these terminal stages. awaiting_* are the
+// human gates: the engine filled+uploaded everything a machine can, and a person
+// finishes in the browser (read the agreement + SMS verify).
+const TERMINAL = new Set(["done", "failed", "awaiting_review", "awaiting_sms"]);
+const AWAITING_MSG = "已自动上传，请在浏览器完成最后一步阅读用户协议并短信验证";
+
+// Streamable PREVIEW (public): prefer tagged so the clean file isn't exposed.
 const PREVIEW_ROLE_PRIORITY = [
   "audio_tagged_wav",
   "audio_tagged_mp3",
   "audio_untagged_wav",
   "audio_untagged_mp3",
 ];
-// The buyer DELIVERABLE WAV (lossless, no watermark) uploaded into the license drawer.
+// Buyer DELIVERABLE WAV (lossless, no watermark).
 const DELIVERABLE_WAV_PRIORITY = ["audio_untagged_wav", "audio_tagged_wav"];
+// Short metadata rendered as a compact spec strip; everything else stacks.
+const SPEC_KEYS = ["bpm", "key", "genre", "mood"];
 
 function isAudioRole(role: string): boolean {
   return role.startsWith("audio_");
@@ -52,7 +58,6 @@ function isAudioRole(role: string): boolean {
 function isWavRole(role: string): boolean {
   return role.startsWith("audio_") && role.endsWith("_wav");
 }
-
 function fileName(a: Asset): string {
   return a.rel_path ?? a.abs_path.split("/").pop() ?? a.abs_path;
 }
@@ -77,19 +82,24 @@ export function PublishDialog({
   const [publishing, setPublishing] = useState(false);
   const pollRef = useRef<number | null>(null);
 
-  // Derive option lists from the track's assets (rule 4: no derivation in selectors).
   const audioAssets = useMemo(
     () => trackAssets.filter((a) => isAudioRole(a.role)),
     [trackAssets],
   );
   const wavAssets = useMemo(() => trackAssets.filter((a) => isWavRole(a.role)), [trackAssets]);
-  const coverAssets = useMemo(
-    () => trackAssets.filter((a) => a.role === "cover"),
-    [trackAssets],
+  const coverAssets = useMemo(() => trackAssets.filter((a) => a.role === "cover"), [trackAssets]);
+  const stemsAssets = useMemo(() => trackAssets.filter((a) => a.role === "stems"), [trackAssets]);
+
+  const specFields = useMemo(
+    () =>
+      SPEC_KEYS.map((k) => result?.fields.find((f) => f.key === k)).filter(
+        (f): f is NonNullable<typeof f> => Boolean(f && f.value),
+      ),
+    [result],
   );
-  const stemsAssets = useMemo(
-    () => trackAssets.filter((a) => a.role === "stems"),
-    [trackAssets],
+  const blockFields = useMemo(
+    () => (result?.fields ?? []).filter((f) => !SPEC_KEYS.includes(f.key)),
+    [result],
   );
 
   const stopPolling = (): void => {
@@ -99,7 +109,6 @@ export function PublishDialog({
     }
   };
 
-  // Reset + load metadata, assets, session when opened.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -124,15 +133,12 @@ export function PublishDialog({
       .then((list) => {
         if (cancelled) return;
         setTrackAssets(list);
-        // Preview: tagged WAV → tagged MP3 → untagged → any audio.
         const preview =
           pickFirst(list, PREVIEW_ROLE_PRIORITY) ?? list.find((a) => isAudioRole(a.role));
         if (preview) setAudioAssetId(preview.id);
-        // Deliverable WAV: untagged WAV → tagged WAV → any WAV.
         const wav =
           pickFirst(list, DELIVERABLE_WAV_PRIORITY) ?? list.find((a) => isWavRole(a.role));
         if (wav) setWavAssetId(wav.id);
-        // Stems + cover: their dedicated roles.
         const stems = list.find((a) => a.role === "stems");
         if (stems) setStemsAssetId(stems.id);
         const cover = list.find((a) => a.role === "cover");
@@ -176,7 +182,7 @@ export function PublishDialog({
         try {
           const status = await publishApi.status(job_id);
           setJob(status);
-          if (status.stage === "done" || status.stage === "failed") {
+          if (TERMINAL.has(status.stage)) {
             stopPolling();
             setPublishing(false);
           }
@@ -190,158 +196,190 @@ export function PublishDialog({
     }
   }
 
-  const stageLabel = job ? (STAGE_LABELS[job.stage] ?? job.stage) : null;
+  const stage = job?.stage;
+  const isAwaiting = stage === "awaiting_review" || stage === "awaiting_sms";
+  const inProgress = Boolean(job) && !TERMINAL.has(stage ?? "");
+  const stageLabel = stage ? (STAGE_LABELS[stage] ?? stage) : null;
 
   const selectCls =
-    "rounded-md border border-border-subtle bg-transparent px-2 py-1 text-sm text-text-primary disabled:opacity-40";
+    "h-8 w-full min-w-0 rounded-md border border-border-subtle bg-transparent px-2 text-sm text-text-primary " +
+    "focus:border-text-tertiary focus:outline-none disabled:opacity-40";
+  const sectionCls = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-tertiary";
+
+  // One compact row per upload slot: fixed label column + select. Hints live in
+  // the title tooltip to keep each row to a single line.
+  function FileRow(props: {
+    label: string;
+    hint: string;
+    value: number | null;
+    onChange: (id: number | null) => void;
+    items: Asset[];
+    emptyLabel: string;
+    withRole?: boolean;
+  }): React.JSX.Element {
+    return (
+      <label className="grid grid-cols-[4.25rem_1fr] items-center gap-2" title={props.hint}>
+        <span className="truncate text-xs text-text-secondary">{props.label}</span>
+        <select
+          aria-label={props.label}
+          value={props.value ?? ""}
+          onChange={(e) => props.onChange(e.target.value ? Number(e.target.value) : null)}
+          disabled={props.items.length === 0 && props.value == null}
+          className={selectCls}
+        >
+          <option value="">{props.emptyLabel}</option>
+          {props.items.map((a) => (
+            <option key={a.id} value={a.id}>
+              {props.withRole ? `${a.role} · ${fileName(a)}` : fileName(a)}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>发布到平台</DialogTitle>
-          <DialogDescription>核对信息后一键发布（{platform}）。</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            发布到平台
+            <span className="rounded border border-border-subtle px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-text-tertiary">
+              {platform}
+            </span>
+          </DialogTitle>
         </DialogHeader>
 
         {sessionOk === false && (
-          <div className="mb-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
-            需要先登录网易云（在终端运行 uv run python scripts/publish-dev.py login）
+          <div className="mb-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              需要先登录网易云 —— 终端运行{" "}
+              <code className="rounded bg-bg-row-hover px-1">
+                uv run python scripts/publish-dev.py login
+              </code>
+            </span>
           </div>
         )}
 
-        <div className="mb-3 flex flex-col gap-3">
-          {/* ① streamable preview */}
-          <label className="flex flex-col gap-1 text-xs text-text-secondary">
-            预览音频
-            <span className="text-[11px] text-text-tertiary">
-              平台公开试听版（默认带标签 tagged，防止白嫖无水印版）
-            </span>
-            <select
-              aria-label="预览音频"
-              value={audioAssetId ?? ""}
-              onChange={(e) => setAudioAssetId(e.target.value ? Number(e.target.value) : null)}
-              disabled={audioAssets.length === 0}
-              className={selectCls}
-            >
-              {audioAssets.length === 0 && <option value="">无可用音频</option>}
-              {audioAssets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.role} — {fileName(a)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {/* ② buyer deliverable WAV */}
-          <label className="flex flex-col gap-1 text-xs text-text-secondary">
-            交付 WAV（买家下载）
-            <span className="text-[11px] text-text-tertiary">
-              付费买家拿到的无水印高音质（默认 untagged WAV，租赁档必传）
-            </span>
-            <select
-              aria-label="交付 WAV"
-              value={wavAssetId ?? ""}
-              onChange={(e) => setWavAssetId(e.target.value ? Number(e.target.value) : null)}
-              className={selectCls}
-            >
-              <option value="">不上传交付 WAV</option>
-              {wavAssets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.role} — {fileName(a)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {/* ③ stems for the 分轨 tier */}
-          <label className="flex flex-col gap-1 text-xs text-text-secondary">
-            分轨 stems（可选）
-            <span className="text-[11px] text-text-tertiary">
-              分轨档买家拿到的 stems 包（&lt;200MB；无则跳过该档）
-            </span>
-            <select
-              aria-label="分轨 stems"
-              value={stemsAssetId ?? ""}
-              onChange={(e) => setStemsAssetId(e.target.value ? Number(e.target.value) : null)}
-              disabled={stemsAssets.length === 0}
-              className={selectCls}
-            >
-              <option value="">不上传分轨</option>
-              {stemsAssets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {fileName(a)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {/* ④ cover */}
-          <label className="flex flex-col gap-1 text-xs text-text-secondary">
-            封面
-            <select
-              aria-label="封面"
-              value={coverAssetId ?? ""}
-              onChange={(e) => setCoverAssetId(e.target.value ? Number(e.target.value) : null)}
-              className={selectCls}
-            >
-              <option value="">无封面</option>
-              {coverAssets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {fileName(a)}
-                </option>
-              ))}
-            </select>
-          </label>
+        {/* — upload slots — */}
+        <div className={`${sectionCls} mb-2`}>上传文件</div>
+        <div className="mb-4 flex flex-col gap-1.5">
+          <FileRow
+            label="预览音频"
+            hint="平台公开试听版，默认带标签 tagged（防止白嫖无水印版）"
+            value={audioAssetId}
+            onChange={setAudioAssetId}
+            items={audioAssets}
+            emptyLabel="无可用音频"
+            withRole
+          />
+          <FileRow
+            label="交付 WAV"
+            hint="付费买家下载的无水印高音质，默认 untagged WAV（租赁档必传）"
+            value={wavAssetId}
+            onChange={setWavAssetId}
+            items={wavAssets}
+            emptyLabel="不上传"
+            withRole
+          />
+          <FileRow
+            label="分轨"
+            hint="分轨档买家拿到的 stems 包（<200MB；无则跳过该档）"
+            value={stemsAssetId}
+            onChange={setStemsAssetId}
+            items={stemsAssets}
+            emptyLabel="不上传"
+          />
+          <FileRow
+            label="封面"
+            hint="专辑封面，默认当前 track 封面"
+            value={coverAssetId}
+            onChange={setCoverAssetId}
+            items={coverAssets}
+            emptyLabel="无封面"
+          />
         </div>
 
-        <div className="max-h-[40vh] overflow-y-auto beatos-scroll">
-          {result?.fields.map((f) => (
-            <div
-              key={f.key}
-              className="flex items-start gap-2 py-1.5 border-b border-border-subtle"
-            >
-              <div className="w-16 shrink-0 text-xs text-text-secondary pt-0.5">{f.label}</div>
-              <div className="flex-1 whitespace-pre-wrap text-sm">
-                {f.value || (f.options.length ? f.options.join("、") : null) || (
-                  <span className="text-text-tertiary">—</span>
-                )}
-              </div>
+        {/* — metadata review — */}
+        <div className={`${sectionCls} mb-2`}>元数据</div>
+        <div className="max-h-[34vh] overflow-y-auto beatos-scroll pr-1">
+          {specFields.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {specFields.map((f) => (
+                <span
+                  key={f.key}
+                  className="inline-flex items-baseline gap-1 rounded border border-border-subtle px-1.5 py-0.5 text-xs"
+                >
+                  <span className="text-text-tertiary">{f.label}</span>
+                  <span className="text-text-primary">{f.value}</span>
+                </span>
+              ))}
             </div>
-          ))}
+          )}
+          <div className="flex flex-col gap-2">
+            {blockFields.map((f) => {
+              const v = f.value || (f.options.length ? f.options.join("、") : "");
+              return (
+                <div key={f.key} className="flex flex-col gap-0.5">
+                  <span className="text-[10px] uppercase tracking-wide text-text-tertiary">
+                    {f.label}
+                  </span>
+                  <span className="whitespace-pre-wrap text-sm leading-snug text-text-primary">
+                    {v || <span className="text-text-tertiary">—</span>}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <div className="text-xs">
-            {job && job.stage === "done" && (
-              <span className="text-success">
-                发布成功
-                {job.result?.url && (
-                  <>
-                    {" — "}
-                    <a
-                      href={job.result.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline"
-                    >
-                      查看
-                    </a>
-                  </>
-                )}
-              </span>
+        {/* — status + action — */}
+        {(isAwaiting || (job && stage === "done") || (job && stage === "failed")) && (
+          <div className="mt-3">
+            {isAwaiting && (
+              <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+                <MonitorSmartphone className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="leading-snug">{AWAITING_MSG}</span>
+              </div>
             )}
-            {job && job.stage === "failed" && (
-              <span className="text-error">发布失败：{job.result?.error ?? job.message}</span>
+            {stage === "done" && (
+              <div className="flex items-center gap-2 rounded-md border border-success/40 bg-success/10 px-3 py-2 text-xs text-success">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>
+                  发布成功
+                  {job?.result?.url && (
+                    <>
+                      {" — "}
+                      <a href={job.result.url} target="_blank" rel="noreferrer" className="underline">
+                        查看
+                      </a>
+                    </>
+                  )}
+                </span>
+              </div>
             )}
-            {job && job.stage !== "done" && job.stage !== "failed" && (
-              <span className="text-text-secondary">{stageLabel}…</span>
+            {stage === "failed" && (
+              <div className="flex items-start gap-2 rounded-md border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="leading-snug">发布失败：{job?.result?.error ?? job?.message}</span>
+              </div>
             )}
           </div>
+        )}
+
+        <div className="mt-4 flex items-center justify-end gap-3">
+          {inProgress && (
+            <span className="flex items-center gap-1.5 text-xs text-text-secondary">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {stageLabel}…
+            </span>
+          )}
           <button
             type="button"
             onClick={handlePublish}
             disabled={publishing || sessionOk === false || audioAssetId == null}
-            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-3 py-1.5 text-sm text-text-primary hover:bg-bg-row-hover disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 rounded-md bg-text-primary px-3.5 py-1.5 text-sm font-medium text-bg-base hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Rocket className="h-3.5 w-3.5" /> 发布
           </button>
