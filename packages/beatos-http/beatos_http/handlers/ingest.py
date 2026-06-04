@@ -28,6 +28,58 @@ _FIELD_TO_COL = {
 }
 
 
+async def _read_setting(conn: aiosqlite.Connection, key: str):
+    """Read a JSON app_setting on the SAME connection (the approve handler runs
+    inside one transaction — opening a second connection would risk a lock)."""
+    async with conn.execute(
+        "SELECT value_json FROM app_setting WHERE key = ?", (key,)
+    ) as cur:
+        row = await cur.fetchone()
+    if row is None or row[0] is None:
+        return None
+    try:
+        return json.loads(row[0])
+    except (ValueError, TypeError):
+        return None
+
+
+async def _apply_creation_defaults(conn: aiosqlite.Connection, track_id: int, now: str) -> None:
+    """Apply the user's configured creation defaults to a freshly-created track.
+
+    These defaults (`default_is_free`, `default_license_tiers`) were previously
+    applied ONLY by the renderer after a UI create, so tracks created through the
+    MCP `create_tracks` path (server-side, no renderer) silently skipped them
+    (caught dogfooding 2026-06-04: an MCP-imported track had no license/is_free,
+    so the publish engine had nothing to fill in 授权设置). Apply them here so
+    every creation path lands the same catalog state. Best-effort per setting —
+    a malformed value must not fail the batch."""
+    if await _read_setting(conn, "default_is_free") is True:
+        await conn.execute(
+            "UPDATE track SET is_free = 1, updated_at = ? WHERE id = ?", (now, track_id)
+        )
+    tiers = await _read_setting(conn, "default_license_tiers")
+    if isinstance(tiers, list):
+        for pos, tpl in enumerate(tiers):
+            if not isinstance(tpl, dict):
+                continue
+            await conn.execute(
+                "INSERT INTO license_tier (track_id, position, name, deliverables, "
+                "prices_json, notes, created_at, updated_at, share) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    track_id,
+                    pos,
+                    str(tpl.get("name") or ""),
+                    json.dumps(tpl.get("deliverables") or []),
+                    json.dumps(tpl.get("prices") or {}),
+                    tpl.get("notes"),
+                    now,
+                    now,
+                    tpl.get("share"),
+                ),
+            )
+
+
 @register_approve_handler("create_tracks")
 async def _approve_create_tracks(conn: aiosqlite.Connection, token: str) -> dict:
     payload = await verify_token(conn, token, expected_tool="create_tracks")
@@ -50,7 +102,9 @@ async def _approve_create_tracks(conn: aiosqlite.Connection, token: str) -> dict
             f"VALUES ({', '.join('?' * len(params))})",
             params,
         )
-        created_ids.append(cur.lastrowid)
+        track_id = cur.lastrowid
+        await _apply_creation_defaults(conn, track_id, now)
+        created_ids.append(track_id)
     result = {"created_ids": created_ids}
     await consume_token_with_result(conn, token, result)
     return result

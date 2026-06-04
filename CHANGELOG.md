@@ -18,6 +18,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 ### Changed
 
 - **Track editor layout.** Files now sit directly under the metadata fields; tags + description moved to a bottom 备注 section.
+- **MCP-created tracks inherit creation defaults.** The configured default license tiers + free flag (Settings) are now applied server-side on `create_tracks`, so a track imported by an agent over MCP lands the same catalog state as one created in the UI (previously those defaults were applied only by the renderer, so MCP imports came in with no license/price).
 - **Bigger Lists "+" hit target.** The new-playlist button in the sidebar was hard to click; its tap area is enlarged.
 - **Detail panel fits a medium window.** Tighter section gaps/dividers and a slightly smaller BPM/Key readout so the panel shows fully without scrolling.
 

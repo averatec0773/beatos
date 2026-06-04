@@ -269,3 +269,67 @@ async def test_approve_detach_assets_idempotent_on_missing(client, db_path):
     body = res.json()
     by_role = {r["role"]: r["removed"] for r in body["results"]}
     assert by_role == {"audio": True, "cover": False}
+
+
+# --- create_tracks applies creation defaults (parity with the UI path) ---
+
+
+async def _set_setting(db_path, key, value):
+    import json as _json
+    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute(
+            "INSERT INTO app_setting (key, value_json, updated_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
+            (key, _json.dumps(value), now),
+        )
+        await conn.commit()
+
+
+@pytest.mark.asyncio
+async def test_create_tracks_applies_default_license_and_free(client, db_path):
+    await _set_setting(db_path, "default_is_free", True)
+    await _set_setting(db_path, "default_license_tiers", [
+        {"name": "MP3", "deliverables": ["mp3"], "prices": {"CNY": 128}, "share": 25},
+        {"name": "WAV", "deliverables": ["wav"], "prices": {"CNY": 188}, "share": 15},
+    ])
+    async with aiosqlite.connect(db_path) as conn:
+        tok = await create_token(
+            conn, "create_tracks",
+            {"items": [{"title": "Defaulted"}],
+             "preview": {"headline": "x", "sample": [], "warnings": []}},
+        )
+    res = await client.post(f"/api/tokens/{tok}/approve")
+    assert res.status_code == 200
+    tid = res.json()["created_ids"][0]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT is_free FROM track WHERE id = ?", (tid,)) as c:
+            assert (await c.fetchone())[0] == 1
+        async with conn.execute(
+            "SELECT name, deliverables, prices_json, share FROM license_tier "
+            "WHERE track_id = ? ORDER BY position", (tid,)
+        ) as c:
+            rows = await c.fetchall()
+    assert [r[0] for r in rows] == ["MP3", "WAV"]
+    assert rows[0][1] == '["mp3"]' and '"CNY": 128' in rows[0][2] and rows[0][3] == 25
+
+
+@pytest.mark.asyncio
+async def test_create_tracks_no_defaults_no_tiers(client, db_path):
+    # No default_* settings configured → behaves as before (bare track row).
+    async with aiosqlite.connect(db_path) as conn:
+        tok = await create_token(
+            conn, "create_tracks",
+            {"items": [{"title": "Bare"}],
+             "preview": {"headline": "x", "sample": [], "warnings": []}},
+        )
+    res = await client.post(f"/api/tokens/{tok}/approve")
+    assert res.status_code == 200
+    tid = res.json()["created_ids"][0]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT is_free FROM track WHERE id = ?", (tid,)) as c:
+            assert (await c.fetchone())[0] == 0
+        async with conn.execute(
+            "SELECT COUNT(*) FROM license_tier WHERE track_id = ?", (tid,)
+        ) as c:
+            assert (await c.fetchone())[0] == 0
