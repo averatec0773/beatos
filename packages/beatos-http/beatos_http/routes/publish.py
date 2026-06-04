@@ -8,7 +8,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException
 
 from beatos_http.pro import pro_available
-from beatos_http.publish_schemas import PublishRequestBody
+from beatos_http.publish_schemas import PublishLoginBody, PublishRequestBody
 
 router = APIRouter(tags=["publish"])
 
@@ -49,6 +49,47 @@ async def publish_sessions() -> dict:
     return {"sessions": {p: session_exists(p) for p in available()}}
 
 
+@router.post("/api/publish/sessions/validate")
+async def publish_sessions_validate() -> dict:
+    _require_pro()
+    from beatos_publish.platforms import available
+    from beatos_publish.service import validate_session
+    return {"sessions": {p: await validate_session(p) for p in available()}}
+
+
+@router.post("/api/publish/login")
+async def publish_login_start(body: PublishLoginBody) -> dict:
+    _require_pro()
+    from beatos_publish.platforms import available
+    if body.platform not in available():
+        raise HTTPException(400, f"unknown platform {body.platform}")
+    from beatos_http.publish_login import REGISTRY as LOGINS
+    if LOGINS.is_active(body.platform):
+        raise HTTPException(409, f"login already in progress for {body.platform}")
+    login_id = LOGINS.start(body.platform, body.account or "default")
+    return {"login_id": login_id}
+
+
+@router.get("/api/publish/login/{login_id}")
+async def publish_login_status(login_id: str) -> dict:
+    _require_pro()
+    from beatos_http.publish_login import REGISTRY as LOGINS
+    t = LOGINS.get(login_id)
+    if t is None:
+        raise HTTPException(404, "login task not found")
+    return {"status": t.status, "message": t.message}
+
+
+@router.get("/api/publish/jobs")
+async def publish_jobs() -> dict:
+    _require_pro()
+    from beatos_publish.jobs import REGISTRY
+    return {"jobs": [j.model_dump(mode="json") for j in REGISTRY.all()]}
+
+
+# NOTE: keep this catch-all LAST — it matches any /api/publish/<x>, so every
+# literal /api/publish/... route (sessions, sessions/validate, login, jobs)
+# must be declared above it or it will shadow them (→ 404 "job not found").
 @router.get("/api/publish/{job_id}")
 async def publish_status(job_id: str) -> dict:
     _require_pro()

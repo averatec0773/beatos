@@ -115,9 +115,13 @@ export function PublishDialog({
   const [wavAssetId, setWavAssetId] = useState<number | null>(null);
   const [stemsAssetId, setStemsAssetId] = useState<number | null>(null);
   const [sessionOk, setSessionOk] = useState<boolean | null>(null);
+  const [loggingIn, setLoggingIn] = useState(false);
   const [job, setJob] = useState<PublishJob | null>(null);
   const [publishing, setPublishing] = useState(false);
   const pollRef = useRef<number | null>(null);
+  const loginPollRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const audioAssets = useMemo(
     () => trackAssets.filter((a) => isAudioRole(a.role)),
@@ -139,10 +143,56 @@ export function PublishDialog({
     [result],
   );
 
+  async function startLogin(): Promise<void> {
+    if (loginPollRef.current) {
+      window.clearInterval(loginPollRef.current);
+      loginPollRef.current = null;
+    }
+    setLoggingIn(true);
+    try {
+      const { login_id } = await publishApi.login(platform);
+      if (!mountedRef.current) return;
+      loginPollRef.current = window.setInterval(async () => {
+        try {
+          const { status } = await publishApi.loginStatus(login_id);
+          if (status === "success") {
+            if (loginPollRef.current) {
+              window.clearInterval(loginPollRef.current);
+              loginPollRef.current = null;
+            }
+            if (!mountedRef.current) return;
+            setLoggingIn(false);
+            const s = await publishApi.sessions();
+            if (!mountedRef.current) return;
+            setSessionOk(Boolean(s.sessions?.[platform]));
+          } else if (status === "failed" || status === "timeout") {
+            if (loginPollRef.current) {
+              window.clearInterval(loginPollRef.current);
+              loginPollRef.current = null;
+            }
+            if (!mountedRef.current) return;
+            setLoggingIn(false);
+            useToastStore.getState().show("error", "登录未完成");
+          }
+        } catch {
+          /* keep polling */
+        }
+      }, 2000);
+    } catch {
+      if (!mountedRef.current) return;
+      setLoggingIn(false);
+      useToastStore.getState().show("error", "无法开始登录");
+    }
+  }
+
   const stopPolling = (): void => {
     if (pollRef.current != null) {
       window.clearInterval(pollRef.current);
       pollRef.current = null;
+    }
+    if (loginPollRef.current != null) {
+      window.clearInterval(loginPollRef.current);
+      loginPollRef.current = null;
     }
   };
 
@@ -253,14 +303,19 @@ export function PublishDialog({
         </DialogHeader>
 
         {sessionOk === false && (
-          <div className="mb-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>
-              需要先登录网易云 —— 终端运行{" "}
-              <code className="rounded bg-bg-row-hover px-1">
-                uv run python scripts/publish-dev.py login
-              </code>
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+            <span className="flex items-center gap-2">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              需要先登录网易云
             </span>
+            <button
+              type="button"
+              disabled={loggingIn}
+              onClick={() => void startLogin()}
+              className="rounded border border-warning/50 px-2 py-0.5 text-warning hover:bg-warning/20 disabled:opacity-50"
+            >
+              {loggingIn ? "浏览器已打开…" : "登录"}
+            </button>
           </div>
         )}
 

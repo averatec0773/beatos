@@ -13,6 +13,7 @@ import { ApprovalsSection } from "@/components/Sidebar/ApprovalsSection";
 import { TrashSection } from "@/components/Sidebar/TrashSection";
 import { SettingsSection } from "@/components/Sidebar/SettingsSection";
 import { SidebarFooter } from "@/components/Sidebar/SidebarFooter";
+import { PublishCenterSection } from "@/components/Sidebar/PublishCenterSection";
 
 export function SidebarPanel(): React.JSX.Element {
   const refreshLists = useListStore((s) => s.refresh);
@@ -58,6 +59,7 @@ export function SidebarPanel(): React.JSX.Element {
       </div>
       <div className="flex flex-col gap-0.5">
         <AllBeatsSection />
+        <PublishCenterSection />
         <TrashSection />
         <ApprovalsSection />
       </div>
