@@ -1,0 +1,51 @@
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+
+import { SessionHealthRow } from "@/components/PublishCenter/SessionHealthRow";
+import { LiveJobRow } from "@/components/PublishCenter/LiveJobRow";
+
+describe("SessionHealthRow", () => {
+  it("expired shows re-login prompt", () => {
+    render(
+      <SessionHealthRow platform="netease" state="expired" loggingIn={false} onLogin={vi.fn()} />,
+    );
+    expect(screen.getByText(/已过期/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /登录/ })).toBeEnabled();
+  });
+  it("valid shows logged-in badge", () => {
+    render(
+      <SessionHealthRow platform="netease" state="valid" loggingIn={false} onLogin={vi.fn()} />,
+    );
+    expect(screen.getByText(/已登录/)).toBeInTheDocument();
+  });
+  it("loggingIn disables the button", () => {
+    render(
+      <SessionHealthRow platform="netease" state="expired" loggingIn={true} onLogin={vi.fn()} />,
+    );
+    expect(screen.getByRole("button")).toBeDisabled();
+  });
+});
+
+describe("LiveJobRow", () => {
+  const base = {
+    job_id: "j1",
+    stage: "awaiting_sms",
+    message: "enter SMS",
+    updated_at: "2026-06-04T00:00:00Z",
+    request: { track_id: 7, platform: "netease" },
+  };
+  it("awaiting_sms surfaces the 等你 prompt", () => {
+    render(<LiveJobRow job={base} title="My Beat" onRepublish={vi.fn()} />);
+    expect(screen.getByText(/正在等你/)).toBeInTheDocument();
+  });
+  it("done with url shows a view link", () => {
+    render(
+      <LiveJobRow
+        job={{ ...base, stage: "done", result: { ok: true, url: "https://x" } }}
+        title="My Beat"
+        onRepublish={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("link", { name: /查看上架/ })).toHaveAttribute("href", "https://x");
+  });
+});
