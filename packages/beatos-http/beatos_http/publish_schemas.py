@@ -19,3 +19,8 @@ class PublishRequestBody(BaseModel):
     schedule: Optional[_dt.datetime] = None
     dry_run: bool = False
     auto_advance: bool = False
+
+
+class PublishLoginBody(BaseModel):
+    platform: str
+    account: str | None = None
