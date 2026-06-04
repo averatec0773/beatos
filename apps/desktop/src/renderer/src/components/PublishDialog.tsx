@@ -61,6 +61,43 @@ function isWavRole(role: string): boolean {
 function fileName(a: Asset): string {
   return a.rel_path ?? a.abs_path.split("/").pop() ?? a.abs_path;
 }
+
+const SELECT_CLS =
+  "h-8 w-full min-w-0 rounded-md border border-border-subtle bg-transparent px-2 text-sm text-text-primary " +
+  "focus:border-text-tertiary focus:outline-none disabled:opacity-40";
+
+// One compact row per upload slot: fixed label column + select. Hints live in the
+// title tooltip to keep each row to one line. Declared at module level (NOT inside
+// PublishDialog) so it isn't re-created on every render (lint: no components during render).
+function FileRow(props: {
+  label: string;
+  hint: string;
+  value: number | null;
+  onChange: (id: number | null) => void;
+  items: Asset[];
+  emptyLabel: string;
+  withRole?: boolean;
+}): React.JSX.Element {
+  return (
+    <label className="grid grid-cols-[4.25rem_1fr] items-center gap-2" title={props.hint}>
+      <span className="truncate text-xs text-text-secondary">{props.label}</span>
+      <select
+        aria-label={props.label}
+        value={props.value ?? ""}
+        onChange={(e) => props.onChange(e.target.value ? Number(e.target.value) : null)}
+        disabled={props.items.length === 0 && props.value == null}
+        className={SELECT_CLS}
+      >
+        <option value="">{props.emptyLabel}</option>
+        {props.items.map((a) => (
+          <option key={a.id} value={a.id}>
+            {props.withRole ? `${a.role} · ${fileName(a)}` : fileName(a)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 function pickFirst(list: Asset[], roles: string[]): Asset | undefined {
   return roles.map((role) => list.find((a) => a.role === role)).find(Boolean);
 }
@@ -201,42 +238,7 @@ export function PublishDialog({
   const inProgress = Boolean(job) && !TERMINAL.has(stage ?? "");
   const stageLabel = stage ? (STAGE_LABELS[stage] ?? stage) : null;
 
-  const selectCls =
-    "h-8 w-full min-w-0 rounded-md border border-border-subtle bg-transparent px-2 text-sm text-text-primary " +
-    "focus:border-text-tertiary focus:outline-none disabled:opacity-40";
   const sectionCls = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-tertiary";
-
-  // One compact row per upload slot: fixed label column + select. Hints live in
-  // the title tooltip to keep each row to a single line.
-  function FileRow(props: {
-    label: string;
-    hint: string;
-    value: number | null;
-    onChange: (id: number | null) => void;
-    items: Asset[];
-    emptyLabel: string;
-    withRole?: boolean;
-  }): React.JSX.Element {
-    return (
-      <label className="grid grid-cols-[4.25rem_1fr] items-center gap-2" title={props.hint}>
-        <span className="truncate text-xs text-text-secondary">{props.label}</span>
-        <select
-          aria-label={props.label}
-          value={props.value ?? ""}
-          onChange={(e) => props.onChange(e.target.value ? Number(e.target.value) : null)}
-          disabled={props.items.length === 0 && props.value == null}
-          className={selectCls}
-        >
-          <option value="">{props.emptyLabel}</option>
-          {props.items.map((a) => (
-            <option key={a.id} value={a.id}>
-              {props.withRole ? `${a.role} · ${fileName(a)}` : fileName(a)}
-            </option>
-          ))}
-        </select>
-      </label>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
