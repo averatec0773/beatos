@@ -10,8 +10,13 @@ export interface PublishJob {
 export interface PublishCreateBody {
   track_id: number;
   platform: string;
+  /** Streamable preview audio (public). */
   audio_asset_id: number;
   cover_asset_id?: number;
+  /** Buyer deliverable — the lossless untagged WAV uploaded into the license drawer. */
+  deliverable_wav_asset_id?: number;
+  /** Buyer deliverable — the stems package for the 分轨 tier. */
+  deliverable_stems_asset_id?: number;
   account?: string;
   dry_run?: boolean;
 }

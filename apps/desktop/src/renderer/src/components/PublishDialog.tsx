@@ -24,23 +24,40 @@ const STAGE_LABELS: Record<string, string> = {
   queued: "排队中",
   launching: "启动浏览器",
   navigating: "打开上传页",
-  uploading_audio: "上传音频",
+  uploading_audio: "上传预览音频",
   uploading_cover: "上传封面",
   filling_metadata: "填写元数据",
+  uploading_deliverables: "上传交付文件",
   submitting: "提交中",
+  awaiting_review: "已填好，请在浏览器核对",
+  awaiting_sms: "等待手机短信验证码",
   done: "已完成",
   failed: "失败",
 };
 
-const AUDIO_ROLE_PRIORITY = [
-  "audio_untagged_wav",
-  "audio_untagged_mp3",
+// The streamable PREVIEW (public試聽). Prefer the tagged version so the clean
+// file can't be ripped for free; fall back to untagged if no tagged exists.
+const PREVIEW_ROLE_PRIORITY = [
   "audio_tagged_wav",
   "audio_tagged_mp3",
+  "audio_untagged_wav",
+  "audio_untagged_mp3",
 ];
+// The buyer DELIVERABLE WAV (lossless, no watermark) uploaded into the license drawer.
+const DELIVERABLE_WAV_PRIORITY = ["audio_untagged_wav", "audio_tagged_wav"];
 
 function isAudioRole(role: string): boolean {
   return role.startsWith("audio_");
+}
+function isWavRole(role: string): boolean {
+  return role.startsWith("audio_") && role.endsWith("_wav");
+}
+
+function fileName(a: Asset): string {
+  return a.rel_path ?? a.abs_path.split("/").pop() ?? a.abs_path;
+}
+function pickFirst(list: Asset[], roles: string[]): Asset | undefined {
+  return roles.map((role) => list.find((a) => a.role === role)).find(Boolean);
 }
 
 export function PublishDialog({
@@ -53,17 +70,25 @@ export function PublishDialog({
   const [trackAssets, setTrackAssets] = useState<Asset[]>([]);
   const [audioAssetId, setAudioAssetId] = useState<number | null>(null);
   const [coverAssetId, setCoverAssetId] = useState<number | null>(null);
+  const [wavAssetId, setWavAssetId] = useState<number | null>(null);
+  const [stemsAssetId, setStemsAssetId] = useState<number | null>(null);
   const [sessionOk, setSessionOk] = useState<boolean | null>(null);
   const [job, setJob] = useState<PublishJob | null>(null);
   const [publishing, setPublishing] = useState(false);
   const pollRef = useRef<number | null>(null);
 
+  // Derive option lists from the track's assets (rule 4: no derivation in selectors).
   const audioAssets = useMemo(
     () => trackAssets.filter((a) => isAudioRole(a.role)),
     [trackAssets],
   );
+  const wavAssets = useMemo(() => trackAssets.filter((a) => isWavRole(a.role)), [trackAssets]);
   const coverAssets = useMemo(
     () => trackAssets.filter((a) => a.role === "cover"),
+    [trackAssets],
+  );
+  const stemsAssets = useMemo(
+    () => trackAssets.filter((a) => a.role === "stems"),
     [trackAssets],
   );
 
@@ -83,6 +108,8 @@ export function PublishDialog({
     setTrackAssets([]);
     setAudioAssetId(null);
     setCoverAssetId(null);
+    setWavAssetId(null);
+    setStemsAssetId(null);
     setSessionOk(null);
 
     exportApi
@@ -97,10 +124,17 @@ export function PublishDialog({
       .then((list) => {
         if (cancelled) return;
         setTrackAssets(list);
-        const audio =
-          AUDIO_ROLE_PRIORITY.map((role) => list.find((a) => a.role === role)).find(Boolean) ??
-          list.find((a) => isAudioRole(a.role));
-        if (audio) setAudioAssetId(audio.id);
+        // Preview: tagged WAV → tagged MP3 → untagged → any audio.
+        const preview =
+          pickFirst(list, PREVIEW_ROLE_PRIORITY) ?? list.find((a) => isAudioRole(a.role));
+        if (preview) setAudioAssetId(preview.id);
+        // Deliverable WAV: untagged WAV → tagged WAV → any WAV.
+        const wav =
+          pickFirst(list, DELIVERABLE_WAV_PRIORITY) ?? list.find((a) => isWavRole(a.role));
+        if (wav) setWavAssetId(wav.id);
+        // Stems + cover: their dedicated roles.
+        const stems = list.find((a) => a.role === "stems");
+        if (stems) setStemsAssetId(stems.id);
         const cover = list.find((a) => a.role === "cover");
         if (cover) setCoverAssetId(cover.id);
       })
@@ -123,7 +157,7 @@ export function PublishDialog({
 
   async function handlePublish(): Promise<void> {
     if (audioAssetId == null) {
-      useToastStore.getState().show("warning", "请先选择音频文件");
+      useToastStore.getState().show("warning", "请先选择预览音频");
       return;
     }
     setPublishing(true);
@@ -134,6 +168,8 @@ export function PublishDialog({
         platform,
         audio_asset_id: audioAssetId,
         cover_asset_id: coverAssetId ?? undefined,
+        deliverable_wav_asset_id: wavAssetId ?? undefined,
+        deliverable_stems_asset_id: stemsAssetId ?? undefined,
       });
       stopPolling();
       pollRef.current = window.setInterval(async () => {
@@ -156,6 +192,9 @@ export function PublishDialog({
 
   const stageLabel = job ? (STAGE_LABELS[job.stage] ?? job.stage) : null;
 
+  const selectCls =
+    "rounded-md border border-border-subtle bg-transparent px-2 py-1 text-sm text-text-primary disabled:opacity-40";
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -171,35 +210,84 @@ export function PublishDialog({
         )}
 
         <div className="mb-3 flex flex-col gap-3">
+          {/* ① streamable preview */}
           <label className="flex flex-col gap-1 text-xs text-text-secondary">
-            音频文件
+            预览音频
+            <span className="text-[11px] text-text-tertiary">
+              平台公开试听版（默认带标签 tagged，防止白嫖无水印版）
+            </span>
             <select
-              aria-label="音频文件"
+              aria-label="预览音频"
               value={audioAssetId ?? ""}
               onChange={(e) => setAudioAssetId(e.target.value ? Number(e.target.value) : null)}
               disabled={audioAssets.length === 0}
-              className="rounded-md border border-border-subtle bg-transparent px-2 py-1 text-sm text-text-primary disabled:opacity-40"
+              className={selectCls}
             >
               {audioAssets.length === 0 && <option value="">无可用音频</option>}
               {audioAssets.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.role} — {a.rel_path ?? a.abs_path.split("/").pop()}
+                  {a.role} — {fileName(a)}
                 </option>
               ))}
             </select>
           </label>
+
+          {/* ② buyer deliverable WAV */}
           <label className="flex flex-col gap-1 text-xs text-text-secondary">
-            封面（可选）
+            交付 WAV（买家下载）
+            <span className="text-[11px] text-text-tertiary">
+              付费买家拿到的无水印高音质（默认 untagged WAV，租赁档必传）
+            </span>
+            <select
+              aria-label="交付 WAV"
+              value={wavAssetId ?? ""}
+              onChange={(e) => setWavAssetId(e.target.value ? Number(e.target.value) : null)}
+              className={selectCls}
+            >
+              <option value="">不上传交付 WAV</option>
+              {wavAssets.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.role} — {fileName(a)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* ③ stems for the 分轨 tier */}
+          <label className="flex flex-col gap-1 text-xs text-text-secondary">
+            分轨 stems（可选）
+            <span className="text-[11px] text-text-tertiary">
+              分轨档买家拿到的 stems 包（&lt;200MB；无则跳过该档）
+            </span>
+            <select
+              aria-label="分轨 stems"
+              value={stemsAssetId ?? ""}
+              onChange={(e) => setStemsAssetId(e.target.value ? Number(e.target.value) : null)}
+              disabled={stemsAssets.length === 0}
+              className={selectCls}
+            >
+              <option value="">不上传分轨</option>
+              {stemsAssets.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {fileName(a)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* ④ cover */}
+          <label className="flex flex-col gap-1 text-xs text-text-secondary">
+            封面
             <select
               aria-label="封面"
               value={coverAssetId ?? ""}
               onChange={(e) => setCoverAssetId(e.target.value ? Number(e.target.value) : null)}
-              className="rounded-md border border-border-subtle bg-transparent px-2 py-1 text-sm text-text-primary"
+              className={selectCls}
             >
               <option value="">无封面</option>
               {coverAssets.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.rel_path ?? a.abs_path.split("/").pop()}
+                  {fileName(a)}
                 </option>
               ))}
             </select>
