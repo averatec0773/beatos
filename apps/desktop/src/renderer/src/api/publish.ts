@@ -21,6 +21,22 @@ export interface PublishCreateBody {
   dry_run?: boolean;
 }
 
+export type SessionState =
+  | "valid" | "expired" | "not_logged_in" | "checking" | "unknown";
+
+export type ValidatedSessionState = "valid" | "expired" | "not_logged_in";
+
+export type LoginStatus = "pending" | "success" | "failed" | "timeout";
+
+export interface PublishJobFull {
+  job_id: string;
+  stage: string;
+  message: string;
+  updated_at: string;
+  request: { track_id: number; platform: string };
+  result?: { ok: boolean; url?: string; error?: string };
+}
+
 export const publishApi = {
   create(body: PublishCreateBody): Promise<{ job_id: string }> {
     return apiPost<{ job_id: string }>(`/api/publish`, body);
@@ -30,5 +46,22 @@ export const publishApi = {
   },
   sessions(): Promise<{ sessions: Record<string, boolean> }> {
     return apiGet<{ sessions: Record<string, boolean> }>(`/api/publish/sessions`);
+  },
+  validateSessions(): Promise<{ sessions: Record<string, ValidatedSessionState> }> {
+    return apiPost<{ sessions: Record<string, ValidatedSessionState> }>(
+      `/api/publish/sessions/validate`,
+      {},
+    );
+  },
+  login(platform: string): Promise<{ login_id: string }> {
+    return apiPost<{ login_id: string }>(`/api/publish/login`, { platform });
+  },
+  loginStatus(loginId: string): Promise<{ status: LoginStatus; message: string }> {
+    return apiGet<{ status: LoginStatus; message: string }>(
+      `/api/publish/login/${encodeURIComponent(loginId)}`,
+    );
+  },
+  jobs(): Promise<{ jobs: PublishJobFull[] }> {
+    return apiGet<{ jobs: PublishJobFull[] }>(`/api/publish/jobs`);
   },
 };
