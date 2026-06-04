@@ -19,7 +19,7 @@ uv sync
 # the venv (public workspace members), and beatos-pro's own pyproject carries a
 # standalone-testing path source for beatos-core that resolves wrong when nested.
 uv pip install -e packages/pro/beatos-publish --no-deps
-uv pip install patchright
+uv pip install "patchright>=1.40"   # --no-deps skipped it; pin to the engine's floor
 patchright install chromium   # once per machine — the browser the engine drives
 ```
 

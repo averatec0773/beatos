@@ -50,7 +50,7 @@ A real SQLite database for every beat: title, BPM, key, genre (multi-value), moo
 
 ### 2. AI co-pilot (MCP)
 
-A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client. 22 tools (7 read + 15 write): read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Approvals panel.
+A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client. 24 tools (8 read + 16 write), plus a publish tool in the Pro build: read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Approvals panel.
 
 </td>
 <td width="33%" valign="top">
@@ -71,14 +71,14 @@ Spotify-style bottom bar (Tone.js + Web Audio). Plays the FLOAT-32 WAVs your DAW
 
 <div align="center">
   <br/>
-  <img src="screenshots/mcp-claude-desktop.png" alt="BeatOS surfaced as a Desktop connector in Claude Desktop, with all 22 tools listed under read-only and write/delete permission groups" width="900" />
+  <img src="screenshots/mcp-claude-desktop.png" alt="BeatOS surfaced as a Desktop connector in Claude Desktop, with all tools listed under read-only and write/delete permission groups" width="900" />
   <br/>
   <em>BeatOS registered as a Desktop MCP connector in Claude Desktop — read-only tools auto-allowed, writes gated behind approval.</em>
   <br/>
   <br/>
 </div>
 
-**Tools shipping today (20 total):**
+**Tools shipping today (24 in the free build; +1 publish tool in the Pro build):**
 
 | Surface | Tools |
 |---|---|
@@ -142,6 +142,12 @@ make sync                              # resolve Python workspace
 cd apps/desktop && npm install
 ```
 
+> **Pro build (publishing).** Publishing is a Pro feature in the private `packages/pro/`
+> submodule. With access to it: `git submodule update --init packages/pro`, then
+> `uv pip install -e packages/pro/beatos-publish --no-deps` + `uv pip install "patchright>=1.40"`.
+> Full steps in [`packages/pro-mount-notes.md`](packages/pro-mount-notes.md). Without it,
+> the free build runs normally and greys out the publish entry.
+
 **Run**
 
 ```bash
@@ -184,13 +190,12 @@ npm run build && npm run smoke         # Playwright _electron end-to-end
 
 ```
 apps/desktop/              Electron shell + React renderer
-apps/extension/            Browser extension — auto-fills platform upload forms (v0.0.37, Phase 1)
 packages/
   beatos-core/             Pure Python business logic (no web/RPC deps)
   beatos-http/             FastAPI facade for the renderer
   beatos-mcp/              stdio MCP server for AI agents
-  beatos-platforms/        Per-platform vocab maps (v0.1+ adapters)
-packages/pro/             Private submodule — Pro features (platform publishing). Absent in the free build.
+  beatos-platforms/        Per-platform vocab maps
+  pro/                     Private submodule — Pro features (platform publishing); absent in the free build
 conventions/               Architecture and design references
 screenshots/               README assets
 ```

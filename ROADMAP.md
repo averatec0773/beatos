@@ -161,54 +161,13 @@ Both originally-planned features are now delivered:
 
 ---
 
-## v0.2.0 — First publish adapter (NetEase Cloudmusic)
+## v0.2.0 — Platform publishing (shipped, now Pro)
 
-> **Implementation approach updated** (feat/platform-inject-extension). The original Playwright/CDP sketch (`beatos-core/adapters/` + `--remote-debugging-port=9222`) is superseded by a browser-extension + fixed-port sidecar design. See `apps/extension/README.md`.
-
-### Phase 1 — browser-extension form-filling (IMPLEMENTED, feat/platform-inject-extension)
-
-- **Sidecar inject port**: fixed port **48923** (`BEATOS_INJECT_PORT`). The sidecar exposes `POST /api/inject/stage` (write metadata slot) and `GET /api/inject/form-map/{platform}` (serve selector maps). If 48923 is already in use at startup, extension upload is disabled that session (main app unaffected).
-- **ExportDialog trigger**: "发送到上传页" button in the per-track 导出 dialog stages metadata to the port, then opens the platform URL in the default browser.
-- **Browser extension** (`apps/extension/`): content script polls the staging slot, fills matched fields via selectors, shows an overlay (filled count + unmatched fields + which audio file to drag). The extension **never submits** — the user drags the audio file and clicks submit.
-- **Selector maps as data**: field→CSS-selector mappings live in `packages/beatos-platforms/data/netease/upload-form.json`, served via `GET /api/inject/form-map/netease`. NetEase page redesigns only require updating the JSON — no extension reload needed.
-- **NetEase only** for Phase 1. Vocab maps at `packages/beatos-platforms/` already cover genre/mood translation.
-- The empty `beatos-core/adapters/` stub is unused; the Playwright/CDP path is abandoned.
-
-### Phase 2-B — custom-widget click-interaction fill (IMPLEMENTED, v0.0.38)
-
-- Typed async "widget drivers" in `apps/extension/src/interaction-fill.ts` fill the click-to-open Ant widgets: `antv3-select` (曲风), `key-triple` (音名/调号/调式 via `key-decompose.ts`), `tag-modal` (说明标签), `license-modal` (价格). Triggers resolve by stable `data-ne2e-name` anchors.
-- Reference DOM snapshot for future calibration: `apps/extension/reference/netease-upload-page.html`.
-
-### Phase 2-B fixes — verified live via Playwright (DONE, v0.0.39)
-
-All three reported failures were root-caused by driving the real logged-in NetEase page with the Playwright MCP (not a static snapshot, which lacks the modals/drawer entirely):
-
-- **调式 race fixed**: dropdowns accumulate because Ant v3 only closes on a *trusted* outside click (a content script can't emit one), so a stale open dropdown satisfied the wait instantly and the option scan raced ahead of 调式's render. `pickAntOption` now scopes to each trigger's own dropdown via `aria-controls` + polls for the target option. Value commits; the dropdown still cosmetically lingers (unavoidable).
-- **说明标签 fixed**: the modal is a vertical-tab widget (适用场景/情绪表达/自定义); `tag-modal` now switches tabs to find moods under 情绪表达.
-- **价格 fixed (best-effort)**: 授权设置 is a right-side **drawer** (not `.ant-modal`), multi-step — `license-modal` opens it, checks the configured license type (default 租赁授权), and fills the first tier's 售价. Never clicks 保存 (human reviews the sub-tier matrix + submits).
-
-### Next-step fixes (Phase 2-B follow-ups, unscheduled)
-
-- **价格 multi-tier**: map BeatOS's multiple tiers onto NetEase's fixed sub-tier matrix (MP3 / MP3+WAV / +分轨) rather than filling only the first 售价 row.
-- **说明标签 自定义 tab**: also push unmatched moods into the 自定义标签 free-text input (currently only matches the fixed 适用场景 + 情绪表达 buttons).
-
-### Phase 2-C — upload templates + single-track album (templates SHIPPED v0.0.40, refined v0.0.41)
-
-**Templates + single-album name shipped in v0.0.40** — see CHANGELOG. Three `{}` templates (专辑名 / Beat 名称 / Beat 说明) + producer credit, configured in Settings → 上传模板, stored in `app_setting["upload_templates"]`, rendered by the pure `beatos-core/export/templates.py` and threaded through `netease.render`; the extension fills 专辑名 as a native field + shows a cover reminder. Decided during brainstorming: **every beat = a single-track album**, so NO album entity / migration / new track field — the album name is just another template. The `{ARTIST}` idea was dropped (the producer writes the reference artist into `{title}` or the template literal).
-
-**Refined in v0.0.41** (Subproject B): `{prod}` now resolves from `track.producer` (joined by a configurable `prod_separator`, default ` x `; the Settings `prod` field is fallback-only). Added a `album_description` template (default `{publish date} Prod.{prod}`, filled into the 专辑描述 textarea) and a `{publish date}` token (`YYYY-MM-DD`, export day, service-injected). Token regex widened to allow spaces in `{...}`.
-
-**Subproject A — license-tier price + share (SHIPPED v0.0.42):** `license_tier` gained a nullable `share` (0–100) column (migration 017, append-only), threaded through model + service + HTTP + MCP + the track-editor and default-tiers UIs. `netease.render` emits a structured `price_tiers` field (deliverables → MP3 / MP3+WAV / +分轨 row, CNY price, share); the extension's `license-modal` driver checks each rental row and fills its 售价 + 编曲分润比例 (exact-title-first match so MP3 ≠ MP3+WAV). CNY-only; null share → 分润 blank; 永久独家 + the unlimited rental row stay manual. Verified live on the real rental matrix.
-
-Remaining Phase 2-C follow-ups (future):
-- **Album cover auto-carry**: BeatOS knows the track's `cover_asset_id` but the extension can't inject a local file into a file input (and must never auto-submit) — today it's a manual drag + overlay reminder. A future path could expose the cover file to the producer more directly.
-- **Album type / 版本 / 发行日期**: still filled manually on the page; could be added to the recipe/templates if they turn out to need automation.
-
-### Phase 2-A — MCP tool + multi-platform (pending)
-
-- MCP `inject_to_platform` tool with 2PC approval (`token` → `await_approval`), consistent with the existing write-surface pattern (the staging slot + extension consumer already exist; this just adds the AI trigger).
-- Additional platforms via data-driven selector maps in `beatos-platforms/data/{platform}/upload-form.json`.
-- Spec hooks: `docs/superpowers/specs/future-netease-license-model.md`.
+Per-platform publishing shipped and now lives in the private `beatos-pro` repo,
+mounted at `packages/pro/`. The public free core keeps the catalog, on-demand
+metadata export, and the AI/MCP surface; the publishing engine, browser automation,
+and platform recipes are closed-source (a Pro feature). The free build degrades
+gracefully — see `packages/pro-mount-notes.md`.
 
 ---
 
