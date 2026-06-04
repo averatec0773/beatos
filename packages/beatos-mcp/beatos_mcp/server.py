@@ -391,6 +391,10 @@ async def detach_assets(
 # --- Pro tools (registered only when the beatos-publish engine is present) ---
 
 if pro_available():
+    # Strong refs to in-flight publish tasks — asyncio only holds weak refs, so a
+    # fire-and-forget create_task() could be GC'd mid-run. Discarded on completion.
+    _publish_tasks: set = set()
+
     @mcp.tool(
         annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=True),
     )
@@ -401,13 +405,46 @@ if pro_available():
         cover_asset_id: Annotated[int | None, Field(description="Cover image asset id, optional.")] = None,
         account: Annotated[str, Field(description="Session account; default 'default'.")] = "default",
     ) -> dict:
-        """Publish a track to a platform (Pro). Drives the browser to the platform's
-        human verification gate (e.g. NetEase SMS) and pauses. Returns the engine result."""
+        """START publishing a track to a platform (Pro). Returns IMMEDIATELY with a
+        job_id — this does NOT complete the publish. It opens a (visible) browser on
+        the user's machine, fills the form and uploads files (which can be slow), then
+        PAUSES for a human at the platform's verification gate (e.g. NetEase needs an
+        SMS code only a person can enter). Poll publish_status(job_id) for progress; a
+        person must finish at the browser. Requires a prior login and a desktop session
+        with a display. Do NOT retry on timeout — the job keeps running; check status."""
+        import asyncio
+
+        from beatos_publish.jobs import REGISTRY
         from beatos_publish.models import PublishRequest
-        from beatos_publish.service import run_publish
+        from beatos_publish.service import run_job
         req = PublishRequest(track_id=track_id, platform=platform,
                              audio_asset_id=audio_asset_id, cover_asset_id=cover_asset_id, account=account)
-        return (await run_publish(req)).model_dump()
+        job_id = REGISTRY.create(req)
+        task = asyncio.create_task(run_job(job_id, req))
+        _publish_tasks.add(task)
+        task.add_done_callback(_publish_tasks.discard)
+        return {
+            "job_id": job_id,
+            "status": "started",
+            "note": "Publish started in a browser; a human must finish at the platform's "
+                    "verification gate. Poll publish_status(job_id). Do not retry on timeout.",
+        }
+
+    @mcp.tool(annotations=_READ_ANNOTATIONS)
+    async def publish_status(
+        job_id: Annotated[str, Field(description="The job_id returned by publish_track.")],
+    ) -> dict:
+        """Poll a publish job started by publish_track (Pro). Returns
+        {job_id, stage, message, result?}. Stages: queued/launching/navigating/
+        uploading_audio/uploading_cover/filling_metadata/uploading_deliverables/
+        submitting/awaiting_review/awaiting_sms/done/failed. The job may PARK at
+        'awaiting_review' or 'awaiting_sms' until a human acts at the browser — that is
+        expected, not a failure. 'done' = published, 'failed' = error."""
+        from beatos_publish.jobs import REGISTRY
+        job = REGISTRY.get(job_id)
+        if job is None:
+            return {"error": "job not found", "job_id": job_id}
+        return job.model_dump()
 
 
 # --- ASGI app for FastAPI mount ---
