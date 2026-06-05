@@ -30,7 +30,7 @@ describe("ExportDialog", () => {
     render(<ExportDialog open trackId={1} onClose={() => {}} />);
 
     await waitFor(() => screen.getByText("陷阱说唱"));
-    const copyButtons = await screen.findAllByRole("button", { name: /复制|copy/i });
+    const copyButtons = await screen.findAllByRole("button", { name: /copy/i });
     await user.click(copyButtons[0]);
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("My Beat"));
@@ -39,9 +39,9 @@ describe("ExportDialog", () => {
   it("greys out the publish button when Pro is absent", async () => {
     render(<ExportDialog open trackId={1} onClose={() => {}} />);
 
-    const publish = await screen.findByRole("button", { name: /发布到平台/ });
+    const publish = await screen.findByRole("button", { name: /publish to platform/i });
     expect(publish).toBeDisabled();
-    expect(publish).toHaveAttribute("title", "Pro 功能 · 购买解锁");
+    expect(publish).toHaveAttribute("title", "Pro feature · purchase to unlock");
   });
 
   it("enables the publish button when Pro is present", async () => {
@@ -49,7 +49,7 @@ describe("ExportDialog", () => {
     render(<ExportDialog open trackId={1} onClose={() => {}} />);
 
     await waitFor(() => screen.getByText("陷阱说唱"));
-    const publish = await screen.findByRole("button", { name: /发布到平台/ });
+    const publish = await screen.findByRole("button", { name: /publish to platform/i });
     expect(publish).toBeEnabled();
   });
 });

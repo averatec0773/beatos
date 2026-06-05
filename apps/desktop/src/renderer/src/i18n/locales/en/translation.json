@@ -88,6 +88,26 @@
     "copyJson": "Copy JSON",
     "toolsList": "Tools ({{count}}): {{list}}"
   },
+  "dialogs": {
+    "export": {
+      "copyAria": "Copy",
+      "failed": "Export failed",
+      "title": "Export metadata",
+      "desc": "Copy field by field into the platform upload form.",
+      "platformAria": "Platform",
+      "proLocked": "Pro feature · purchase to unlock",
+      "publish": "Publish to platform"
+    }
+  },
+  "contextMenu": {
+    "edit": "Edit",
+    "addToList": "Add to list",
+    "removeFromList": "Remove from this list",
+    "revealInFinder": "Reveal in Finder",
+    "exportToPlatform": "Export to platform…",
+    "delete": "Delete",
+    "deleteConfirm": "Delete \"{{title}}\"?"
+  },
   "settings": {
     "title": "Settings",
     "groups": { "appearance": "Appearance", "beatsUpload": "Beats & Upload", "general": "General" },

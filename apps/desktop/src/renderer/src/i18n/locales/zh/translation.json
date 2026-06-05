@@ -88,6 +88,26 @@
     "copyJson": "复制 JSON",
     "toolsList": "工具（{{count}}）: {{list}}"
   },
+  "dialogs": {
+    "export": {
+      "copyAria": "复制",
+      "failed": "导出失败",
+      "title": "导出元数据",
+      "desc": "逐字段复制到平台上传表单。",
+      "platformAria": "平台",
+      "proLocked": "Pro 功能 · 购买解锁",
+      "publish": "发布到平台"
+    }
+  },
+  "contextMenu": {
+    "edit": "编辑",
+    "addToList": "添加到歌单",
+    "removeFromList": "从此歌单移除",
+    "revealInFinder": "在 Finder 中显示",
+    "exportToPlatform": "导出到平台…",
+    "delete": "删除",
+    "deleteConfirm": "删除「{{title}}」?"
+  },
   "settings": {
     "title": "设置",
     "groups": { "appearance": "外观", "beatsUpload": "Beats 与上传", "general": "通用" },
