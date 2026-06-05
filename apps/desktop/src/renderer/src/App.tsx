@@ -17,6 +17,7 @@ import { useTrackStore } from "@/stores/tracks";
 import { useListStore } from "@/stores/lists";
 import { addTracksToList } from "@/lib/add-tracks-to-list";
 import { useVocabLocaleStore } from "@/stores/vocab-locale";
+import { useAppLanguageStore } from "@/stores/app-language";
 import { usePlayerStore } from "@/stores/player";
 import { useProStore } from "@/stores/pro";
 
@@ -33,6 +34,8 @@ export default function App(): React.JSX.Element {
   // fall back to the store's "both" default (logged in the store).
   useEffect(() => {
     void useVocabLocaleStore.getState().hydrate();
+    // Load the persisted App-UI language once at boot (defaults to English).
+    void useAppLanguageStore.getState().hydrate();
     // Restore the persisted player resume point (last track, paused at its
     // saved position) + volume/mute/shuffle/repeat; falls back to idle if the
     // track or its file is gone.
