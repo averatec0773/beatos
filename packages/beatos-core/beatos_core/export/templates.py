@@ -17,6 +17,13 @@ DEFAULT_TEMPLATES: dict[str, str] = {
         "如需完整使用权请进行购买，感谢支持！"
     ),
     "album_description": "{publish date} Prod.{prod}",
+    "douyin_title": "{free}{title} {genre}型beat",
+    "douyin_caption": (
+        "🎵{title} | {genre} {bpm}BPM {key}\n"
+        "Prod.{prod}\n"
+        "评论扣beat或主页查看完整版🎧"
+    ),
+    "douyin_topics": "型beat 说唱伴奏",
     "prod_separator": " x ",
 }
 
@@ -26,7 +33,7 @@ _TOKEN_RE = re.compile(r"\{([\w ]+)\}")
 def render_template(
     tmpl: str, track: Track, *, prod: str, year: int, publish_date: str, genre_zh: str, free: str = ""
 ) -> str:
-    """Substitute {title}/{genre}/{year}/{publish date}/{prod}/{bpm}/{key}.
+    """Substitute {title}/{genre}/{year}/{publish date}/{prod}/{bpm}/{key}/{tags}.
 
     Pure: no I/O. `genre_zh`/`year`/`publish_date`/`prod` are supplied by the
     caller. Token names are matched allowing internal spaces and trimmed before
@@ -41,6 +48,7 @@ def render_template(
         "prod": prod or "",
         "bpm": str(track.bpm) if track.bpm is not None else "",
         "key": track.key_signature or "",
+        "tags": " ".join(track.tags or []),
         "free": free,
     }
 

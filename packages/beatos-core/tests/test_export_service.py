@@ -38,3 +38,17 @@ async def test_unknown_platform_raises():
 async def test_missing_track_raises():
     with pytest.raises(ValueError):
         await export_metadata(999999, "netease")
+
+
+def test_available_platforms_includes_douyin():
+    assert "douyin" in available_platforms()
+
+
+@pytest.mark.asyncio
+async def test_export_douyin_track():
+    track = await create_track("Beat C")
+    await update_track(track.id, {"tags": ["型beat"], "bpm": 140})
+    result = await export_metadata(track.id, "douyin")
+    by_key = {f.key: f for f in result.fields}
+    assert by_key["title"].value
+    assert "caption" in by_key and "topics" in by_key

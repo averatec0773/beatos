@@ -50,6 +50,12 @@ const PREVIEW_ROLE_PRIORITY = [
 ];
 // Buyer DELIVERABLE WAV (lossless, no watermark).
 const DELIVERABLE_WAV_PRIORITY = ["audio_untagged_wav", "audio_tagged_wav"];
+// Promo video for video platforms (douyin): prefer vertical 9:16.
+const PROMO_VIDEO_ROLE_PRIORITY = [
+  "promo_video_vertical",
+  "promo_video_landscape",
+  "promo_video_square",
+];
 // Short metadata rendered as a compact spec strip; everything else stacks.
 const SPEC_KEYS = ["bpm", "key", "genre", "mood"];
 
@@ -58,6 +64,9 @@ function isAudioRole(role: string): boolean {
 }
 function isWavRole(role: string): boolean {
   return role.startsWith("audio_") && role.endsWith("_wav");
+}
+function isPromoVideoRole(role: string): boolean {
+  return role.startsWith("promo_video");
 }
 function fileName(a: Asset): string {
   return a.rel_path ?? a.abs_path.split("/").pop() ?? a.abs_path;
@@ -115,6 +124,7 @@ export function PublishDialog({
   const [coverAssetId, setCoverAssetId] = useState<number | null>(null);
   const [wavAssetId, setWavAssetId] = useState<number | null>(null);
   const [stemsAssetId, setStemsAssetId] = useState<number | null>(null);
+  const [videoAssetId, setVideoAssetId] = useState<number | null>(null);
   const [sessionOk, setSessionOk] = useState<boolean | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
   const [job, setJob] = useState<PublishJob | null>(null);
@@ -131,6 +141,11 @@ export function PublishDialog({
   const wavAssets = useMemo(() => trackAssets.filter((a) => isWavRole(a.role)), [trackAssets]);
   const coverAssets = useMemo(() => trackAssets.filter((a) => a.role === "cover"), [trackAssets]);
   const stemsAssets = useMemo(() => trackAssets.filter((a) => a.role === "stems"), [trackAssets]);
+  const videoAssets = useMemo(
+    () => trackAssets.filter((a) => isPromoVideoRole(a.role)),
+    [trackAssets],
+  );
+  const isDouyin = platform === "douyin";
 
   const specFields = useMemo(
     () =>
@@ -207,6 +222,7 @@ export function PublishDialog({
     setCoverAssetId(null);
     setWavAssetId(null);
     setStemsAssetId(null);
+    setVideoAssetId(null);
     setSessionOk(null);
 
     exportApi
@@ -231,6 +247,8 @@ export function PublishDialog({
         if (stems) setStemsAssetId(stems.id);
         const cover = list.find((a) => a.role === "cover");
         if (cover) setCoverAssetId(cover.id);
+        const video = pickFirst(list, PROMO_VIDEO_ROLE_PRIORITY);
+        if (video) setVideoAssetId(video.id);
       })
       .catch(() => {
         if (!cancelled) useToastStore.getState().show("error", "Failed to load assets");
@@ -250,21 +268,31 @@ export function PublishDialog({
   useEffect(() => stopPolling, []);
 
   async function handlePublish(): Promise<void> {
-    if (audioAssetId == null) {
-      useToastStore.getState().show("warning", "Select a preview audio first");
+    if (isDouyin ? videoAssetId == null : audioAssetId == null) {
+      useToastStore
+        .getState()
+        .show("warning", isDouyin ? "Select a promo video first" : "Select a preview audio first");
       return;
     }
     setPublishing(true);
     setJob(null);
     try {
-      const { job_id } = await publishApi.create({
-        track_id: trackId,
-        platform,
-        audio_asset_id: audioAssetId,
-        cover_asset_id: coverAssetId ?? undefined,
-        deliverable_wav_asset_id: wavAssetId ?? undefined,
-        deliverable_stems_asset_id: stemsAssetId ?? undefined,
-      });
+      const body = isDouyin
+        ? {
+            track_id: trackId,
+            platform,
+            video_asset_id: videoAssetId ?? undefined,
+            cover_asset_id: coverAssetId ?? undefined,
+          }
+        : {
+            track_id: trackId,
+            platform,
+            audio_asset_id: audioAssetId ?? undefined,
+            cover_asset_id: coverAssetId ?? undefined,
+            deliverable_wav_asset_id: wavAssetId ?? undefined,
+            deliverable_stems_asset_id: stemsAssetId ?? undefined,
+          };
+      const { job_id } = await publishApi.create(body);
       stopPolling();
       pollRef.current = window.setInterval(async () => {
         try {
@@ -307,7 +335,7 @@ export function PublishDialog({
           <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             <span className="flex items-center gap-2">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              Log in to NetEase first
+              Log in first
             </span>
             <button
               type="button"
@@ -323,40 +351,64 @@ export function PublishDialog({
         {/* — upload slots — */}
         <div className={`${sectionCls} mb-2`}>Files</div>
         <div className="mb-4 flex flex-col gap-1.5">
-          <FileRow
-            label="Preview audio"
-            hint="Public preview on the platform — defaults to the tagged version (so the clean file isn't exposed)"
-            value={audioAssetId}
-            onChange={setAudioAssetId}
-            items={audioAssets}
-            emptyLabel="No audio available"
-            withRole
-          />
-          <FileRow
-            label="Deliverable WAV"
-            hint="Lossless no-watermark file paid buyers download — defaults to the untagged WAV (required for any rental tier)"
-            value={wavAssetId}
-            onChange={setWavAssetId}
-            items={wavAssets}
-            emptyLabel="Don't upload"
-            withRole
-          />
-          <FileRow
-            label="Stems"
-            hint="Stems package buyers of the stems tier receive (<200MB; skip the tier if none)"
-            value={stemsAssetId}
-            onChange={setStemsAssetId}
-            items={stemsAssets}
-            emptyLabel="Don't upload"
-          />
-          <FileRow
-            label="Cover"
-            hint="Album cover — defaults to the track's current cover"
-            value={coverAssetId}
-            onChange={setCoverAssetId}
-            items={coverAssets}
-            emptyLabel="No cover"
-          />
+          {isDouyin ? (
+            <>
+              <FileRow
+                label="Promo video"
+                hint="Promo video published to Douyin (vertical 9:16 preferred)"
+                value={videoAssetId}
+                onChange={setVideoAssetId}
+                items={videoAssets}
+                emptyLabel="No video available"
+                withRole
+              />
+              <FileRow
+                label="Cover"
+                hint="Video cover — defaults to the track's current cover (optional)"
+                value={coverAssetId}
+                onChange={setCoverAssetId}
+                items={coverAssets}
+                emptyLabel="No cover"
+              />
+            </>
+          ) : (
+            <>
+              <FileRow
+                label="Preview audio"
+                hint="Public preview on the platform — defaults to the tagged version (so the clean file isn't exposed)"
+                value={audioAssetId}
+                onChange={setAudioAssetId}
+                items={audioAssets}
+                emptyLabel="No audio available"
+                withRole
+              />
+              <FileRow
+                label="Deliverable WAV"
+                hint="Lossless no-watermark file paid buyers download — defaults to the untagged WAV (required for any rental tier)"
+                value={wavAssetId}
+                onChange={setWavAssetId}
+                items={wavAssets}
+                emptyLabel="Don't upload"
+                withRole
+              />
+              <FileRow
+                label="Stems"
+                hint="Stems package buyers of the stems tier receive (<200MB; skip the tier if none)"
+                value={stemsAssetId}
+                onChange={setStemsAssetId}
+                items={stemsAssets}
+                emptyLabel="Don't upload"
+              />
+              <FileRow
+                label="Cover"
+                hint="Album cover — defaults to the track's current cover"
+                value={coverAssetId}
+                onChange={setCoverAssetId}
+                items={coverAssets}
+                emptyLabel="No cover"
+              />
+            </>
+          )}
         </div>
 
         {/* — metadata review — */}
@@ -436,7 +488,7 @@ export function PublishDialog({
           <button
             type="button"
             onClick={handlePublish}
-            disabled={publishing || sessionOk === false || audioAssetId == null}
+            disabled={publishing || sessionOk === false || (isDouyin ? videoAssetId == null : audioAssetId == null)}
             className="inline-flex items-center gap-1.5 rounded-md bg-text-primary px-3.5 py-1.5 text-sm font-medium text-bg-base hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Rocket className="h-3.5 w-3.5" /> Publish

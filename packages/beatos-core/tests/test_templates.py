@@ -82,7 +82,11 @@ def test_album_description_default_template():
 
 
 def test_default_templates_have_all_keys():
-    assert set(DEFAULT_TEMPLATES) == {"album_name", "beat_name", "beat_description", "album_description", "prod_separator", "free_prefix"}
+    assert set(DEFAULT_TEMPLATES) == {
+        "album_name", "beat_name", "beat_description", "album_description",
+        "prod_separator", "free_prefix",
+        "douyin_title", "douyin_caption", "douyin_topics",
+    }
 
 
 def test_free_token_renders_prefix_or_empty():
@@ -97,3 +101,23 @@ def test_free_token_renders_prefix_or_empty():
                                publish_date="", genre_zh="", free="")
     assert out_free == '[FREE] "X"'
     assert out_paid == '"X"'
+
+
+def test_tags_token_joins_track_tags():
+    t = _track(tags=["型beat", "说唱"])
+    assert _render("{tags}", t) == "型beat 说唱"
+
+
+def test_tags_token_empty_when_none():
+    assert _render("[{tags}]", _track(tags=None)) == "[]"
+
+
+def test_douyin_title_default_template():
+    out = _render(DEFAULT_TEMPLATES["douyin_title"], genre_zh="Trap")
+    assert out == "仙泉 Trap型beat"
+
+
+def test_douyin_caption_default_template():
+    t = _track(bpm=140, key_signature="F# minor")
+    out = _render(DEFAULT_TEMPLATES["douyin_caption"], t, genre_zh="Trap")
+    assert "仙泉" in out and "Trap" in out and "140BPM" in out and "F# minor" in out

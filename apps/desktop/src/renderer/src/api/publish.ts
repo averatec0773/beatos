@@ -10,8 +10,10 @@ export interface PublishJob {
 export interface PublishCreateBody {
   track_id: number;
   platform: string;
-  /** Streamable preview audio (public). */
-  audio_asset_id: number;
+  /** Streamable preview audio (music platforms). */
+  audio_asset_id?: number;
+  /** Promo video (video platforms, e.g. douyin). */
+  video_asset_id?: number;
   cover_asset_id?: number;
   /** Buyer deliverable — the lossless untagged WAV uploaded into the license drawer. */
   deliverable_wav_asset_id?: number;

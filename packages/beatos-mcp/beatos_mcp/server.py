@@ -400,25 +400,27 @@ if pro_available():
     )
     async def publish_track(
         track_id: Annotated[int, Field(description="Track id to publish.")],
-        platform: Annotated[str, Field(description="Platform key (e.g. 'netease').")],
-        audio_asset_id: Annotated[int, Field(description="Asset id of the audio file (untagged).")],
+        platform: Annotated[str, Field(description="Platform key (e.g. 'netease', 'douyin').")],
+        audio_asset_id: Annotated[int | None, Field(description="Audio asset id (untagged) — required for music platforms like netease.")] = None,
+        video_asset_id: Annotated[int | None, Field(description="Promo-video asset id — required for video platforms like douyin.")] = None,
         cover_asset_id: Annotated[int | None, Field(description="Cover image asset id, optional.")] = None,
         account: Annotated[str, Field(description="Session account; default 'default'.")] = "default",
     ) -> dict:
         """START publishing a track to a platform (Pro). Returns IMMEDIATELY with a
         job_id — this does NOT complete the publish. It opens a (visible) browser on
         the user's machine, fills the form and uploads files (which can be slow), then
-        PAUSES for a human at the platform's verification gate (e.g. NetEase needs an
-        SMS code only a person can enter). Poll publish_status(job_id) for progress; a
-        person must finish at the browser. Requires a prior login and a desktop session
-        with a display. Do NOT retry on timeout — the job keeps running; check status."""
+        PAUSES for a human at the platform's gate (netease: SMS code; douyin: review +
+        click 发布). Poll publish_status(job_id) for progress; a person must finish at
+        the browser. Requires a prior login and a desktop session with a display. Do NOT
+        retry on timeout — the job keeps running; check status."""
         import asyncio
 
         from beatos_publish.jobs import REGISTRY
         from beatos_publish.models import PublishRequest
         from beatos_publish.service import run_job
         req = PublishRequest(track_id=track_id, platform=platform,
-                             audio_asset_id=audio_asset_id, cover_asset_id=cover_asset_id, account=account)
+                             audio_asset_id=audio_asset_id, video_asset_id=video_asset_id,
+                             cover_asset_id=cover_asset_id, account=account)
         job_id = REGISTRY.create(req)
         task = asyncio.create_task(run_job(job_id, req))
         _publish_tasks.add(task)

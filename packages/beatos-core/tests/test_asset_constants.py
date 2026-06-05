@@ -10,6 +10,9 @@ def test_asset_roles_set():
         "audio_untagged_mp3",
         "audio_tagged_wav",
         "audio_untagged_wav",
+        "promo_video_vertical",
+        "promo_video_landscape",
+        "promo_video_square",
     })
 
 

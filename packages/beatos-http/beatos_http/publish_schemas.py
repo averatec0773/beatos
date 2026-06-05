@@ -12,7 +12,8 @@ class PublishRequestBody(BaseModel):
     track_id: int
     platform: str
     account: str = "default"
-    audio_asset_id: int
+    audio_asset_id: Optional[int] = None
+    video_asset_id: Optional[int] = None
     cover_asset_id: Optional[int] = None
     deliverable_wav_asset_id: Optional[int] = None
     deliverable_stems_asset_id: Optional[int] = None
