@@ -61,6 +61,18 @@
     "savedAt": "Saved {{time}}",
     "saveFailed": "Save defaults failed: {{error}}"
   },
+  "uploadTemplates": {
+    "title": "Upload templates",
+    "desc": "When sending to a platform's upload page, these templates generate the album name / beat name / beat description. Placeholders:",
+    "albumName": "Album name template",
+    "beatName": "Beat name template",
+    "beatDesc": "Beat description template",
+    "albumDesc": "Album description template",
+    "producerJoiner": "Producer joiner",
+    "freePrefix": "Free prefix (only emitted at {free} for free tracks)",
+    "freePrefixAria": "Free prefix",
+    "resetDefaults": "Reset to defaults"
+  },
   "settings": {
     "title": "Settings",
     "groups": { "appearance": "Appearance", "beatsUpload": "Beats & Upload", "general": "General" },

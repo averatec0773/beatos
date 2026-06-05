@@ -61,6 +61,18 @@
     "savedAt": "已保存 {{time}}",
     "saveFailed": "保存默认值失败: {{error}}"
   },
+  "uploadTemplates": {
+    "title": "上传模板",
+    "desc": "发送到平台上传页时，用这些模板生成专辑名 / Beat 名称 / Beat 说明。占位符:",
+    "albumName": "专辑名模板",
+    "beatName": "Beat 名称模板",
+    "beatDesc": "Beat 说明模板",
+    "albumDesc": "专辑描述模板",
+    "producerJoiner": "Producer 连接符",
+    "freePrefix": "免费前缀（仅免费曲目的 {free} 处生成）",
+    "freePrefixAria": "免费前缀",
+    "resetDefaults": "重置默认"
+  },
   "settings": {
     "title": "设置",
     "groups": { "appearance": "外观", "beatsUpload": "Beats 与上传", "general": "通用" },
