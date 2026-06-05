@@ -20,25 +20,26 @@ interface Props {
 }
 
 const STAGE_LABELS: Record<string, string> = {
-  queued: "排队中",
-  launching: "启动浏览器",
-  navigating: "打开上传页",
-  uploading_audio: "上传预览音频",
-  uploading_cover: "上传封面",
-  filling_metadata: "填写元数据",
-  uploading_deliverables: "上传交付文件",
-  submitting: "提交中",
-  awaiting_review: "等待人工完成",
-  awaiting_sms: "等待人工完成",
-  done: "已完成",
-  failed: "失败",
+  queued: "Queued",
+  launching: "Launching browser",
+  navigating: "Opening upload page",
+  uploading_audio: "Uploading preview audio",
+  uploading_cover: "Uploading cover",
+  filling_metadata: "Filling metadata",
+  uploading_deliverables: "Uploading deliverables",
+  submitting: "Submitting",
+  awaiting_review: "Waiting for you",
+  awaiting_sms: "Waiting for you",
+  done: "Done",
+  failed: "Failed",
 };
 
 // A publish stops polling on any of these terminal stages. awaiting_* are the
 // human gates: the engine filled+uploaded everything a machine can, and a person
 // finishes in the browser (read the agreement + SMS verify).
 const TERMINAL = new Set(["done", "failed", "awaiting_review", "awaiting_sms"]);
-const AWAITING_MSG = "已自动上传，请在浏览器完成最后一步阅读用户协议并短信验证";
+const AWAITING_MSG =
+  "Auto-uploaded — finish the last step in the browser (read the agreement, then SMS-verify).";
 
 // Streamable PREVIEW (public): prefer tagged so the clean file isn't exposed.
 const PREVIEW_ROLE_PRIORITY = [
@@ -172,7 +173,7 @@ export function PublishDialog({
             }
             if (!mountedRef.current) return;
             setLoggingIn(false);
-            useToastStore.getState().show("error", "登录未完成");
+            useToastStore.getState().show("error", "Login not completed");
           }
         } catch {
           /* keep polling */
@@ -181,7 +182,7 @@ export function PublishDialog({
     } catch {
       if (!mountedRef.current) return;
       setLoggingIn(false);
-      useToastStore.getState().show("error", "无法开始登录");
+      useToastStore.getState().show("error", "Couldn't start login");
     }
   }
 
@@ -212,7 +213,7 @@ export function PublishDialog({
       .forTrack(trackId, platform)
       .then((r) => !cancelled && setResult(r))
       .catch(() => {
-        if (!cancelled) useToastStore.getState().show("error", "加载元数据失败");
+        if (!cancelled) useToastStore.getState().show("error", "Failed to load metadata");
       });
 
     assetsApi
@@ -232,7 +233,7 @@ export function PublishDialog({
         if (cover) setCoverAssetId(cover.id);
       })
       .catch(() => {
-        if (!cancelled) useToastStore.getState().show("error", "加载素材失败");
+        if (!cancelled) useToastStore.getState().show("error", "Failed to load assets");
       });
 
     publishApi
@@ -250,7 +251,7 @@ export function PublishDialog({
 
   async function handlePublish(): Promise<void> {
     if (audioAssetId == null) {
-      useToastStore.getState().show("warning", "请先选择预览音频");
+      useToastStore.getState().show("warning", "Select a preview audio first");
       return;
     }
     setPublishing(true);
@@ -278,7 +279,7 @@ export function PublishDialog({
         }
       }, 1500);
     } catch {
-      useToastStore.getState().show("error", "发布失败");
+      useToastStore.getState().show("error", "Publish failed");
       setPublishing(false);
     }
   }
@@ -295,7 +296,7 @@ export function PublishDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            发布到平台
+            Publish to platform
             <span className="rounded border border-border-subtle px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-text-tertiary">
               {platform}
             </span>
@@ -306,7 +307,7 @@ export function PublishDialog({
           <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             <span className="flex items-center gap-2">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              需要先登录网易云
+              Log in to NetEase first
             </span>
             <button
               type="button"
@@ -314,52 +315,52 @@ export function PublishDialog({
               onClick={() => void startLogin()}
               className="rounded border border-warning/50 px-2 py-0.5 text-warning hover:bg-warning/20 disabled:opacity-50"
             >
-              {loggingIn ? "浏览器已打开…" : "登录"}
+              {loggingIn ? "Browser open…" : "Log in"}
             </button>
           </div>
         )}
 
         {/* — upload slots — */}
-        <div className={`${sectionCls} mb-2`}>上传文件</div>
+        <div className={`${sectionCls} mb-2`}>Files</div>
         <div className="mb-4 flex flex-col gap-1.5">
           <FileRow
-            label="预览音频"
-            hint="平台公开试听版，默认带标签 tagged（防止白嫖无水印版）"
+            label="Preview audio"
+            hint="Public preview on the platform — defaults to the tagged version (so the clean file isn't exposed)"
             value={audioAssetId}
             onChange={setAudioAssetId}
             items={audioAssets}
-            emptyLabel="无可用音频"
+            emptyLabel="No audio available"
             withRole
           />
           <FileRow
-            label="交付 WAV"
-            hint="付费买家下载的无水印高音质，默认 untagged WAV（租赁档必传）"
+            label="Deliverable WAV"
+            hint="Lossless no-watermark file paid buyers download — defaults to the untagged WAV (required for any rental tier)"
             value={wavAssetId}
             onChange={setWavAssetId}
             items={wavAssets}
-            emptyLabel="不上传"
+            emptyLabel="Don't upload"
             withRole
           />
           <FileRow
-            label="分轨"
-            hint="分轨档买家拿到的 stems 包（<200MB；无则跳过该档）"
+            label="Stems"
+            hint="Stems package buyers of the stems tier receive (<200MB; skip the tier if none)"
             value={stemsAssetId}
             onChange={setStemsAssetId}
             items={stemsAssets}
-            emptyLabel="不上传"
+            emptyLabel="Don't upload"
           />
           <FileRow
-            label="封面"
-            hint="专辑封面，默认当前 track 封面"
+            label="Cover"
+            hint="Album cover — defaults to the track's current cover"
             value={coverAssetId}
             onChange={setCoverAssetId}
             items={coverAssets}
-            emptyLabel="无封面"
+            emptyLabel="No cover"
           />
         </div>
 
         {/* — metadata review — */}
-        <div className={`${sectionCls} mb-2`}>元数据</div>
+        <div className={`${sectionCls} mb-2`}>Metadata</div>
         <div className="max-h-[34vh] overflow-y-auto beatos-scroll pr-1">
           {specFields.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
@@ -404,12 +405,12 @@ export function PublishDialog({
               <div className="flex items-center gap-2 rounded-md border border-success/40 bg-success/10 px-3 py-2 text-xs text-success">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>
-                  发布成功
+                  Published
                   {job?.result?.url && (
                     <>
                       {" — "}
                       <a href={job.result.url} target="_blank" rel="noreferrer" className="underline">
-                        查看
+                        View
                       </a>
                     </>
                   )}
@@ -419,7 +420,7 @@ export function PublishDialog({
             {stage === "failed" && (
               <div className="flex items-start gap-2 rounded-md border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span className="leading-snug">发布失败：{job?.result?.error ?? job?.message}</span>
+                <span className="leading-snug">Publish failed: {job?.result?.error ?? job?.message}</span>
               </div>
             )}
           </div>
@@ -438,7 +439,7 @@ export function PublishDialog({
             disabled={publishing || sessionOk === false || audioAssetId == null}
             className="inline-flex items-center gap-1.5 rounded-md bg-text-primary px-3.5 py-1.5 text-sm font-medium text-bg-base hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Rocket className="h-3.5 w-3.5" /> 发布
+            <Rocket className="h-3.5 w-3.5" /> Publish
           </button>
         </div>
       </DialogContent>
