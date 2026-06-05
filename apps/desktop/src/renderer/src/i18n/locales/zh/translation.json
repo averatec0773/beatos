@@ -12,5 +12,33 @@
     "selectAll": "全选",
     "revealInFinder": "在 Finder 中显示",
     "dash": "—"
+  },
+  "settings": {
+    "title": "设置",
+    "groups": { "appearance": "外观", "beatsUpload": "Beats 与上传", "general": "通用" },
+    "language": {
+      "title": "语言",
+      "desc": "应用界面语言。genre/mood 标签的值不受影响 —— 在「Tag display」中设置。"
+    },
+    "tagDisplay": {
+      "title": "标签显示",
+      "desc": "编辑器、筛选器与曲目列表中 genre / mood 选项的显示语言。已存储的值不受影响。",
+      "bilingual": "双语"
+    },
+    "storage": {
+      "title": "存储",
+      "dbPath": "曲库数据库路径",
+      "restartHint": "更改此路径后需要重启。",
+      "restartAlert": "数据库路径已更改。请重启 BeatOS 使新位置生效。",
+      "updateFailed": "更新数据库路径失败: {{error}}"
+    },
+    "about": {
+      "title": "关于",
+      "madeBy": "由 averatec0773 制作",
+      "website": "我的网站: ",
+      "websiteAria": "在浏览器中打开 averatec.studio",
+      "repo": "项目仓库: ",
+      "repoAria": "在浏览器中打开 GitHub 项目仓库"
+    }
   }
 }

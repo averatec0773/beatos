@@ -12,5 +12,33 @@
     "selectAll": "Select all",
     "revealInFinder": "Reveal in Finder",
     "dash": "—"
+  },
+  "settings": {
+    "title": "Settings",
+    "groups": { "appearance": "Appearance", "beatsUpload": "Beats & Upload", "general": "General" },
+    "language": {
+      "title": "Language",
+      "desc": "Application interface language. Genre/mood tag values are unaffected — set those under Tag display."
+    },
+    "tagDisplay": {
+      "title": "Tag display",
+      "desc": "Display language for genre and mood options across the editor, filters, and track list. Stored values are unaffected.",
+      "bilingual": "Bilingual"
+    },
+    "storage": {
+      "title": "Storage",
+      "dbPath": "Catalog database path",
+      "restartHint": "A restart is required after changing this path.",
+      "restartAlert": "Database path changed. Please restart BeatOS for the new location to take effect.",
+      "updateFailed": "Failed to update database path: {{error}}"
+    },
+    "about": {
+      "title": "About",
+      "madeBy": "Made by averatec0773",
+      "website": "My website: ",
+      "websiteAria": "Open averatec.studio in browser",
+      "repo": "Project repo: ",
+      "repoAria": "Open project repository on GitHub in browser"
+    }
   }
 }

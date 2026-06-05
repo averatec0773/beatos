@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
 import { AppearanceSection } from "@/components/Settings/AppearanceSection";
 import { DefaultLicenseTiersSection } from "@/components/Settings/DefaultLicenseTiersSection";
+import { LanguageSection } from "@/components/Settings/LanguageSection";
 import { ProducersSection } from "@/components/Settings/ProducersSection";
 import { UploadTemplatesSection } from "@/components/Settings/UploadTemplatesSection";
 import { VocabLocaleSection } from "@/components/Settings/VocabLocaleSection";
@@ -23,15 +25,14 @@ function SettingsGroup({
   );
 }
 
-function StorageSection(): React.JSX.Element {
-  const [dbPath, setDbPath] = useState<string>("");
-
-  useEffect(() => {
-    window.beatos
-      .getDbPath()
-      .then(setDbPath)
-      .catch(() => setDbPath(""));
-  }, []);
+function StorageSection({
+  dbPath,
+  onDbPathChange,
+}: {
+  dbPath: string;
+  onDbPathChange: (newPath: string) => void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
 
   async function onChange(): Promise<void> {
     const newFolder = await window.beatos.openFolderDialog();
@@ -40,35 +41,35 @@ function StorageSection(): React.JSX.Element {
     try {
       const r = await window.beatos.setDbPath(fullPath);
       if (r.restartRequired) {
-        alert("Database path changed. Please restart BeatOS for the new location to take effect.");
+        alert(t("settings.storage.restartAlert"));
       }
-      setDbPath(fullPath);
+      onDbPathChange(fullPath);
     } catch (e) {
-      alert(`Failed to update db path: ${e instanceof Error ? e.message : String(e)}`);
+      alert(t("settings.storage.updateFailed", { error: e instanceof Error ? e.message : String(e) }));
     }
   }
 
   return (
     <section className="mb-10">
-      <h2 className="text-lg font-semibold mb-3">Storage</h2>
+      <h2 className="text-lg font-semibold mb-3">{t("settings.storage.title")}</h2>
       <div>
         <label className="block text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-2">
-          Catalog database path
+          {t("settings.storage.dbPath")}
         </label>
         <div className="flex items-center gap-2">
           <code className="flex-1 px-3 py-2 bg-bg-elevated rounded-md text-xs truncate border border-border-subtle">
-            {dbPath || "Loading…"}
+            {dbPath || t("common.loading")}
           </code>
           <button
             type="button"
             onClick={onChange}
             className="px-3 py-2 rounded-md border border-border-subtle text-sm hover:bg-bg-row-hover"
           >
-            Change…
+            {t("common.change")}
           </button>
         </div>
         <p className="mt-2 text-xs text-text-tertiary">
-          A restart is required after changing this path.
+          {t("settings.storage.restartHint")}
         </p>
       </div>
     </section>
@@ -76,35 +77,36 @@ function StorageSection(): React.JSX.Element {
 }
 
 function AboutSection(): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <section className="mt-10 pt-6 border-t border-border-subtle">
       <h2 className="text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-3">
-        About
+        {t("settings.about.title")}
       </h2>
       <div className="text-sm text-text-secondary">
-        Made by <span className="text-text-primary font-medium">averatec0773</span>
+        {t("settings.about.madeBy")}
       </div>
       <div className="mt-3 flex flex-col gap-1.5 text-sm">
         <div>
-          <span className="text-text-secondary">My website: </span>
+          <span className="text-text-secondary">{t("settings.about.website")}</span>
           <button
             type="button"
             onClick={() => void window.beatos.openExternal("https://averatec.studio")}
             className="text-accent underline hover:no-underline"
-            aria-label="Open averatec.studio in browser"
+            aria-label={t("settings.about.websiteAria")}
           >
             averatec.studio
           </button>
         </div>
         <div>
-          <span className="text-text-secondary">Project repo: </span>
+          <span className="text-text-secondary">{t("settings.about.repo")}</span>
           <button
             type="button"
             onClick={() =>
               void window.beatos.openExternal("https://github.com/averatec0773/beatos")
             }
             className="text-accent underline hover:no-underline"
-            aria-label="Open project repository on GitHub in browser"
+            aria-label={t("settings.about.repoAria")}
           >
             github.com/averatec0773/beatos
           </button>
@@ -115,31 +117,33 @@ function AboutSection(): React.JSX.Element {
 }
 
 export function SettingsPanel(): React.JSX.Element {
+  const { t } = useTranslation();
   const [dbPath, setDbPath] = useState<string>("");
   const [repoRoot, setRepoRoot] = useState<string>("");
   useEffect(() => {
-    void window.beatos.getDbPath().then(setDbPath);
+    window.beatos.getDbPath().then(setDbPath).catch(() => setDbPath(""));
     void window.beatos.getRepoRoot().then(setRepoRoot);
   }, []);
 
   return (
     <main className="beatos-scroll flex-1 overflow-y-auto p-8 rounded-xl beatos-card">
       <div className="max-w-2xl">
-        <h1 className="text-2xl font-bold mb-8">Settings</h1>
+        <h1 className="text-2xl font-bold mb-8">{t("settings.title")}</h1>
 
-        <SettingsGroup title="Appearance">
+        <SettingsGroup title={t("settings.groups.appearance")}>
           <AppearanceSection />
         </SettingsGroup>
 
-        <SettingsGroup title="Beats & Upload">
+        <SettingsGroup title={t("settings.groups.beatsUpload")}>
           <UploadTemplatesSection />
           <DefaultLicenseTiersSection />
           <ProducersSection />
         </SettingsGroup>
 
-        <SettingsGroup title="General">
+        <SettingsGroup title={t("settings.groups.general")}>
+          <LanguageSection />
           <VocabLocaleSection />
-          <StorageSection />
+          <StorageSection dbPath={dbPath} onDbPathChange={setDbPath} />
           <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
         </SettingsGroup>
 
