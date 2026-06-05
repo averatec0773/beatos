@@ -223,6 +223,26 @@
     "clearAria": "Clear project folder",
     "openFailed": "Could not open folder: {{error}}"
   },
+  "trash": {
+    "title": "Trash",
+    "empty": "Trash is empty.",
+    "restore": "Restore",
+    "deleteForever": "Delete forever",
+    "emptyAll": "Empty trash",
+    "trashedPrefix": "Trashed",
+    "count": "{{count}} trashed track",
+    "count_other": "{{count}} trashed tracks",
+    "restored": "Restored {{count}} track",
+    "restored_other": "Restored {{count}} tracks",
+    "deleted": "Permanently deleted {{count}} track",
+    "deleted_other": "Permanently deleted {{count}} tracks",
+    "emptied": "Emptied trash ({{count}} track)",
+    "emptied_other": "Emptied trash ({{count}} tracks)",
+    "deleteOneConfirm": "Delete \"{{name}}\" forever? This cannot be undone.",
+    "deleteManyConfirm": "Delete {{count}} tracks forever? This cannot be undone.",
+    "deleteAllConfirm": "Permanently delete ALL {{count}} trashed track? This cannot be undone.",
+    "deleteAllConfirm_other": "Permanently delete ALL {{count}} trashed tracks? This cannot be undone."
+  },
   "settings": {
     "title": "Settings",
     "groups": { "appearance": "Appearance", "beatsUpload": "Beats & Upload", "general": "General" },

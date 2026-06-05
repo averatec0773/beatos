@@ -223,6 +223,26 @@
     "clearAria": "清除工程文件夹",
     "openFailed": "无法打开文件夹: {{error}}"
   },
+  "trash": {
+    "title": "回收站",
+    "empty": "回收站是空的。",
+    "restore": "恢复",
+    "deleteForever": "永久删除",
+    "emptyAll": "清空回收站",
+    "trashedPrefix": "已删除",
+    "count": "{{count}} 个已删除曲目",
+    "count_other": "{{count}} 个已删除曲目",
+    "restored": "已恢复 {{count}} 个曲目",
+    "restored_other": "已恢复 {{count}} 个曲目",
+    "deleted": "已永久删除 {{count}} 个曲目",
+    "deleted_other": "已永久删除 {{count}} 个曲目",
+    "emptied": "已清空回收站（{{count}} 个曲目）",
+    "emptied_other": "已清空回收站（{{count}} 个曲目）",
+    "deleteOneConfirm": "永久删除「{{name}}」? 此操作无法撤销。",
+    "deleteManyConfirm": "永久删除 {{count}} 个曲目? 此操作无法撤销。",
+    "deleteAllConfirm": "永久删除全部 {{count}} 个已删除曲目? 此操作无法撤销。",
+    "deleteAllConfirm_other": "永久删除全部 {{count}} 个已删除曲目? 此操作无法撤销。"
+  },
   "settings": {
     "title": "设置",
     "groups": { "appearance": "外观", "beatsUpload": "Beats 与上传", "general": "通用" },
