@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type TestResult = { ok: true; toolsCount: number; version: string } | { ok: false; error: string };
 
@@ -26,6 +27,7 @@ function buildConfigJson(repoRoot: string, dbPath: string): string {
 }
 
 export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [testState, setTestState] = useState<
     "idle" | "testing" | { kind: "result"; result: TestResult }
@@ -54,30 +56,27 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between text-left text-sm font-medium"
         aria-expanded={open}
-        aria-label="AI Integration"
+        aria-label={t("ai.title")}
       >
-        <h2 className="text-lg font-semibold">AI Integration</h2>
+        <h2 className="text-lg font-semibold">{t("ai.title")}</h2>
         <span className="text-text-tertiary">{open ? "▾" : "▸"}</span>
       </button>
 
       {open && (
         <div className="mt-3 space-y-3 text-sm">
-          <p className="text-text-secondary">
-            Lets Claude Desktop and other AI clients read your BeatOS library over MCP. Read-only in
-            v0.0.20.
-          </p>
+          <p className="text-text-secondary">{t("ai.desc")}</p>
 
           <div className="flex items-center justify-between">
-            <span>Status</span>
+            <span>{t("ai.status")}</span>
             <div className="flex items-center gap-2">
-              <span className="text-success">● Available</span>
+              <span className="text-success">{t("ai.available")}</span>
               <button
                 type="button"
                 className="rounded border border-border-subtle px-2 py-0.5 text-xs hover:bg-bg-row-hover"
                 onClick={runTest}
                 disabled={testState === "testing"}
               >
-                {testState === "testing" ? "Testing…" : "Test connection"}
+                {testState === "testing" ? t("ai.testing") : t("ai.testConnection")}
               </button>
             </div>
           </div>
@@ -85,13 +84,13 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
           {typeof testState === "object" && testState.kind === "result" && (
             <div className={testState.result.ok ? "text-success text-xs" : "text-danger text-xs"}>
               {testState.result.ok
-                ? `✓ Connection OK · ${testState.result.toolsCount} tools`
-                : `✗ ${testState.result.error}`}
+                ? t("ai.connectionOk", { count: testState.result.toolsCount })
+                : t("ai.connectionErr", { error: testState.result.error })}
             </div>
           )}
 
           <div className="flex items-center justify-between gap-3">
-            <span>Database</span>
+            <span>{t("ai.database")}</span>
             <div className="flex min-w-0 items-center gap-2">
               <code className="truncate text-xs text-text-secondary">{dbPath}</code>
               <button
@@ -99,14 +98,14 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
                 className="shrink-0 rounded border border-border-subtle px-2 py-0.5 text-xs hover:bg-bg-row-hover"
                 onClick={copyPath}
               >
-                Copy path
+                {t("ai.copyPath")}
               </button>
             </div>
           </div>
 
           <div>
             <div className="mb-1 text-xs uppercase tracking-wide text-text-tertiary">
-              Claude Desktop configuration
+              {t("ai.claudeConfig")}
             </div>
             <pre className="max-h-64 overflow-auto rounded bg-bg-elevated p-3 text-xs">
               {configJson}
@@ -117,13 +116,13 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
                 className="rounded border border-border-subtle px-2 py-0.5 text-xs hover:bg-bg-row-hover"
                 onClick={copyJson}
               >
-                Copy JSON
+                {t("ai.copyJson")}
               </button>
             </div>
           </div>
 
           <div className="text-xs text-text-tertiary">
-            Tools ({TOOL_NAMES.length}): {TOOL_NAMES.join(" · ")}
+            {t("ai.toolsList", { count: TOOL_NAMES.length, list: TOOL_NAMES.join(" · ") })}
           </div>
         </div>
       )}

@@ -73,6 +73,21 @@
     "freePrefixAria": "Free prefix",
     "resetDefaults": "Reset to defaults"
   },
+  "ai": {
+    "title": "AI Integration",
+    "desc": "Lets Claude Desktop and other AI clients read your BeatOS library over MCP. Read-only in v0.0.20.",
+    "status": "Status",
+    "available": "● Available",
+    "testing": "Testing…",
+    "testConnection": "Test connection",
+    "connectionOk": "✓ Connection OK · {{count}} tools",
+    "connectionErr": "✗ {{error}}",
+    "database": "Database",
+    "copyPath": "Copy path",
+    "claudeConfig": "Claude Desktop configuration",
+    "copyJson": "Copy JSON",
+    "toolsList": "Tools ({{count}}): {{list}}"
+  },
   "settings": {
     "title": "Settings",
     "groups": { "appearance": "Appearance", "beatsUpload": "Beats & Upload", "general": "General" },

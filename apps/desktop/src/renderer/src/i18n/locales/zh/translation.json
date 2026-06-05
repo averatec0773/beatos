@@ -73,6 +73,21 @@
     "freePrefixAria": "免费前缀",
     "resetDefaults": "重置默认"
   },
+  "ai": {
+    "title": "AI Integration",
+    "desc": "让 Claude Desktop 等 AI 客户端通过 MCP 读取你的 BeatOS 曲库。v0.0.20 为只读。",
+    "status": "状态",
+    "available": "● 可用",
+    "testing": "测试中…",
+    "testConnection": "测试连接",
+    "connectionOk": "✓ 连接正常 · {{count}} 个工具",
+    "connectionErr": "✗ {{error}}",
+    "database": "数据库",
+    "copyPath": "复制路径",
+    "claudeConfig": "Claude Desktop 配置",
+    "copyJson": "复制 JSON",
+    "toolsList": "工具（{{count}}）: {{list}}"
+  },
   "settings": {
     "title": "设置",
     "groups": { "appearance": "外观", "beatsUpload": "Beats 与上传", "general": "通用" },
