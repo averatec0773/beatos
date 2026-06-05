@@ -13,6 +13,19 @@
     "revealInFinder": "Reveal in Finder",
     "dash": "—"
   },
+  "appearance": {
+    "panels": "Panels",
+    "panelOpacity": "Panel opacity",
+    "panelOpacityHint": "Lower = more of the backdrop shows through the cards.",
+    "background": "Background",
+    "asciiRain": "ASCII glyph rain",
+    "asciiRainDesc": "Ambient monochrome character field behind the panels.",
+    "enableBackdrop": "Enable ASCII backdrop",
+    "intensity": "Intensity",
+    "backdropIntensity": "Backdrop intensity",
+    "speed": "Speed",
+    "backdropSpeed": "Backdrop speed"
+  },
   "settings": {
     "title": "Settings",
     "groups": { "appearance": "Appearance", "beatsUpload": "Beats & Upload", "general": "General" },
