@@ -333,3 +333,28 @@ async def test_create_tracks_no_defaults_no_tiers(client, db_path):
             "SELECT COUNT(*) FROM license_tier WHERE track_id = ?", (tid,)
         ) as c:
             assert (await c.fetchone())[0] == 0
+
+
+@pytest.mark.asyncio
+async def test_create_tracks_reuses_existing_producer_casing(client, db_path):
+    """An MCP-created track with a case-variant producer ('metro') reuses the
+    existing casing ('Metro') instead of creating a divergent producer."""
+    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute(
+            "INSERT INTO track (title, producer, created_at, updated_at) "
+            "VALUES ('Seed', '[\"Metro\"]', ?, ?)",
+            (now, now),
+        )
+        tok = await create_token(
+            conn, "create_tracks",
+            {"items": [{"title": "New", "producer": ["metro"]}],
+             "preview": {"headline": "x", "sample": [], "warnings": []}},
+        )
+        await conn.commit()
+    res = await client.post(f"/api/tokens/{tok}/approve")
+    assert res.status_code == 200
+    tid = res.json()["created_ids"][0]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT producer FROM track WHERE id = ?", (tid,)) as c:
+            assert (await c.fetchone())[0] == '["Metro"]'

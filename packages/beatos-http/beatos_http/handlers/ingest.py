@@ -9,6 +9,7 @@ import sqlite3
 
 import aiosqlite
 
+from beatos_core.tracks.service import canonicalize_producers
 from beatos_core.two_phase import (
     RowVanishedError,
     consume_token_with_result,
@@ -96,7 +97,14 @@ async def _approve_create_tracks(conn: aiosqlite.Connection, token: str) -> dict
         for f in ("producer", "genre", "mood"):
             if f in it and it[f] is not None:
                 cols.append(f)
-                params.append(json.dumps(it[f]))
+                if f == "producer":
+                    # Reuse an existing producer's casing on a case-insensitive
+                    # match (agents over MCP otherwise create 'metro' alongside
+                    # 'Metro'). Same conn → sees producers added earlier in batch.
+                    canon = await canonicalize_producers(it[f], conn=conn)
+                    params.append(json.dumps(canon))
+                else:
+                    params.append(json.dumps(it[f]))
         cur = await conn.execute(
             f"INSERT INTO track ({', '.join(cols)}) "
             f"VALUES ({', '.join('?' * len(params))})",

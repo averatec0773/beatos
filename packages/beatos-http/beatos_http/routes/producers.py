@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from beatos_core.tracks.service import (
     count_tracks_with_producer,
+    normalize_producer_casing,
     rewrite_producer,
 )
 
@@ -55,3 +56,26 @@ async def rewrite(payload: RewritePayload) -> RewriteResult:
         raise HTTPException(status_code=400, detail="from must be non-empty")
     affected = await rewrite_producer(payload.from_, payload.to)
     return RewriteResult(affected=affected)
+
+
+class NormalizePayload(BaseModel):
+    dry_run: bool = False
+
+
+class NormalizeGroup(BaseModel):
+    canonical: str
+    merged_from: list[str]
+
+
+class NormalizeResult(BaseModel):
+    groups: list[NormalizeGroup]
+    affected: int
+    dry_run: bool
+
+
+@router.post("/normalize-case", response_model=NormalizeResult)
+async def normalize_case(payload: NormalizePayload | None = None) -> NormalizeResult:
+    """Merge producer values that differ only by case into the most-used casing.
+    `{"dry_run": true}` previews the merge plan without mutating."""
+    res = await normalize_producer_casing(dry_run=bool(payload and payload.dry_run))
+    return NormalizeResult(**res)
