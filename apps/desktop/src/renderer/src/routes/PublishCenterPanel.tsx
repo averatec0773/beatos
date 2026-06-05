@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Rocket } from "lucide-react";
 
 import { publishApi } from "@/api/publish";
 import { usePublishCenterStore } from "@/stores/publish-center";
@@ -8,6 +8,8 @@ import { useTrackStore } from "@/stores/tracks";
 import { useToastStore } from "@/stores/toast";
 import { SessionHealthRow } from "@/components/PublishCenter/SessionHealthRow";
 import { LiveJobRow } from "@/components/PublishCenter/LiveJobRow";
+import { PublishTrackPicker } from "@/components/PublishCenter/PublishTrackPicker";
+import { PublishDialog } from "@/components/PublishDialog";
 
 const SECTION = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-tertiary";
 
@@ -39,6 +41,8 @@ export function PublishCenterPanel(): React.JSX.Element {
   }, [trackList]);
 
   const [loginPlatform, setLoginPlatform] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [publishTrackId, setPublishTrackId] = useState<number | null>(null);
   const jobsTimer = useRef<number | null>(null);
   const loginTimer = useRef<number | null>(null);
   const mountedRef = useRef(true);
@@ -100,10 +104,19 @@ export function PublishCenterPanel(): React.JSX.Element {
 
   return (
     <div className="beatos-card beatos-scroll h-full overflow-y-auto rounded-xl p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-text-primary">Publish Center</h1>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-text-tertiary">{checkedAgoLabel(validatedAt)}</span>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-text-primary">Publish Center</h1>
+          <p className="mt-0.5 text-[11px] text-text-tertiary">{checkedAgoLabel(validatedAt)}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-accent/50 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/10"
+          >
+            <Rocket size={13} /> Publish a track
+          </button>
           <button
             type="button"
             onClick={() => void validateSessions(true)}
@@ -147,6 +160,25 @@ export function PublishCenterPanel(): React.JSX.Element {
           ))
         )}
       </div>
+
+      <PublishTrackPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={(id) => {
+          setPickerOpen(false);
+          setPublishTrackId(id);
+        }}
+      />
+      {publishTrackId != null && (
+        <PublishDialog
+          open
+          trackId={publishTrackId}
+          onClose={() => {
+            setPublishTrackId(null);
+            void refreshJobs();
+          }}
+        />
+      )}
     </div>
   );
 }

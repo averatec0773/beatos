@@ -14,7 +14,7 @@ export function ApprovalsSection(): React.JSX.Element {
   return (
     <SidebarNavButton
       icon={<Inbox size={20} />}
-      label="Approvals"
+      label="Agent Actions"
       active={location.pathname === "/approvals"}
       onClick={() => navigate("/approvals")}
       dataAttr="data-approvals-link"

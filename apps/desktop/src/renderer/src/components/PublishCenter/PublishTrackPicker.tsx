@@ -1,0 +1,94 @@
+import React, { useEffect, useState } from "react";
+import { Search } from "lucide-react";
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { tracks as tracksApi, type Track } from "@/api/tracks";
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onPick: (trackId: number) => void;
+}
+
+/** Minimal track picker for starting a publish from the Publish Center.
+ *  Server-side search via tracks.list({ q }); picking a track hands its id back
+ *  to the panel, which opens the existing PublishDialog. */
+export function PublishTrackPicker({ open, onClose, onPick }: Props): React.JSX.Element {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Reset the query each time the picker opens.
+  useEffect(() => {
+    if (open) setQuery("");
+  }, [open]);
+
+  // Debounced search (also runs on open with an empty query → recent tracks).
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    const t = window.setTimeout(() => {
+      tracksApi
+        .list({ q: query || undefined })
+        .then((rows) => {
+          if (!cancelled) setResults(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open, query]);
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Publish a track</DialogTitle>
+        </DialogHeader>
+
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-border-subtle bg-bg-elevated px-2.5 py-1.5">
+          <Search size={14} className="text-text-tertiary" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search tracks…"
+            className="w-full bg-transparent text-sm text-text-primary outline-none placeholder:text-text-tertiary"
+          />
+        </div>
+
+        <div className="beatos-scroll flex max-h-[50vh] flex-col gap-0.5 overflow-y-auto">
+          {loading ? (
+            <div className="px-2 py-3 text-xs text-text-tertiary">Searching…</div>
+          ) : results.length === 0 ? (
+            <div className="px-2 py-3 text-xs text-text-tertiary">No tracks found</div>
+          ) : (
+            results.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onPick(t.id)}
+                className="flex items-center justify-between rounded-md px-2.5 py-2 text-left hover:bg-bg-row-hover"
+              >
+                <span className="truncate text-sm text-text-primary">{t.title}</span>
+                {t.bpm != null && (
+                  <span className="ml-2 shrink-0 font-mono text-[11px] tabular-nums text-text-tertiary">
+                    {t.bpm} BPM
+                  </span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

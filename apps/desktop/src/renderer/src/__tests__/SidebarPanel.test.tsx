@@ -83,7 +83,7 @@ it("renders sections in Claude-style order", () => {
   const aside = container.querySelector("aside");
   expect(aside).not.toBeNull();
   const text = aside!.textContent ?? "";
-  const required = ["All Beats", "Trash", "Approvals", "Lists", "@averatec0773", "Settings"];
+  const required = ["All Beats", "Agent Actions", "Trash", "Lists", "@averatec0773", "Settings"];
   const indices = required.map((needle) => text.indexOf(needle));
   expect(indices.every((i) => i >= 0)).toBe(true);
   const sorted = [...indices].sort((a, b) => a - b);

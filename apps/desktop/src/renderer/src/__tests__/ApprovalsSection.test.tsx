@@ -47,7 +47,7 @@ describe("ApprovalsSection", () => {
         <ApprovalsSection />
       </MemoryRouter>,
     );
-    await screen.findByText(/Approvals/i);
+    await screen.findByText(/Agent Actions/i);
     expect(screen.queryByText(/\(\d+\)/)).toBeNull();
   });
 
@@ -73,7 +73,7 @@ describe("ApprovalsSection", () => {
         </Routes>
       </MemoryRouter>,
     );
-    await userEvent.click(screen.getByRole("button", { name: /approvals/i }));
+    await userEvent.click(screen.getByRole("button", { name: /agent actions/i }));
     expect(screen.getByTestId("loc").textContent).toBe("/approvals");
   });
 });
