@@ -22,11 +22,11 @@ describe("DefaultLicenseTiersSection share input", () => {
     saveMock.mockClear();
   });
 
-  it("editing 分成 % persists share as a number in the saved template", async () => {
+  it("editing Share % persists share as a number in the saved template", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<DefaultLicenseTiersSection />);
 
-    const inputs = await screen.findAllByLabelText(/分成/);
+    const inputs = await screen.findAllByLabelText(/Share %/i);
     // MP3 row is the first (preset slot 0)
     await user.type(inputs[0], "30");
     await vi.advanceTimersByTimeAsync(800);
@@ -46,7 +46,7 @@ describe("DefaultLicenseTiersSection share input", () => {
     ]);
     render(<DefaultLicenseTiersSection />);
 
-    const inputs = await screen.findAllByLabelText(/分成/);
+    const inputs = await screen.findAllByLabelText(/Share %/i);
     // WAV is preset slot index 1 — find the one with value "15"
     const wavInput = inputs.find((el) => (el as HTMLInputElement).value === "15");
     expect(wavInput).toBeDefined();
@@ -59,7 +59,7 @@ describe("DefaultLicenseTiersSection share input", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<DefaultLicenseTiersSection />);
 
-    const inputs = await screen.findAllByLabelText(/分成/);
+    const inputs = await screen.findAllByLabelText(/Share %/i);
     const mp3Input = inputs.find((el) => (el as HTMLInputElement).value === "25");
     expect(mp3Input).toBeDefined();
     await user.clear(mp3Input!);

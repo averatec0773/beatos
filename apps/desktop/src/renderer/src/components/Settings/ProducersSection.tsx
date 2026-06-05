@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Star, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { producers as producersApi } from "@/api/producers";
 import {
@@ -27,6 +28,7 @@ import { useTrackStore } from "@/stores/tracks";
  *     Also unlinks from known_producers if both lists held the name.
  */
 export function ProducersSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const [used, setUsed] = useState<string[]>([]);
   const [knownOnly, setKnownOnly] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -52,12 +54,13 @@ export function ProducersSection(): React.JSX.Element {
   useEffect(() => {
     if (!adding) return;
     // Defer one paint so the input is in the DOM before we try to focus.
-    const t = setTimeout(() => inputRef.current?.focus(), 0);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => inputRef.current?.focus(), 0);
+    return () => clearTimeout(timer);
   }, [adding]);
 
   async function onRemove(name: string, isOrphan: boolean): Promise<void> {
-    if (!confirm(`Remove "${name}"${isOrphan ? "" : " from every track"}?`)) return;
+    const suffix = isOrphan ? "" : t("producers.removeSuffixEveryTrack");
+    if (!confirm(t("producers.removeConfirm", { name, suffix }))) return;
     setBusy(name);
     try {
       if (!isOrphan) {
@@ -72,7 +75,10 @@ export function ProducersSection(): React.JSX.Element {
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", `Failed to remove "${name}": ${e instanceof Error ? e.message : String(e)}`);
+        .show(
+          "error",
+          t("producers.removeFailed", { name, error: e instanceof Error ? e.message : String(e) }),
+        );
     } finally {
       setBusy(null);
     }
@@ -86,7 +92,12 @@ export function ProducersSection(): React.JSX.Element {
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", `Failed to set primary: ${e instanceof Error ? e.message : String(e)}`);
+        .show(
+          "error",
+          t("producers.setPrimaryFailed", {
+            error: e instanceof Error ? e.message : String(e),
+          }),
+        );
       await refresh();
     }
   }
@@ -99,7 +110,7 @@ export function ProducersSection(): React.JSX.Element {
       return;
     }
     if ([...used, ...knownOnly].includes(name)) {
-      useToastStore.getState().show("warning", `"${name}" already exists.`);
+      useToastStore.getState().show("warning", t("producers.exists", { name }));
       inputRef.current?.focus();
       return;
     }
@@ -111,7 +122,10 @@ export function ProducersSection(): React.JSX.Element {
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", `Add failed: ${e instanceof Error ? e.message : String(e)}`);
+        .show(
+          "error",
+          t("producers.addFailed", { error: e instanceof Error ? e.message : String(e) }),
+        );
     }
   }
 
@@ -132,20 +146,20 @@ export function ProducersSection(): React.JSX.Element {
 
   const allEmpty = used.length === 0 && knownOnly.length === 0;
 
+  // prod token used in the starHint — shows the placeholder literally
+  const prod = "{prod}";
+
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Producers</h2>
+        <h2 className="text-lg font-semibold">{t("producers.title")}</h2>
       </div>
       {!loaded ? (
-        <div className="text-text-tertiary text-sm">Loading…</div>
+        <div className="text-text-tertiary text-sm">{t("common.loading")}</div>
       ) : (
         <div className="rounded-md border border-border-subtle p-3">
           {allEmpty && !adding ? (
-            <p className="text-xs text-text-tertiary py-1">
-              No producers yet. Click + Add producer to pre-register names, or they'll appear here
-              as soon as you set Producer on a track.
-            </p>
+            <p className="text-xs text-text-tertiary py-1">{t("producers.empty")}</p>
           ) : (
             <div className="flex flex-wrap items-center gap-1.5">
               {used.map((name) => (
@@ -179,9 +193,9 @@ export function ProducersSection(): React.JSX.Element {
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={onAddKeyDown}
                     onBlur={() => void commitAdd()}
-                    placeholder="Producer name"
+                    placeholder={t("producers.namePlaceholder")}
                     className="bg-transparent text-sm leading-none placeholder:text-text-tertiary focus:outline-none w-32"
-                    aria-label="New producer name"
+                    aria-label={t("producers.newNameAria")}
                   />
                 </div>
               ) : (
@@ -191,7 +205,7 @@ export function ProducersSection(): React.JSX.Element {
                   className="inline-flex h-7 items-center gap-1 rounded-full border border-border-subtle px-3 text-sm leading-none text-text-tertiary hover:bg-bg-elevated hover:text-text-primary focus:outline-none"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Add producer
+                  {t("producers.add")}
                 </button>
               )}
             </div>
@@ -199,9 +213,7 @@ export function ProducersSection(): React.JSX.Element {
         </div>
       )}
       <p className="mt-2 text-xs text-text-tertiary">
-        Dashed-outline chips are names you added here but no track uses yet. Solid chips are in use
-        on at least one track — removing them clears the name from every track. 点击 ★
-        标记你自己为主制作人 —— 导出 {"{prod}"} 时它排在最前。
+        {t("producers.legend")} {t("producers.starHint", { prod })}
       </p>
     </section>
   );
@@ -224,6 +236,7 @@ function ProducerChip({
   onRemove,
   onTogglePrimary,
 }: ProducerChipProps): React.JSX.Element {
+  const { t } = useTranslation();
   const baseStyle =
     variant === "used"
       ? "bg-accent/20 text-text-primary"
@@ -241,8 +254,8 @@ function ProducerChip({
         onClick={onTogglePrimary}
         disabled={busy}
         className="rounded-full p-0.5 text-text-tertiary hover:text-amber-400 focus:outline-none disabled:opacity-50"
-        aria-label={`${isPrimary ? "unset" : "set"} ${name} as primary`}
-        title={isPrimary ? "主制作人(点击取消)" : "设为主制作人"}
+        aria-label={t(isPrimary ? "producers.setPrimaryAriaUnset" : "producers.setPrimaryAriaSet", { name })}
+        title={t(isPrimary ? "producers.primaryTooltipSet" : "producers.primaryTooltipUnset")}
       >
         {isPrimary ? <span aria-hidden="true">★</span> : <Star className="h-3 w-3" />}
       </button>

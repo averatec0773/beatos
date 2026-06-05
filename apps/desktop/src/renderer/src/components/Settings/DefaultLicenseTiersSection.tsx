@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   loadDefaultLicenseTiers,
@@ -81,6 +82,7 @@ function draftToTemplate(d: DraftRow): DefaultLicenseTierTemplate | null {
 }
 
 export function DefaultLicenseTiersSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const [presets, setPresets] = useState<Record<PresetKey, DraftRow>>(() => ({
     mp3: {
       name: "MP3",
@@ -145,12 +147,12 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
         },
       };
       const customList: DraftRow[] = [];
-      for (const t of list) {
-        const d = (t.deliverables ?? [])[0]?.toLowerCase() ?? "";
+      for (const tpl of list) {
+        const d = (tpl.deliverables ?? [])[0]?.toLowerCase() ?? "";
         if (PRESET_KEYS.has(d)) {
-          presetMap[d as PresetKey] = templateToDraft(t, presetMap[d as PresetKey].uid);
+          presetMap[d as PresetKey] = templateToDraft(tpl, presetMap[d as PresetKey].uid);
         } else if (d !== "") {
-          customList.push(templateToDraft(t, uidCounter.current++));
+          customList.push(templateToDraft(tpl, uidCounter.current++));
         }
       }
       setPresets(presetMap);
@@ -184,13 +186,18 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
         } catch (e) {
           useToastStore
             .getState()
-            .show("error", `Save defaults failed: ${e instanceof Error ? e.message : String(e)}`);
+            .show(
+              "error",
+              t("licenseTiers.saveFailed", {
+                error: e instanceof Error ? e.message : String(e),
+              }),
+            );
         } finally {
           setSaving(false);
         }
       }, SAVE_DEBOUNCE_MS);
     },
-    [],
+    [t],
   );
 
   function updatePreset(preset: PresetKey, mutator: (row: DraftRow) => DraftRow): void {
@@ -232,25 +239,22 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
   }
 
   const status = useMemo(() => {
-    if (loading) return "Loading…";
-    if (saving) return "Saving…";
-    if (savedAt) return `Saved ${savedAt.toLocaleTimeString()}`;
+    if (loading) return t("common.loading");
+    if (saving) return t("common.saving");
+    if (savedAt) return t("licenseTiers.savedAt", { time: savedAt.toLocaleTimeString() });
     return "";
-  }, [loading, saving, savedAt]);
+  }, [loading, saving, savedAt, t]);
 
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Default license tiers</h2>
+        <h2 className="text-lg font-semibold">{t("licenseTiers.defaultTitle")}</h2>
         <span className="text-xs text-text-tertiary">{status}</span>
       </div>
-      <p className="text-xs text-text-tertiary mb-3">
-        Applied to every newly-created track. Empty rows are skipped. Existing tracks are not
-        touched when you change these.
-      </p>
+      <p className="text-xs text-text-tertiary mb-3">{t("licenseTiers.defaultDesc")}</p>
 
       {loading ? (
-        <div className="text-xs text-text-tertiary py-4">Loading…</div>
+        <div className="text-xs text-text-tertiary py-4">{t("common.loading")}</div>
       ) : (
         <div className="flex flex-col gap-1.5">
           {PRESET_SLOTS.map((slot) => {
@@ -321,14 +325,14 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
             className="self-start inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border border-border-subtle hover:bg-bg-row-hover"
           >
             <Plus size={12} />
-            Add custom tier
+            {t("licenseTiers.addCustom")}
           </button>
         </div>
       )}
       <label className="flex items-center gap-2 mt-3 text-sm">
         <input
           type="checkbox"
-          aria-label="新建 track 默认免费"
+          aria-label={t("licenseTiers.freeDefaultAria")}
           checked={defaultFree}
           onChange={(e) => {
             const v = e.target.checked;
@@ -336,7 +340,7 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
             void saveDefaultIsFree(v);
           }}
         />
-        新建 track 默认免费(自动带 [FREE] 前缀 + NetEase 勾免费使用)
+        {t("licenseTiers.freeDefaultLabel")}
       </label>
     </section>
   );
@@ -365,6 +369,7 @@ function RowEditor({
   onShareChange,
   onDelete,
 }: RowEditorProps): React.JSX.Element {
+  const { t } = useTranslation();
   const borderClass = emptyStyle
     ? "border-dashed border-border-subtle"
     : "border-border-subtle bg-bg-elevated";
@@ -377,9 +382,9 @@ function RowEditor({
           type="text"
           value={row.name}
           onChange={(e) => onNameChange?.(e.target.value)}
-          placeholder="Tier name (e.g. MIDI)"
+          placeholder={t("licenseTiers.tierNamePlaceholder")}
           className={`${LABEL_WIDTH} shrink-0 ${inputBg} border border-border-subtle rounded-md px-2 py-1 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-primary placeholder:text-text-tertiary placeholder:normal-case placeholder:tracking-normal placeholder:font-normal`}
-          aria-label="Tier name"
+          aria-label={t("licenseTiers.tierNameAria")}
         />
       ) : (
         <span
@@ -409,7 +414,7 @@ function RowEditor({
               onChange={(e) => onPriceChange(code, e.target.value)}
               placeholder={placeholder}
               className="w-20 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
-              aria-label={`${code} price`}
+              aria-label={t("licenseTiers.priceAria", { code })}
             />
           </label>
         );
@@ -421,7 +426,7 @@ function RowEditor({
           value={row.otherCurrency ?? ""}
           onChange={(e) => onOtherCurrencyChange(e.target.value || null)}
           className="bg-transparent pl-2 pr-1 py-1.5 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary focus:outline-none"
-          aria-label="Third currency"
+          aria-label={t("licenseTiers.thirdCurrencyAria")}
         >
           <option value="">—</option>
           {OTHER_CURRENCIES.map((c) => (
@@ -443,7 +448,7 @@ function RowEditor({
               : "—"
           }
           className="w-20 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none disabled:opacity-50"
-          aria-label="Other currency price"
+          aria-label={t("licenseTiers.otherCurrencyPriceAria")}
         />
       </div>
       <label
@@ -461,7 +466,7 @@ function RowEditor({
           onChange={(e) => onShareChange(e.target.value)}
           placeholder="—"
           className="w-14 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
-          aria-label="分成 %"
+          aria-label={t("licenseTiers.shareAria")}
         />
       </label>
       <div className="flex-1" />
@@ -470,7 +475,7 @@ function RowEditor({
           type="button"
           onClick={onDelete}
           className="w-7 h-7 flex items-center justify-center rounded text-text-tertiary hover:text-danger hover:bg-bg-row-hover shrink-0"
-          aria-label="Remove default tier"
+          aria-label={t("licenseTiers.removeAria")}
           title="Remove"
         >
           <Trash2 size={14} />
