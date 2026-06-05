@@ -327,6 +327,9 @@ async def update_track(track_id: int, updates: dict[str, Any]) -> Track:
             raise ValueError(f"Track {track_id} not found.")
         return current
 
+    if isinstance(updates.get("producer"), list):
+        updates = {**updates, "producer": await canonicalize_producers(updates["producer"])}
+
     sets: list[str] = []
     values: list[Any] = []
     for field, value in updates.items():
@@ -360,6 +363,11 @@ async def bulk_update_tracks(ids: list[int], patch: dict) -> dict:
     scalar_fields = [(FIELD_TO_COL[f], spec) for f, spec in patch.items() if f in SCALAR_FIELDS]
     array_fields = [(FIELD_TO_COL[f], spec) for f, spec in patch.items() if f not in SCALAR_FIELDS]
     async with aiosqlite.connect(db_path) as conn:
+        producer_canon = (
+            await _producer_canon_map_conn(conn)
+            if any(col == "producer" for col, _ in array_fields)
+            else None
+        )
         # Pre-fetch every array-field column for all ids in one query (avoid N+1:
         # the per-id SELECT-then-UPDATE loop scaled at 2N round-trips on a bulk edit).
         current_arrays: dict[int, tuple] = {}
@@ -381,6 +389,8 @@ async def bulk_update_tracks(ids: list[int], patch: dict) -> dict:
             if row is not None:
                 for i, (col, spec) in enumerate(array_fields):
                     new_arr = apply_array_patch(row[i], spec)
+                    if col == "producer" and producer_canon is not None:
+                        new_arr = _apply_producer_canon(new_arr, producer_canon)
                     sets.append(f"{col}=?")
                     params.append(json.dumps(new_arr))
             if not sets:
@@ -536,3 +546,119 @@ async def rewrite_producer(from_values: list[str], to_value: str | None) -> int:
             )
         await conn.commit()
     return updated
+
+
+# --- producer case-insensitive canonicalization -------------------------------
+# Producers are free-text JSON-array values, so "Metro" and "metro" used to count
+# as two distinct producers (an agent over MCP would create the divergent casing).
+# We canonicalize on write: a case-insensitive (casefold) match against existing
+# producers reuses the existing casing. casefold() is the Unicode-correct way to
+# compare case-insensitively.
+
+def _canon_key(name: str) -> str:
+    return name.strip().casefold()
+
+
+def _build_canon_map(rows: list) -> dict[str, str]:
+    """rows = (value, count) ordered count-desc; first casing per key wins
+    (= the most-frequently used existing casing becomes canonical)."""
+    canon: dict[str, str] = {}
+    for value, _count in rows:
+        if not isinstance(value, str):
+            continue
+        key = _canon_key(value)
+        if key and key not in canon:
+            canon[key] = value
+    return canon
+
+
+_CANON_SQL = (
+    "SELECT je.value, COUNT(*) AS c "
+    "FROM track, json_each(track.producer) je "
+    "WHERE track.producer IS NOT NULL AND track.deleted_at IS NULL "
+    "GROUP BY je.value ORDER BY c DESC, je.value ASC"
+)
+
+
+async def _producer_canon_map_conn(conn: aiosqlite.Connection) -> dict[str, str]:
+    async with conn.execute(_CANON_SQL) as cur:
+        rows = await cur.fetchall()
+    return _build_canon_map(rows)
+
+
+async def _producer_canon_map() -> dict[str, str]:
+    async with aiosqlite.connect(resolve_db_path()) as conn:
+        return await _producer_canon_map_conn(conn)
+
+
+def _apply_producer_canon(names: list, canon: dict[str, str]) -> list[str]:
+    """Map each name to its canonical casing (existing wins, else first-seen),
+    dropping empties + case-insensitive duplicates while preserving order. Mutates
+    `canon` so later items in the same list snap to an earlier one's casing."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in names:
+        if not isinstance(raw, str):
+            continue
+        s = raw.strip()
+        if not s:
+            continue
+        key = s.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        canonical = canon.get(key)
+        if canonical is None:
+            canon[key] = s  # this casing becomes canonical for later items
+            canonical = s
+        out.append(canonical)
+    return out
+
+
+async def canonicalize_producers(
+    names: list, conn: aiosqlite.Connection | None = None
+) -> list[str]:
+    """Normalize a producer list against existing producers: a case-insensitive
+    match reuses the existing casing (so 'metro' becomes 'Metro' when that already
+    exists), and empties + case-insensitive duplicates are dropped. Single
+    chokepoint every write path funnels through. Pass `conn` to read against an
+    in-flight transaction (e.g. the MCP ingest batch)."""
+    if not names:
+        return []
+    canon = await (_producer_canon_map_conn(conn) if conn is not None else _producer_canon_map())
+    return _apply_producer_canon(names, canon)
+
+
+async def normalize_producer_casing(*, dry_run: bool = False) -> dict:
+    """One-time cleanup: merge existing producer values that differ only by case
+    into one canonical casing (the most-frequently used). Returns the merge plan
+    and the number of affected tracks. dry_run=True plans without mutating."""
+    async with aiosqlite.connect(resolve_db_path()) as conn:
+        async with conn.execute(_CANON_SQL) as cur:
+            rows = await cur.fetchall()
+    groups: dict[str, list[str]] = {}
+    for value, _count in rows:
+        if not isinstance(value, str):
+            continue
+        key = _canon_key(value)
+        if key:
+            groups.setdefault(key, []).append(value)  # already count-desc ordered
+
+    plan: list[dict] = []
+    for casings in groups.values():
+        if len(casings) < 2:
+            continue
+        plan.append({"canonical": casings[0], "merged_from": casings[1:]})
+
+    if dry_run:
+        variants = [v for g in plan for v in g["merged_from"]]
+        affected = await count_tracks_with_producer(variants) if variants else 0
+        return {"groups": plan, "affected": affected, "dry_run": True}
+
+    affected = 0
+    for g in plan:
+        # Only the non-canonical variants need rewriting; tracks already on the
+        # canonical casing stay untouched (so the count = tracks actually changed,
+        # matching the dry-run).
+        affected += await rewrite_producer(g["merged_from"], g["canonical"])
+    return {"groups": plan, "affected": affected, "dry_run": False}
