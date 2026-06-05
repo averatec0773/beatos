@@ -16,12 +16,12 @@ export function PublishCenterSection(): React.JSX.Element {
     return (
       <SidebarNavButton
         icon={<Rocket size={20} />}
-        label="发布中心"
+        label="Publish Center"
         active={false}
         onClick={() =>
           useToastStore
             .getState()
-            .show("info", "发布中心是 BeatOS Pro 功能,安装 Pro 模块后启用")
+            .show("info", "Publish Center is a BeatOS Pro feature — install the Pro module to enable it.")
         }
         dataAttr="data-locked"
         trailing={<Lock size={14} className="text-text-tertiary" />}
@@ -32,7 +32,7 @@ export function PublishCenterSection(): React.JSX.Element {
   return (
     <SidebarNavButton
       icon={<Rocket size={20} />}
-      label="发布中心"
+      label="Publish Center"
       active={active}
       onClick={() => navigate("/publish")}
       dataAttr="data-publish-center-link"

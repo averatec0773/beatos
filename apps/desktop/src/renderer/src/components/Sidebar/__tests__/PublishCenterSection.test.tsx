@@ -17,12 +17,12 @@ describe("PublishCenterSection", () => {
   it("shows a lock affordance when Pro is unavailable", () => {
     useProStore.setState({ publishAvailable: false, loaded: true });
     renderSection();
-    expect(screen.getByLabelText(/发布中心/)).toHaveAttribute("data-locked", "");
+    expect(screen.getByLabelText(/Publish Center/)).toHaveAttribute("data-locked", "");
   });
 
   it("is an unlocked nav entry when Pro is available", () => {
     useProStore.setState({ publishAvailable: true, loaded: true });
     renderSection();
-    expect(screen.getByLabelText(/发布中心/)).not.toHaveAttribute("data-locked");
+    expect(screen.getByLabelText(/Publish Center/)).not.toHaveAttribute("data-locked");
   });
 });

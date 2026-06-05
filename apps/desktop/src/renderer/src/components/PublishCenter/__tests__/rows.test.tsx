@@ -9,14 +9,14 @@ describe("SessionHealthRow", () => {
     render(
       <SessionHealthRow platform="netease" state="expired" loggingIn={false} onLogin={vi.fn()} />,
     );
-    expect(screen.getByText(/已过期/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /登录/ })).toBeEnabled();
+    expect(screen.getByText(/Expired/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Log in/ })).toBeEnabled();
   });
   it("valid shows logged-in badge", () => {
     render(
       <SessionHealthRow platform="netease" state="valid" loggingIn={false} onLogin={vi.fn()} />,
     );
-    expect(screen.getByText(/已登录/)).toBeInTheDocument();
+    expect(screen.getByText(/Logged in/)).toBeInTheDocument();
   });
   it("loggingIn disables the button", () => {
     render(
@@ -34,9 +34,9 @@ describe("LiveJobRow", () => {
     updated_at: "2026-06-04T00:00:00Z",
     request: { track_id: 7, platform: "netease" },
   };
-  it("awaiting_sms surfaces the 等你 prompt", () => {
+  it("awaiting_sms surfaces the waiting-for-you prompt", () => {
     render(<LiveJobRow job={base} title="My Beat" onRepublish={vi.fn()} />);
-    expect(screen.getByText(/正在等你/)).toBeInTheDocument();
+    expect(screen.getByText(/Waiting for you/)).toBeInTheDocument();
   });
   it("done with url shows a view link", () => {
     render(
@@ -46,6 +46,6 @@ describe("LiveJobRow", () => {
         onRepublish={vi.fn()}
       />,
     );
-    expect(screen.getByRole("link", { name: /查看上架/ })).toHaveAttribute("href", "https://x");
+    expect(screen.getByRole("link", { name: /View listing/ })).toHaveAttribute("href", "https://x");
   });
 });
