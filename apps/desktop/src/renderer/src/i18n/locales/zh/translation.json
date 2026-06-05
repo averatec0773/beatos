@@ -173,6 +173,56 @@
     "progress": "分析中 {{done}}/{{total}}",
     "done": "完成 {{done}}/{{total}}，填入 BPM {{bpm}}、Key {{key}}"
   },
+  "player": {
+    "decodeFailedToast": "播放失败（解码）。点击播放重试。",
+    "previous": "上一首",
+    "retry": "重试",
+    "pause": "暂停",
+    "play": "播放",
+    "retryTitle": "播放失败 —— 点击重试",
+    "next": "下一首",
+    "shuffle": "随机播放",
+    "repeat": "循环",
+    "unmute": "取消静音",
+    "mute": "静音",
+    "volume": "音量"
+  },
+  "topbar": {
+    "goAllBeats": "前往 All Beats",
+    "back": "返回"
+  },
+  "bulkBar": {
+    "selected": "已选 {{count}} 个",
+    "clearSelection": "清除选择",
+    "clearEsc": "清除 (Esc)"
+  },
+  "sidebar": {
+    "expand": "展开侧栏",
+    "collapse": "收起侧栏",
+    "library": "曲库",
+    "allBeats": "All Beats",
+    "trash": "回收站",
+    "addList": "添加歌单",
+    "newPlaylist": "新建歌单",
+    "listNamePlaceholder": "歌单名称",
+    "deleteListConfirm": "删除歌单「{{name}}」?",
+    "devGithubAria": "在浏览器中打开开发者 GitHub 主页",
+    "devGithubTitle": "开发者 —— 打开 GitHub 主页",
+    "publishCenterLocked": "Publish Center 是 BeatOS Pro 功能 —— 安装 Pro 模块即可启用。",
+    "lists": "歌单",
+    "listSubtitle": "歌单 · {{count}} 首",
+    "listSubtitle_other": "歌单 · {{count}} 首",
+    "deleteListDesc": "歌单会被删除，但其中的曲目仍保留在曲库中。",
+    "publishCenter": "Publish Center"
+  },
+  "projectFolder": {
+    "label": "工程文件夹",
+    "choose": "+ 选择文件夹",
+    "openTitle": "打开 {{path}}",
+    "change": "更改",
+    "clearAria": "清除工程文件夹",
+    "openFailed": "无法打开文件夹: {{error}}"
+  },
   "settings": {
     "title": "设置",
     "groups": { "appearance": "外观", "beatsUpload": "Beats 与上传", "general": "通用" },

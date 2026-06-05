@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Music } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -6,6 +7,7 @@ import { useTrackStore } from "@/stores/tracks";
 import { SidebarNavButton } from "@/components/Sidebar/SidebarNavButton";
 
 export function AllBeatsSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const count = useTrackStore((s) => s.total);
@@ -14,7 +16,7 @@ export function AllBeatsSection(): React.JSX.Element {
   return (
     <SidebarNavButton
       icon={<Music size={20} />}
-      label="All Beats"
+      label={t("sidebar.allBeats")}
       active={active}
       onClick={() => navigate("/")}
       dataAttr="data-all-beats-link"

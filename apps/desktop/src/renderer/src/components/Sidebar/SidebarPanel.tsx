@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { matchPath, useLocation } from "react-router-dom";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
@@ -16,6 +17,7 @@ import { SidebarFooter } from "@/components/Sidebar/SidebarFooter";
 import { PublishCenterSection } from "@/components/Sidebar/PublishCenterSection";
 
 export function SidebarPanel(): React.JSX.Element {
+  const { t } = useTranslation();
   const refreshLists = useListStore((s) => s.refresh);
   const refreshTrash = useTrashStore((s) => s.refresh);
   const refreshTotal = useTrackStore((s) => s.refreshTotal);
@@ -48,14 +50,14 @@ export function SidebarPanel(): React.JSX.Element {
           type="button"
           onClick={toggleCollapsed}
           aria-pressed={collapsed}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+          aria-label={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
           className="text-text-tertiary hover:text-text-primary p-1.5 -ml-1 rounded-md hover:bg-bg-row-hover"
           data-sidebar-toggle
         >
           {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
         </button>
-        {!collapsed && <span className="beatos-eyebrow">Library</span>}
+        {!collapsed && <span className="beatos-eyebrow">{t("sidebar.library")}</span>}
       </div>
       <div className="flex flex-col gap-0.5">
         <AllBeatsSection />

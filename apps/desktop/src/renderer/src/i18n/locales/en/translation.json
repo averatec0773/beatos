@@ -173,6 +173,56 @@
     "progress": "Analyzing {{done}}/{{total}}",
     "done": "Done {{done}}/{{total}} — filled BPM {{bpm}}, Key {{key}}"
   },
+  "player": {
+    "decodeFailedToast": "Playback failed (decode). Click play to retry.",
+    "previous": "Previous",
+    "retry": "Retry",
+    "pause": "Pause",
+    "play": "Play",
+    "retryTitle": "Playback failed — click to retry",
+    "next": "Next",
+    "shuffle": "Shuffle",
+    "repeat": "Repeat",
+    "unmute": "Unmute",
+    "mute": "Mute",
+    "volume": "Volume"
+  },
+  "topbar": {
+    "goAllBeats": "Go to All Beats",
+    "back": "Back"
+  },
+  "bulkBar": {
+    "selected": "{{count}} selected",
+    "clearSelection": "Clear selection",
+    "clearEsc": "Clear (Esc)"
+  },
+  "sidebar": {
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "library": "Library",
+    "allBeats": "All Beats",
+    "trash": "Trash",
+    "addList": "Add List",
+    "newPlaylist": "New playlist",
+    "listNamePlaceholder": "List name",
+    "deleteListConfirm": "Delete List \"{{name}}\"?",
+    "devGithubAria": "Open developer GitHub profile in browser",
+    "devGithubTitle": "Developer — open GitHub profile",
+    "publishCenterLocked": "Publish Center is a BeatOS Pro feature — install the Pro module to enable it.",
+    "lists": "Lists",
+    "listSubtitle": "Playlist · {{count}} track",
+    "listSubtitle_other": "Playlist · {{count}} tracks",
+    "deleteListDesc": "The list is removed but member tracks stay in your library.",
+    "publishCenter": "Publish Center"
+  },
+  "projectFolder": {
+    "label": "Project folder",
+    "choose": "+ Choose folder",
+    "openTitle": "Open {{path}}",
+    "change": "Change",
+    "clearAria": "Clear project folder",
+    "openFailed": "Could not open folder: {{error}}"
+  },
   "settings": {
     "title": "Settings",
     "groups": { "appearance": "Appearance", "beatsUpload": "Beats & Upload", "general": "General" },
