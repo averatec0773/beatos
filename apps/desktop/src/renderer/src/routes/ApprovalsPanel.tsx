@@ -14,7 +14,7 @@ export function ApprovalsPanel(): React.JSX.Element {
   return (
     <main className="beatos-scroll flex-1 overflow-y-auto p-8 rounded-xl beatos-card">
       <div className="max-w-2xl">
-        <h1 className="text-2xl font-bold mb-6">Approvals</h1>
+        <h1 className="text-2xl font-bold mb-6">Agent Actions</h1>
 
         {empty ? (
           <div className="rounded border border-border-subtle bg-bg-elevated p-6 text-sm text-text-secondary">

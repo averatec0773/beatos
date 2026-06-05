@@ -60,8 +60,8 @@ export function SidebarPanel(): React.JSX.Element {
       <div className="flex flex-col gap-0.5">
         <AllBeatsSection />
         <PublishCenterSection />
-        <TrashSection />
         <ApprovalsSection />
+        <TrashSection />
       </div>
       <ListsSection activeListId={activeListId} />
       <div className="mt-auto flex flex-col gap-0.5">

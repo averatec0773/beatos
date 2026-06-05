@@ -12,6 +12,12 @@ vi.mock("@/api/publish", () => ({
   },
 }));
 
+// Stub the heavy children — covered by their own tests.
+vi.mock("@/components/PublishDialog", () => ({ PublishDialog: () => null }));
+vi.mock("@/components/PublishCenter/PublishTrackPicker", () => ({
+  PublishTrackPicker: () => null,
+}));
+
 import { PublishCenterPanel } from "@/routes/PublishCenterPanel";
 import { usePublishCenterStore } from "@/stores/publish-center";
 
@@ -45,6 +51,7 @@ describe("PublishCenterPanel", () => {
     );
     expect(screen.getByText(/Account sessions/)).toBeInTheDocument();
     expect(screen.getByText(/Activity/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Publish a track/ })).toBeInTheDocument();
     await vi.advanceTimersByTimeAsync(50);
     expect(screen.getByText(/No publishes in progress/)).toBeInTheDocument();
   });
