@@ -88,7 +88,35 @@
     "copyJson": "Copy JSON",
     "toolsList": "Tools ({{count}}): {{list}}"
   },
+  "editor": {
+    "genre": "Genre",
+    "genres": "Genres",
+    "addGenre": "Add genre...",
+    "mood": "Mood",
+    "moods": "Moods",
+    "addMood": "Add mood...",
+    "producer": "Producer",
+    "producers": "Producers",
+    "addProducer": "Add producer..."
+  },
   "dialogs": {
+    "bulkEdit": {
+      "modeAdd": "Add",
+      "modeReplace": "Replace",
+      "modeRemove": "Remove",
+      "title": "Bulk edit {{count}} track",
+      "title_other": "Bulk edit {{count}} tracks",
+      "desc": "Empty fields are left unchanged.",
+      "applyDefaultTiers": "Apply default license tiers",
+      "apply": "Apply to {{count}} track",
+      "apply_other": "Apply to {{count}} tracks",
+      "updated": "Updated {{count}} track",
+      "updated_other": "Updated {{count}} tracks",
+      "failed": "Bulk edit failed",
+      "licenseApplied": "Applied license to {{count}} track",
+      "licenseApplied_other": "Applied license to {{count}} tracks",
+      "licenseFailed": "Apply license template failed (did you configure default tiers in Settings?)"
+    },
     "export": {
       "copyAria": "Copy",
       "failed": "Export failed",

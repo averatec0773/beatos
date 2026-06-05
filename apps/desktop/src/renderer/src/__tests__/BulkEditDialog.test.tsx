@@ -28,7 +28,7 @@ describe("BulkEditDialog", () => {
     await user.click(screen.getByRole("button", { name: /^apply$/i }));
 
     // Click the main dialog apply button
-    await user.click(screen.getByRole("button", { name: /应用到 2 首/i }));
+    await user.click(screen.getByRole("button", { name: /apply to 2/i }));
 
     await waitFor(() =>
       expect(update).toHaveBeenCalledWith([1, 2], { genre: { add: ["Trap Rap"] } }),

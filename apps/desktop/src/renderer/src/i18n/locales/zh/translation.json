@@ -88,7 +88,35 @@
     "copyJson": "复制 JSON",
     "toolsList": "工具（{{count}}）: {{list}}"
   },
+  "editor": {
+    "genre": "Genre",
+    "genres": "Genres",
+    "addGenre": "添加 genre...",
+    "mood": "Mood",
+    "moods": "Moods",
+    "addMood": "添加 mood...",
+    "producer": "Producer",
+    "producers": "Producers",
+    "addProducer": "添加 producer..."
+  },
   "dialogs": {
+    "bulkEdit": {
+      "modeAdd": "追加",
+      "modeReplace": "覆盖",
+      "modeRemove": "移除",
+      "title": "批量编辑 {{count}} 首",
+      "title_other": "批量编辑 {{count}} 首",
+      "desc": "留空的字段不会改动。",
+      "applyDefaultTiers": "套用默认 license tiers",
+      "apply": "应用到 {{count}} 首",
+      "apply_other": "应用到 {{count}} 首",
+      "updated": "已更新 {{count}} 首",
+      "updated_other": "已更新 {{count}} 首",
+      "failed": "批量编辑失败",
+      "licenseApplied": "已套用 license 到 {{count}} 首",
+      "licenseApplied_other": "已套用 license 到 {{count}} 首",
+      "licenseFailed": "套用 license 模板失败（是否已在 Settings 配置默认 tiers？）"
+    },
     "export": {
       "copyAria": "复制",
       "failed": "导出失败",
