@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
+import { useTranslation } from "react-i18next";
 
 import { usePlayerStore } from "@/stores/player";
 import { audioEngine } from "@/lib/audio-engine";
@@ -43,6 +44,7 @@ export function AsciiSeekWaveform({
   onValueChange,
   className,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawRef = useRef<(() => void) | null>(null);
   const breathRef = useRef(0); // smoothed live level — gentle, not per-bar jitter
@@ -152,7 +154,7 @@ export function AsciiSeekWaveform({
       </SliderPrimitive.Track>
       <SliderPrimitive.Thumb
         className="block h-4 w-[2px] rounded-sm bg-white/80 shadow focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white disabled:pointer-events-none"
-        aria-label="Seek"
+        aria-label={t("player.seek")}
       />
     </SliderPrimitive.Root>
   );

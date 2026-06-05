@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ export function DeleteSidebarItemDialog({
   description,
   onConfirm,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -36,7 +38,7 @@ export function DeleteSidebarItemDialog({
             onClick={() => onOpenChange(false)}
             className="px-4 py-2 rounded-md border border-border-subtle text-sm hover:bg-bg-row-hover"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -45,7 +47,7 @@ export function DeleteSidebarItemDialog({
             }}
             className="px-4 py-2 rounded-md bg-danger text-white text-sm hover:opacity-90"
           >
-            Delete
+            {t("common.delete")}
           </button>
         </DialogFooter>
       </DialogContent>

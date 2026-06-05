@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { useTrackQueryStore } from "@/stores/track-query";
 import { facetsApi, type FacetValue } from "@/api/facets";
@@ -40,6 +41,7 @@ export function extractCompletedChipToken(
 }
 
 export function SearchInput(): React.JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const setText = useTrackQueryStore((s) => s.setText);
 
@@ -186,7 +188,7 @@ export function SearchInput(): React.JSX.Element {
           // Delay blur so dropdown button clicks register before it hides.
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           onKeyDown={onInputKeyDown}
-          placeholder="Search title / tags / genre:trap"
+          placeholder={t("search.placeholder")}
           className="flex-1 bg-transparent text-[15px] text-text-primary focus:outline-none"
         />
         {box.length > 0 && (
@@ -194,7 +196,7 @@ export function SearchInput(): React.JSX.Element {
             type="button"
             onClick={closeAndClear}
             className="text-text-tertiary hover:text-text-primary shrink-0"
-            aria-label="Clear search"
+            aria-label={t("search.clearAria")}
           >
             <X size={14} />
           </button>

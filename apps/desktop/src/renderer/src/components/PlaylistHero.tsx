@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pencil } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import type { Track } from "@/api/tracks";
 import { ListCoverMosaic } from "@/components/Sidebar/ListCoverMosaic";
@@ -41,6 +42,7 @@ export function PlaylistHero({
   const glow = useDominantColor(firstCover);
   const tint = glow ?? "44, 44, 52";
 
+  const { t } = useTranslation();
   const rename = useListStore((s) => s.rename);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
@@ -64,7 +66,7 @@ export function PlaylistHero({
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", `Rename failed: ${e instanceof Error ? e.message : String(e)}`);
+        .show("error", t("playlistHero.renameFailed", { error: e instanceof Error ? e.message : String(e) }));
     }
   }
 
@@ -79,7 +81,7 @@ export function PlaylistHero({
         <ListCoverMosaic covers={covers} size={128} />
       </div>
       <div className="min-w-0 flex flex-col gap-2 pb-1">
-        <span className="beatos-eyebrow">Playlist</span>
+        <span className="beatos-eyebrow">{t("playlistHero.playlist")}</span>
         {editing ? (
           <input
             ref={inputRef}
@@ -97,7 +99,7 @@ export function PlaylistHero({
           <div className="group flex items-center gap-2 min-w-0">
             <h1
               onDoubleClick={startEdit}
-              title="Double-click to rename"
+              title={t("playlistHero.doubleClickRename")}
               className="truncate text-4xl font-extrabold leading-none tracking-tight"
             >
               {name}
@@ -106,7 +108,7 @@ export function PlaylistHero({
               type="button"
               data-playlist-edit
               onClick={startEdit}
-              aria-label="Rename playlist"
+              aria-label={t("playlistHero.renameAria")}
               className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-text-tertiary hover:text-text-primary hover:bg-bg-row-hover opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <Pencil size={16} />
@@ -114,7 +116,7 @@ export function PlaylistHero({
           </div>
         )}
         <span className="text-sm text-text-secondary">
-          {tracks.length} {tracks.length === 1 ? "track" : "tracks"}
+          {t("playlistHero.trackCount", { count: tracks.length })}
         </span>
       </div>
     </div>

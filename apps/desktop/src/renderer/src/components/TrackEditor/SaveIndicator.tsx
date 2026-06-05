@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import { formatSavedAgo, type SaveState } from "@/lib/track-editor-helpers";
 
@@ -17,17 +18,18 @@ export function SaveIndicator({
   lastSavedAt,
   onRetry,
 }: SaveIndicatorProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   if (titleEmpty) {
     return (
       <span data-save-status="title-required" className="text-danger text-xs">
-        Title required to save
+        {t("editor.titleRequired")}
       </span>
     );
   }
   if (saveState === "saving") {
     return (
       <span data-save-status="saving" className="text-text-tertiary text-xs">
-        Saving…
+        {t("common.saving")}
       </span>
     );
   }
@@ -40,14 +42,14 @@ export function SaveIndicator({
         className="text-danger text-xs hover:underline"
         title={saveErrorMsg ?? undefined}
       >
-        Save failed — retry
+        {t("editor.saveFailed")}
       </button>
     );
   }
   if (saveState === "saved" && lastSavedAt != null) {
     return (
       <span data-save-status="saved" className="text-text-tertiary text-xs">
-        Saved · {formatSavedAgo(lastSavedAt)}
+        {t("editor.saved", { time: formatSavedAgo(lastSavedAt) })}
       </span>
     );
   }

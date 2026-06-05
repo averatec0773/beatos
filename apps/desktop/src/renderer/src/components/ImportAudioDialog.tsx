@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ export function ImportAudioDialog({
   onCancel,
   onConfirm,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const canAttach = files.length === 1 && attachCandidate != null;
   const [destination, setDestination] = useState<ImportDestination>("new");
   const [tag, setTag] = useState<AudioTag>("untagged");
@@ -42,7 +44,9 @@ export function ImportAudioDialog({
 
   const count = files.length;
   const title =
-    count === 1 ? `Import "${files[0]?.name ?? "audio"}"` : `Import ${count} audio files`;
+    count === 1
+      ? t("dialogs.import.titleOne", { name: files[0]?.name ?? "audio" })
+      : t("dialogs.import.titleMany", { count });
 
   return (
     <Dialog
@@ -59,7 +63,7 @@ export function ImportAudioDialog({
         <div className="space-y-4">
           <fieldset>
             <legend className="text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-2">
-              Where
+              {t("dialogs.import.where")}
             </legend>
             <label className="flex items-center gap-2 text-sm text-text-primary py-1 cursor-pointer">
               <input
@@ -70,7 +74,7 @@ export function ImportAudioDialog({
                 onChange={() => setDestination("new")}
                 className="accent-accent"
               />
-              <span>Create {count > 1 ? `${count} new tracks` : "new track"}</span>
+              <span>{t("dialogs.import.createNew", { count })}</span>
             </label>
             <label
               className={[
@@ -91,17 +95,17 @@ export function ImportAudioDialog({
               />
               <span>
                 {canAttach
-                  ? `Attach to "${attachCandidate!.title}" (replaces existing role)`
+                  ? t("dialogs.import.attachTo", { title: attachCandidate!.title })
                   : count > 1
-                    ? "Attach to selected — pick one file at a time"
-                    : "Attach to selected — no track focused"}
+                    ? t("dialogs.import.attachMultiple")
+                    : t("dialogs.import.attachNone")}
               </span>
             </label>
           </fieldset>
 
           <fieldset>
             <legend className="text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-2">
-              Role
+              {t("dialogs.import.role")}
             </legend>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
@@ -113,7 +117,7 @@ export function ImportAudioDialog({
                   onChange={() => setTag("tagged")}
                   className="accent-accent"
                 />
-                <span>Tagged</span>
+                <span>{t("dialogs.import.tagged")}</span>
               </label>
               <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
                 <input
@@ -124,7 +128,7 @@ export function ImportAudioDialog({
                   onChange={() => setTag("untagged")}
                   className="accent-accent"
                 />
-                <span>Untagged</span>
+                <span>{t("dialogs.import.untagged")}</span>
               </label>
             </div>
           </fieldset>
@@ -136,14 +140,14 @@ export function ImportAudioDialog({
             onClick={onCancel}
             className="px-4 py-2 rounded-md border border-border-subtle text-sm hover:bg-bg-row-hover"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
             onClick={() => onConfirm({ destination, tag })}
             className="px-4 py-2 rounded-md text-sm btn-primary"
           >
-            Import
+            {t("dialogs.import.import")}
           </button>
         </DialogFooter>
       </DialogContent>

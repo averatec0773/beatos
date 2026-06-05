@@ -1,4 +1,5 @@
 import React from "react";
+import i18n from "@/i18n";
 
 interface State {
   error: Error | null;
@@ -26,9 +27,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="min-h-screen bg-bg-base text-text-primary p-8 overflow-y-auto">
           <div className="max-w-3xl">
-            <h1 className="text-xl font-bold text-danger mb-3">Render error</h1>
+            <h1 className="text-xl font-bold text-danger mb-3">{i18n.t("errors.renderError")}</h1>
             <p className="text-sm text-text-secondary mb-4">
-              Something threw while rendering. Details below — please share with the developer.
+              {i18n.t("errors.renderErrorDesc")}
             </p>
             <pre className="bg-bg-elevated border border-border-subtle rounded-md p-4 text-xs text-danger overflow-x-auto">
               {this.state.error.name}: {this.state.error.message}
@@ -42,7 +43,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               onClick={() => this.setState({ error: null, info: null })}
               className="mt-4 px-4 py-2 rounded-md border border-border-subtle text-text-primary hover:bg-bg-row-hover"
             >
-              Try again
+              {i18n.t("errors.tryAgain")}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useTrackQueryStore } from "@/stores/track-query";
 import { formatChipLabel } from "@/lib/format-chip-label";
@@ -27,6 +28,7 @@ const FIELD_OPTIONS: { field: FieldType; label: string }[] = [
 type PopoverView = "field-list" | FieldType;
 
 export function FilterChipBar({ inline = false }: { inline?: boolean } = {}): React.JSX.Element {
+  const { t } = useTranslation();
   const filters = useTrackQueryStore((s) => s.filters);
   const clearAllFilters = useTrackQueryStore((s) => s.clearAllFilters);
   const removeFilter = useTrackQueryStore((s) => s.removeFilter);
@@ -143,7 +145,7 @@ export function FilterChipBar({ inline = false }: { inline?: boolean } = {}): Re
           <span
             onClick={(e) => handleRemoveChip(chip, e)}
             className="hover:text-text-primary leading-none"
-            aria-label={`Remove ${chip.field} filter`}
+            aria-label={t("filters.removeFilterAria", { field: chip.field })}
           >
             ×
           </span>
@@ -164,14 +166,14 @@ export function FilterChipBar({ inline = false }: { inline?: boolean } = {}): Re
             onClick={openFieldPicker}
             className="text-xs text-accent hover:underline"
           >
-            + Add filter
+            {t("filters.addFilter")}
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-56 p-3">
           {view === "field-list" ? (
             <div className="flex flex-col gap-0.5">
               <div className="text-xs font-semibold text-text-tertiary uppercase tracking-wide px-1 mb-1">
-                Filter by
+                {t("filters.filterBy")}
               </div>
               {FIELD_OPTIONS.map((opt) => (
                 <button
@@ -196,7 +198,7 @@ export function FilterChipBar({ inline = false }: { inline?: boolean } = {}): Re
           onClick={clearAllFilters}
           className={`${inline ? "" : "ml-auto "}text-xs text-text-tertiary hover:text-text-secondary`}
         >
-          Clear all
+          {t("filters.clearAll")}
         </button>
       )}
     </div>

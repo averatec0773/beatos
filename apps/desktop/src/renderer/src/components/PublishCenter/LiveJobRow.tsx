@@ -1,5 +1,6 @@
 import React from "react";
 import { Loader2, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import type { PublishJobFull } from "@/api/publish";
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function LiveJobRow({ job, title, onRepublish }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const stage = job.stage;
   const awaiting = AWAITING.has(stage);
   return (
@@ -21,16 +23,18 @@ export function LiveJobRow({ job, title, onRepublish }: Props): React.JSX.Elemen
         <div className="mt-0.5 flex items-center gap-1.5 text-xs">
           {awaiting ? (
             <span className="flex items-center gap-1 text-warning">
-              <Clock size={12} /> Waiting for you — finish in the open browser (
-              {stage === "awaiting_sms" ? "enter SMS → submit" : "next → sign → submit"})
+              <Clock size={12} />{" "}
+              {stage === "awaiting_sms"
+                ? t("publishCenter.waitingForSms")
+                : t("publishCenter.waitingForReview")}
             </span>
           ) : stage === "done" ? (
             <span className="flex items-center gap-1 text-success">
-              <CheckCircle2 size={12} /> Published
+              <CheckCircle2 size={12} /> {t("publishCenter.published")}
             </span>
           ) : stage === "failed" ? (
             <span className="flex items-center gap-1 text-error">
-              <XCircle size={12} /> Failed — {job.message}
+              <XCircle size={12} /> {t("publishCenter.failedJob", { message: job.message })}
             </span>
           ) : (
             <span className="flex items-center gap-1 text-text-tertiary">
@@ -46,7 +50,7 @@ export function LiveJobRow({ job, title, onRepublish }: Props): React.JSX.Elemen
           rel="noreferrer"
           className="shrink-0 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-row-hover"
         >
-          View listing
+          {t("publishCenter.viewListing")}
         </a>
       ) : stage === "failed" ? (
         <button
@@ -54,7 +58,7 @@ export function LiveJobRow({ job, title, onRepublish }: Props): React.JSX.Elemen
           onClick={() => onRepublish(job.request.track_id)}
           className="shrink-0 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-row-hover"
         >
-          Republish
+          {t("publishCenter.republish")}
         </button>
       ) : null}
     </div>

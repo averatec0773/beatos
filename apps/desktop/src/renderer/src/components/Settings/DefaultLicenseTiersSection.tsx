@@ -476,7 +476,7 @@ function RowEditor({
           onClick={onDelete}
           className="w-7 h-7 flex items-center justify-center rounded text-text-tertiary hover:text-danger hover:bg-bg-row-hover shrink-0"
           aria-label={t("licenseTiers.removeAria")}
-          title="Remove"
+          title={t("common.remove")}
         >
           <Trash2 size={14} />
         </button>

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import type { HistoryToken } from "@/hooks/use-pending-tokens-history";
 
@@ -33,10 +34,11 @@ function statusClass(status: HistoryToken["status"]): string {
 }
 
 export function HistoryList({ tokens }: Props): React.JSX.Element | null {
+  const { t } = useTranslation();
   if (tokens.length === 0) return null;
   return (
     <section>
-      <h2 className="mb-3 text-sm font-medium text-text-secondary">Recent ({tokens.length})</h2>
+      <h2 className="mb-3 text-sm font-medium text-text-secondary">{t("approvals.recent", { count: tokens.length })}</h2>
       <ul className="space-y-1">
         {tokens.map((t) => {
           const when = t.consumed_at ?? t.expires_at;

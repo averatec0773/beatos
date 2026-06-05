@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw, Rocket } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { publishApi } from "@/api/publish";
 import { usePublishCenterStore } from "@/stores/publish-center";
@@ -13,16 +14,8 @@ import { PublishDialog } from "@/components/PublishDialog";
 
 const SECTION = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-tertiary";
 
-function checkedAgoLabel(validatedAt: Record<string, number>): string {
-  const ts = Math.max(0, ...Object.values(validatedAt));
-  if (!ts) return "Never checked";
-  const mins = Math.floor((Date.now() - ts) / 60000);
-  if (mins < 1) return "Checked just now";
-  if (mins < 60) return `Checked ${mins}m ago`;
-  return `Checked ${Math.floor(mins / 60)}h ago`;
-}
-
 export function PublishCenterPanel(): React.JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const sessions = usePublishCenterStore((s) => s.sessions);
   const jobs = usePublishCenterStore((s) => s.jobs);
@@ -36,9 +29,9 @@ export function PublishCenterPanel(): React.JSX.Element {
   const trackList = useTrackStore((s) => s.list);
   const titleFor = useMemo(() => {
     const map = new Map<number, string>();
-    for (const t of trackList) map.set(t.id, t.title);
-    return (id: number) => map.get(id) ?? `Track #${id}`;
-  }, [trackList]);
+    for (const track of trackList) map.set(track.id, track.title);
+    return (id: number) => map.get(id) ?? t("publishCenter.trackFallback", { id });
+  }, [trackList, t]);
 
   const [loginPlatform, setLoginPlatform] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -83,12 +76,17 @@ export function PublishCenterPanel(): React.JSX.Element {
           if (status === "success") {
             stopLogin();
             await validateSessions(true);
-            useToastStore.getState().show("success", "Logged in");
+            useToastStore.getState().show("success", t("publishCenter.loggedInToast"));
           } else if (status === "failed" || status === "timeout") {
             stopLogin();
             useToastStore
               .getState()
-              .show("error", `Login ${status === "timeout" ? "timed out" : "failed"}: ${message}`);
+              .show(
+                "error",
+                status === "timeout"
+                  ? t("publishCenter.loginTimedOut", { message })
+                  : t("publishCenter.loginFailed", { message }),
+              );
           }
         } catch {
           /* transient; keep polling */
@@ -96,18 +94,27 @@ export function PublishCenterPanel(): React.JSX.Element {
       }, 2000);
     } catch {
       setLoginPlatform(null);
-      useToastStore.getState().show("error", "Couldn't start login");
+      useToastStore.getState().show("error", t("publishCenter.couldntStartLogin"));
     }
   }
 
   const platforms = useMemo(() => Object.keys(sessions), [sessions]);
 
+  const checkedAgoLabel = useMemo(() => {
+    const ts = Math.max(0, ...Object.values(validatedAt));
+    if (!ts) return t("publishCenter.neverChecked");
+    const mins = Math.floor((Date.now() - ts) / 60000);
+    if (mins < 1) return t("publishCenter.checkedJustNow");
+    if (mins < 60) return t("publishCenter.checkedMinsAgo", { mins });
+    return t("publishCenter.checkedHoursAgo", { hours: Math.floor(mins / 60) });
+  }, [validatedAt, t]);
+
   return (
     <div className="beatos-card beatos-scroll h-full overflow-y-auto rounded-xl p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-text-primary">Publish Center</h1>
-          <p className="mt-0.5 text-[11px] text-text-tertiary">{checkedAgoLabel(validatedAt)}</p>
+          <h1 className="text-lg font-semibold text-text-primary">{t("publishCenter.title")}</h1>
+          <p className="mt-0.5 text-[11px] text-text-tertiary">{checkedAgoLabel}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -115,7 +122,7 @@ export function PublishCenterPanel(): React.JSX.Element {
             onClick={() => setPickerOpen(true)}
             className="flex items-center gap-1.5 rounded-md border border-accent/50 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/10"
           >
-            <Rocket size={13} /> Publish a track
+            <Rocket size={13} /> {t("publishCenter.publishTrack")}
           </button>
           <button
             type="button"
@@ -123,15 +130,15 @@ export function PublishCenterPanel(): React.JSX.Element {
             disabled={validating}
             className="flex items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-row-hover disabled:opacity-50"
           >
-            <RefreshCw size={13} className={validating ? "animate-spin" : ""} /> Refresh
+            <RefreshCw size={13} className={validating ? "animate-spin" : ""} /> {t("publishCenter.refresh")}
           </button>
         </div>
       </div>
 
-      <div className={`${SECTION} mb-2`}>Account sessions</div>
+      <div className={`${SECTION} mb-2`}>{t("publishCenter.accountSessions")}</div>
       <div className="mb-6 flex flex-col gap-1.5">
         {platforms.length === 0 ? (
-          <div className="text-xs text-text-tertiary">No platforms</div>
+          <div className="text-xs text-text-tertiary">{t("publishCenter.noPlatforms")}</div>
         ) : (
           platforms.map((p) => (
             <SessionHealthRow
@@ -145,10 +152,10 @@ export function PublishCenterPanel(): React.JSX.Element {
         )}
       </div>
 
-      <div className={`${SECTION} mb-2`}>Activity</div>
+      <div className={`${SECTION} mb-2`}>{t("publishCenter.activity")}</div>
       <div className="flex flex-col gap-1.5">
         {jobs.length === 0 ? (
-          <div className="text-xs text-text-tertiary">No publishes in progress</div>
+          <div className="text-xs text-text-tertiary">{t("publishCenter.noPublishes")}</div>
         ) : (
           jobs.map((j) => (
             <LiveJobRow

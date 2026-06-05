@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import type { FacetValue } from "@/api/facets";
 
@@ -33,6 +34,7 @@ export function SearchDropdown({
   onPickChip,
   onOpenTrack,
 }: Props): React.JSX.Element | null {
+  const { t } = useTranslation();
   const hasFacets = topProducers.length > 0 || topGenres.length > 0 || topKeys.length > 0;
   const hasAnything = recent.length > 0 || hasFacets || recentlyAdded.length > 0;
 
@@ -41,12 +43,12 @@ export function SearchDropdown({
   return (
     <div
       role="listbox"
-      aria-label="Search suggestions"
+      aria-label={t("search.suggestions")}
       className="absolute left-0 right-0 top-full mt-1 z-50 max-h-96 overflow-y-auto rounded-md border border-border-subtle bg-bg-elevated p-1 shadow-lg"
     >
       {recent.length > 0 && (
         <div>
-          <SectionLabel>Recent searches</SectionLabel>
+          <SectionLabel>{t("search.recentSearches")}</SectionLabel>
           {recent.map((r) => (
             <button
               key={r}
@@ -64,7 +66,7 @@ export function SearchDropdown({
         <div>
           {topProducers.length > 0 && (
             <>
-              <SectionLabel>Top producers</SectionLabel>
+              <SectionLabel>{t("search.topProducers")}</SectionLabel>
               <div className="flex flex-wrap gap-1 px-2 pb-1">
                 {topProducers.map((f) => (
                   <button
@@ -81,7 +83,7 @@ export function SearchDropdown({
           )}
           {topGenres.length > 0 && (
             <>
-              <SectionLabel>Top genres</SectionLabel>
+              <SectionLabel>{t("search.topGenres")}</SectionLabel>
               <div className="flex flex-wrap gap-1 px-2 pb-1">
                 {topGenres.map((f) => (
                   <button
@@ -98,7 +100,7 @@ export function SearchDropdown({
           )}
           {topKeys.length > 0 && (
             <>
-              <SectionLabel>Top keys</SectionLabel>
+              <SectionLabel>{t("search.topKeys")}</SectionLabel>
               <div className="flex flex-wrap gap-1 px-2 pb-1">
                 {topKeys.map((f) => (
                   <button
@@ -118,7 +120,7 @@ export function SearchDropdown({
 
       {recentlyAdded.length > 0 && (
         <div>
-          <SectionLabel>Recently added</SectionLabel>
+          <SectionLabel>{t("search.recentlyAdded")}</SectionLabel>
           {recentlyAdded.map((t) => (
             <button
               key={t.id}

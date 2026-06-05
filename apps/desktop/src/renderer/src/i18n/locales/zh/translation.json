@@ -11,7 +11,12 @@
     "clear": "清空",
     "selectAll": "全选",
     "revealInFinder": "在 Finder 中显示",
-    "dash": "—"
+    "dash": "—",
+    "apply": "应用",
+    "dismiss": "关闭",
+    "close": "关闭",
+    "remove": "移除",
+    "noCover": "无封面"
   },
   "appearance": {
     "panels": "面板",
@@ -63,7 +68,20 @@
     "setFreeFailed": "设置免费失败: {{error}}",
     "removeAria": "移除默认 tier",
     "savedAt": "已保存 {{time}}",
-    "saveFailed": "保存默认值失败: {{error}}"
+    "saveFailed": "保存默认值失败: {{error}}",
+    "deleteTier": "删除 tier",
+    "saveEnter": "保存（Enter）",
+    "cancelEsc": "取消（Esc）",
+    "saveTier": "保存 tier",
+    "sectionTitle": "License Tiers",
+    "addTier": "添加 tier",
+    "saveTierFailed": "保存 tier 失败: {{error}}",
+    "deleteTierFailed": "删除 tier 失败: {{error}}",
+    "addPresetTierFailed": "添加 {{preset}} tier 失败: {{error}}",
+    "addTierFailed": "添加 tier 失败: {{error}}",
+    "tierNameRequired": "请输入 tier 名称。",
+    "tierIsPreset": "「{{name}}」是预设 — 请填写上方对应行。",
+    "tierAlreadyExists": "已存在「{{name}}」tier。"
   },
   "uploadTemplates": {
     "title": "上传模板",
@@ -111,7 +129,10 @@
     "addMood": "添加 mood...",
     "producer": "Producer",
     "producers": "Producers",
-    "addProducer": "添加 producer..."
+    "addProducer": "添加 producer...",
+    "titleRequired": "请输入标题以保存",
+    "saveFailed": "保存失败 — 重试",
+    "saved": "已保存 · {{time}}"
   },
   "dialogs": {
     "bulkEdit": {
@@ -158,6 +179,31 @@
       "exported": "已导出 {{count}} 个文件",
       "exported_other": "已导出 {{count}} 个文件",
       "skipped": "（跳过 {{count}} 个缺失文件）"
+    },
+    "analyzeResult": {
+      "title": "音频分析结果",
+      "desc": "选择要应用到曲目的检测值。",
+      "replaceExisting": "覆盖已有值",
+      "lowConfidence": "⚠ 低置信度 "
+    },
+    "import": {
+      "titleOne": "导入「{{name}}」",
+      "titleMany": "导入 {{count}} 个音频文件",
+      "where": "位置",
+      "createNew": "创建 {{count}} 首新曲目",
+      "createNew_other": "创建 {{count}} 首新曲目",
+      "attachTo": "附加到「{{title}}」（替换现有角色）",
+      "attachMultiple": "附加到选中 — 每次选择一个文件",
+      "attachNone": "附加到选中 — 未聚焦曲目",
+      "role": "角色",
+      "tagged": "带标签",
+      "untagged": "无标签",
+      "import": "导入",
+      "attachFailed": "附加失败: {{errors}}",
+      "attached": "已将 {{tag}} 音频附加到「{{title}}」",
+      "imported": "已导入 {{count}} 首（{{tag}}）",
+      "imported_other": "已导入 {{count}} 首（{{tag}}）",
+      "partial": "已导入 {{created}}/{{total}}，{{failed}} 个失败"
     }
   },
   "contextMenu": {
@@ -167,7 +213,8 @@
     "revealInFinder": "在 Finder 中显示",
     "exportToPlatform": "导出到平台…",
     "delete": "删除",
-    "deleteConfirm": "删除「{{title}}」?"
+    "deleteConfirm": "删除「{{title}}」?",
+    "rename": "重命名"
   },
   "analysis": {
     "progress": "分析中 {{done}}/{{total}}",
@@ -185,7 +232,8 @@
     "repeat": "循环",
     "unmute": "取消静音",
     "mute": "静音",
-    "volume": "音量"
+    "volume": "音量",
+    "seek": "定位"
   },
   "topbar": {
     "goAllBeats": "前往 All Beats",
@@ -213,7 +261,10 @@
     "listSubtitle": "歌单 · {{count}} 首",
     "listSubtitle_other": "歌单 · {{count}} 首",
     "deleteListDesc": "歌单会被删除，但其中的曲目仍保留在曲库中。",
-    "publishCenter": "Publish Center"
+    "publishCenter": "Publish Center",
+    "settings": "设置",
+    "agentActions": "Agent 操作",
+    "resizeSidebar": "调整侧栏宽度"
   },
   "projectFolder": {
     "label": "工程文件夹",
@@ -270,5 +321,217 @@
       "repo": "项目仓库: ",
       "repoAria": "在浏览器中打开 GitHub 项目仓库"
     }
+  },
+  "trackList": {
+    "addTrack": "添加曲目",
+    "analyzeAll": "分析全部未分析（{{count}}）",
+    "exportPlaylist": "导出歌单",
+    "exportPlaylistTitle": "导出歌单文件",
+    "editMetadata": "编辑元数据",
+    "analyzeSelected": "分析选中",
+    "moveToTrash": "移至回收站",
+    "moveToTrashConfirm": "将 1 首曲目移至回收站？",
+    "moveToTrashConfirmMany": "将 {{count}} 首曲目移至回收站？",
+    "movedToTrash": "已将 1 首移至回收站",
+    "movedToTrashMany": "已将 {{count}} 首移至回收站",
+    "trackCount": "{{count}} 首",
+    "trackCount_other": "{{count}} 首",
+    "dropAudio": "拖入音频文件（.wav 或 .mp3）以创建新曲目"
+  },
+  "approvals": {
+    "title": "Agent 操作",
+    "empty": "暂无 AI 活动。连接 MCP 客户端即可开始（见设置 → AI Integration）。",
+    "pending": "⚠ 待处理（{{count}}）",
+    "recent": "近期记录（{{count}}）",
+    "cannotBeUndone": "此操作无法撤销。",
+    "iUnderstand": "我确认此操作不可逆",
+    "approve": "✓ 批准",
+    "reject": "✗ 拒绝",
+    "hide": "隐藏",
+    "showAll": "显示全部 {{count}}"
+  },
+  "detail": {
+    "nowFocused": "当前选中",
+    "nowPlaying": "正在播放",
+    "selectTrack": "选择一首曲目以查看详情。",
+    "hidePreview": "隐藏预览",
+    "showPreview": "显示预览",
+    "noGenre": "无 Genre",
+    "genreMood": "Genre / Mood",
+    "credits": "制作信息",
+    "added": "添加日期",
+    "updated": "更新日期",
+    "description": "描述",
+    "resizePreview": "调整预览面板宽度"
+  },
+  "search": {
+    "placeholder": "搜索标题 / 标签 / genre:trap",
+    "clearAria": "清除搜索",
+    "suggestions": "搜索建议",
+    "recentSearches": "最近搜索",
+    "topProducers": "热门 Producer",
+    "topGenres": "热门 Genre",
+    "topKeys": "热门 Key",
+    "recentlyAdded": "最近添加"
+  },
+  "emptyState": {
+    "noTracks": "暂无曲目",
+    "noTracksDesc": "添加第一首曲目以开始。",
+    "addTrack": "添加曲目",
+    "emptyList": "歌单「{{name}}」是空的",
+    "emptyListDesc": "从 All Beats 拖入曲目以添加。",
+    "noResults": "没有与「{{query}}」匹配的曲目",
+    "noResultsDesc": "试试更短或不同的搜索词。",
+    "clearSearch": "清除搜索"
+  },
+  "errors": {
+    "renderError": "渲染错误",
+    "renderErrorDesc": "渲染时发生错误。详情如下——请反馈给开发者。",
+    "tryAgain": "重试",
+    "backendUnreachable": "无法连接后端",
+    "backendUnreachableDesc": "Python sidecar 未响应，通常意味着启动失败。",
+    "retry": "重试",
+    "sidecarDisconnected": "后端已断开",
+    "sidecarExited": "sidecar 进程已退出（code {{code}}，signal {{signal}}）。重启应用以重新连接。"
+  },
+  "keyPicker": {
+    "add": "添加 Key",
+    "major": "大调",
+    "minor": "小调",
+    "flatKeys": "降号 Keys",
+    "sharpKeys": "升号 Keys"
+  },
+  "chipSelect": {
+    "renameValue": "重命名",
+    "confirmRename": "确认重命名",
+    "deleteValueGlobally": "全局删除",
+    "addCustomValue": "添加自定义值",
+    "atMax": "已达上限 —— 请先移除一个",
+    "typeToAdd": "输入以添加…",
+    "add": "添加",
+    "selected": "{{count}} / {{max}} 已选",
+    "cancel": "取消",
+    "apply": "应用"
+  },
+  "publishDialog": {
+    "files": "Files",
+    "metadata": "Metadata",
+    "loginNotCompleted": "登录未完成",
+    "couldntStartLogin": "无法启动登录",
+    "failedToLoadMetadata": "加载元数据失败",
+    "failedToLoadAssets": "加载资源失败",
+    "selectPromoVideoFirst": "请先选择推广视频",
+    "selectPreviewAudioFirst": "请先选择预览音频",
+    "publishFailed": "发布失败",
+    "publishToPlatform": "发布到平台",
+    "logInFirst": "请先登录",
+    "browserOpen": "浏览器已打开…",
+    "logIn": "登录",
+    "awaitingMsg": "已自动上传 —— 请在打开的浏览器中完成最后一步（阅读协议，然后短信验证）。",
+    "published": "已发布",
+    "view": "查看",
+    "publishFailedDetail": "发布失败: {{error}}",
+    "publish": "发布",
+    "stageQueued": "已排队",
+    "stageLaunching": "启动浏览器",
+    "stageNavigating": "打开上传页面",
+    "stageUploadingAudio": "上传预览音频",
+    "stageUploadingCover": "上传封面",
+    "stageFillingMetadata": "填写元数据",
+    "stageUploadingDeliverables": "上传交付文件",
+    "stageSubmitting": "提交中",
+    "stageAwaitingReview": "等待你操作",
+    "stageAwaitingSms": "等待你操作",
+    "stageDone": "完成",
+    "stageFailed": "失败"
+  },
+  "publishCenter": {
+    "title": "Publish Center",
+    "publishTrack": "发布曲目",
+    "refresh": "刷新",
+    "accountSessions": "账号会话",
+    "noPlatforms": "无平台",
+    "activity": "发布活动",
+    "noPublishes": "无进行中的发布",
+    "neverChecked": "从未检查",
+    "checkedJustNow": "刚刚检查",
+    "checkedMinsAgo": "{{mins}} 分钟前检查",
+    "checkedHoursAgo": "{{hours}} 小时前检查",
+    "browserOpenFinishLogin": "浏览器已打开——完成登录…",
+    "reLogin": "重新登录",
+    "logIn": "登录",
+    "loggedIn": "已登录",
+    "expired": "已过期——请重新登录",
+    "checking": "检查中",
+    "notLoggedIn": "未登录",
+    "waitingForReview": "等待你操作——在已打开的浏览器中完成（下一步 → 签名 → 提交）",
+    "waitingForSms": "等待你操作——在已打开的浏览器中完成（输入短信验证码 → 提交）",
+    "published": "已发布",
+    "failedJob": "失败——{{message}}",
+    "viewListing": "查看发布",
+    "republish": "重新发布",
+    "searchTracks": "搜索曲目…",
+    "searching": "搜索中…",
+    "noTracksFound": "未找到曲目",
+    "loggedInToast": "已登录",
+    "loginTimedOut": "登录超时: {{message}}",
+    "loginFailed": "登录失败: {{message}}",
+    "couldntStartLogin": "无法启动登录",
+    "trackFallback": "Track #{{id}}"
+  },
+  "filters": {
+    "addFilter": "+ 添加筛选",
+    "filterBy": "筛选方式",
+    "clearAll": "清除全部",
+    "removeFilterAria": "移除 {{field}} 筛选",
+    "loading": "加载中…",
+    "failedToLoad": "加载失败",
+    "noValuesFound": "无可用值",
+    "bpmRange": "BPM 范围",
+    "minPlaceholder": "最小",
+    "maxPlaceholder": "最大",
+    "hasAudio": "有音频",
+    "any": "任意",
+    "yes": "是",
+    "no": "否"
+  },
+  "fileRows": {
+    "files": "文件",
+    "promoVideos": "推广视频",
+    "missing": "缺失",
+    "findFile": "查找文件",
+    "addFile": "+ 添加文件",
+    "revealInFinder": "在 Finder 中显示",
+    "replaceFile": "替换文件…",
+    "detach": "移除",
+    "coverMissing": "封面 · 缺失",
+    "coverActions": "封面操作",
+    "replace": "替换…",
+    "attachFailed": "附加失败: {{error}}",
+    "relocateFailed": "重新定位失败: {{error}}",
+    "dropWrongType": "{{label}} 需要以下格式之一: {{exts}}（收到 {{name}}）",
+    "getPathFailed": "无法读取文件路径。请使用「+ 添加文件」按钮。",
+    "emptyPath": "拖入的文件没有可访问路径。请使用「+ 添加文件」按钮。"
+  },
+  "playlistHero": {
+    "playlist": "歌单",
+    "renameAria": "重命名歌单",
+    "doubleClickRename": "双击以重命名",
+    "renameFailed": "重命名失败: {{error}}",
+    "trackCount": "{{count}} 首",
+    "trackCount_other": "{{count}} 首"
+  },
+  "tableHeader": {
+    "title": "标题",
+    "bpm": "BPM",
+    "key": "Key",
+    "genre": "Genre",
+    "updated": "更新时间"
+  },
+  "addToList": {
+    "noLists": "暂无歌单"
+  },
+  "dragOverlay": {
+    "tracks": "{{count}} 首"
   }
 }

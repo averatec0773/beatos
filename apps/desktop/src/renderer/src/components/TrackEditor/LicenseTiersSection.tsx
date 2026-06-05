@@ -214,7 +214,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
       } catch (e) {
         useToastStore
           .getState()
-          .show("error", `Save tier failed: ${e instanceof Error ? e.message : String(e)}`);
+          .show("error", t("licenseTiers.saveTierFailed", { error: e instanceof Error ? e.message : String(e) }));
       } finally {
         savingTimers.current.delete(tierId);
       }
@@ -268,7 +268,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", `Delete tier failed: ${e instanceof Error ? e.message : String(e)}`);
+        .show("error", t("licenseTiers.deleteTierFailed", { error: e instanceof Error ? e.message : String(e) }));
     }
   }
 
@@ -354,7 +354,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
         .getState()
         .show(
           "error",
-          `Add ${preset.toUpperCase()} tier failed: ${e instanceof Error ? e.message : String(e)}`,
+          t("licenseTiers.addPresetTierFailed", { preset: preset.toUpperCase(), error: e instanceof Error ? e.message : String(e) }),
         );
     }
   }
@@ -371,13 +371,13 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
 
   function validateCustomName(rawName: string): string | null {
     const name = rawName.trim().toLowerCase();
-    if (name === "") return "Tier name is required.";
+    if (name === "") return t("licenseTiers.tierNameRequired");
     if (PRESET_KEYS.has(name))
-      return `"${name.toUpperCase()}" is a preset — fill the row above instead.`;
+      return t("licenseTiers.tierIsPreset", { name: name.toUpperCase() });
     const dupe = tiers.find(
       (tier) => tier.deliverables.length === 1 && tier.deliverables[0].toLowerCase() === name,
     );
-    if (dupe) return `A "${name.toUpperCase()}" tier already exists.`;
+    if (dupe) return t("licenseTiers.tierAlreadyExists", { name: name.toUpperCase() });
     return null;
   }
 
@@ -404,7 +404,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", `Add tier failed: ${e instanceof Error ? e.message : String(e)}`);
+        .show("error", t("licenseTiers.addTierFailed", { error: e instanceof Error ? e.message : String(e) }));
     }
   }
 
@@ -415,7 +415,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-            License Tiers
+            {t("licenseTiers.sectionTitle")}
           </h3>
           <label
             className="flex items-center gap-1.5 text-xs text-text-secondary"
@@ -438,12 +438,12 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
           data-license-add-tier
         >
           <Plus size={12} />
-          Add tier
+          {t("licenseTiers.addTier")}
         </button>
       </header>
 
       {loading ? (
-        <div className="text-xs text-text-tertiary py-4">Loading…</div>
+        <div className="text-xs text-text-tertiary py-4">{t("common.loading")}</div>
       ) : (
         <div className="flex flex-col gap-1.5">
           {PRESET_SLOTS.map((slot) => {
@@ -537,6 +537,7 @@ function PriceTrio({
   onPriceChange,
   onOtherCurrencyChange,
 }: PriceTrioProps): React.JSX.Element {
+  const { t } = useTranslation();
   const inputBg = ghost ? "bg-transparent" : "bg-bg-base";
   const fxSource = pickFxSource(priceInputs, otherCurrency);
   return (
@@ -574,7 +575,7 @@ function PriceTrio({
           onChange={(e) => onOtherCurrencyChange(e.target.value || null)}
           disabled={disabled}
           className="bg-transparent pl-2 pr-1 py-1.5 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary focus:outline-none disabled:opacity-50"
-          aria-label="Third currency"
+          aria-label={t("licenseTiers.thirdCurrencyAria")}
         >
           <option value="">—</option>
           {OTHER_CURRENCIES.map((c) => (
@@ -596,7 +597,7 @@ function PriceTrio({
               : "—"
           }
           className="w-20 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none disabled:opacity-50"
-          aria-label="Other currency price"
+          aria-label={t("licenseTiers.otherCurrencyPriceAria")}
         />
       </div>
     </>
@@ -660,8 +661,8 @@ function FilledTierRow({
         type="button"
         onClick={onDelete}
         className="w-7 h-7 flex items-center justify-center rounded text-text-tertiary hover:text-danger hover:bg-bg-row-hover shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100"
-        aria-label="Delete tier"
-        title="Delete tier"
+        aria-label={t("licenseTiers.deleteTier")}
+        title={t("licenseTiers.deleteTier")}
       >
         <Trash2 size={14} />
       </button>
@@ -770,9 +771,9 @@ function PendingCustomRow({
         value={value.name}
         onChange={(e) => onChange({ name: e.target.value })}
         onKeyDown={onKeyDown}
-        placeholder="Tier name (e.g. MIDI)"
+        placeholder={t("licenseTiers.tierNamePlaceholder")}
         className={`${LABEL_WIDTH} shrink-0 bg-bg-base border border-border-subtle rounded-md px-2 py-1 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-primary placeholder:text-text-tertiary placeholder:normal-case placeholder:tracking-normal placeholder:font-normal`}
-        aria-label="Tier name"
+        aria-label={t("licenseTiers.tierNameAria")}
       />
       <PriceTrio
         priceInputs={value.priceInputs}
@@ -812,8 +813,8 @@ function PendingCustomRow({
         type="button"
         onClick={onCommit}
         className="w-7 h-7 flex items-center justify-center rounded text-accent hover:bg-bg-row-hover shrink-0"
-        aria-label="Save tier"
-        title="Save (Enter)"
+        aria-label={t("licenseTiers.saveTier")}
+        title={t("licenseTiers.saveEnter")}
       >
         <Check size={14} />
       </button>
@@ -821,8 +822,8 @@ function PendingCustomRow({
         type="button"
         onClick={onCancel}
         className="w-7 h-7 flex items-center justify-center rounded text-text-tertiary hover:text-text-primary hover:bg-bg-row-hover shrink-0"
-        aria-label="Cancel"
-        title="Cancel (Esc)"
+        aria-label={t("common.cancel")}
+        title={t("licenseTiers.cancelEsc")}
       >
         <X size={14} />
       </button>

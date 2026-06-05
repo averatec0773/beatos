@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ export function AnalyzeResultDialog({
   onApply,
   onClose,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [replaceExisting, setReplaceExisting] = useState(false);
   const [bpmChecked, setBpmChecked] = useState(false);
   const [keyChecked, setKeyChecked] = useState(false);
@@ -89,8 +91,8 @@ export function AnalyzeResultDialog({
     >
       <DialogContent data-analyze-dialog onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Audio Analysis Results</DialogTitle>
-          <DialogDescription>Select which detected values to apply to the track.</DialogDescription>
+          <DialogTitle>{t("dialogs.analyzeResult.title")}</DialogTitle>
+          <DialogDescription>{t("dialogs.analyzeResult.desc")}</DialogDescription>
         </DialogHeader>
 
         {result && (
@@ -152,7 +154,7 @@ export function AnalyzeResultDialog({
             className="h-4 w-4 accent-[var(--accent)] cursor-pointer"
             data-replace-existing
           />
-          Replace existing values
+          {t("dialogs.analyzeResult.replaceExisting")}
         </label>
 
         <DialogFooter className="flex-row gap-2 sm:justify-start mt-2">
@@ -161,14 +163,14 @@ export function AnalyzeResultDialog({
             onClick={onClose}
             className="px-4 py-2 rounded-md border border-border-subtle text-text-primary hover:bg-bg-row-hover text-sm font-medium"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
             onClick={handleApply}
             className="px-4 py-2 rounded-md font-medium text-sm btn-primary"
           >
-            Apply
+            {t("common.apply")}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -183,6 +185,7 @@ function ConfidenceBadge({
   confidence: number | null;
   threshold: number;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   if (confidence == null) {
     return <span className="text-xs text-text-tertiary">—</span>;
   }
@@ -190,7 +193,7 @@ function ConfidenceBadge({
   const isLow = confidence < threshold;
   return (
     <span className={isLow ? "text-xs text-warning font-medium" : "text-xs text-text-tertiary"}>
-      {isLow ? "⚠ Low " : ""}
+      {isLow ? t("dialogs.analyzeResult.lowConfidence") : ""}
       {pct}%
     </span>
   );

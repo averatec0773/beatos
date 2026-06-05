@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { PanelRightClose, ChevronLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
@@ -19,6 +20,7 @@ import { GutterResizer } from "@/components/GutterResizer";
  * is closed. Drag LEFT = wider (the panel grows from its left edge → w - dx).
  */
 export function PreviewGutter(): React.JSX.Element {
+  const { t } = useTranslation();
   const open = usePreviewPanelStore((s) => s.open);
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
   // Collapsed: the detail panel now renders a persistent rail (not null), so the
@@ -26,7 +28,7 @@ export function PreviewGutter(): React.JSX.Element {
   if (!open) return <div className="w-2 shrink-0" aria-hidden />;
   return (
     <GutterResizer
-      ariaLabel="Resize preview panel"
+      ariaLabel={t("detail.resizePreview")}
       dataAttr="data-preview-resizer"
       getStartWidth={() => usePreviewPanelStore.getState().width}
       onResize={(w, dx) =>
@@ -42,6 +44,7 @@ export function PreviewGutter(): React.JSX.Element {
  * via the TopBar preview toggle.
  */
 function DetailHeader({ label }: { label: string }): React.JSX.Element {
+  const { t } = useTranslation();
   const setOpen = usePreviewPanelStore((s) => s.setOpen);
   return (
     <div className="flex items-center justify-between">
@@ -50,8 +53,8 @@ function DetailHeader({ label }: { label: string }): React.JSX.Element {
         type="button"
         onClick={() => setOpen(false)}
         className="text-text-tertiary hover:text-text-primary p-1 -mr-1 rounded-md hover:bg-bg-row-hover"
-        aria-label="Hide preview"
-        title="Hide preview"
+        aria-label={t("detail.hidePreview")}
+        title={t("detail.hidePreview")}
         data-preview-close
       >
         <PanelRightClose size={16} />
@@ -105,6 +108,7 @@ function EtchDivider(): React.JSX.Element {
 }
 
 export function TrackDetailPanel(): React.JSX.Element | null {
+  const { t } = useTranslation();
   const open = usePreviewPanelStore((s) => s.open);
   const setOpen = usePreviewPanelStore((s) => s.setOpen);
   const width = usePreviewPanelStore((s) => s.width);
@@ -141,8 +145,8 @@ export function TrackDetailPanel(): React.JSX.Element | null {
           type="button"
           onClick={() => setOpen(true)}
           className="rail-expand absolute inset-0 flex items-center justify-center text-text-secondary hover:text-text-primary"
-          aria-label="Show preview"
-          title="Show preview"
+          aria-label={t("detail.showPreview")}
+          title={t("detail.showPreview")}
           data-preview-open
         >
           <ChevronLeft size={18} />
@@ -164,8 +168,8 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         className="relative beatos-scroll overflow-y-auto beatos-card rounded-xl p-4 flex-shrink-0"
         style={{ width }}
       >
-        <DetailHeader label="Now Focused" />
-        <div className="mt-2 text-text-tertiary text-sm">Select a track to see details.</div>
+        <DetailHeader label={t("detail.nowFocused")} />
+        <div className="mt-2 text-text-tertiary text-sm">{t("detail.selectTrack")}</div>
       </aside>
     );
   }
@@ -175,7 +179,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
       className="relative beatos-scroll beatos-card rounded-xl p-4 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0"
       style={{ width }}
     >
-      <DetailHeader label={playingThis ? "Now Playing" : "Now Focused"} />
+      <DetailHeader label={playingThis ? t("detail.nowPlaying") : t("detail.nowFocused")} />
       <Coverflow
         panelWidth={width}
         glowColor={glow}
@@ -192,7 +196,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
           {current.genre && current.genre.length > 0 ? (
             current.genre.map((g) => formatVocabLabel(g, "genre", vocabLocale)).join(", ")
           ) : (
-            <span className="text-text-tertiary">No genre</span>
+            <span className="text-text-tertiary">{t("detail.noGenre")}</span>
           )}
         </div>
       </div>
@@ -203,7 +207,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
       <div>
         <EtchDivider />
-        <div className="beatos-eyebrow mb-2">Genre / Mood</div>
+        <div className="beatos-eyebrow mb-2">{t("detail.genreMood")}</div>
         <div className="flex flex-wrap gap-1.5">
           {(current.genre ?? []).map((g) => (
             <Chip key={`g-${g}`}>{formatVocabLabel(g, "genre", vocabLocale)}</Chip>
@@ -220,22 +224,22 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
       <div>
         <EtchDivider />
-        <div className="beatos-eyebrow mb-2">Credits</div>
+        <div className="beatos-eyebrow mb-2">{t("detail.credits")}</div>
         <div className="flex flex-col gap-1.5 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-text-tertiary">Producer</span>
+            <span className="text-text-tertiary">{t("editor.producer")}</span>
             <span className="text-text-primary">
               {current.producer && current.producer.length > 0 ? current.producer.join(", ") : "—"}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-text-tertiary">Added</span>
+            <span className="text-text-tertiary">{t("detail.added")}</span>
             <span className="font-mono text-text-secondary">
               {formatRowDate(current.created_at)}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-text-tertiary">Updated</span>
+            <span className="text-text-tertiary">{t("detail.updated")}</span>
             <span className="font-mono text-text-secondary">
               {formatRowDate(current.updated_at)}
             </span>
@@ -253,7 +257,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
       {current.description && current.description.trim().length > 0 && (
         <div>
           <EtchDivider />
-          <div className="beatos-eyebrow mb-2">Description</div>
+          <div className="beatos-eyebrow mb-2">{t("detail.description")}</div>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">
             {current.description}
           </div>

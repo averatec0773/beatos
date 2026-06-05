@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Package, Plus, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { attachAudioToTrack, importAsNewTracks } from "@/lib/create-track-from-file";
 
@@ -28,6 +29,7 @@ import { analysis } from "@/api/analysis";
 import { useAnalysisJobStore } from "@/stores/analysis-job";
 
 export function TrackListPanel(): React.JSX.Element {
+  const { t } = useTranslation();
   const list = useTrackStore((s) => s.list);
   const current = useTrackStore((s) => s.current);
   const refresh = useTrackStore((s) => s.refresh);
@@ -188,9 +190,9 @@ export function TrackListPanel(): React.JSX.Element {
     if (opts.destination === "attach" && current) {
       const r = await attachAudioToTrack(files, current.id, opts.tag);
       if (r.errors.length > 0) {
-        toast.show("error", `Attach failed: ${r.errors.join("; ")}`, 6000);
+        toast.show("error", t("dialogs.import.attachFailed", { errors: r.errors.join("; ") }), 6000);
       } else {
-        toast.show("success", `Attached ${opts.tag} audio to "${current.title}"`);
+        toast.show("success", t("dialogs.import.attached", { tag: opts.tag, title: current.title }));
       }
       return;
     }
@@ -198,16 +200,14 @@ export function TrackListPanel(): React.JSX.Element {
     if (r.errors.length > 0) {
       toast.show(
         "warning",
-        `Imported ${r.created}/${files.length} — ${r.errors.length} failed`,
+        t("dialogs.import.partial", { created: r.created, total: files.length, failed: r.errors.length }),
         6000,
       );
       console.warn("[import] errors:", r.errors);
     } else if (r.created > 0) {
       toast.show(
         "success",
-        r.created === 1
-          ? `Imported 1 track (${opts.tag})`
-          : `Imported ${r.created} tracks (${opts.tag})`,
+        t("dialogs.import.imported", { count: r.created, tag: opts.tag }),
       );
     }
   }
@@ -240,12 +240,12 @@ export function TrackListPanel(): React.JSX.Element {
       },
       {
         key: "edit-meta",
-        label: "编辑元数据",
+        label: t("trackList.editMetadata"),
         onClick: () => setBulkEditOpen(true),
       },
       {
         key: "analyze",
-        label: "分析选中",
+        label: t("trackList.analyzeSelected"),
         onClick: async () => {
           const ids = Array.from(selectedIds);
           const { job_id, total } = await analysis.startBatch("selected", ids);
@@ -255,14 +255,14 @@ export function TrackListPanel(): React.JSX.Element {
       },
       {
         key: "trash",
-        label: "Move to trash",
+        label: t("trackList.moveToTrash"),
         variant: "danger",
         icon: <Trash2 size={14} />,
         onClick: async () => {
           const ids = Array.from(selectedIds);
           if (
             !confirm(
-              ids.length === 1 ? "Move 1 track to trash?" : `Move ${ids.length} tracks to trash?`,
+              ids.length === 1 ? t("trackList.moveToTrashConfirm") : t("trackList.moveToTrashConfirmMany", { count: ids.length }),
             )
           )
             return;
@@ -280,12 +280,12 @@ export function TrackListPanel(): React.JSX.Element {
             .getState()
             .show(
               "success",
-              ids.length === 1 ? "Moved 1 track to trash" : `Moved ${ids.length} tracks to trash`,
+              ids.length === 1 ? t("trackList.movedToTrash") : t("trackList.movedToTrashMany", { count: ids.length }),
             );
         },
       },
     ],
-    [selectedIds, listId, refresh, clearSelection],
+    [selectedIds, listId, refresh, clearSelection, t],
   );
 
   async function onAddTrack(): Promise<void> {
@@ -327,7 +327,7 @@ export function TrackListPanel(): React.JSX.Element {
               className="absolute inset-0 z-50 bg-accent/10 border-2 border-accent border-dashed pointer-events-none flex items-center justify-center"
             >
               <span className="text-accent text-base font-medium">
-                Drop audio files (.wav or .mp3) to create new tracks
+                {t("trackList.dropAudio")}
               </span>
             </div>
           )}
@@ -367,7 +367,7 @@ export function TrackListPanel(): React.JSX.Element {
             className="absolute inset-0 z-50 bg-accent/10 border-2 border-accent border-dashed pointer-events-none flex items-center justify-center"
           >
             <span className="text-accent text-base font-medium">
-              Drop audio files (.wav or .mp3) to create new tracks
+              {t("trackList.dropAudio")}
             </span>
           </div>
         )}
@@ -381,7 +381,7 @@ export function TrackListPanel(): React.JSX.Element {
             className="btn-primary inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
           >
             <Plus size={13} />
-            Add Track
+            {t("trackList.addTrack")}
           </button>
           {listId == null && unanalyzed > 0 && (
             <button
@@ -392,7 +392,7 @@ export function TrackListPanel(): React.JSX.Element {
               }}
               className="rounded-md border border-border-subtle px-2 py-1 text-xs hover:bg-bg-row-hover"
             >
-              分析全部未分析 ({unanalyzed})
+              {t("trackList.analyzeAll", { count: unanalyzed })}
             </button>
           )}
           {currentList && (
@@ -401,17 +401,17 @@ export function TrackListPanel(): React.JSX.Element {
               data-export-playlist
               onClick={() => setPlaylistExportOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle px-2 py-1 text-xs hover:bg-bg-row-hover"
-              title="打包导出歌单文件"
+              title={t("trackList.exportPlaylistTitle")}
             >
               <Package size={13} />
-              导出歌单
+              {t("trackList.exportPlaylist")}
             </button>
           )}
           <div className="h-4 w-px bg-border-subtle" />
           <FilterChipBar inline />
           <span className="text-text-tertiary text-sm ml-auto whitespace-nowrap">
             {currentList ? `${currentList.name} · ` : ""}
-            {visible.length} track{visible.length === 1 ? "" : "s"}
+            {t("trackList.trackCount", { count: visible.length })}
           </span>
         </header>
         <div className="flex-1 flex flex-col min-w-0">
@@ -433,40 +433,40 @@ export function TrackListPanel(): React.JSX.Element {
               clearSelection();
               select(null);
             }}
-            renderRow={(t) => (
+            renderRow={(track) => (
               <TrackContextMenu
-                key={t.id}
-                trackId={t.id}
-                trackTitle={t.title}
+                key={track.id}
+                trackId={track.id}
+                trackTitle={track.title}
                 audioPath={null}
                 currentListId={listId}
-                onEdit={() => navigate(`/tracks/${t.id}/edit`)}
-                onDelete={() => remove(t.id)}
-                onExport={() => setExportTrackId(t.id)}
+                onEdit={() => navigate(`/tracks/${track.id}/edit`)}
+                onDelete={() => remove(track.id)}
+                onExport={() => setExportTrackId(track.id)}
                 onRemoveFromList={() => refresh(listId != null ? { list_id: listId } : undefined)}
               >
                 <div className="data-[state=open]:ring-2 data-[state=open]:ring-inset data-[state=open]:ring-accent">
                   <TrackRow
-                    track={t}
-                    coverAssetId={t.cover_asset_id}
-                    selected={current?.id === t.id}
-                    isMultiSelected={selectedIds.has(t.id)}
+                    track={track}
+                    coverAssetId={track.cover_asset_id}
+                    selected={current?.id === track.id}
+                    isMultiSelected={selectedIds.has(track.id)}
                     onSelect={(e: React.MouseEvent) => {
                       if (e.shiftKey) {
-                        selectOne(t.id, "range");
+                        selectOne(track.id, "range");
                       } else if (e.metaKey || e.ctrlKey) {
-                        selectOne(t.id, "toggle");
+                        selectOne(track.id, "toggle");
                       } else {
-                        selectOne(t.id, "replace");
-                        select(t.id);
+                        selectOne(track.id, "replace");
+                        select(track.id);
                         // Reopen the detail panel on a plain click — it's the
                         // reopen path now that the TopBar toggle is gone.
                         usePreviewPanelStore.getState().setOpen(true);
                       }
                     }}
-                    onOpen={() => navigate(`/tracks/${t.id}/edit`)}
+                    onOpen={() => navigate(`/tracks/${track.id}/edit`)}
                     onDelete={() => {
-                      if (confirm(`Delete "${t.title}"?`)) remove(t.id);
+                      if (confirm(t("contextMenu.deleteConfirm", { title: track.title }))) remove(track.id);
                     }}
                   />
                 </div>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { PendingToken } from "@/hooks/use-pending-tokens";
 
@@ -87,6 +88,7 @@ function renderExpandedItems(payload: Record<string, unknown>): string[] {
 }
 
 export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const preview = extractPreview(token.payload);
   const [expanded, setExpanded] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -108,14 +110,14 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
             onClick={() => void onApprove(token.token)}
             className="rounded border border-success px-3 py-1 text-success hover:bg-success/10"
           >
-            ✓ Approve
+            {t("approvals.approve")}
           </button>
           <button
             type="button"
             onClick={() => void onReject(token.token)}
             className="rounded border border-danger px-3 py-1 text-danger hover:bg-danger/10"
           >
-            ✗ Reject
+            {t("approvals.reject")}
           </button>
         </div>
       </li>
@@ -139,7 +141,7 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
       <div className={"font-medium " + (isDestructive ? "text-danger" : "")}>
         {preview.headline}
       </div>
-      {isDestructive && <div className="mt-1 text-xs text-danger">This cannot be undone.</div>}
+      {isDestructive && <div className="mt-1 text-xs text-danger">{t("approvals.cannotBeUndone")}</div>}
 
       <div className="mt-2 text-xs text-text-secondary">{preview.sample.join(" · ")}</div>
 
@@ -149,7 +151,7 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
           onClick={() => setExpanded((v) => !v)}
           className="mt-1 text-xs underline text-text-tertiary"
         >
-          {expanded ? "Hide" : `Show all ${total}`}
+          {expanded ? t("approvals.hide") : t("approvals.showAll", { count: total })}
         </button>
       )}
       {expandedItems && (
@@ -182,7 +184,7 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
             checked={confirmed}
             onChange={(e) => setConfirmed(e.target.checked)}
           />
-          <span>I understand this is permanent</span>
+          <span>{t("approvals.iUnderstand")}</span>
         </label>
       )}
 
@@ -198,14 +200,14 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
               : "border-success text-success hover:bg-success/10")
           }
         >
-          ✓ Approve
+          {t("approvals.approve")}
         </button>
         <button
           type="button"
           onClick={() => void onReject(token.token)}
           className="rounded border border-danger px-3 py-1 text-danger hover:bg-danger/10"
         >
-          ✗ Reject
+          {t("approvals.reject")}
         </button>
       </div>
     </li>
