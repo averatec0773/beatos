@@ -11,11 +11,21 @@ import { LiveJobRow } from "@/components/PublishCenter/LiveJobRow";
 
 const SECTION = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-tertiary";
 
+function checkedAgoLabel(validatedAt: Record<string, number>): string {
+  const ts = Math.max(0, ...Object.values(validatedAt));
+  if (!ts) return "Never checked";
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return "Checked just now";
+  if (mins < 60) return `Checked ${mins}m ago`;
+  return `Checked ${Math.floor(mins / 60)}h ago`;
+}
+
 export function PublishCenterPanel(): React.JSX.Element {
   const navigate = useNavigate();
   const sessions = usePublishCenterStore((s) => s.sessions);
   const jobs = usePublishCenterStore((s) => s.jobs);
   const validating = usePublishCenterStore((s) => s.validating);
+  const validatedAt = usePublishCenterStore((s) => s.validatedAt);
   const loadSessions = usePublishCenterStore((s) => s.loadSessions);
   const validateSessions = usePublishCenterStore((s) => s.validateSessions);
   const refreshJobs = usePublishCenterStore((s) => s.refreshJobs);
@@ -68,13 +78,13 @@ export function PublishCenterPanel(): React.JSX.Element {
           const { status, message } = await publishApi.loginStatus(login_id);
           if (status === "success") {
             stopLogin();
-            await validateSessions();
-            useToastStore.getState().show("success", "登录成功");
+            await validateSessions(true);
+            useToastStore.getState().show("success", "Logged in");
           } else if (status === "failed" || status === "timeout") {
             stopLogin();
             useToastStore
               .getState()
-              .show("error", `登录${status === "timeout" ? "超时" : "失败"}：${message}`);
+              .show("error", `Login ${status === "timeout" ? "timed out" : "failed"}: ${message}`);
           }
         } catch {
           /* transient; keep polling */
@@ -82,7 +92,7 @@ export function PublishCenterPanel(): React.JSX.Element {
       }, 2000);
     } catch {
       setLoginPlatform(null);
-      useToastStore.getState().show("error", "无法开始登录");
+      useToastStore.getState().show("error", "Couldn't start login");
     }
   }
 
@@ -91,21 +101,24 @@ export function PublishCenterPanel(): React.JSX.Element {
   return (
     <div className="beatos-card beatos-scroll h-full overflow-y-auto rounded-xl p-5">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-text-primary">发布中心</h1>
-        <button
-          type="button"
-          onClick={() => void validateSessions()}
-          disabled={validating}
-          className="flex items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-row-hover disabled:opacity-50"
-        >
-          <RefreshCw size={13} className={validating ? "animate-spin" : ""} /> 刷新状态
-        </button>
+        <h1 className="text-lg font-semibold text-text-primary">Publish Center</h1>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-text-tertiary">{checkedAgoLabel(validatedAt)}</span>
+          <button
+            type="button"
+            onClick={() => void validateSessions(true)}
+            disabled={validating}
+            className="flex items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-row-hover disabled:opacity-50"
+          >
+            <RefreshCw size={13} className={validating ? "animate-spin" : ""} /> Refresh
+          </button>
+        </div>
       </div>
 
-      <div className={`${SECTION} mb-2`}>账号会话</div>
+      <div className={`${SECTION} mb-2`}>Account sessions</div>
       <div className="mb-6 flex flex-col gap-1.5">
         {platforms.length === 0 ? (
-          <div className="text-xs text-text-tertiary">暂无平台</div>
+          <div className="text-xs text-text-tertiary">No platforms</div>
         ) : (
           platforms.map((p) => (
             <SessionHealthRow
@@ -119,10 +132,10 @@ export function PublishCenterPanel(): React.JSX.Element {
         )}
       </div>
 
-      <div className={`${SECTION} mb-2`}>实时任务</div>
+      <div className={`${SECTION} mb-2`}>Activity</div>
       <div className="flex flex-col gap-1.5">
         {jobs.length === 0 ? (
-          <div className="text-xs text-text-tertiary">当前没有进行中的发布</div>
+          <div className="text-xs text-text-tertiary">No publishes in progress</div>
         ) : (
           jobs.map((j) => (
             <LiveJobRow
