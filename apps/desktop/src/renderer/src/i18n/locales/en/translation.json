@@ -155,6 +155,10 @@
     "delete": "Delete",
     "deleteConfirm": "Delete \"{{title}}\"?"
   },
+  "analysis": {
+    "progress": "Analyzing {{done}}/{{total}}",
+    "done": "Done {{done}}/{{total}} — filled BPM {{bpm}}, Key {{key}}"
+  },
   "settings": {
     "title": "Settings",
     "groups": { "appearance": "Appearance", "beatsUpload": "Beats & Upload", "general": "General" },
