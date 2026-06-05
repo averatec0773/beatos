@@ -125,6 +125,25 @@
       "platformAria": "Platform",
       "proLocked": "Pro feature · purchase to unlock",
       "publish": "Publish to platform"
+    },
+    "playlistExport": {
+      "manifestFailed": "Could not read the playlist file manifest",
+      "title": "Export playlist \"{{name}}\"",
+      "desc": "Pick files to package, foldered by track. Package as a ZIP or copy straight to a folder.",
+      "modeZip": "ZIP archive",
+      "modeCopy": "Copy to folder",
+      "bulk": "Bulk",
+      "loading": "Loading…",
+      "emptyList": "The playlist is empty.",
+      "noFiles": "No files",
+      "missing": "(missing)",
+      "selected": "{{count}} file selected",
+      "selected_other": "{{count}} files selected",
+      "submit": "Choose location & export",
+      "exportFailed": "Export failed: {{error}}",
+      "exported": "Exported {{count}} file",
+      "exported_other": "Exported {{count}} files",
+      "skipped": " (skipped {{count}} missing)"
     }
   },
   "contextMenu": {

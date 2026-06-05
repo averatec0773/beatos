@@ -125,6 +125,25 @@
       "platformAria": "平台",
       "proLocked": "Pro 功能 · 购买解锁",
       "publish": "发布到平台"
+    },
+    "playlistExport": {
+      "manifestFailed": "无法读取歌单文件清单",
+      "title": "导出歌单「{{name}}」",
+      "desc": "勾选要打包的文件，按 track 分文件夹。可打包为 ZIP 或直接复制到文件夹。",
+      "modeZip": "ZIP 压缩包",
+      "modeCopy": "复制到文件夹",
+      "bulk": "批量",
+      "loading": "读取中…",
+      "emptyList": "歌单是空的。",
+      "noFiles": "无文件",
+      "missing": "(缺失)",
+      "selected": "已选 {{count}} 个文件",
+      "selected_other": "已选 {{count}} 个文件",
+      "submit": "选择位置并导出",
+      "exportFailed": "导出失败: {{error}}",
+      "exported": "已导出 {{count}} 个文件",
+      "exported_other": "已导出 {{count}} 个文件",
+      "skipped": "（跳过 {{count}} 个缺失文件）"
     }
   },
   "contextMenu": {
