@@ -1,0 +1,16 @@
+{
+  "common": {
+    "cancel": "取消",
+    "ok": "确定",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "change": "更改…",
+    "loading": "加载中…",
+    "saving": "保存中…",
+    "clear": "清空",
+    "selectAll": "全选",
+    "revealInFinder": "在 Finder 中显示",
+    "dash": "—"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "ok": "OK",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "change": "Change…",
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "clear": "Clear",
+    "selectAll": "Select all",
+    "revealInFinder": "Reveal in Finder",
+    "dash": "—"
+  }
+}
