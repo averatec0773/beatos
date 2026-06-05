@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Check, Plus, Trash2, X } from "lucide-react";
 
 import { licenseTiers as api, type LicenseTier, type LicenseTierUpdate } from "@/api/license-tiers";
@@ -85,7 +86,7 @@ function deliverablesKey(deliverables: string[]): string {
   return JSON.stringify(Array.from(new Set(deliverables.map((d) => d.toLowerCase()))).sort());
 }
 
-/** Parse a revenue-share (分成) input string to a tier share. Empty / non-numeric / out-of-
+/** Parse a revenue-share input string to a tier share. Empty / non-numeric / out-of-
  *  range [0,100] all map to null (unset) — so a stray "150" is silently
  *  dropped rather than sent to the API (which would 400 and, on the
  *  auto-create path, retry-loop). The `<input max={100}>` is the first guard;
@@ -119,6 +120,7 @@ function emptyPresetDefaults(): Record<PresetKey, EmptyPresetState> {
 }
 
 export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [free, setFree] = useState(isFree);
   useEffect(() => {
     setFree(isFree);
@@ -132,7 +134,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
       setFree(!next);
       useToastStore
         .getState()
-        .show("error", `设置免费失败: ${e instanceof Error ? e.message : String(e)}`);
+        .show("error", t("licenseTiers.setFreeFailed", { error: e instanceof Error ? e.message : String(e) }));
     }
   }
 
@@ -175,9 +177,9 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     const save = savingTimers.current;
     const create = createTimers.current;
     return () => {
-      for (const t of save.values()) clearTimeout(t);
+      for (const timer of save.values()) clearTimeout(timer);
       save.clear();
-      for (const t of create.values()) clearTimeout(t);
+      for (const timer of create.values()) clearTimeout(timer);
       create.clear();
     };
   }, []);
@@ -186,18 +188,18 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     const presetById: Partial<Record<PresetKey, DraftTier>> = {};
     const customs: DraftTier[] = [];
     const legacy: DraftTier[] = [];
-    for (const t of tiers) {
-      if (t.deliverables.length === 1) {
-        const d = t.deliverables[0].toLowerCase();
+    for (const tier of tiers) {
+      if (tier.deliverables.length === 1) {
+        const d = tier.deliverables[0].toLowerCase();
         if (PRESET_KEYS.has(d)) {
-          presetById[d as PresetKey] = t;
+          presetById[d as PresetKey] = tier;
         } else {
-          customs.push(t);
+          customs.push(tier);
         }
-      } else if (t.deliverables.length === 0) {
-        legacy.push(t);
+      } else if (tier.deliverables.length === 0) {
+        legacy.push(tier);
       } else {
-        legacy.push(t);
+        legacy.push(tier);
       }
     }
     return { presetById, customs, legacy };
@@ -220,40 +222,40 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     savingTimers.current.set(tierId, handle);
   }
 
-  function updateLocal(tierId: number, mutator: (t: DraftTier) => DraftTier): void {
+  function updateLocal(tierId: number, mutator: (tier: DraftTier) => DraftTier): void {
     setTiers((prev) => {
-      const next = prev.map((t) => (t.id === tierId ? mutator(t) : t));
-      const target = next.find((t) => t.id === tierId);
+      const next = prev.map((tier) => (tier.id === tierId ? mutator(tier) : tier));
+      const target = next.find((tier) => tier.id === tierId);
       if (target) scheduleSave(tierId, target);
       return next;
     });
   }
 
   function onTierPriceChange(tierId: number, currency: string, raw: string): void {
-    updateLocal(tierId, (t) => ({
-      ...t,
-      priceInputs: { ...t.priceInputs, [currency]: raw },
+    updateLocal(tierId, (tier) => ({
+      ...tier,
+      priceInputs: { ...tier.priceInputs, [currency]: raw },
     }));
   }
 
   function onTierOtherCurrencyChange(tierId: number, nextCurrency: string | null): void {
-    updateLocal(tierId, (t) => {
+    updateLocal(tierId, (tier) => {
       // Switching away clears the previous third-slot value so the server
       // never holds a stale entry for a currency the user can no longer see.
-      const nextInputs = { ...t.priceInputs };
-      if (t.otherCurrency && t.otherCurrency !== nextCurrency) {
-        delete nextInputs[t.otherCurrency];
+      const nextInputs = { ...tier.priceInputs };
+      if (tier.otherCurrency && tier.otherCurrency !== nextCurrency) {
+        delete nextInputs[tier.otherCurrency];
       }
-      return { ...t, otherCurrency: nextCurrency, priceInputs: nextInputs };
+      return { ...tier, otherCurrency: nextCurrency, priceInputs: nextInputs };
     });
   }
 
   function onTierShareChange(tierId: number, raw: string): void {
-    updateLocal(tierId, (t) => ({ ...t, shareInput: raw }));
+    updateLocal(tierId, (tier) => ({ ...tier, shareInput: raw }));
   }
 
   async function onDelete(tierId: number): Promise<void> {
-    const tier = tiers.find((t) => t.id === tierId);
+    const tier = tiers.find((tier) => tier.id === tierId);
     if (!tier) return;
     const pending = savingTimers.current.get(tierId);
     if (pending) {
@@ -262,7 +264,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     }
     try {
       await api.remove(tierId);
-      setTiers((prev) => prev.filter((t) => t.id !== tierId));
+      setTiers((prev) => prev.filter((tier) => tier.id !== tierId));
     } catch (e) {
       useToastStore
         .getState()
@@ -373,7 +375,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     if (PRESET_KEYS.has(name))
       return `"${name.toUpperCase()}" is a preset — fill the row above instead.`;
     const dupe = tiers.find(
-      (t) => t.deliverables.length === 1 && t.deliverables[0].toLowerCase() === name,
+      (tier) => tier.deliverables.length === 1 && tier.deliverables[0].toLowerCase() === name,
     );
     if (dupe) return `A "${name.toUpperCase()}" tier already exists.`;
     return null;
@@ -417,15 +419,15 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
           </h3>
           <label
             className="flex items-center gap-1.5 text-xs text-text-secondary"
-            title="开启后 beat 名称带 [FREE] 前缀,NetEase 导出勾免费使用"
+            title={t("licenseTiers.freeTitle")}
           >
             <input
               type="checkbox"
-              aria-label="免费非商用授权 (FREE)"
+              aria-label={t("licenseTiers.freeAria")}
               checked={free}
               onChange={(e) => void onToggleFree(e.target.checked)}
             />
-            免费 (FREE)
+            {t("licenseTiers.freeLabel")}
           </label>
         </div>
         <button
@@ -618,6 +620,7 @@ function FilledTierRow({
   onShareChange,
   onDelete,
 }: FilledTierRowProps): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <div
       data-license-tier
@@ -649,7 +652,7 @@ function FilledTierRow({
           onChange={(e) => onShareChange(e.target.value)}
           placeholder="—"
           className="w-14 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
-          aria-label="分成 %"
+          aria-label={t("licenseTiers.shareAria")}
         />
       </label>
       <div className="flex-1" />
@@ -687,6 +690,7 @@ function EmptyTierRow({
   onOtherCurrencyChange,
   onShareChange,
 }: EmptyTierRowProps): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <div
       data-license-tier
@@ -720,7 +724,7 @@ function EmptyTierRow({
           onChange={(e) => onShareChange(e.target.value)}
           placeholder="—"
           className="w-14 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
-          aria-label="分成 %"
+          aria-label={t("licenseTiers.shareAria")}
         />
       </label>
       <div className="flex-1" />
@@ -744,6 +748,7 @@ function PendingCustomRow({
   onCommit,
   onCancel,
 }: PendingCustomRowProps): React.JSX.Element {
+  const { t } = useTranslation();
   function onKeyDown(e: React.KeyboardEvent): void {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -799,7 +804,7 @@ function PendingCustomRow({
           onKeyDown={onKeyDown}
           placeholder="—"
           className="w-14 min-w-0 bg-transparent px-2 py-1.5 text-sm tabular-nums placeholder:text-text-tertiary focus:outline-none"
-          aria-label="分成 %"
+          aria-label={t("licenseTiers.shareAria")}
         />
       </label>
       <div className="flex-1" />

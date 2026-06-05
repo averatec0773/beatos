@@ -57,6 +57,10 @@
     "thirdCurrencyAria": "第三货币",
     "otherCurrencyPriceAria": "其他货币价格",
     "shareAria": "分成 %",
+    "freeLabel": "免费 (FREE)",
+    "freeTitle": "开启后 beat 名称带 [FREE] 前缀，NetEase 导出勾免费使用",
+    "freeAria": "免费非商用授权 (FREE)",
+    "setFreeFailed": "设置免费失败: {{error}}",
     "removeAria": "移除默认 tier",
     "savedAt": "已保存 {{time}}",
     "saveFailed": "保存默认值失败: {{error}}"
@@ -89,6 +93,16 @@
     "toolsList": "工具（{{count}}）: {{list}}"
   },
   "editor": {
+    "loading": "加载中…",
+    "analyzeTitleNeedsAudio": "请先附加音频",
+    "analyzeTitle": "分析 BPM 和 Key",
+    "analyzing": "分析中…",
+    "analyze": "分析音频",
+    "exportTitle": "导出元数据到平台",
+    "export": "导出元数据",
+    "fieldTitle": "标题",
+    "notes": "备注",
+    "tags": "标签（逗号分隔）",
     "genre": "Genre",
     "genres": "Genres",
     "addGenre": "添加 genre...",

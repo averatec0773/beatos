@@ -57,6 +57,10 @@
     "thirdCurrencyAria": "Third currency",
     "otherCurrencyPriceAria": "Other currency price",
     "shareAria": "Share %",
+    "freeLabel": "Free (FREE)",
+    "freeTitle": "Enables [FREE] prefix in beat name and free-use on NetEase export",
+    "freeAria": "Free non-commercial license (FREE)",
+    "setFreeFailed": "Set free failed: {{error}}",
     "removeAria": "Remove default tier",
     "savedAt": "Saved {{time}}",
     "saveFailed": "Save defaults failed: {{error}}"
@@ -89,6 +93,16 @@
     "toolsList": "Tools ({{count}}): {{list}}"
   },
   "editor": {
+    "loading": "Loading…",
+    "analyzeTitleNeedsAudio": "Attach audio first",
+    "analyzeTitle": "Analyze BPM and Key",
+    "analyzing": "Analyzing…",
+    "analyze": "Analyze audio",
+    "exportTitle": "Export metadata to platform",
+    "export": "Export metadata",
+    "fieldTitle": "Title",
+    "notes": "Notes",
+    "tags": "Tags (comma-separated)",
     "genre": "Genre",
     "genres": "Genres",
     "addGenre": "Add genre...",
