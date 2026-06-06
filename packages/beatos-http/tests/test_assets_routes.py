@@ -238,3 +238,38 @@ def test_audio_endpoint_supports_range(tmp_path):
     assert res.status_code == 206
     assert "content-range" in {k.lower() for k in res.headers.keys()}
     assert res.headers["content-range"].startswith("bytes ")
+
+
+def _make_dirty_wav(path: pathlib.Path) -> None:
+    """A WAV with a JUNK chunk before fmt and a trailing cue chunk — the shape
+    Chromium rejects and the server must sanitize."""
+    import struct
+
+    def chunk(cid: bytes, body: bytes) -> bytes:
+        pad = b"\x00" if (len(body) & 1) else b""
+        return cid + struct.pack("<I", len(body)) + body + pad
+
+    fmt = struct.pack("<HHIIHH", 1, 1, 44100, 44100 * 2, 2, 16)
+    audio = b"\x11\x22\x33\x44" * 64
+    body = b"WAVE" + chunk(b"JUNK", b"\x00" * 12) + chunk(b"fmt ", fmt) + chunk(b"data", audio) + chunk(b"cue ", b"\x00" * 4)
+    path.write_bytes(b"RIFF" + struct.pack("<I", len(body)) + body)
+
+
+def test_audio_endpoint_repairs_dirty_wav(tmp_path):
+    client = TestClient(create_app())
+    track_id = _create_track(client)
+    wav = tmp_path / "dirty.wav"
+    _make_dirty_wav(wav)
+    asset_id = client.post(
+        f"/api/tracks/{track_id}/assets",
+        json={"role": "audio_tagged_wav", "path": str(wav)},
+    ).json()["id"]
+
+    res = client.get(f"/api/assets/audio/{asset_id}")
+
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "audio/wav"
+    assert res.content[0:4] == b"RIFF"
+    assert b"JUNK" not in res.content
+    assert b"cue " not in res.content
+    assert len(res.content) < wav.stat().st_size

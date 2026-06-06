@@ -1,6 +1,7 @@
 """/api/tracks/:id/assets and /api/assets/cover/:id routes."""
 from __future__ import annotations
 
+import asyncio
 import pathlib
 
 from fastapi import APIRouter, HTTPException, Query, Response
@@ -16,6 +17,7 @@ from beatos_core.assets.service import (
 )
 from beatos_core.assets._constants import AUDIO_ROLES as _AUDIO_ROLES
 from beatos_core.models import Asset, AssetCreate
+from beatos_http.wav_repair import repair_wav_if_needed, wav_needs_repair
 
 router = APIRouter(tags=["assets"])
 
@@ -87,7 +89,7 @@ _AUDIO_MIME = {
 
 
 @router.get("/api/assets/audio/{asset_id}")
-async def audio_stream(asset_id: int) -> FileResponse:
+async def audio_stream(asset_id: int) -> Response:
     asset = await get_asset(asset_id)
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found.")
@@ -101,4 +103,28 @@ async def audio_stream(asset_id: int) -> FileResponse:
     fallback = _AUDIO_MIME.get(asset.role) or (
         "audio/wav" if p.suffix.lower() == ".wav" else "audio/mpeg"
     )
-    return FileResponse(p, media_type=asset.mime_type or fallback)
+    media = asset.mime_type or fallback
+    if media in ("audio/x-wav", "audio/vnd.wave"):
+        media = "audio/wav"
+
+    is_wav = media == "audio/wav" or p.suffix.lower() == ".wav"
+    if is_wav:
+        # Clean WAVs stay on a range-capable FileResponse (decodeAudioData and
+        # the audio element handle them fine). Only DAW WAVs with extra RIFF
+        # chunks / EXTENSIBLE fmt are buffered + sanitized so Chromium can
+        # decode them — matching what the Electron beatos-asset:// proxy did.
+        def _scan() -> bool:
+            with open(p, "rb") as f:
+                return wav_needs_repair(f)
+
+        if await asyncio.to_thread(_scan):
+            raw = await asyncio.to_thread(p.read_bytes)
+            repaired = await asyncio.to_thread(repair_wav_if_needed, raw)
+            return Response(
+                content=repaired,
+                media_type="audio/wav",
+                headers={"Cache-Control": "no-store"},
+            )
+        return FileResponse(p, media_type="audio/wav")
+
+    return FileResponse(p, media_type=media)
