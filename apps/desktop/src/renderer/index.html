@@ -4,15 +4,17 @@
     <meta charset="UTF-8" />
     <title>BeatOS</title>
     <!--
-      CSP for BeatOS renderer.
-      connect-src allows the Python sidecar on 127.0.0.1 (any port — it's ephemeral)
-      AND the beatos-asset: custom protocol so Tone.js / decodeAudioData can fetch
-      audio buffers (added v0.0.16 — switching from <audio> to Web Audio API).
+      CSP for the BeatOS renderer — shared by the Electron build AND the browser
+      (web) build, so it allows the union of what each host needs:
+      - Electron: the beatos-asset: custom protocol so Tone.js / decodeAudioData
+        fetch audio buffers and <img> loads covers; the sidecar on 127.0.0.1.
+      - Web: same-origin ('self') media/img/connect for /api/assets + the API
+        (the SPA is served by the sidecar), plus ws: for the Vite HMR socket.
       font-src includes data: because @fontsource ships some woff2 as data URLs.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: beatos-asset:; media-src beatos-asset:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* beatos-asset:; worker-src 'self' blob:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: beatos-asset:; media-src 'self' beatos-asset:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://localhost:* ws://127.0.0.1:* beatos-asset:; worker-src 'self' blob:"
     />
   </head>
 
