@@ -12,6 +12,7 @@ import { ApprovalsPanel } from "@/routes/ApprovalsPanel";
 import { PublishCenterPanel } from "@/routes/PublishCenterPanel";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SidecarCrashToast } from "@/components/SidecarCrashToast";
+import { FileBrowserDialog } from "@/components/FileBrowserDialog";
 import { DragOverlayPreview } from "@/components/DragOverlayPreview";
 import { useTrackStore } from "@/stores/tracks";
 import { useListStore } from "@/stores/lists";
@@ -57,6 +58,7 @@ export default function App(): React.JSX.Element {
   return (
     <ErrorBoundary>
       <SidecarCrashToast />
+      <FileBrowserDialog />
       <DndContext
         sensors={sensors}
         onDragStart={({ active }) => {

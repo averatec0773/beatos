@@ -495,6 +495,16 @@
     "yes": "是",
     "no": "否"
   },
+  "fileBrowser": {
+    "titleFile": "选择文件",
+    "titleFolder": "选择文件夹",
+    "up": "上一级",
+    "selectFolder": "选择此文件夹",
+    "select": "选择",
+    "empty": "空文件夹",
+    "loadFailed": "无法列出文件夹：{{error}}",
+    "filteredHint": "仅显示：{{exts}}"
+  },
   "fileRows": {
     "files": "文件",
     "promoVideos": "推广视频",
