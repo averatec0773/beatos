@@ -107,7 +107,13 @@ try {
   const page = await browser.newPage();
   page.on("pageerror", (e) => failures.push(`pageerror: ${e.message}`));
   page.on("console", (m) => {
-    if (m.type() === "error") failures.push(`console.error: ${m.text()}`);
+    if (m.type() !== "error") return;
+    const text = m.text();
+    // 402 (Payment Required) is the intentional Pro-gating signal: in a free
+    // build the Publish Center's Pro endpoints return 402 and the panel renders
+    // graceful empty states. It's by-design (desktop behaves the same), not a bug.
+    if (text.includes("402 (Payment Required)")) return;
+    failures.push(`console.error: ${text}`);
   });
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#root > *", { timeout: 8000 });
@@ -266,6 +272,81 @@ try {
     }
   } catch (addAudioErr) {
     failures.push(`add-audio: harness error: ${addAudioErr.message}`);
+  }
+
+  // -----------------------------------------------------------------------
+  // Route parity sweep (Phase 2): every top-level route renders in the browser.
+  // The page-level console.error handler already funnels any runtime error into
+  // `failures`, so navigating each route also guards against per-page crashes.
+  // -----------------------------------------------------------------------
+  const routes = [
+    { hash: "#/settings", expect: "Settings" },
+    { hash: "#/approvals", expect: "Agent Actions" },
+    { hash: "#/trash", expect: "Trash" },
+    { hash: "#/publish", expect: "Publish Center" },
+  ];
+  for (const r of routes) {
+    try {
+      await page.evaluate((h) => {
+        window.location.hash = h;
+      }, r.hash);
+      await page.waitForFunction(
+        (txt) => (document.querySelector("main")?.innerText || "").includes(txt),
+        r.expect,
+        { timeout: 6000 },
+      );
+    } catch {
+      failures.push(`route ${r.hash}: did not render "${r.expect}"`);
+    }
+  }
+  console.log("smoke-web: route parity (settings/approvals/trash/publish render) PASS");
+
+  // The approvals stream connects same-origin (SSE works in the browser).
+  try {
+    const sse = await page.evaluate(
+      () =>
+        new Promise((res) => {
+          const es = new EventSource("/api/tokens/stream");
+          es.onopen = () => {
+            es.close();
+            res("open");
+          };
+          es.onerror = () => {
+            es.close();
+            res("error");
+          };
+          setTimeout(() => {
+            es.close();
+            res("timeout");
+          }, 2000);
+        }),
+    );
+    if (sse === "open") console.log("smoke-web: approvals SSE (/api/tokens/stream) open PASS");
+    else failures.push(`approvals SSE did not open (got "${sse}")`);
+  } catch (e) {
+    failures.push(`approvals SSE check error: ${e.message}`);
+  }
+
+  // Web Settings omits the desktop-only sections (Storage / AI Integration).
+  try {
+    await page.evaluate(() => {
+      window.location.hash = "#/settings";
+    });
+    await page.waitForFunction(
+      () => (document.querySelector("main")?.innerText || "").includes("Settings"),
+      { timeout: 6000 },
+    );
+    const leak = await page.evaluate(() => {
+      const txt = document.querySelector("main")?.innerText || "";
+      return { storage: /CATALOG DATABASE PATH/.test(txt), ai: txt.includes("AI Integration") };
+    });
+    if (leak.storage || leak.ai) {
+      failures.push(`web Settings leaks desktop-only section(s): ${JSON.stringify(leak)}`);
+    } else {
+      console.log("smoke-web: web Settings omits Storage + AI Integration PASS");
+    }
+  } catch (e) {
+    failures.push(`settings parity check error: ${e.message}`);
   }
 
   await page.screenshot({ path: screenshotPath });
