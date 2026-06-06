@@ -116,6 +116,7 @@ export function FileBrowserDialog(): React.JSX.Element {
                 <button
                   key={e.path}
                   type="button"
+                  data-fs-entry
                   onClick={() => {
                     if (e.is_dir) void load(e.path);
                     else if (isSelectableFile) setSelected(e.path);

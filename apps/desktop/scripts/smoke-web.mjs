@@ -10,8 +10,8 @@
  * Exit codes: 0 PASS, 1 FAIL, 2 prereq missing.
  */
 import { spawn } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, existsSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdtempSync, mkdirSync, rmSync, existsSync, writeFileSync, unlinkSync } from "node:fs";
+import { tmpdir, homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
 
@@ -37,6 +37,11 @@ const failures = [];
 let exitCode = 0;
 let sidecar, browser;
 let sidecarExit = null; // { code, signal } once the sidecar process exits
+
+// Candidate WAV seeded at HOME root for the file-browser add-audio test (not a
+// dotfile — /api/fs/list hides dotfiles). Cleaned up in the finally block.
+const candidateWavName = `beatos-web-smoke-${ts}.wav`;
+const candidateWavPath = join(homedir(), candidateWavName);
 
 async function waitForHealth(timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
@@ -161,6 +166,108 @@ try {
     );
   }
 
+  // -----------------------------------------------------------------------
+  // Add-audio via file browser (Part B): create a fresh track with no audio,
+  // seed a candidate WAV at the home root, navigate to the editor, open the
+  // FileBrowserDialog via the "+ Add file" button, select the file, and verify
+  // that the track now has an audio asset via the API.
+  // -----------------------------------------------------------------------
+  try {
+    // 1. Seed the candidate WAV at home root (non-dotfile — listing shows it).
+    writeFileSync(candidateWavPath, makeDawStyleWav());
+
+    // 2. Create a second track with no audio.
+    const emptyTrack = await postJson("/api/tracks", { title: "Web Smoke Add Audio" });
+
+    // 3. Navigate to the track editor route (HashRouter: /#/tracks/{id}/edit).
+    await page.goto(`${BASE}/#/tracks/${emptyTrack.id}/edit`, { waitUntil: "domcontentloaded" });
+    // Wait for the editor container, then wait for the file rows to load
+    // (they only render after the track + asset fetch resolves).
+    await page.waitForSelector("[data-track-editor]", { timeout: 8000 });
+    await page.waitForSelector("[data-file-row]", { timeout: 8000 });
+
+    // 4. Click the "+ Add file" button on the first empty audio row (audio_tagged_wav).
+    //    AudioFileRow renders the button with text from i18n key fileRows.addFile = "+ Add file".
+    //    Use a text locator to be robust against exact whitespace variations.
+    const addFileBtn = page.locator('[data-file-row][data-empty="true"]').first().locator('button', { hasText: /\+ Add file/i });
+    await addFileBtn.waitFor({ timeout: 5000 });
+    await addFileBtn.click();
+
+    // 5. Wait for the FileBrowserDialog to open (title "Choose a file").
+    const dialog = page.locator('[role="dialog"]').filter({ hasText: "Choose a file" });
+    await dialog.waitFor({ timeout: 5000 });
+
+    // 6. Wait for the FS listing to load (the loading indicator disappears and
+    //    entries appear). The modal opens at home by default.
+    await page.waitForFunction(
+      () => {
+        const d = document.querySelector('[role="dialog"]');
+        if (!d) return false;
+        // Loading text disappears, at least one button-entry appears
+        const btns = d.querySelectorAll("[data-fs-entry]");
+        return btns.length > 0;
+      },
+      { timeout: 8000 },
+    );
+
+    // 7. Assert real FS rows rendered (listing is non-empty).
+    const entryCount = await page.evaluate(() => {
+      const d = document.querySelector('[role="dialog"]');
+      return d ? d.querySelectorAll("[data-fs-entry]").length : 0;
+    });
+    if (entryCount === 0) {
+      failures.push("add-audio: FileBrowserDialog opened but shows no FS entries");
+    } else {
+      console.log(`smoke-web: FileBrowserDialog loaded ${entryCount} FS entries PASS`);
+    }
+
+    // 8. Click the candidate WAV row (single-click selects it).
+    const candidateRow = dialog.getByRole("button").filter({ hasText: candidateWavName });
+    const candidateRowCount = await candidateRow.count();
+    if (candidateRowCount === 0) {
+      failures.push(
+        `add-audio: candidate WAV "${candidateWavName}" not found in FileBrowserDialog listing`,
+      );
+    } else {
+      await candidateRow.first().click();
+
+      // 9. Click the "Select" button (enabled once a file is selected).
+      const selectBtn = dialog.getByRole("button", { name: "Select" });
+      await selectBtn.waitFor({ timeout: 5000 });
+      await selectBtn.click();
+
+      // 10. Poll GET /api/tracks/{id}/assets until an audio-role asset appears.
+      const deadline = Date.now() + 6000;
+      let attached = false;
+      while (Date.now() < deadline) {
+        const res = await fetch(`${BASE}/api/tracks/${emptyTrack.id}/assets`);
+        if (res.ok) {
+          const assets = await res.json();
+          if (
+            Array.isArray(assets) &&
+            assets.some((a) => typeof a.role === "string" && a.role.startsWith("audio"))
+          ) {
+            attached = true;
+            break;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      if (attached) {
+        console.log(
+          `smoke-web: add audio via file browser (modal → real FS → select → asset attached) PASS`,
+        );
+      } else {
+        failures.push(
+          `add-audio: selected "${candidateWavName}" but no audio asset appeared on track ${emptyTrack.id} within 6s`,
+        );
+      }
+    }
+  } catch (addAudioErr) {
+    failures.push(`add-audio: harness error: ${addAudioErr.message}`);
+  }
+
   await page.screenshot({ path: screenshotPath });
   console.log(`smoke-web: screenshot ${screenshotPath}`);
 
@@ -194,5 +301,8 @@ try {
     });
   }
   rmSync(userData, { recursive: true, force: true });
+  try {
+    unlinkSync(candidateWavPath);
+  } catch {}
 }
 process.exit(exitCode);

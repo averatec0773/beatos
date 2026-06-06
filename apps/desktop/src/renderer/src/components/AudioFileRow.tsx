@@ -44,7 +44,7 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
     // frame (caused silent rejection in v0.0.13.1).
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
-    if (!dragOver) setDragOver(true);
+    if (platform.kind === "electron" && !dragOver) setDragOver(true);
   }
   function handleDragLeave(): void {
     setDragOver(false);
@@ -53,6 +53,7 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(false);
+    if (platform.kind === "web") return;
     const file = e.dataTransfer.files[0];
     if (!file) {
       console.warn("[file-row drop] dataTransfer.files is empty");
