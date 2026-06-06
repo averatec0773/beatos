@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { attachAudioToTrack, importAsNewTracks } from "@/lib/create-track-from-file";
+import { platform } from "@/platform";
 
 import { useTrackStore } from "@/stores/tracks";
 import { useTrackQueryStore } from "@/stores/track-query";
@@ -172,6 +173,10 @@ export function TrackListPanel(): React.JSX.Element {
   function onSectionDrop(e: React.DragEvent<HTMLElement>): void {
     e.preventDefault();
     setDropping(false);
+    // Browsers can't expose a dropped OS file's absolute path (linked-mode needs
+    // it). In the web build, importing is done via the file browser ("+ Add file");
+    // a drop here is a no-op rather than a confusing "empty path" error.
+    if (platform.kind !== "electron") return;
     const files = Array.from(e.dataTransfer.files).filter((f) => {
       const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
       return ext === ".wav" || ext === ".mp3";
@@ -223,6 +228,10 @@ export function TrackListPanel(): React.JSX.Element {
   function onSectionDragOver(e: React.DragEvent<HTMLElement>): void {
     // Always preventDefault — gating on types.includes("Files") was unreliable (v0.0.13.2 lesson)
     e.preventDefault();
+    if (platform.kind !== "electron") {
+      e.dataTransfer.dropEffect = "none"; // OS-file drop-in is desktop-only (no path in the browser)
+      return;
+    }
     e.dataTransfer.dropEffect = "copy";
     if (!dropping) setDropping(true);
   }
