@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw, Rocket } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 
 import { publishApi } from "@/api/publish";
 import { usePublishCenterStore } from "@/stores/publish-center";
@@ -13,6 +14,17 @@ import { PublishTrackPicker } from "@/components/PublishCenter/PublishTrackPicke
 import { PublishDialog } from "@/components/PublishDialog";
 
 const SECTION = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-tertiary";
+
+// Module scope so Date.now() is not called during component render
+// (react-hooks/purity). Recomputed cheaply each render.
+function formatCheckedAgo(t: TFunction, validatedAt: Record<string, number>): string {
+  const ts = Math.max(0, ...Object.values(validatedAt));
+  if (!ts) return t("publishCenter.neverChecked");
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return t("publishCenter.checkedJustNow");
+  if (mins < 60) return t("publishCenter.checkedMinsAgo", { mins });
+  return t("publishCenter.checkedHoursAgo", { hours: Math.floor(mins / 60) });
+}
 
 export function PublishCenterPanel(): React.JSX.Element {
   const { t } = useTranslation();
@@ -100,14 +112,7 @@ export function PublishCenterPanel(): React.JSX.Element {
 
   const platforms = useMemo(() => Object.keys(sessions), [sessions]);
 
-  const checkedAgoLabel = useMemo(() => {
-    const ts = Math.max(0, ...Object.values(validatedAt));
-    if (!ts) return t("publishCenter.neverChecked");
-    const mins = Math.floor((Date.now() - ts) / 60000);
-    if (mins < 1) return t("publishCenter.checkedJustNow");
-    if (mins < 60) return t("publishCenter.checkedMinsAgo", { mins });
-    return t("publishCenter.checkedHoursAgo", { hours: Math.floor(mins / 60) });
-  }, [validatedAt, t]);
+  const checkedAgoLabel = formatCheckedAgo(t, validatedAt);
 
   return (
     <div className="beatos-card beatos-scroll h-full overflow-y-auto rounded-xl p-5">

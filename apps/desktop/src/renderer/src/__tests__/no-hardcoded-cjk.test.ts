@@ -4,7 +4,24 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOTS = ["src/renderer/src/components", "src/renderer/src/routes"];
-const CJK = /[一-鿿　-〿＀-￯]/;
+
+// CJK detection by code-point range, using hex literals so THIS guard file
+// stays free of literal CJK and irregular whitespace (which would otherwise
+// self-trip eslint's no-irregular-whitespace rule). Ranges: Han ideographs,
+// CJK symbols/punctuation, and fullwidth/halfwidth forms.
+const CJK_RANGES: ReadonlyArray<readonly [number, number]> = [
+  [0x4e00, 0x9fff],
+  [0x3000, 0x303f],
+  [0xff00, 0xffef],
+];
+
+function hasCJK(line: string): boolean {
+  for (const ch of line) {
+    const cp = ch.codePointAt(0);
+    if (cp !== undefined && CJK_RANGES.some(([a, b]) => cp >= a && cp <= b)) return true;
+  }
+  return false;
+}
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -23,7 +40,7 @@ describe("no hardcoded CJK in chrome", () => {
         readFileSync(file, "utf8")
           .split("\n")
           .forEach((line, i) => {
-            if (CJK.test(line)) offenders.push(`${file}:${i + 1}  ${line.trim()}`);
+            if (hasCJK(line)) offenders.push(`${file}:${i + 1}  ${line.trim()}`);
           });
       }
     }

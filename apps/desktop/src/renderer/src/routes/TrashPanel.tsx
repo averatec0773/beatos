@@ -10,6 +10,15 @@ import { useAppLanguageStore } from "@/stores/app-language";
 import { formatRelativeTime, formatDate } from "@/i18n/format";
 import { CoverImage } from "@/components/CoverImage";
 import { BulkActionBar, type BulkAction } from "@/components/BulkActionBar";
+import type { AppLanguage } from "@/i18n/resources";
+
+// Module scope so Date.now()/new Date() are not called during component render
+// (react-hooks/purity), mirroring the original module-level helper.
+function formatTrashedAt(lang: AppLanguage, trashedAtMs: number | null): string {
+  return trashedAtMs != null
+    ? formatRelativeTime(lang, trashedAtMs, Date.now())
+    : formatDate(lang, new Date());
+}
 
 export function TrashPanel(): React.JSX.Element {
   const { t } = useTranslation();
@@ -168,9 +177,7 @@ export function TrashPanel(): React.JSX.Element {
                   <div className="text-sm font-medium truncate">{row.title}</div>
                   <div className="text-xs text-text-tertiary">
                     {t("trash.trashedPrefix")}{" "}
-                    {trashedAtMs != null
-                      ? formatRelativeTime(lang, trashedAtMs, Date.now())
-                      : formatDate(lang, new Date())}
+                    {formatTrashedAt(lang, trashedAtMs)}
                   </div>
                 </div>
                 <button
