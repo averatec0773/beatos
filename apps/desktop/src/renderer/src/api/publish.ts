@@ -23,8 +23,7 @@ export interface PublishCreateBody {
   dry_run?: boolean;
 }
 
-export type SessionState =
-  | "valid" | "expired" | "not_logged_in" | "checking" | "unknown";
+export type SessionState = "valid" | "expired" | "not_logged_in" | "checking" | "unknown";
 
 export type ValidatedSessionState = "valid" | "expired" | "not_logged_in";
 

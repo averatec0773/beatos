@@ -134,7 +134,10 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
       setFree(!next);
       useToastStore
         .getState()
-        .show("error", t("licenseTiers.setFreeFailed", { error: e instanceof Error ? e.message : String(e) }));
+        .show(
+          "error",
+          t("licenseTiers.setFreeFailed", { error: e instanceof Error ? e.message : String(e) }),
+        );
     }
   }
 
@@ -214,7 +217,10 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
       } catch (e) {
         useToastStore
           .getState()
-          .show("error", t("licenseTiers.saveTierFailed", { error: e instanceof Error ? e.message : String(e) }));
+          .show(
+            "error",
+            t("licenseTiers.saveTierFailed", { error: e instanceof Error ? e.message : String(e) }),
+          );
       } finally {
         savingTimers.current.delete(tierId);
       }
@@ -268,7 +274,10 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", t("licenseTiers.deleteTierFailed", { error: e instanceof Error ? e.message : String(e) }));
+        .show(
+          "error",
+          t("licenseTiers.deleteTierFailed", { error: e instanceof Error ? e.message : String(e) }),
+        );
     }
   }
 
@@ -350,12 +359,13 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
         ...prev,
         [preset]: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
       }));
-      useToastStore
-        .getState()
-        .show(
-          "error",
-          t("licenseTiers.addPresetTierFailed", { preset: preset.toUpperCase(), error: e instanceof Error ? e.message : String(e) }),
-        );
+      useToastStore.getState().show(
+        "error",
+        t("licenseTiers.addPresetTierFailed", {
+          preset: preset.toUpperCase(),
+          error: e instanceof Error ? e.message : String(e),
+        }),
+      );
     }
   }
 
@@ -372,8 +382,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
   function validateCustomName(rawName: string): string | null {
     const name = rawName.trim().toLowerCase();
     if (name === "") return t("licenseTiers.tierNameRequired");
-    if (PRESET_KEYS.has(name))
-      return t("licenseTiers.tierIsPreset", { name: name.toUpperCase() });
+    if (PRESET_KEYS.has(name)) return t("licenseTiers.tierIsPreset", { name: name.toUpperCase() });
     const dupe = tiers.find(
       (tier) => tier.deliverables.length === 1 && tier.deliverables[0].toLowerCase() === name,
     );
@@ -404,7 +413,10 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", t("licenseTiers.addTierFailed", { error: e instanceof Error ? e.message : String(e) }));
+        .show(
+          "error",
+          t("licenseTiers.addTierFailed", { error: e instanceof Error ? e.message : String(e) }),
+        );
     }
   }
 

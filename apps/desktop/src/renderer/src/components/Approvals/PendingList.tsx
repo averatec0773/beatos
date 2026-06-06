@@ -15,7 +15,9 @@ export function PendingList({ tokens, onApprove, onReject }: Props): React.JSX.E
   if (tokens.length === 0) return null;
   return (
     <section className="mb-6">
-      <h2 className="mb-3 text-sm font-medium text-warning">{t("approvals.pending", { count: tokens.length })}</h2>
+      <h2 className="mb-3 text-sm font-medium text-warning">
+        {t("approvals.pending", { count: tokens.length })}
+      </h2>
       <ul className="space-y-2">
         {tokens.map((t) => (
           <PendingCard key={t.token} token={t} onApprove={onApprove} onReject={onReject} />

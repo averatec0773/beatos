@@ -23,12 +23,15 @@ export function AnalysisProgressBar() {
         if (stop) return;
         setJob(j);
         if (j.status === "done") {
-          useToastStore
-            .getState()
-            .show(
-              "success",
-              t("analysis.done", { done: j.done, total: j.total, bpm: j.filled_bpm, key: j.filled_key }),
-            );
+          useToastStore.getState().show(
+            "success",
+            t("analysis.done", {
+              done: j.done,
+              total: j.total,
+              bpm: j.filled_bpm,
+              key: j.filled_key,
+            }),
+          );
           clear();
           return;
         }

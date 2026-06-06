@@ -184,14 +184,12 @@ export function DefaultLicenseTiersSection(): React.JSX.Element {
           await saveDefaultLicenseTiers(templates);
           setSavedAt(new Date());
         } catch (e) {
-          useToastStore
-            .getState()
-            .show(
-              "error",
-              t("licenseTiers.saveFailed", {
-                error: e instanceof Error ? e.message : String(e),
-              }),
-            );
+          useToastStore.getState().show(
+            "error",
+            t("licenseTiers.saveFailed", {
+              error: e instanceof Error ? e.message : String(e),
+            }),
+          );
         } finally {
           setSaving(false);
         }

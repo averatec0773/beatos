@@ -20,11 +20,7 @@ export function PublishCenterSection(): React.JSX.Element {
         icon={<Rocket size={20} />}
         label={t("sidebar.publishCenter")}
         active={false}
-        onClick={() =>
-          useToastStore
-            .getState()
-            .show("info", t("sidebar.publishCenterLocked"))
-        }
+        onClick={() => useToastStore.getState().show("info", t("sidebar.publishCenterLocked"))}
         dataAttr="data-locked"
         trailing={<Lock size={14} className="text-text-tertiary" />}
       />

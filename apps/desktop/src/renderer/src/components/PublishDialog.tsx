@@ -3,12 +3,7 @@ import { Rocket, Loader2, CheckCircle2, AlertCircle, MonitorSmartphone } from "l
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { exportApi, type ExportResult } from "@/api/export";
 import { assets as assetsApi, type Asset } from "@/api/assets";
 import { publishApi, type PublishJob } from "@/api/publish";
@@ -121,12 +116,14 @@ export function PublishDialog({
   const pollRef = useRef<number | null>(null);
   const loginPollRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
-
-  const audioAssets = useMemo(
-    () => trackAssets.filter((a) => isAudioRole(a.role)),
-    [trackAssets],
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
   );
+
+  const audioAssets = useMemo(() => trackAssets.filter((a) => isAudioRole(a.role)), [trackAssets]);
   const wavAssets = useMemo(() => trackAssets.filter((a) => isWavRole(a.role)), [trackAssets]);
   const coverAssets = useMemo(() => trackAssets.filter((a) => a.role === "cover"), [trackAssets]);
   const stemsAssets = useMemo(() => trackAssets.filter((a) => a.role === "stems"), [trackAssets]);
@@ -218,7 +215,8 @@ export function PublishDialog({
       .forTrack(trackId, platform)
       .then((r) => !cancelled && setResult(r))
       .catch(() => {
-        if (!cancelled) useToastStore.getState().show("error", t("publishDialog.failedToLoadMetadata"));
+        if (!cancelled)
+          useToastStore.getState().show("error", t("publishDialog.failedToLoadMetadata"));
       });
 
     assetsApi
@@ -240,7 +238,8 @@ export function PublishDialog({
         if (video) setVideoAssetId(video.id);
       })
       .catch(() => {
-        if (!cancelled) useToastStore.getState().show("error", t("publishDialog.failedToLoadAssets"));
+        if (!cancelled)
+          useToastStore.getState().show("error", t("publishDialog.failedToLoadAssets"));
       });
 
     publishApi
@@ -260,7 +259,12 @@ export function PublishDialog({
     if (isDouyin ? videoAssetId == null : audioAssetId == null) {
       useToastStore
         .getState()
-        .show("warning", isDouyin ? t("publishDialog.selectPromoVideoFirst") : t("publishDialog.selectPreviewAudioFirst"));
+        .show(
+          "warning",
+          isDouyin
+            ? t("publishDialog.selectPromoVideoFirst")
+            : t("publishDialog.selectPreviewAudioFirst"),
+        );
       return;
     }
     setPublishing(true);
@@ -318,8 +322,12 @@ export function PublishDialog({
     done: "publishDialog.stageDone",
     failed: "publishDialog.stageFailed",
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stageLabel = stage ? (STAGE_KEY[stage] ? i18n.t(STAGE_KEY[stage] as any) as string : stage) : null;
+
+  const stageLabel = stage
+    ? STAGE_KEY[stage]
+      ? (i18n.t(STAGE_KEY[stage] as any) as string)
+      : stage
+    : null;
 
   const sectionCls = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-tertiary";
 
@@ -465,7 +473,12 @@ export function PublishDialog({
                   {job?.result?.url && (
                     <>
                       {" — "}
-                      <a href={job.result.url} target="_blank" rel="noreferrer" className="underline">
+                      <a
+                        href={job.result.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline"
+                      >
                         {t("publishDialog.view")}
                       </a>
                     </>
@@ -476,7 +489,11 @@ export function PublishDialog({
             {stage === "failed" && (
               <div className="flex items-start gap-2 rounded-md border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span className="leading-snug">{t("publishDialog.publishFailedDetail", { error: job?.result?.error ?? job?.message })}</span>
+                <span className="leading-snug">
+                  {t("publishDialog.publishFailedDetail", {
+                    error: job?.result?.error ?? job?.message,
+                  })}
+                </span>
               </div>
             )}
           </div>
@@ -492,7 +509,11 @@ export function PublishDialog({
           <button
             type="button"
             onClick={handlePublish}
-            disabled={publishing || sessionOk === false || (isDouyin ? videoAssetId == null : audioAssetId == null)}
+            disabled={
+              publishing ||
+              sessionOk === false ||
+              (isDouyin ? videoAssetId == null : audioAssetId == null)
+            }
             className="inline-flex items-center gap-1.5 rounded-md bg-text-primary px-3.5 py-1.5 text-sm font-medium text-bg-base hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Rocket className="h-3.5 w-3.5" /> {t("publishDialog.publish")}

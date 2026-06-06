@@ -34,9 +34,7 @@ export function EmptyState(props: Props): React.JSX.Element {
           <h2 className="text-xl font-semibold text-text-primary">
             {t("emptyState.emptyList", { name: props.listName })}
           </h2>
-          <p className="mt-2 text-text-secondary text-sm">
-            {t("emptyState.emptyListDesc")}
-          </p>
+          <p className="mt-2 text-text-secondary text-sm">{t("emptyState.emptyListDesc")}</p>
         </div>
       </div>
     );

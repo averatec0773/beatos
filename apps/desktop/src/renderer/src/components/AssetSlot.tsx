@@ -118,7 +118,9 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
     return (
       <div className="aspect-square flex flex-col items-center justify-center gap-2 bg-bg-elevated border border-danger rounded-md text-danger p-2 text-center">
         <AlertTriangle size={16} />
-        <span className="text-xs">{label} · {t("fileRows.missing")}</span>
+        <span className="text-xs">
+          {label} · {t("fileRows.missing")}
+        </span>
         <button
           type="button"
           onClick={onRelocate}

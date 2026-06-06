@@ -141,7 +141,9 @@ export function PendingCard({ token, onApprove, onReject }: Props): React.JSX.El
       <div className={"font-medium " + (isDestructive ? "text-danger" : "")}>
         {preview.headline}
       </div>
-      {isDestructive && <div className="mt-1 text-xs text-danger">{t("approvals.cannotBeUndone")}</div>}
+      {isDestructive && (
+        <div className="mt-1 text-xs text-danger">{t("approvals.cannotBeUndone")}</div>
+      )}
 
       <div className="mt-2 text-xs text-text-secondary">{preview.sample.join(" · ")}</div>
 

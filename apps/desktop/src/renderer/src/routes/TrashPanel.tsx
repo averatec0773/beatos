@@ -67,9 +67,7 @@ export function TrashPanel(): React.JSX.Element {
     await refresh();
     void useTrackStore.getState().refresh();
     void useTrackStore.getState().refreshTotal();
-    useToastStore
-      .getState()
-      .show("success", t("trash.restored", { count: ids.length }));
+    useToastStore.getState().show("success", t("trash.restored", { count: ids.length }));
   }
 
   async function onPurge(ids: number[], names?: string): Promise<void> {
@@ -86,9 +84,7 @@ export function TrashPanel(): React.JSX.Element {
       }
     }
     await refresh();
-    useToastStore
-      .getState()
-      .show("success", t("trash.deleted", { count: ids.length }));
+    useToastStore.getState().show("success", t("trash.deleted", { count: ids.length }));
   }
 
   async function onEmptyAll(): Promise<void> {
@@ -96,9 +92,7 @@ export function TrashPanel(): React.JSX.Element {
     if (!confirm(t("trash.deleteAllConfirm", { count: list.length }))) return;
     const r = await tracks.purgeAllTrash();
     await refresh();
-    useToastStore
-      .getState()
-      .show("success", t("trash.emptied", { count: r.purged }));
+    useToastStore.getState().show("success", t("trash.emptied", { count: r.purged }));
   }
 
   const bulkActions = useMemo<BulkAction[]>(
@@ -176,8 +170,7 @@ export function TrashPanel(): React.JSX.Element {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{row.title}</div>
                   <div className="text-xs text-text-tertiary">
-                    {t("trash.trashedPrefix")}{" "}
-                    {formatTrashedAt(lang, trashedAtMs)}
+                    {t("trash.trashedPrefix")} {formatTrashedAt(lang, trashedAtMs)}
                   </div>
                 </div>
                 <button

@@ -25,24 +25,30 @@ describe("TrashPanel i18n — empty state", () => {
 
   it("renders English empty-state when lang is en", async () => {
     await i18n.changeLanguage("en");
-    useTrashStore.setState({ list: [], selectedIds: new Set(), loading: false, refresh: vi.fn().mockResolvedValue(undefined) } as any);
+    useTrashStore.setState({
+      list: [],
+      selectedIds: new Set(),
+      loading: false,
+      refresh: vi.fn().mockResolvedValue(undefined),
+    } as any);
 
     render(<TrashPanel />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Trash is empty.")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Trash is empty.")).toBeInTheDocument());
   });
 
   it("renders Chinese empty-state after switching to zh", async () => {
     await i18n.changeLanguage("zh");
     useAppLanguageStore.setState({ language: "zh" });
-    useTrashStore.setState({ list: [], selectedIds: new Set(), loading: false, refresh: vi.fn().mockResolvedValue(undefined) } as any);
+    useTrashStore.setState({
+      list: [],
+      selectedIds: new Set(),
+      loading: false,
+      refresh: vi.fn().mockResolvedValue(undefined),
+    } as any);
 
     render(<TrashPanel />);
 
-    await waitFor(() =>
-      expect(screen.getByText("回收站是空的。")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("回收站是空的。")).toBeInTheDocument());
   });
 });

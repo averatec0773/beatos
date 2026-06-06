@@ -55,9 +55,7 @@ export function BottomPlayerBar() {
     audioEngine.setMuted(usePlayerStore.getState().muted);
     return audioEngine.on("error", (err) => {
       console.warn("[player] decode error", err);
-      useToastStore
-        .getState()
-        .show("error", t("player.decodeFailedToast"), 6000);
+      useToastStore.getState().show("error", t("player.decodeFailedToast"), 6000);
     });
   }, []);
 
@@ -157,7 +155,9 @@ export function BottomPlayerBar() {
             onClick={handleTogglePlay}
             data-play-button
             data-status={status}
-            aria-label={errored ? t("player.retry") : playing ? t("player.pause") : t("player.play")}
+            aria-label={
+              errored ? t("player.retry") : playing ? t("player.pause") : t("player.play")
+            }
             title={errored ? t("player.retryTitle") : undefined}
             className={errored ? "ring-2 ring-red-500/60" : undefined}
           >

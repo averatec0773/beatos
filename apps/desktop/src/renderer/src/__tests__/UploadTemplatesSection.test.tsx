@@ -25,8 +25,12 @@ describe("UploadTemplatesSection", () => {
     render(<UploadTemplatesSection />);
     expect(screen.getByLabelText("Album name template")).toHaveValue(DEFAULT_TEMPLATES.album_name);
     expect(screen.getByLabelText("Beat name template")).toHaveValue(DEFAULT_TEMPLATES.beat_name);
-    expect(screen.getByLabelText("Beat description template")).toHaveValue(DEFAULT_TEMPLATES.beat_description);
-    expect(screen.getByLabelText("Album description template")).toHaveValue(DEFAULT_TEMPLATES.album_description);
+    expect(screen.getByLabelText("Beat description template")).toHaveValue(
+      DEFAULT_TEMPLATES.beat_description,
+    );
+    expect(screen.getByLabelText("Album description template")).toHaveValue(
+      DEFAULT_TEMPLATES.album_description,
+    );
     expect(screen.getByLabelText("Producer joiner")).toHaveValue(DEFAULT_TEMPLATES.prod_separator);
     expect(screen.queryByLabelText("制作人署名")).toBeNull();
   });

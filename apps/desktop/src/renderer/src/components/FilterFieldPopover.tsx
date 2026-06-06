@@ -104,8 +104,12 @@ function MultiValuePicker({
         {FIELD_LABELS[field]}
       </div>
       <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5">
-        {loading && <span className="text-xs text-text-tertiary px-1 py-1">{t("filters.loading")}</span>}
-        {error && <span className="text-xs text-text-tertiary px-1 py-1">{t("filters.failedToLoad")}</span>}
+        {loading && (
+          <span className="text-xs text-text-tertiary px-1 py-1">{t("filters.loading")}</span>
+        )}
+        {error && (
+          <span className="text-xs text-text-tertiary px-1 py-1">{t("filters.failedToLoad")}</span>
+        )}
         {!loading && !error && values.length === 0 && (
           <span className="text-xs text-text-tertiary px-1 py-1">{t("filters.noValuesFound")}</span>
         )}

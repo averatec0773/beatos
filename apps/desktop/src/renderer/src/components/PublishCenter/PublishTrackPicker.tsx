@@ -69,9 +69,13 @@ export function PublishTrackPicker({ open, onClose, onPick }: Props): React.JSX.
 
         <div className="beatos-scroll flex max-h-[50vh] flex-col gap-0.5 overflow-y-auto">
           {loading ? (
-            <div className="px-2 py-3 text-xs text-text-tertiary">{t("publishCenter.searching")}</div>
+            <div className="px-2 py-3 text-xs text-text-tertiary">
+              {t("publishCenter.searching")}
+            </div>
           ) : results.length === 0 ? (
-            <div className="px-2 py-3 text-xs text-text-tertiary">{t("publishCenter.noTracksFound")}</div>
+            <div className="px-2 py-3 text-xs text-text-tertiary">
+              {t("publishCenter.noTracksFound")}
+            </div>
           ) : (
             results.map((t) => (
               <button

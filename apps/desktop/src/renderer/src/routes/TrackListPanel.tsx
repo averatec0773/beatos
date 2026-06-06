@@ -190,9 +190,16 @@ export function TrackListPanel(): React.JSX.Element {
     if (opts.destination === "attach" && current) {
       const r = await attachAudioToTrack(files, current.id, opts.tag);
       if (r.errors.length > 0) {
-        toast.show("error", t("dialogs.import.attachFailed", { errors: r.errors.join("; ") }), 6000);
+        toast.show(
+          "error",
+          t("dialogs.import.attachFailed", { errors: r.errors.join("; ") }),
+          6000,
+        );
       } else {
-        toast.show("success", t("dialogs.import.attached", { tag: opts.tag, title: current.title }));
+        toast.show(
+          "success",
+          t("dialogs.import.attached", { tag: opts.tag, title: current.title }),
+        );
       }
       return;
     }
@@ -200,15 +207,16 @@ export function TrackListPanel(): React.JSX.Element {
     if (r.errors.length > 0) {
       toast.show(
         "warning",
-        t("dialogs.import.partial", { created: r.created, total: files.length, failed: r.errors.length }),
+        t("dialogs.import.partial", {
+          created: r.created,
+          total: files.length,
+          failed: r.errors.length,
+        }),
         6000,
       );
       console.warn("[import] errors:", r.errors);
     } else if (r.created > 0) {
-      toast.show(
-        "success",
-        t("dialogs.import.imported", { count: r.created, tag: opts.tag }),
-      );
+      toast.show("success", t("dialogs.import.imported", { count: r.created, tag: opts.tag }));
     }
   }
 
@@ -262,7 +270,9 @@ export function TrackListPanel(): React.JSX.Element {
           const ids = Array.from(selectedIds);
           if (
             !confirm(
-              ids.length === 1 ? t("trackList.moveToTrashConfirm") : t("trackList.moveToTrashConfirmMany", { count: ids.length }),
+              ids.length === 1
+                ? t("trackList.moveToTrashConfirm")
+                : t("trackList.moveToTrashConfirmMany", { count: ids.length }),
             )
           )
             return;
@@ -280,7 +290,9 @@ export function TrackListPanel(): React.JSX.Element {
             .getState()
             .show(
               "success",
-              ids.length === 1 ? t("trackList.movedToTrash") : t("trackList.movedToTrashMany", { count: ids.length }),
+              ids.length === 1
+                ? t("trackList.movedToTrash")
+                : t("trackList.movedToTrashMany", { count: ids.length }),
             );
         },
       },
@@ -326,9 +338,7 @@ export function TrackListPanel(): React.JSX.Element {
               data-drop-overlay
               className="absolute inset-0 z-50 bg-accent/10 border-2 border-accent border-dashed pointer-events-none flex items-center justify-center"
             >
-              <span className="text-accent text-base font-medium">
-                {t("trackList.dropAudio")}
-              </span>
+              <span className="text-accent text-base font-medium">{t("trackList.dropAudio")}</span>
             </div>
           )}
           {/* An empty *list* still shows its hero (mosaic + name) — only the
@@ -366,9 +376,7 @@ export function TrackListPanel(): React.JSX.Element {
             data-drop-overlay
             className="absolute inset-0 z-50 bg-accent/10 border-2 border-accent border-dashed pointer-events-none flex items-center justify-center"
           >
-            <span className="text-accent text-base font-medium">
-              {t("trackList.dropAudio")}
-            </span>
+            <span className="text-accent text-base font-medium">{t("trackList.dropAudio")}</span>
           </div>
         )}
         {currentList && (
@@ -466,7 +474,8 @@ export function TrackListPanel(): React.JSX.Element {
                     }}
                     onOpen={() => navigate(`/tracks/${track.id}/edit`)}
                     onDelete={() => {
-                      if (confirm(t("contextMenu.deleteConfirm", { title: track.title }))) remove(track.id);
+                      if (confirm(t("contextMenu.deleteConfirm", { title: track.title })))
+                        remove(track.id);
                     }}
                   />
                 </div>

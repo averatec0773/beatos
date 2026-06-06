@@ -66,7 +66,10 @@ export function PlaylistHero({
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", t("playlistHero.renameFailed", { error: e instanceof Error ? e.message : String(e) }));
+        .show(
+          "error",
+          t("playlistHero.renameFailed", { error: e instanceof Error ? e.message : String(e) }),
+        );
     }
   }
 

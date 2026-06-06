@@ -86,7 +86,9 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
     setBusy(true);
     try {
       const r = await bulk.update(ids, patch);
-      useToastStore.getState().show("success", t("dialogs.bulkEdit.updated", { count: r.updated_count }));
+      useToastStore
+        .getState()
+        .show("success", t("dialogs.bulkEdit.updated", { count: r.updated_count }));
       await useTrackStore.getState().refresh();
       onDone();
     } catch {
@@ -100,13 +102,13 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
     setBusy(true);
     try {
       const r = await bulk.applyLicenseTemplate(ids);
-      useToastStore.getState().show("success", t("dialogs.bulkEdit.licenseApplied", { count: r.applied }));
+      useToastStore
+        .getState()
+        .show("success", t("dialogs.bulkEdit.licenseApplied", { count: r.applied }));
       await useTrackStore.getState().refresh();
       onDone();
     } catch {
-      useToastStore
-        .getState()
-        .show("error", t("dialogs.bulkEdit.licenseFailed"));
+      useToastStore.getState().show("error", t("dialogs.bulkEdit.licenseFailed"));
     } finally {
       setBusy(false);
     }

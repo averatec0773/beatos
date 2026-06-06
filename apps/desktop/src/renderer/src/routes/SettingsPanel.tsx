@@ -45,7 +45,9 @@ function StorageSection({
       }
       onDbPathChange(fullPath);
     } catch (e) {
-      alert(t("settings.storage.updateFailed", { error: e instanceof Error ? e.message : String(e) }));
+      alert(
+        t("settings.storage.updateFailed", { error: e instanceof Error ? e.message : String(e) }),
+      );
     }
   }
 
@@ -68,9 +70,7 @@ function StorageSection({
             {t("common.change")}
           </button>
         </div>
-        <p className="mt-2 text-xs text-text-tertiary">
-          {t("settings.storage.restartHint")}
-        </p>
+        <p className="mt-2 text-xs text-text-tertiary">{t("settings.storage.restartHint")}</p>
       </div>
     </section>
   );
@@ -83,9 +83,7 @@ function AboutSection(): React.JSX.Element {
       <h2 className="text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-3">
         {t("settings.about.title")}
       </h2>
-      <div className="text-sm text-text-secondary">
-        {t("settings.about.madeBy")}
-      </div>
+      <div className="text-sm text-text-secondary">{t("settings.about.madeBy")}</div>
       <div className="mt-3 flex flex-col gap-1.5 text-sm">
         <div>
           <span className="text-text-secondary">{t("settings.about.website")}</span>
@@ -121,7 +119,10 @@ export function SettingsPanel(): React.JSX.Element {
   const [dbPath, setDbPath] = useState<string>("");
   const [repoRoot, setRepoRoot] = useState<string>("");
   useEffect(() => {
-    window.beatos.getDbPath().then(setDbPath).catch(() => setDbPath(""));
+    window.beatos
+      .getDbPath()
+      .then(setDbPath)
+      .catch(() => setDbPath(""));
     void window.beatos.getRepoRoot().then(setRepoRoot);
   }, []);
 

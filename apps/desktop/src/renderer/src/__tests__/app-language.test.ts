@@ -12,7 +12,9 @@ describe("app-language store", () => {
   });
 
   it("setLanguage updates i18next and persists", async () => {
-    const set = vi.spyOn(appSettings, "set").mockResolvedValue({ key: "app_language", value: "zh" });
+    const set = vi
+      .spyOn(appSettings, "set")
+      .mockResolvedValue({ key: "app_language", value: "zh" });
     await useAppLanguageStore.getState().setLanguage("zh");
     expect(useAppLanguageStore.getState().language).toBe("zh");
     expect(i18n.language).toBe("zh");

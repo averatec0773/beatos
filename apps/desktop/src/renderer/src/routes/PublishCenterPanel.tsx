@@ -65,7 +65,12 @@ export function PublishCenterPanel(): React.JSX.Element {
     };
   }, [loadSessions, validateSessions, refreshJobs]);
 
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
 
   function stopLogin(): void {
     if (loginTimer.current) window.clearInterval(loginTimer.current);
@@ -135,7 +140,8 @@ export function PublishCenterPanel(): React.JSX.Element {
             disabled={validating}
             className="flex items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-row-hover disabled:opacity-50"
           >
-            <RefreshCw size={13} className={validating ? "animate-spin" : ""} /> {t("publishCenter.refresh")}
+            <RefreshCw size={13} className={validating ? "animate-spin" : ""} />{" "}
+            {t("publishCenter.refresh")}
           </button>
         </div>
       </div>

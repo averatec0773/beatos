@@ -14,7 +14,11 @@ export function TrackEditor(): React.JSX.Element {
     return <main className="flex-1 p-8 rounded-xl beatos-card text-danger">{loadError}</main>;
   }
   if (!track) {
-    return <main className="flex-1 p-8 rounded-xl beatos-card text-text-tertiary">{t("editor.loading")}</main>;
+    return (
+      <main className="flex-1 p-8 rounded-xl beatos-card text-text-tertiary">
+        {t("editor.loading")}
+      </main>
+    );
   }
 
   return (

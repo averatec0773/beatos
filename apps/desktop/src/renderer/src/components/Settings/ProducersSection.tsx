@@ -90,14 +90,12 @@ export function ProducersSection(): React.JSX.Element {
     try {
       await savePrimaryProducer(next);
     } catch (e) {
-      useToastStore
-        .getState()
-        .show(
-          "error",
-          t("producers.setPrimaryFailed", {
-            error: e instanceof Error ? e.message : String(e),
-          }),
-        );
+      useToastStore.getState().show(
+        "error",
+        t("producers.setPrimaryFailed", {
+          error: e instanceof Error ? e.message : String(e),
+        }),
+      );
       await refresh();
     }
   }
@@ -254,7 +252,9 @@ function ProducerChip({
         onClick={onTogglePrimary}
         disabled={busy}
         className="rounded-full p-0.5 text-text-tertiary hover:text-amber-400 focus:outline-none disabled:opacity-50"
-        aria-label={t(isPrimary ? "producers.setPrimaryAriaUnset" : "producers.setPrimaryAriaSet", { name })}
+        aria-label={t(isPrimary ? "producers.setPrimaryAriaUnset" : "producers.setPrimaryAriaSet", {
+          name,
+        })}
         title={t(isPrimary ? "producers.primaryTooltipSet" : "producers.primaryTooltipUnset")}
       >
         {isPrimary ? <span aria-hidden="true">★</span> : <Star className="h-3 w-3" />}

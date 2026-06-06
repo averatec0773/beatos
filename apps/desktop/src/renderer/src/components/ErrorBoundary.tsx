@@ -28,9 +28,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         <div className="min-h-screen bg-bg-base text-text-primary p-8 overflow-y-auto">
           <div className="max-w-3xl">
             <h1 className="text-xl font-bold text-danger mb-3">{i18n.t("errors.renderError")}</h1>
-            <p className="text-sm text-text-secondary mb-4">
-              {i18n.t("errors.renderErrorDesc")}
-            </p>
+            <p className="text-sm text-text-secondary mb-4">{i18n.t("errors.renderErrorDesc")}</p>
             <pre className="bg-bg-elevated border border-border-subtle rounded-md p-4 text-xs text-danger overflow-x-auto">
               {this.state.error.name}: {this.state.error.message}
               {"\n\n"}

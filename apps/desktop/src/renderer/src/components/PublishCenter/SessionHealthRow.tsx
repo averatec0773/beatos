@@ -13,7 +13,12 @@ interface Props {
   onLogin: () => void;
 }
 
-export function SessionHealthRow({ platform, state, loggingIn, onLogin }: Props): React.JSX.Element {
+export function SessionHealthRow({
+  platform,
+  state,
+  loggingIn,
+  onLogin,
+}: Props): React.JSX.Element {
   const { t } = useTranslation();
   const label = PLATFORM_LABEL[platform] ?? platform;
   return (

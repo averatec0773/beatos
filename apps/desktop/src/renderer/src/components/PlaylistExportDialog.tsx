@@ -72,7 +72,8 @@ export function PlaylistExportDialog({
         setSelected(init);
       })
       .catch(() => {
-        if (!cancelled) useToastStore.getState().show("error", t("dialogs.playlistExport.manifestFailed"));
+        if (!cancelled)
+          useToastStore.getState().show("error", t("dialogs.playlistExport.manifestFailed"));
       });
     return () => {
       cancelled = true;
@@ -157,14 +158,19 @@ export function PlaylistExportDialog({
     try {
       const res = await listsApi.exportPackage(listId, { mode, dest, items });
       const toast = useToastStore.getState();
-      const skip = res.skipped.length ? t("dialogs.playlistExport.skipped", { count: res.skipped.length }) : "";
+      const skip = res.skipped.length
+        ? t("dialogs.playlistExport.skipped", { count: res.skipped.length })
+        : "";
       toast.show("success", t("dialogs.playlistExport.exported", { count: res.file_count }) + skip);
       void window.beatos.revealInFinder(res.output_path);
       onClose();
     } catch (e) {
-      useToastStore
-        .getState()
-        .show("error", t("dialogs.playlistExport.exportFailed", { error: e instanceof Error ? e.message : String(e) }));
+      useToastStore.getState().show(
+        "error",
+        t("dialogs.playlistExport.exportFailed", {
+          error: e instanceof Error ? e.message : String(e),
+        }),
+      );
     } finally {
       setBusy(false);
     }
@@ -175,9 +181,7 @@ export function PlaylistExportDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("dialogs.playlistExport.title", { name: listName })}</DialogTitle>
-          <DialogDescription>
-            {t("dialogs.playlistExport.desc")}
-          </DialogDescription>
+          <DialogDescription>{t("dialogs.playlistExport.desc")}</DialogDescription>
         </DialogHeader>
 
         <div className="mb-3 inline-flex rounded-md border border-border-subtle p-0.5 text-sm">
@@ -191,7 +195,9 @@ export function PlaylistExportDialog({
               }`}
             >
               {m === "zip" ? <FileArchive size={14} /> : <FolderOpen size={14} />}
-              {m === "zip" ? t("dialogs.playlistExport.modeZip") : t("dialogs.playlistExport.modeCopy")}
+              {m === "zip"
+                ? t("dialogs.playlistExport.modeZip")
+                : t("dialogs.playlistExport.modeCopy")}
             </button>
           ))}
         </div>
@@ -236,9 +242,13 @@ export function PlaylistExportDialog({
 
         <div className="max-h-[46vh] overflow-y-auto beatos-scroll -mx-1 px-1">
           {manifest == null ? (
-            <div className="py-8 text-center text-sm text-text-tertiary">{t("dialogs.playlistExport.loading")}</div>
+            <div className="py-8 text-center text-sm text-text-tertiary">
+              {t("dialogs.playlistExport.loading")}
+            </div>
           ) : manifest.length === 0 ? (
-            <div className="py-8 text-center text-sm text-text-tertiary">{t("dialogs.playlistExport.emptyList")}</div>
+            <div className="py-8 text-center text-sm text-text-tertiary">
+              {t("dialogs.playlistExport.emptyList")}
+            </div>
           ) : (
             manifest.map((track) => {
               const existing = track.files.filter((f) => !f.missing).map((f) => f.asset_id);
@@ -255,7 +265,9 @@ export function PlaylistExportDialog({
                     />
                     <span className="text-sm font-medium truncate">{track.title}</span>
                     {track.files.length === 0 && (
-                      <span className="text-xs text-text-tertiary">{t("dialogs.playlistExport.noFiles")}</span>
+                      <span className="text-xs text-text-tertiary">
+                        {t("dialogs.playlistExport.noFiles")}
+                      </span>
                     )}
                   </label>
                   <div className="mt-1 ml-6 flex flex-col gap-1">
@@ -294,7 +306,8 @@ export function PlaylistExportDialog({
 
         <div className="mt-3 flex items-center gap-3">
           <span className="text-xs text-text-tertiary">
-            {t("dialogs.playlistExport.selected", { count }) + (count > 0 ? ` · ${formatBytes(bytes)}` : "")}
+            {t("dialogs.playlistExport.selected", { count }) +
+              (count > 0 ? ` · ${formatBytes(bytes)}` : "")}
           </span>
           <div className="flex-1" />
           <button

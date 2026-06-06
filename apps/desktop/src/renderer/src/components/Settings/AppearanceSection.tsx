@@ -45,9 +45,7 @@ export function AppearanceSection(): React.JSX.Element {
           className="w-full accent-white"
           aria-label={t("appearance.panelOpacity")}
         />
-        <p className="mt-1 text-xs text-text-tertiary">
-          {t("appearance.panelOpacityHint")}
-        </p>
+        <p className="mt-1 text-xs text-text-tertiary">{t("appearance.panelOpacityHint")}</p>
       </div>
 
       <h2 className="text-lg font-semibold mb-3 mt-8">{t("appearance.background")}</h2>

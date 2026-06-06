@@ -14,9 +14,7 @@ export function ApiErrorState({ error, onRetry }: Props): React.JSX.Element {
       <div className="max-w-md text-center space-y-4">
         <AlertCircle size={48} className="text-danger mx-auto" />
         <h1 className="text-2xl font-bold">{t("errors.backendUnreachable")}</h1>
-        <p className="text-text-secondary text-sm">
-          {t("errors.backendUnreachableDesc")}
-        </p>
+        <p className="text-text-secondary text-sm">{t("errors.backendUnreachableDesc")}</p>
         <pre className="text-xs text-text-tertiary bg-bg-elevated rounded-md p-2 text-left overflow-auto max-h-32">
           {error.message}
         </pre>
