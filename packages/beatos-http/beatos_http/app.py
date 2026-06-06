@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import pathlib
 import socket
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -18,6 +19,7 @@ import structlog
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from beatos_core.db import resolve_db_path, run_migrations
 from beatos_core.two_phase import cleanup_terminal_tokens
@@ -171,6 +173,14 @@ def create_app() -> FastAPI:
     app.include_router(batch_analysis.router)
 
     app.mount("/mcp", mcp_asgi_app)
+
+    # Serve the built web SPA (browser frontend) when a build directory is
+    # configured. Mounted LAST so /api/* and /mcp routes always win. HashRouter
+    # keeps client routes in the URL fragment, so html=True (serve index.html at
+    # "/") is sufficient — no server-side SPA fallback needed.
+    web_dir = os.environ.get("BEATOS_WEB_DIR")
+    if web_dir and pathlib.Path(web_dir).is_dir():
+        app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
     return app
 

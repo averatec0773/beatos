@@ -1,17 +1,21 @@
-"""Entry point: `python -m beatos_http` starts uvicorn on an ephemeral port.
+"""Entry point: `python -m beatos_http` starts uvicorn.
 
-Steps:
-1. Bind a socket to port 0 to get an OS-assigned free port.
-2. Hand the socket to uvicorn.
-3. Write the handshake file only AFTER uvicorn is listening (in the server's
-   startup hook) — writing it at bind time races the bind→listen gap, so a
-   client that reads the port too early gets Connection refused (audit B2).
+Two modes:
+- Electron (default): bind an OS-assigned ephemeral port (port 0) and advertise
+  it via the handshake file once uvicorn is listening.
+- Web (`BEATOS_HTTP_PORT` set): bind that fixed port so a browser can open a
+  stable localhost URL; the SPA is served by the app when `BEATOS_WEB_DIR` is set.
+
+The handshake file is written only AFTER uvicorn is listening (in the server's
+startup hook) — writing it at bind time races the bind→listen gap, so a client
+that reads the port too early gets Connection refused (audit B2).
 """
 from __future__ import annotations
 
 import asyncio
 import atexit
 import logging
+import os
 import socket
 
 from beatos_http.handshake import default_handshake_path
@@ -104,7 +108,19 @@ async def _serve(main_sock: socket.socket, main_port: int) -> None:
 
 def main() -> None:
     atexit.register(_cleanup_handshake)
-    sock, port = _bind_ephemeral()
+    fixed = os.environ.get("BEATOS_HTTP_PORT")
+    if fixed:
+        # Web mode: bind a known port so the browser can open a stable URL.
+        try:
+            port = int(fixed)
+        except ValueError:
+            raise SystemExit(f"BEATOS_HTTP_PORT={fixed!r} is not a valid integer")
+        sock = _try_bind_fixed(port)
+        if sock is None:
+            raise SystemExit(f"BEATOS_HTTP_PORT={port} is already in use")
+    else:
+        # Electron mode: OS-assigned ephemeral port advertised via handshake.
+        sock, port = _bind_ephemeral()
     try:
         asyncio.run(_serve(sock, port))
     finally:

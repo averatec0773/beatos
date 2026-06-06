@@ -8,6 +8,29 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _reset_logging_state():
+    """configure() is sticky via a module-level _CONFIGURED flag, and importing
+    beatos_http.__main__ configures logging at import time. Reset the flag + root
+    handlers around each test so these assertions run from a clean slate
+    regardless of what ran (or imported) earlier in the session."""
+    from beatos_http import logging_config
+
+    root = logging.getLogger()
+    saved_handlers = root.handlers[:]
+    saved_level = root.level
+    logging_config._CONFIGURED = False
+    root.handlers = []
+    yield
+    logging_config._CONFIGURED = False
+    # Close handlers configure() opened during the test (RotatingFileHandler
+    # holds an fd) before restoring the originals, to avoid ResourceWarning.
+    for h in root.handlers:
+        h.close()
+    root.handlers = saved_handlers
+    root.setLevel(saved_level)
+
+
 def test_configure_writes_jsonl_to_path(tmp_path: Path, monkeypatch):
     from beatos_http import logging_config
 
