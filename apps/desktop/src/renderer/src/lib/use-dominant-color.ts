@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 
+import { platform } from "@/platform";
+
 /**
  * Extracts a representative "glow" colour from a cover image, returned as an
  * `"r, g, b"` channel string for composing into `rgba(...)`, or `null` when
  * there is no cover / extraction is unavailable.
  *
- * The cover loads over the `beatos-asset://` scheme, which is registered
+ * The cover loads over the platform asset URL (custom protocol in Electron), which is registered
  * `corsEnabled` (see main/index.ts), so an `<img crossOrigin="anonymous">`
  * draws to a canvas without tainting it. If readback still throws (tainted
  * canvas, decode failure), we fall back to `null` and callers use a neutral
@@ -29,7 +31,7 @@ export function useDominantColor(assetId: number | null): string | null {
     const img = new Image();
     img.crossOrigin = "anonymous";
     const timer = window.setTimeout(() => {
-      img.src = `beatos-asset://cover/${assetId}`;
+      img.src = platform.assetUrl("cover", assetId);
     }, 150);
     img.onload = () => {
       if (cancelled) return;

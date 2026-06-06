@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { MoreHorizontal, AlertTriangle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { platform } from "@/platform";
 import { useAssetSlot } from "@/hooks/useAssetSlot";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { formatBytes } from "@/lib/format-bytes";
@@ -63,7 +64,7 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
     }
     let absPath: string;
     try {
-      absPath = window.beatos.getPathForFile(file);
+      absPath = platform.getPathForFile(file);
     } catch (err) {
       console.warn("[file-row drop] getPathForFile threw", err);
       alert(t("fileRows.getPathFailed"));

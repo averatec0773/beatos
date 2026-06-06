@@ -1,3 +1,4 @@
+import { platform } from "@/platform";
 import { tracks } from "@/api/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { useTrackStore } from "@/stores/tracks";
@@ -37,7 +38,7 @@ function resolveFiles(files: File[]): { ok: PathedFile[]; errors: string[]; skip
     }
     let absPath: string;
     try {
-      absPath = window.beatos.getPathForFile(file);
+      absPath = platform.getPathForFile(file);
     } catch {
       errors.push(`${file.name}: cannot read path`);
       continue;

@@ -1,8 +1,10 @@
+import { platform } from "@/platform";
+
 let cachedBase: string | null = null;
 
 async function base(): Promise<string> {
   if (cachedBase) return cachedBase;
-  cachedBase = await window.beatos.getApiBase();
+  cachedBase = await platform.getApiBase();
   return cachedBase;
 }
 

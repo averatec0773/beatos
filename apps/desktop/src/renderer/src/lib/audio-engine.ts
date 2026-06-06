@@ -32,6 +32,7 @@
 
 import * as Tone from "tone";
 
+import { platform } from "@/platform";
 import { computePeaks } from "@/lib/waveform";
 
 export type EngineStatus = "idle" | "loading" | "paused" | "playing" | "error";
@@ -114,7 +115,7 @@ class AudioEngine {
       this.bufferCache.set(assetId, buf);
     } else {
       try {
-        buf = await new Tone.ToneAudioBuffer().load(`beatos-asset://audio/${assetId}`);
+        buf = await new Tone.ToneAudioBuffer().load(platform.assetUrl("audio", assetId));
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e));
         this.currentAssetId = null;

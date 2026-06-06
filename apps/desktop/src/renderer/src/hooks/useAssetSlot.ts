@@ -1,3 +1,4 @@
+import { platform } from "@/platform";
 import { useAssetStore } from "@/stores/assets";
 import type { Asset } from "@/api/assets";
 
@@ -31,7 +32,7 @@ export function useAssetSlot(
   const pickAndAttach = async (replace: boolean, explicitPath?: string) => {
     const picked =
       explicitPath ??
-      (await window.beatos.openFileDialog([{ name: label, extensions: filterExtensions }]));
+      (await platform.openFileDialog([{ name: label, extensions: filterExtensions }]));
     if (!picked) return;
     try {
       await attachAction(trackId, role, picked, { replace });
@@ -47,7 +48,7 @@ export function useAssetSlot(
 
   const relocate = async () => {
     if (!asset) return;
-    const picked = await window.beatos.openFileDialog([
+    const picked = await platform.openFileDialog([
       { name: label, extensions: filterExtensions },
     ]);
     if (!picked) return;
@@ -60,7 +61,7 @@ export function useAssetSlot(
 
   const reveal = () => {
     if (!asset) return;
-    window.beatos.revealInFinder(asset.abs_path);
+    platform.revealInFinder(asset.abs_path);
   };
 
   return { asset, pickAndAttach, detach, relocate, reveal };

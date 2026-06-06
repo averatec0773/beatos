@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { FolderOpen, X } from "lucide-react";
 
+import { platform } from "@/platform";
 import { useToastStore } from "@/stores/toast";
 
 /**
@@ -22,13 +23,13 @@ export function ProjectFolderRow({
   const showToast = useToastStore((s) => s.show);
 
   const pick = async (): Promise<void> => {
-    const picked = await window.beatos.pickFolder();
+    const picked = await platform.pickFolder();
     if (picked) onChange(picked);
   };
 
   const open = async (): Promise<void> => {
     if (!projectPath) return;
-    const err = await window.beatos.openPath(projectPath);
+    const err = await platform.openPath(projectPath);
     if (err) showToast("error", t("projectFolder.openFailed", { error: err }));
   };
 

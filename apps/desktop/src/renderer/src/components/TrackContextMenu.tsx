@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Edit, Folder, Trash2, ListPlus, ListMinus, Share2 } from "lucide-react";
 
+import { platform } from "@/platform";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -47,7 +48,7 @@ export function TrackContextMenu({
   const userLists = useMemo(() => allLists.filter((l) => l.kind !== "system"), [allLists]);
 
   function onReveal(): void {
-    if (audioPath) window.beatos.revealInFinder(audioPath);
+    if (audioPath) platform.revealInFinder(audioPath);
   }
 
   function onConfirmDelete(): void {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { platform } from "@/platform";
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
 import { AppearanceSection } from "@/components/Settings/AppearanceSection";
 import { DefaultLicenseTiersSection } from "@/components/Settings/DefaultLicenseTiersSection";
@@ -35,11 +36,11 @@ function StorageSection({
   const { t } = useTranslation();
 
   async function onChange(): Promise<void> {
-    const newFolder = await window.beatos.openFolderDialog();
+    const newFolder = await platform.openFolderDialog();
     if (!newFolder) return;
     const fullPath = `${newFolder}/global.db`;
     try {
-      const r = await window.beatos.setDbPath(fullPath);
+      const r = await platform.setDbPath(fullPath);
       if (r.restartRequired) {
         alert(t("settings.storage.restartAlert"));
       }
@@ -89,7 +90,7 @@ function AboutSection(): React.JSX.Element {
           <span className="text-text-secondary">{t("settings.about.website")}</span>
           <button
             type="button"
-            onClick={() => void window.beatos.openExternal("https://averatec.studio")}
+            onClick={() => void platform.openExternal("https://averatec.studio")}
             className="text-accent underline hover:no-underline"
             aria-label={t("settings.about.websiteAria")}
           >
@@ -100,9 +101,7 @@ function AboutSection(): React.JSX.Element {
           <span className="text-text-secondary">{t("settings.about.repo")}</span>
           <button
             type="button"
-            onClick={() =>
-              void window.beatos.openExternal("https://github.com/averatec0773/beatos")
-            }
+            onClick={() => void platform.openExternal("https://github.com/averatec0773/beatos")}
             className="text-accent underline hover:no-underline"
             aria-label={t("settings.about.repoAria")}
           >
@@ -119,11 +118,11 @@ export function SettingsPanel(): React.JSX.Element {
   const [dbPath, setDbPath] = useState<string>("");
   const [repoRoot, setRepoRoot] = useState<string>("");
   useEffect(() => {
-    window.beatos
+    platform
       .getDbPath()
       .then(setDbPath)
       .catch(() => setDbPath(""));
-    void window.beatos.getRepoRoot().then(setRepoRoot);
+    void platform.getRepoRoot().then(setRepoRoot);
   }, []);
 
   return (

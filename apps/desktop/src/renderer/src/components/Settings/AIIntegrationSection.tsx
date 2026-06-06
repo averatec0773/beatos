@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { platform } from "@/platform";
+
 type TestResult = { ok: true; toolsCount: number; version: string } | { ok: false; error: string };
 
 interface Props {
@@ -45,7 +47,7 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
 
   const runTest = async (): Promise<void> => {
     setTestState("testing");
-    const result = await window.beatos.testMcpConnection();
+    const result = await platform.testMcpConnection();
     setTestState({ kind: "result", result });
   };
 

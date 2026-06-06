@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Code2 } from "lucide-react";
 
+import { platform } from "@/platform";
 import { useSidebarPanelStore } from "@/stores/sidebar-panel";
 
 export function SidebarFooter(): React.JSX.Element {
@@ -12,7 +13,7 @@ export function SidebarFooter(): React.JSX.Element {
   return (
     <button
       type="button"
-      onClick={() => void window.beatos.openExternal("https://github.com/averatec0773")}
+      onClick={() => void platform.openExternal("https://github.com/averatec0773")}
       className={[
         "w-full rounded-md text-[13px] flex items-center text-text-tertiary hover:text-text-primary hover:bg-bg-row-hover transition-colors",
         collapsed ? "justify-center py-2" : "px-3 py-1.5 text-left gap-2",

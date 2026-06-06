@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FileArchive, FolderOpen, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { platform } from "@/platform";
 import {
   Dialog,
   DialogContent,
@@ -146,7 +147,7 @@ export function PlaylistExportDialog({
 
   async function handleExport(): Promise<void> {
     if (count === 0 || !manifest) return;
-    const dest = await window.beatos.openFolderDialog();
+    const dest = await platform.openFolderDialog();
     if (!dest) return;
     const items = manifest
       .map((track) => ({
@@ -162,7 +163,7 @@ export function PlaylistExportDialog({
         ? t("dialogs.playlistExport.skipped", { count: res.skipped.length })
         : "";
       toast.show("success", t("dialogs.playlistExport.exported", { count: res.file_count }) + skip);
-      void window.beatos.revealInFinder(res.output_path);
+      void platform.revealInFinder(res.output_path);
       onClose();
     } catch (e) {
       useToastStore.getState().show(

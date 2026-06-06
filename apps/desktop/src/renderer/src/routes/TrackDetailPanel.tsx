@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { PanelRightClose, ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { platform } from "@/platform";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { formatRowDate } from "@/lib/format-row-date";
@@ -187,7 +188,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         onCenterDragStart={(e) => {
           if (!coverAsset || coverAsset.missing) return;
           e.preventDefault();
-          window.beatos.startDragFile(coverAsset.abs_path);
+          platform.startDragFile(coverAsset.abs_path);
         }}
       />
       <div>

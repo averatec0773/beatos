@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { Image as ImageIcon, MoreHorizontal, AlertTriangle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { platform } from "@/platform";
 import { useAssetSlot } from "@/hooks/useAssetSlot";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { CoverImage } from "./CoverImage";
@@ -61,7 +62,7 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
       onDragStart={(e) => {
         if (!asset || asset.missing) return;
         e.preventDefault();
-        window.beatos.startDragFile(asset.abs_path);
+        platform.startDragFile(asset.abs_path);
       }}
       data-cover-drag-source
       data-cover-dropzone

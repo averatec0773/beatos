@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { Image as ImageIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { platform } from "@/platform";
+
 interface Props {
   assetId: number | null;
   size: number;
@@ -13,7 +15,7 @@ interface Props {
 }
 
 /**
- * Renders a cover image via the beatos-asset:// custom protocol.
+ * Renders a cover image via the platform asset URL.
  * Falls back to a music-note placeholder on error or null asset.
  *
  * Always renders in a square box: a non-square source image is cropped via
@@ -67,7 +69,7 @@ export function CoverImage({
     <div style={wrapperStyle} className={wrapperClass}>
       <img
         key={attempt}
-        src={`beatos-asset://cover/${assetId}`}
+        src={platform.assetUrl("cover", assetId)}
         onError={() => {
           if (attempt < 2) {
             retryTimer.current = window.setTimeout(() => setAttempt((a) => a + 1), 250);

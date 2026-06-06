@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { platform } from "@/platform";
+
 export function SidecarCrashToast(): React.JSX.Element | null {
   const { t } = useTranslation();
   const [info, setInfo] = useState<{ code: number | null; signal: string | null } | null>(null);
 
   useEffect(() => {
-    return window.beatos.onSidecarCrashed((i) => setInfo(i));
+    return platform.onSidecarCrashed((i) => setInfo(i));
   }, []);
 
   if (!info) return null;
