@@ -77,7 +77,14 @@ async def cover_stream(asset_id: int) -> FileResponse:
     p = pathlib.Path(asset.abs_path)
     if not p.exists():
         raise HTTPException(status_code=404, detail="Cover file missing.")
-    return FileResponse(p, media_type=asset.mime_type or "image/jpeg")
+    # Covers are immutable per asset id (replacing a cover mints a NEW id), so
+    # let the browser cache them — otherwise every <img> remount re-fetches and
+    # the cover visibly reloads. Mirrors the Electron beatos-asset:// proxy.
+    return FileResponse(
+        p,
+        media_type=asset.mime_type or "image/jpeg",
+        headers={"Cache-Control": "private, max-age=86400"},
+    )
 
 
 _AUDIO_MIME = {

@@ -60,6 +60,22 @@ def test_junk_and_trailing_chunks_are_stripped_but_audio_preserved():
     assert out[data_off + 8:data_off + 8 + data_len] == audio
 
 
+def test_repair_is_idempotent():
+    # Repairing an already-repaired WAV must be a no-op (identity) — this is what
+    # keeps the Electron client-side re-repair from corrupting server-repaired bytes.
+    audio = b"\xde\xad\xbe\xef" * 16
+    dirty = _riff(
+        _chunk(b"JUNK", b"\x00" * 8),
+        _chunk(b"fmt ", _fmt_pcm()),
+        _chunk(b"data", audio),
+        _chunk(b"LIST", b"INFOdata"),
+    )
+    once = repair_wav_if_needed(dirty)
+    twice = repair_wav_if_needed(once)
+    assert twice is once  # canonical {fmt,data} hits the zero-copy fast path
+    assert _needs_repair(once) is False
+
+
 def test_extensible_format_is_unwrapped_to_pcm():
     # 40-byte EXTENSIBLE fmt: tag=0xFFFE, ... SubFormat GUID first 2 bytes = 1 (PCM)
     ext = struct.pack("<HHIIHH", 0xFFFE, 1, 44100, 44100 * 2, 2, 16)

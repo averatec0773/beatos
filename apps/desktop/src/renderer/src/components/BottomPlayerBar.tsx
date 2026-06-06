@@ -16,6 +16,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useTrackStore } from "@/stores/tracks";
 import { useToastStore } from "@/stores/toast";
 import { audioEngine } from "@/lib/audio-engine";
+import { platform } from "@/platform";
 import { CoverImage } from "./CoverImage";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { Slider } from "./ui/slider";
@@ -49,7 +50,7 @@ export function BottomPlayerBar() {
   // The status/position/duration/ended subscription lives in player.ts so
   // tests can mock the engine without mounting this component.
   useEffect(() => {
-    const force = (typeof window !== "undefined" && window.beatos?.isAudioForceMuted?.()) ?? false;
+    const force = platform.isAudioForceMuted();
     audioEngine.setForceMuted(force);
     audioEngine.setVolume(usePlayerStore.getState().volume);
     audioEngine.setMuted(usePlayerStore.getState().muted);
