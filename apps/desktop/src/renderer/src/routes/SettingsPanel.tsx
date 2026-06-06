@@ -143,8 +143,15 @@ export function SettingsPanel(): React.JSX.Element {
         <SettingsGroup title={t("settings.groups.general")}>
           <LanguageSection />
           <VocabLocaleSection />
-          <StorageSection dbPath={dbPath} onDbPathChange={setDbPath} />
-          <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
+          {/* Storage (DB path) + AI Integration (MCP setup) are desktop-only:
+              the web DB path is fixed by the launch env, and MCP wiring targets
+              the local Claude Desktop. Hidden in the browser build. */}
+          {platform.kind === "electron" && (
+            <>
+              <StorageSection dbPath={dbPath} onDbPathChange={setDbPath} />
+              <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
+            </>
+          )}
         </SettingsGroup>
 
         <AboutSection />
