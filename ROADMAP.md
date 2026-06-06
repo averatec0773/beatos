@@ -171,6 +171,26 @@ gracefully — see `packages/pro-mount-notes.md`.
 
 ---
 
+## Web frontend (desktop + browser) — Phases 0–2 SHIPPED; Phase 3 TBD
+
+The renderer now builds for **two targets from one codebase**: the native Electron
+desktop app and a browser SPA served same-origin by the local sidecar (`make web`).
+Electron-only capabilities route through a `platform` seam (electron delegates to the
+preload bridge; web uses same-origin HTTP). See [CHANGELOG.md](CHANGELOG.md) ("Web
+frontend") and [conventions/architecture.md](conventions/architecture.md) §"Web frontend".
+
+- **Phase 0 — SHIPPED**: `platform` seam + Vite web build + sidecar serves the SPA (`BEATOS_WEB_DIR` / `BEATOS_HTTP_PORT`) + server-side WAV repair. Vertical slice: library / search / playback / metadata editing.
+- **Phase 1 — SHIPPED**: browser file I/O — a local `/api/fs` file browser (keeps the desktop's linked-mode `abs_path` semantics), reveal/open in Finder/Explorer on the user's own machine, drag-out → download; OS-file drag-in gated to desktop.
+- **Phase 2 — SHIPPED**: full-page parity + `make web` one-command launch + a route-sweep web smoke (Playwright chromium); desktop-only Settings (DB-path, MCP setup) hidden in the browser build.
+
+### Phase 3 — TBD (deferred, no committed version)
+
+- **Remote / LAN access** — reach the web UI from another device (phone, second PC). Needs auth + an upload-based file path (the backend can't see a remote client's filesystem) and gating `/api/fs/*` off for non-local clients. The `platform` file methods are already the seam an upload implementation would slot into without touching the UI.
+- **Mobile-responsive layout** — the web UI currently mirrors the desktop layout.
+- **Polish** — i18n the few remaining non-keyed `aria-label`s; paginate `/api/fs/list` for very large directories; add `Range` support to `/api/fs/download` if it's ever reused for streaming.
+
+---
+
 ## v0.3+ — Future (deferred until the publish adapter ships)
 
 ### v0.3 — Self-corpus RAG (writing assistance)

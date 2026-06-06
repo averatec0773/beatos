@@ -6,10 +6,10 @@
 
 **The operating system for beat producers.**
 
-A local-first desktop library that holds every beat on your hard drive — catalog it once, then ship it to every platform with an AI co-pilot doing the metadata grind for you.
+A local-first library for every beat on your drive — catalog it once, run it as a **native desktop app or in your browser**, then ship it to every platform with an AI co-pilot doing the metadata grind for you.
 
 [![version](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/averatec0773/beatos/main/apps/desktop/package.json&query=$.version&label=version&prefix=v&color=7c5cff&style=flat-square)](CHANGELOG.md)
-[![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-1f1f1f?style=flat-square)](#install)
+[![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Web-1f1f1f?style=flat-square)](#run)
 [![license](https://img.shields.io/badge/license-Apache--2.0-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
 [![MCP](https://img.shields.io/badge/MCP-Claude%20Code%20%E2%80%A2%20Claude%20Desktop-7c5cff?style=flat-square)](#ai-integration)
@@ -43,25 +43,36 @@ BeatOS fixes this by keeping **one canonical catalog** locally, then letting **e
 
 ### 1. Local catalog
 
-A real SQLite database for every beat: title, BPM, key, genre (multi-value), mood (multi-value), producer credits, tags, license type, price, description, audio assets (WAV/MP3 × tagged/untagged), cover art. Soft-delete trash with restore. Lists for curation. Rename + merge a producer across every track in one click.
+A real SQLite database for every beat: title, BPM, key, genre (multi-value), mood (multi-value), producer credits, tags, license tiers + multi-currency pricing, description, audio assets (WAV/MP3 × tagged/untagged + loop + stems), cover art. Soft-delete trash with restore. Lists for curation. Rename + merge a producer across every track in one click.
 
 </td>
 <td width="33%" valign="top">
 
 ### 2. AI co-pilot (MCP)
 
-A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client. 24 tools (8 read + 16 write), plus a publish tool in the Pro build: read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Approvals panel.
+A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client — **24 tools** in the free build (**26** with Pro): read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Approvals panel.
 
 </td>
 <td width="33%" valign="top">
 
 ### 3. Player + analysis
 
-Spotify-style bottom bar (Tone.js + Web Audio). Plays the FLOAT-32 WAVs your DAW actually exports. Four audio roles per track with instant switch; queue follows the visible filter; shuffle + repeat. On-demand BPM/key analysis via a pluggable engine — Essentia (RhythmExtractor2013 + KeyExtractor "bgate") when the optional extra is installed, else the permissive librosa fallback — with per-field confidence scores.
+Spotify-style bottom bar (Tone.js + Web Audio) that plays the FLOAT-32 WAVs your DAW actually exports — in the desktop app **and** the browser. Audio roles per track with instant switch; queue follows the visible filter; shuffle + repeat. On-demand BPM/key analysis via a pluggable engine — Essentia when the optional extra is installed, else the permissive librosa fallback — with per-field confidence scores.
 
 </td>
 </tr>
 </table>
+
+## Desktop or browser — one codebase, two front ends
+
+BeatOS ships as a **native desktop app** (Electron) and a **browser app** (a local web SPA served by the same Python sidecar). One React codebase builds both, so the two stay in lockstep: Electron-only capabilities (native file dialogs, Finder/Explorer integration, drag-out) route through a thin `platform` seam with a same-origin web implementation behind it.
+
+| | |
+|---|---|
+| **Desktop** | The full native experience. `make dev` from source today; packaged installers at `v0.1.0`. |
+| **Browser** | `make web` builds the SPA and serves it at `http://127.0.0.1:8765` from the local sidecar — **same backend, same library, near-identical UI**, with zero native-packaging cost. Handy for cross-platform use without an Electron build. File picking uses a built-in local file browser; "reveal in Finder/Explorer" and downloads work because the backend is your own machine. |
+
+Both are **local-first and offline** — the browser app talks only to `127.0.0.1`. (Remote/LAN access and a mobile layout are on the [roadmap](ROADMAP.md).)
 
 ## AI integration
 
@@ -78,14 +89,14 @@ Spotify-style bottom bar (Tone.js + Web Audio). Plays the FLOAT-32 WAVs your DAW
   <br/>
 </div>
 
-**Tools shipping today (24 in the free build; +1 publish tool in the Pro build):**
+**Tools shipping today** (24 in the free build; the Pro build adds `publish_track` + `publish_status` for **26**):
 
 | Surface | Tools |
 |---|---|
-| **Read** | `list_tracks`, `get_track`, `list_lists`, `list_distinct_values`, `ping` |
+| **Read** | `list_tracks`, `get_track`, `search_tracks`, `list_lists`, `list_distinct_values`, `export_metadata`, `list_export_platforms`, `ping` |
 | **Lifecycle** | `create_tracks`, `trash_tracks`, `restore_tracks`, `purge_tracks` |
 | **Lists** | `create_list`, `update_list`, `delete_list`, `add_tracks_to_list`, `remove_tracks_from_list`, `reorder_list` |
-| **Metadata** | `update_tracks`, `merge_metadata` |
+| **Metadata** | `update_tracks`, `merge_metadata`, `set_license_tiers` |
 | **Assets** | `attach_assets`, `detach_assets` |
 | **Flow control** | `await_approval` |
 
@@ -109,23 +120,23 @@ You:    [opens BeatOS Approvals panel, sees 12 proposed edits with rationale]
 Claude: [await_approval → status=approved, applies, reports back]
 ```
 
-The same pattern will drive per-platform description generation, NetEase publish drafts (v0.1), and self-corpus RAG drafts (v0.2).
+The same pattern drives on-demand per-platform metadata export today, and will drive publish drafts (Pro) and self-corpus RAG drafts (v0.3+).
 
 ## Local-first, by design
 
 | | |
 |---|---|
-| **No server.** | The sidecar binds `127.0.0.1` on an ephemeral port. Nothing leaves the machine — including conversations with the MCP agent. |
+| **No server.** | The sidecar binds `127.0.0.1` on a local port — and serves the browser front end from there too, same-origin. Nothing leaves the machine, including conversations with the MCP agent. |
 | **No account.** | Single-user. No login, no sync, no cloud. |
 | **No telemetry.** | Zero outbound calls from the app itself. |
 | **Your files stay put.** | BeatOS references paths; nothing is moved or renamed unless you ask. |
-| **Your data is yours.** | One SQLite file under `~/Library/Application Support/BeatOS/` (macOS). Open it with any tool. |
+| **Your data is yours.** | One SQLite file on your disk (`~/Music/BeatOS/global.db` by default). Open it with any tool. |
 
 ## Install
 
-> Packaged installers will arrive at `v0.1.0` together with the first publish adapter. Until then, run from source — see [Develop](#develop) below.
+> Packaged desktop installers will arrive at `v0.1.0` together with the first publish adapter. Until then, run from source — see [Develop](#develop). The browser front end needs no packaging: `make web` and open a tab.
 
-**Targets:** macOS 12+ · Windows 10+. Linux works for development but isn't a supported install target.
+**Targets:** macOS 12+ · Windows 10+ (desktop) · any modern browser (web). Linux works for development and the web front end, but isn't a supported desktop install target.
 
 ## Develop
 
@@ -149,14 +160,15 @@ cd apps/desktop && npm install
 > Full steps in [`packages/pro-mount-notes.md`](packages/pro-mount-notes.md). Without it,
 > the free build runs normally and greys out the publish entry.
 
-**Run**
+### Run
 
 ```bash
-npm run dev:fresh                      # kill orphans + launch Electron + sidecar
-npm run logs:tail                      # follow main.log + sidecar.jsonl
+make dev                               # desktop: Electron + sidecar (or: npm run dev:fresh)
+make web                               # browser: build the SPA + serve it from the sidecar, open a tab
+npm run logs:tail                      # follow main.log + sidecar.jsonl  (from apps/desktop)
 ```
 
-**Wire up the MCP server (Claude Desktop / Claude Code)**
+### Wire up the MCP server (Claude Desktop / Claude Code)
 
 The MCP server lives at `packages/beatos-mcp` and speaks stdio. Add to your MCP client config:
 
@@ -173,12 +185,15 @@ The MCP server lives at `packages/beatos-mcp` and speaks stdio. Add to your MCP 
 
 Then `list_tracks` and friends will be available as tools inside Claude.
 
-**Test**
+### Test
 
 ```bash
-npx vitest run                         # renderer + main (249 tests)
-uv run pytest                          # sidecar (347 tests)
-npm run build && npm run smoke         # Playwright _electron end-to-end
+cd apps/desktop
+npx vitest run                         # renderer + main (Vitest)
+npm run build && npm run smoke         # desktop end-to-end (Playwright _electron)
+npm run build:web && npm run smoke:web # browser end-to-end (Playwright chromium)
+
+uv run pytest packages/                # Python sidecar (core + http + mcp)
 ```
 
 ## Stack
@@ -187,13 +202,15 @@ npm run build && npm run smoke         # Playwright _electron end-to-end
 `Python 3.11` · `FastAPI` · `aiosqlite` · `structlog` · `mcp` (FastMCP) · `librosa` / `essentia` (optional) · `Playwright`
 `SQLite` · `Pydantic v2`
 
+The single React renderer builds to two targets — Electron (`electron-vite`) and a browser SPA (`vite.config.web.ts`) the FastAPI sidecar serves at `/`.
+
 ## Repository
 
 ```
-apps/desktop/              Electron shell + React renderer
+apps/desktop/              Electron shell + React renderer (also builds the browser SPA)
 packages/
   beatos-core/             Pure Python business logic (no web/RPC deps)
-  beatos-http/             FastAPI facade for the renderer
+  beatos-http/             FastAPI facade — serves the renderer API, /api/fs, and the web SPA
   beatos-mcp/              stdio MCP server for AI agents
   beatos-platforms/        Per-platform vocab maps
   pro/                     Private submodule — Pro features (platform publishing); absent in the free build
@@ -202,7 +219,7 @@ screenshots/               README assets
 
 ## Roadmap
 
-Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases, with `v0.1.0` reserved for the first publish adapter (NetEase Cloudmusic).
+Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases. The catalog, the AI/MCP surface, on-demand metadata export, and the **desktop + browser** front ends are shipped; platform publishing is a Pro module. Next up: the first packaged installer + publish adapter (NetEase Cloudmusic), and — for the web front end — remote/LAN access and a mobile layout.
 
 Full plan: [`ROADMAP.md`](ROADMAP.md) · Shipped history: [`CHANGELOG.md`](CHANGELOG.md).
 
