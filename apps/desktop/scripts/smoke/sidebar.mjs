@@ -28,13 +28,15 @@ export async function assertDropCreateApiPath(ctx) {
   }
 }
 
-// Assert the sidebar order — All Beats / Trash / Approvals / Lists
+// Assert the sidebar order — All Beats / Publish Center / Agent Actions / Trash / Lists
 // (footer is non-button so omitted). Replaces the v0.0.14 source reorder API
 // assertion which targeted the now-removed /api/sources/reorder route.
+// ("Approvals" was renamed to "Agent Actions" and Publish Center added — v0.0.47.)
 //
-// "All Beats", "Trash", "Approvals" each render as a single sidebar button whose
-// text starts with that label (count suffix appended, e.g. "All Beats5"). "Lists"
-// is a section header (plain text node, NOT a button). For each label we anchor
+// "All Beats", "Publish Center", "Agent Actions", "Trash" each render as a single
+// sidebar button whose text starts with that label (count suffix may be appended,
+// e.g. "All Beats5"). "Lists" is a section header (plain text node, NOT a button).
+// For each label we anchor
 // on the MOST SPECIFIC element containing it (shortest textContent) so a wrapper
 // that contains several labels never collapses them to the same top.
 export async function assertSidebarOrder(ctx) {
@@ -46,7 +48,7 @@ export async function assertSidebarOrder(ctx) {
       // For each "needle", record the top of the element with the SHORTEST
       // textContent containing it — i.e. the most specific (leaf) node, so a
       // wrapper that contains several labels never wins over the label itself.
-      const needles = ["All Beats", "Trash", "Approvals", "Lists"];
+      const needles = ["All Beats", "Publish Center", "Agent Actions", "Trash", "Lists"];
       const out = {};
       const all = Array.from(sidebar.querySelectorAll("*"));
       for (const needle of needles) {
@@ -66,7 +68,7 @@ export async function assertSidebarOrder(ctx) {
       failures.push("sidebar order: <aside> not found");
       return;
     }
-    const required = ["All Beats", "Trash", "Approvals", "Lists"];
+    const required = ["All Beats", "Publish Center", "Agent Actions", "Trash", "Lists"];
     const missing = required.filter((n) => positions[n] === undefined);
     if (missing.length > 0) {
       failures.push(
@@ -83,7 +85,9 @@ export async function assertSidebarOrder(ctx) {
         return;
       }
     }
-    console.log("smoke: sidebar order (All Beats → Trash → Approvals → Lists) PASS");
+    console.log(
+      "smoke: sidebar order (All Beats → Publish Center → Agent Actions → Trash → Lists) PASS",
+    );
   } catch (e) {
     failures.push(`sidebar order assertion error: ${e.message}`);
   }
