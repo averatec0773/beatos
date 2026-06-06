@@ -7,7 +7,10 @@ be gated off / replaced with uploads if a remote-access mode is ever added.
 """
 from __future__ import annotations
 
+import os
 import pathlib
+import subprocess
+import sys
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -79,3 +82,47 @@ async def fs_download(path: str = Query(...)) -> FileResponse:
     if not p.exists() or not p.is_file():
         raise HTTPException(status_code=404, detail="File not found.")
     return FileResponse(p, filename=p.name, media_type="application/octet-stream")
+
+
+class PathPayload(BaseModel):
+    path: str
+
+
+def _existing(path: str) -> pathlib.Path:
+    p = pathlib.Path(path).expanduser()
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Path not found.")
+    return p
+
+
+@router.post("/api/fs/reveal")
+async def fs_reveal(payload: PathPayload) -> dict:
+    """Reveal a file/folder in the OS file manager (Finder/Explorer)."""
+    p = _existing(payload.path)
+    try:
+        if sys.platform == "darwin":
+            subprocess.run(["open", "-R", str(p)], check=False)
+        elif sys.platform.startswith("win"):
+            subprocess.run(["explorer", "/select," + str(p)], check=False)
+        else:
+            subprocess.run(["xdg-open", str(p.parent)], check=False)
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"ok": True}
+
+
+@router.post("/api/fs/open")
+async def fs_open(payload: PathPayload) -> dict:
+    """Open a file/folder with the OS default handler. Returns {ok, error?}
+    (mirrors the Electron shell.openPath contract: empty error == success)."""
+    p = _existing(payload.path)
+    try:
+        if sys.platform == "darwin":
+            subprocess.run(["open", str(p)], check=False)
+        elif sys.platform.startswith("win"):
+            os.startfile(str(p))  # type: ignore[attr-defined]
+        else:
+            subprocess.run(["xdg-open", str(p)], check=False)
+    except OSError as e:
+        return {"ok": False, "error": str(e)}
+    return {"ok": True}
