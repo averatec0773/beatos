@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 
 export interface BulkAction {
@@ -28,6 +29,7 @@ interface Props {
  * action surface.
  */
 export function BulkActionBar({ count, actions, onClear }: Props): React.JSX.Element | null {
+  const { t } = useTranslation();
   if (count < 2) return null;
   return (
     <div
@@ -35,7 +37,7 @@ export function BulkActionBar({ count, actions, onClear }: Props): React.JSX.Ele
       className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-2 rounded-full bg-bg-elevated/95 border border-border-subtle shadow-lg backdrop-blur-sm select-none whitespace-nowrap"
     >
       <span className="text-xs text-text-secondary font-medium tabular-nums px-2 whitespace-nowrap">
-        {count} selected
+        {t("bulkBar.selected", { count })}
       </span>
       <div className="h-4 w-px bg-border-subtle" />
       {actions.map((a) =>
@@ -62,8 +64,8 @@ export function BulkActionBar({ count, actions, onClear }: Props): React.JSX.Ele
         type="button"
         onClick={onClear}
         className="text-text-tertiary hover:text-text-primary p-1 rounded"
-        aria-label="Clear selection"
-        title="Clear (Esc)"
+        aria-label={t("bulkBar.clearSelection")}
+        title={t("bulkBar.clearEsc")}
       >
         <X size={14} />
       </button>

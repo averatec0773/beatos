@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -13,13 +14,14 @@ interface Props {
 }
 
 export function SidebarItemContextMenu({ children, onRename, onDelete }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onSelect={onRename}>Rename</ContextMenuItem>
+        <ContextMenuItem onSelect={onRename}>{t("contextMenu.rename")}</ContextMenuItem>
         <ContextMenuItem onSelect={onDelete} className="text-danger">
-          Delete
+          {t("contextMenu.delete")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

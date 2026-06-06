@@ -23,10 +23,10 @@ describe("LicenseTiersSection free toggle", () => {
     updateMock.mockClear();
   });
 
-  it("toggling 免费 patches is_free", async () => {
+  it("toggling free patches is_free", async () => {
     const user = userEvent.setup();
     render(<LicenseTiersSection trackId={9} isFree={false} />);
-    const sw = await screen.findByLabelText(/免费/);
+    const sw = await screen.findByLabelText(/free non-commercial/i);
     await user.click(sw);
     await waitFor(() => expect(updateMock).toHaveBeenCalledWith(9, { is_free: true }));
   });

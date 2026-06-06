@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { X, Plus, ChevronDown, MoreHorizontal, Trash2, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Option {
@@ -38,6 +39,7 @@ export function ChipMultiSelect({
   onRenameOption,
   onDeleteOption,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string[]>(value);
   const [customInput, setCustomInput] = useState("");
@@ -208,7 +210,7 @@ export function ChipMultiSelect({
             }}
             autoFocus
             className="min-w-0 flex-1 rounded border border-border-subtle bg-bg-elevated px-2 py-0.5 text-xs focus:outline-none focus:border-accent"
-            aria-label="Rename value"
+            aria-label={t("chipSelect.renameValue")}
           />
           {onRenameOption && (
             <button
@@ -216,7 +218,7 @@ export function ChipMultiSelect({
               onClick={() => void commitRename()}
               disabled={manageBusy}
               className="rounded p-1 text-text-secondary hover:bg-bg-elevated disabled:opacity-50"
-              aria-label="Confirm rename"
+              aria-label={t("chipSelect.confirmRename")}
             >
               <Check className="h-3.5 w-3.5" />
             </button>
@@ -227,7 +229,7 @@ export function ChipMultiSelect({
               onClick={() => void commitDelete()}
               disabled={manageBusy}
               className="rounded p-1 text-danger hover:bg-bg-elevated disabled:opacity-50"
-              aria-label="Delete value globally"
+              aria-label={t("chipSelect.deleteValueGlobally")}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -237,7 +239,7 @@ export function ChipMultiSelect({
             onClick={cancelManage}
             disabled={manageBusy}
             className="rounded p-1 text-text-tertiary hover:bg-bg-elevated disabled:opacity-50"
-            aria-label="Cancel"
+            aria-label={t("common.cancel")}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -362,17 +364,17 @@ export function ChipMultiSelect({
                     disabled={atCap}
                     onChange={(e) => setCustomInput(e.target.value)}
                     onKeyDown={handleCustomKeyDown}
-                    placeholder={atCap ? "At max — remove a chip first" : "Type to add…"}
+                    placeholder={atCap ? t("chipSelect.atMax") : t("chipSelect.typeToAdd")}
                     className="min-w-0 flex-1 rounded border border-border-subtle bg-bg-elevated px-2 py-1 text-xs focus:outline-none focus:border-accent disabled:opacity-50"
                   />
                   <button
                     type="button"
-                    aria-label="Add custom value"
+                    aria-label={t("chipSelect.addCustomValue")}
                     disabled={atCap}
                     onClick={handleCustomAdd}
                     className="rounded border border-border-subtle px-2 py-1 text-xs hover:bg-bg-elevated focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Add
+                    {t("chipSelect.add")}
                   </button>
                 </div>
               </div>
@@ -380,7 +382,7 @@ export function ChipMultiSelect({
 
             {maxSelections != null && maxSelections > 1 && (
               <div className="border-t border-border-subtle px-3 py-1.5 text-[10px] text-text-tertiary">
-                {draft.length} / {maxSelections} selected
+                {t("chipSelect.selected", { count: draft.length, max: maxSelections })}
               </div>
             )}
 
@@ -390,14 +392,14 @@ export function ChipMultiSelect({
                 onClick={handleCancel}
                 className="rounded px-3 py-1 text-xs text-text-secondary hover:bg-bg-row-hover focus:outline-none"
               >
-                Cancel
+                {t("chipSelect.cancel")}
               </button>
               <button
                 type="button"
                 onClick={handleApply}
                 className="rounded px-3 py-1 text-xs focus:outline-none btn-primary"
               >
-                Apply
+                {t("chipSelect.apply")}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { tracks as tracksApi, type Track } from "@/api/tracks";
@@ -14,6 +15,7 @@ interface Props {
  *  Server-side search via tracks.list({ q }); picking a track hands its id back
  *  to the panel, which opens the existing PublishDialog. */
 export function PublishTrackPicker({ open, onClose, onPick }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,7 +53,7 @@ export function PublishTrackPicker({ open, onClose, onPick }: Props): React.JSX.
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Publish a track</DialogTitle>
+          <DialogTitle>{t("publishCenter.publishTrack")}</DialogTitle>
         </DialogHeader>
 
         <div className="mb-2 flex items-center gap-2 rounded-md border border-border-subtle bg-bg-elevated px-2.5 py-1.5">
@@ -60,16 +62,16 @@ export function PublishTrackPicker({ open, onClose, onPick }: Props): React.JSX.
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search tracks…"
+            placeholder={t("publishCenter.searchTracks")}
             className="w-full bg-transparent text-sm text-text-primary outline-none placeholder:text-text-tertiary"
           />
         </div>
 
         <div className="beatos-scroll flex max-h-[50vh] flex-col gap-0.5 overflow-y-auto">
           {loading ? (
-            <div className="px-2 py-3 text-xs text-text-tertiary">Searching…</div>
+            <div className="px-2 py-3 text-xs text-text-tertiary">{t("publishCenter.searching")}</div>
           ) : results.length === 0 ? (
-            <div className="px-2 py-3 text-xs text-text-tertiary">No tracks found</div>
+            <div className="px-2 py-3 text-xs text-text-tertiary">{t("publishCenter.noTracksFound")}</div>
           ) : (
             results.map((t) => (
               <button

@@ -1,31 +1,20 @@
 import React, { useEffect, useMemo } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { tracks } from "@/api/tracks";
 import { useTrashStore } from "@/stores/trash";
 import { useTrackStore } from "@/stores/tracks";
 import { useToastStore } from "@/stores/toast";
+import { useAppLanguageStore } from "@/stores/app-language";
+import { formatRelativeTime, formatDate } from "@/i18n/format";
 import { CoverImage } from "@/components/CoverImage";
 import { BulkActionBar, type BulkAction } from "@/components/BulkActionBar";
 
-function formatTrashedAt(deletedAt: string | null): string {
-  if (!deletedAt) return "unknown";
-  const date = new Date(deletedAt);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMinutes < 1) return "just now";
-  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? "" : "s"} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
-  if (diffDays === 1) return "yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return date.toLocaleDateString();
-}
-
 export function TrashPanel(): React.JSX.Element {
+  const { t } = useTranslation();
+  const lang = useAppLanguageStore((s) => s.language);
+
   const list = useTrashStore((s) => s.list);
   const refresh = useTrashStore((s) => s.refresh);
   const selectedIds = useTrashStore((s) => s.selectedIds);
@@ -71,14 +60,14 @@ export function TrashPanel(): React.JSX.Element {
     void useTrackStore.getState().refreshTotal();
     useToastStore
       .getState()
-      .show("success", ids.length === 1 ? "Restored 1 track" : `Restored ${ids.length} tracks`);
+      .show("success", t("trash.restored", { count: ids.length }));
   }
 
   async function onPurge(ids: number[], names?: string): Promise<void> {
     const msg =
       ids.length === 1
-        ? `Delete "${names ?? `#${ids[0]}`}" forever? This cannot be undone.`
-        : `Delete ${ids.length} tracks forever? This cannot be undone.`;
+        ? t("trash.deleteOneConfirm", { name: names ?? `#${ids[0]}` })
+        : t("trash.deleteManyConfirm", { count: ids.length });
     if (!confirm(msg)) return;
     for (const id of ids) {
       try {
@@ -90,36 +79,24 @@ export function TrashPanel(): React.JSX.Element {
     await refresh();
     useToastStore
       .getState()
-      .show(
-        "success",
-        ids.length === 1
-          ? "Permanently deleted 1 track"
-          : `Permanently deleted ${ids.length} tracks`,
-      );
+      .show("success", t("trash.deleted", { count: ids.length }));
   }
 
   async function onEmptyAll(): Promise<void> {
     if (list.length === 0) return;
-    if (
-      !confirm(
-        `Permanently delete ALL ${list.length} trashed track${
-          list.length === 1 ? "" : "s"
-        }? This cannot be undone.`,
-      )
-    )
-      return;
+    if (!confirm(t("trash.deleteAllConfirm", { count: list.length }))) return;
     const r = await tracks.purgeAllTrash();
     await refresh();
     useToastStore
       .getState()
-      .show("success", `Emptied trash (${r.purged} track${r.purged === 1 ? "" : "s"})`);
+      .show("success", t("trash.emptied", { count: r.purged }));
   }
 
   const bulkActions = useMemo<BulkAction[]>(
     () => [
       {
         key: "restore",
-        label: "Restore",
+        label: t("trash.restore"),
         icon: <RotateCcw size={14} />,
         onClick: async () => {
           const ids = Array.from(selectedIds);
@@ -129,7 +106,7 @@ export function TrashPanel(): React.JSX.Element {
       },
       {
         key: "purge",
-        label: "Delete forever",
+        label: t("trash.deleteForever"),
         icon: <Trash2 size={14} />,
         variant: "danger",
         onClick: async () => {
@@ -140,16 +117,16 @@ export function TrashPanel(): React.JSX.Element {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedIds, clearSelection],
+    [selectedIds, clearSelection, t],
   );
 
   return (
     <section className="beatos-scroll flex-1 overflow-y-auto p-8 relative rounded-xl beatos-card">
       <header className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold select-none">Trash</h1>
+        <h1 className="text-2xl font-bold select-none">{t("trash.title")}</h1>
         <div className="flex items-center gap-3">
           <span className="text-text-tertiary text-sm select-none">
-            {list.length} trashed track{list.length === 1 ? "" : "s"}
+            {t("trash.count", { count: list.length })}
           </span>
           {list.length > 0 && (
             <button
@@ -158,26 +135,27 @@ export function TrashPanel(): React.JSX.Element {
               className="text-xs px-3 py-1.5 rounded border border-danger text-danger hover:bg-danger/10"
               data-trash-empty-all
             >
-              Empty trash
+              {t("trash.emptyAll")}
             </button>
           )}
         </div>
       </header>
       {list.length === 0 ? (
-        <div className="text-text-tertiary text-sm py-12 text-center">Trash is empty.</div>
+        <div className="text-text-tertiary text-sm py-12 text-center">{t("trash.empty")}</div>
       ) : (
         <div className="space-y-2">
-          {list.map((t) => {
-            const isSelected = selectedIds.has(t.id);
+          {list.map((row) => {
+            const isSelected = selectedIds.has(row.id);
+            const trashedAtMs = row.deleted_at ? new Date(row.deleted_at).getTime() : null;
             return (
               <div
-                key={t.id}
+                key={row.id}
                 data-trash-row
                 data-trash-row-selected={isSelected || undefined}
                 onClick={(e) => {
-                  if (e.shiftKey) selectOne(t.id, "range");
-                  else if (e.metaKey || e.ctrlKey) selectOne(t.id, "toggle");
-                  else selectOne(t.id, "replace");
+                  if (e.shiftKey) selectOne(row.id, "range");
+                  else if (e.metaKey || e.ctrlKey) selectOne(row.id, "toggle");
+                  else selectOne(row.id, "replace");
                 }}
                 className={`flex items-center gap-3 p-3 rounded-md border bg-bg-elevated cursor-pointer select-none transition-colors ${
                   isSelected
@@ -185,30 +163,33 @@ export function TrashPanel(): React.JSX.Element {
                     : "border-border-subtle hover:bg-bg-row-hover"
                 }`}
               >
-                <CoverImage assetId={t.cover_asset_id ?? null} size={40} />
+                <CoverImage assetId={row.cover_asset_id ?? null} size={40} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{t.title}</div>
+                  <div className="text-sm font-medium truncate">{row.title}</div>
                   <div className="text-xs text-text-tertiary">
-                    Trashed {formatTrashedAt(t.deleted_at)}
+                    {t("trash.trashedPrefix")}{" "}
+                    {trashedAtMs != null
+                      ? formatRelativeTime(lang, trashedAtMs, Date.now())
+                      : formatDate(lang, new Date())}
                   </div>
                 </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    void onRestore([t.id]);
+                    void onRestore([row.id]);
                   }}
                   className="text-xs px-3 py-1.5 rounded border border-border-subtle hover:bg-bg-row-hover"
                 >
-                  Restore
+                  {t("trash.restore")}
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    void onPurge([t.id], t.title);
+                    void onPurge([row.id], row.title);
                   }}
                   className="text-xs px-3 py-1.5 rounded border border-danger text-danger hover:bg-danger/10"
                 >
-                  Delete forever
+                  {t("trash.deleteForever")}
                 </button>
               </div>
             );

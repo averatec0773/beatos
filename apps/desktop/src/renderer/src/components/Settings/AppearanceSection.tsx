@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   BACKDROP_INTENSITY_MAX,
@@ -15,6 +16,7 @@ import {
  * live (AsciiBackdrop reads the store) and persist across restarts.
  */
 export function AppearanceSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const enabled = useAppearanceStore((s) => s.backdropEnabled);
   const intensity = useAppearanceStore((s) => s.backdropIntensity);
   const speed = useAppearanceStore((s) => s.backdropSpeed);
@@ -26,10 +28,10 @@ export function AppearanceSection(): React.JSX.Element {
 
   return (
     <section className="mb-10">
-      <h2 className="text-lg font-semibold mb-3">Panels</h2>
+      <h2 className="text-lg font-semibold mb-3">{t("appearance.panels")}</h2>
       <div>
         <label className="flex items-center justify-between text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-2">
-          <span>Panel opacity</span>
+          <span>{t("appearance.panelOpacity")}</span>
           <span className="font-mono normal-case tracking-normal text-text-secondary">
             {cardOpacity}
           </span>
@@ -41,20 +43,20 @@ export function AppearanceSection(): React.JSX.Element {
           value={cardOpacity}
           onChange={(e) => setCardOpacity(Number(e.target.value))}
           className="w-full accent-white"
-          aria-label="Panel opacity"
+          aria-label={t("appearance.panelOpacity")}
         />
         <p className="mt-1 text-xs text-text-tertiary">
-          Lower = more of the backdrop shows through the cards.
+          {t("appearance.panelOpacityHint")}
         </p>
       </div>
 
-      <h2 className="text-lg font-semibold mb-3 mt-8">Background</h2>
+      <h2 className="text-lg font-semibold mb-3 mt-8">{t("appearance.background")}</h2>
 
       <label className="flex items-center justify-between gap-4 py-2">
         <span className="text-sm">
-          <span className="text-text-primary">ASCII glyph rain</span>
+          <span className="text-text-primary">{t("appearance.asciiRain")}</span>
           <span className="block text-xs text-text-tertiary mt-0.5">
-            Ambient monochrome character field behind the panels.
+            {t("appearance.asciiRainDesc")}
           </span>
         </span>
         <input
@@ -62,14 +64,14 @@ export function AppearanceSection(): React.JSX.Element {
           checked={enabled}
           onChange={(e) => setEnabled(e.target.checked)}
           className="h-4 w-4 accent-white"
-          aria-label="Enable ASCII backdrop"
+          aria-label={t("appearance.enableBackdrop")}
         />
       </label>
 
       <div className={enabled ? "" : "opacity-40 pointer-events-none"}>
         <div className="mt-4">
           <label className="flex items-center justify-between text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-2">
-            <span>Intensity</span>
+            <span>{t("appearance.intensity")}</span>
             <span className="font-mono normal-case tracking-normal text-text-secondary">
               {intensity}
             </span>
@@ -82,13 +84,13 @@ export function AppearanceSection(): React.JSX.Element {
             disabled={!enabled}
             onChange={(e) => setIntensity(Number(e.target.value))}
             className="w-full accent-white"
-            aria-label="Backdrop intensity"
+            aria-label={t("appearance.backdropIntensity")}
           />
         </div>
 
         <div className="mt-4">
           <label className="flex items-center justify-between text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-2">
-            <span>Speed</span>
+            <span>{t("appearance.speed")}</span>
             <span className="font-mono normal-case tracking-normal text-text-secondary">
               {speed}
             </span>
@@ -101,7 +103,7 @@ export function AppearanceSection(): React.JSX.Element {
             disabled={!enabled}
             onChange={(e) => setSpeed(Number(e.target.value))}
             className="w-full accent-white"
-            aria-label="Backdrop speed"
+            aria-label={t("appearance.backdropSpeed")}
           />
         </div>
       </div>

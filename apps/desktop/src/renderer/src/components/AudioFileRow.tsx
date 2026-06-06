@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { MoreHorizontal, AlertTriangle, RefreshCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { useAssetSlot } from "@/hooks/useAssetSlot";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function AudioFileRow({ trackId, role, label, extensions }: Props) {
+  const { t } = useTranslation();
   const { asset, pickAndAttach, detach, relocate, reveal } = useAssetSlot(
     trackId,
     role,
@@ -56,7 +58,7 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
       return;
     }
     if (!extensionAccepted(file.name)) {
-      alert(`${label} requires one of: ${extensions.join(", ")} (got ${file.name})`);
+      alert(t("fileRows.dropWrongType", { label, exts: extensions.join(", "), name: file.name }));
       return;
     }
     let absPath: string;
@@ -64,12 +66,12 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
       absPath = window.beatos.getPathForFile(file);
     } catch (err) {
       console.warn("[file-row drop] getPathForFile threw", err);
-      alert("Could not read file path. Try the + Add file button.");
+      alert(t("fileRows.getPathFailed"));
       return;
     }
     if (!absPath) {
       console.warn("[file-row drop] getPathForFile returned empty");
-      alert("Dropped file has no accessible path. Try the + Add file button.");
+      alert(t("fileRows.emptyPath"));
       return;
     }
     await pickAndAttach(asset != null, absPath);
@@ -86,13 +88,13 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
           {label}
         </span>
         <AlertTriangle size={14} className="text-danger" />
-        <span className="flex-1 text-sm text-danger truncate">Missing</span>
+        <span className="flex-1 text-sm text-danger truncate">{t("fileRows.missing")}</span>
         <button
           type="button"
           onClick={relocate}
           className="text-xs text-danger underline hover:no-underline inline-flex items-center gap-1"
         >
-          <RefreshCw size={10} /> Find file
+          <RefreshCw size={10} /> {t("fileRows.findFile")}
         </button>
       </div>
     );
@@ -121,7 +123,7 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
           onClick={() => pickAndAttach(false)}
           className="text-sm text-accent hover:underline"
         >
-          + Add file
+          {t("fileRows.addFile")}
         </button>
       </div>
     );
@@ -166,21 +168,21 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
             onClick={reveal}
             className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
-            Reveal in Finder
+            {t("fileRows.revealInFinder")}
           </button>
           <button
             type="button"
             onClick={() => pickAndAttach(true)}
             className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
-            Replace file…
+            {t("fileRows.replaceFile")}
           </button>
           <button
             type="button"
             onClick={detach}
             className="w-full text-left px-3 py-2 text-danger hover:bg-bg-row-hover"
           >
-            Detach
+            {t("fileRows.detach")}
           </button>
         </div>
       )}

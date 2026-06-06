@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { useTranslation } from "react-i18next";
 
 import { KeyPickerPopover } from "./KeyPickerPopover";
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function KeyPicker({ value, onChange }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -25,7 +27,7 @@ export function KeyPicker({ value, onChange }: Props) {
           ) : (
             <span className="flex items-center gap-1 text-text-tertiary">
               <Plus size={14} />
-              <span>Add key</span>
+              <span>{t("keyPicker.add")}</span>
             </span>
           )}
         </button>

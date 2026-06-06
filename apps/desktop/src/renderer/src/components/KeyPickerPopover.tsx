@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { parseKey, formatKey, type KeyMode } from "@/lib/parse-key";
 
 const FLAT_ROW_1 = ["Db", "Eb", null, "Gb", "Ab", "Bb"] as const;
@@ -20,6 +21,7 @@ function inferTab(note: string | null): Tab {
 }
 
 export function KeyPickerPopover({ initialValue, onCommit, onClear, onClose }: Props) {
+  const { t } = useTranslation();
   const seed = parseKey(initialValue);
   const [tab, setTab] = useState<Tab>(inferTab(seed?.note ?? null));
   const [note, setNote] = useState<string | null>(seed?.note ?? null);
@@ -44,14 +46,14 @@ export function KeyPickerPopover({ initialValue, onCommit, onClear, onClose }: P
           onClick={() => setTab("flat")}
           className={`flex-1 pb-2 text-sm ${tab === "flat" ? "border-b-2 border-accent" : "text-text-tertiary"}`}
         >
-          Flat keys
+          {t("keyPicker.flatKeys")}
         </button>
         <button
           type="button"
           onClick={() => setTab("sharp")}
           className={`flex-1 pb-2 text-sm ${tab === "sharp" ? "border-b-2 border-accent" : "text-text-tertiary"}`}
         >
-          Sharp keys
+          {t("keyPicker.sharpKeys")}
         </button>
       </div>
 
@@ -92,40 +94,40 @@ export function KeyPickerPopover({ initialValue, onCommit, onClear, onClose }: P
       <div className="flex gap-2 mb-4">
         <button
           type="button"
-          aria-label="Major"
+          aria-label={t("keyPicker.major")}
           data-selected={mode === "major" ? "true" : "false"}
           onClick={() => setMode("major")}
           className={`flex-1 h-10 rounded-md border ${mode === "major" ? "border-accent bg-accent/15" : "border-border-subtle hover:bg-bg-row-hover"}`}
         >
-          Major
+          {t("keyPicker.major")}
         </button>
         <button
           type="button"
-          aria-label="Minor"
+          aria-label={t("keyPicker.minor")}
           data-selected={mode === "minor" ? "true" : "false"}
           onClick={() => setMode("minor")}
           className={`flex-1 h-10 rounded-md border ${mode === "minor" ? "border-accent bg-accent/15" : "border-border-subtle hover:bg-bg-row-hover"}`}
         >
-          Minor
+          {t("keyPicker.minor")}
         </button>
       </div>
 
       <div className="flex items-center justify-between border-t border-border-subtle pt-3">
         <button
           type="button"
-          aria-label="Clear"
+          aria-label={t("common.clear")}
           onClick={handleClear}
           className="text-sm text-text-tertiary hover:underline"
         >
-          Clear
+          {t("common.clear")}
         </button>
         <button
           type="button"
-          aria-label="Save"
+          aria-label={t("common.save")}
           onClick={handleClose}
           className="px-4 py-1.5 rounded-md text-sm font-medium btn-primary"
         >
-          Save
+          {t("common.save")}
         </button>
       </div>
     </div>

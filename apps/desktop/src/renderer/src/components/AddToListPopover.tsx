@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ListPlus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useListStore } from "@/stores/lists";
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function AddToListPopover({ trackIds, onDone, excludeListId }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const allLists = useListStore((s) => s.all);
   const userLists = allLists.filter((l) => l.kind === "user" && l.id !== excludeListId);
@@ -32,12 +34,12 @@ export function AddToListPopover({ trackIds, onDone, excludeListId }: Props): Re
           data-bulk-add-to-list
         >
           <ListPlus size={14} />
-          Add to list
+          {t("contextMenu.addToList")}
         </button>
       </PopoverTrigger>
       <PopoverContent align="center" sideOffset={8} className="p-1 w-56">
         {userLists.length === 0 ? (
-          <div className="px-3 py-2 text-xs text-text-tertiary">No lists yet</div>
+          <div className="px-3 py-2 text-xs text-text-tertiary">{t("addToList.noLists")}</div>
         ) : (
           <div className="max-h-64 overflow-y-auto">
             {userLists.map((l) => (

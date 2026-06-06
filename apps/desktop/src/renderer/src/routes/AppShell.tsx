@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Outlet } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { TopBar } from "@/components/TopBar";
 import { SidebarPanel } from "@/components/Sidebar/SidebarPanel";
@@ -12,6 +13,7 @@ import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH, useSidebarPanelStore } from "@/st
 import { useAppearanceStore } from "@/stores/appearance";
 
 export function AppShell(): React.JSX.Element {
+  const { t } = useTranslation();
   const setSidebarWidth = useSidebarPanelStore((s) => s.setWidth);
   const sidebarCollapsed = useSidebarPanelStore((s) => s.collapsed);
 
@@ -42,7 +44,7 @@ export function AppShell(): React.JSX.Element {
         <SidebarPanel />
         {!sidebarCollapsed ? (
           <GutterResizer
-            ariaLabel="Resize sidebar"
+            ariaLabel={t("sidebar.resizeSidebar")}
             dataAttr="data-sidebar-resizer"
             getStartWidth={() => useSidebarPanelStore.getState().width}
             onResize={(w, dx) =>

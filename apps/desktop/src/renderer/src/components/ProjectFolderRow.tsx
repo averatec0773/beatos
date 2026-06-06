@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { FolderOpen, X } from "lucide-react";
 
 import { useToastStore } from "@/stores/toast";
@@ -17,6 +18,7 @@ export function ProjectFolderRow({
   projectPath: string | null;
   onChange: (path: string | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const showToast = useToastStore((s) => s.show);
 
   const pick = async (): Promise<void> => {
@@ -27,7 +29,7 @@ export function ProjectFolderRow({
   const open = async (): Promise<void> => {
     if (!projectPath) return;
     const err = await window.beatos.openPath(projectPath);
-    if (err) showToast("error", `Could not open folder: ${err}`);
+    if (err) showToast("error", t("projectFolder.openFailed", { error: err }));
   };
 
   if (!projectPath) {
@@ -38,12 +40,12 @@ export function ProjectFolderRow({
         className="flex items-center gap-3 px-3 py-2 rounded-md border border-dashed border-border-subtle"
       >
         <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-          工程文件夹
+          {t("projectFolder.label")}
         </span>
         <span className="text-text-tertiary text-sm">—</span>
         <div className="flex-1" />
         <button type="button" onClick={pick} className="text-sm text-accent hover:underline">
-          + 选择文件夹
+          {t("projectFolder.choose")}
         </button>
       </div>
     );
@@ -55,12 +57,12 @@ export function ProjectFolderRow({
       className="group flex items-center gap-3 px-3 py-2 rounded-md border border-border-subtle bg-bg-elevated"
     >
       <span className="w-[140px] shrink-0 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-        工程文件夹
+        {t("projectFolder.label")}
       </span>
       <button
         type="button"
         onClick={open}
-        title={`打开 ${projectPath}`}
+        title={t("projectFolder.openTitle", { path: projectPath })}
         className="flex-1 min-w-0 flex items-center gap-2 text-left text-sm text-text-primary hover:text-accent"
       >
         <FolderOpen size={14} className="shrink-0 text-text-secondary group-hover:text-accent" />
@@ -71,12 +73,12 @@ export function ProjectFolderRow({
         onClick={pick}
         className="shrink-0 text-xs text-text-secondary hover:text-text-primary hover:underline"
       >
-        更改
+        {t("projectFolder.change")}
       </button>
       <button
         type="button"
         onClick={() => onChange(null)}
-        aria-label="清除工程文件夹"
+        aria-label={t("projectFolder.clearAria")}
         className="shrink-0 w-7 h-7 flex items-center justify-center rounded hover:bg-bg-row-hover text-text-secondary opacity-0 group-hover:opacity-100"
       >
         <X size={14} />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   Dialog,
@@ -41,6 +42,7 @@ function specFor(f: FieldState): unknown | null {
 }
 
 function ModeToggle({ value, onChange }: { value: Mode; onChange: (m: Mode) => void }) {
+  const { t } = useTranslation();
   return (
     <div className="flex gap-1 text-xs">
       {(["add", "replace", "remove"] as Mode[]).map((m) => (
@@ -50,7 +52,11 @@ function ModeToggle({ value, onChange }: { value: Mode; onChange: (m: Mode) => v
           onClick={() => onChange(m)}
           className={`rounded px-2 py-0.5 ${value === m ? "bg-accent/20 text-text-primary" : "text-text-tertiary"}`}
         >
-          {m === "add" ? "追加" : m === "replace" ? "覆盖" : "移除"}
+          {m === "add"
+            ? t("dialogs.bulkEdit.modeAdd")
+            : m === "replace"
+              ? t("dialogs.bulkEdit.modeReplace")
+              : t("dialogs.bulkEdit.modeRemove")}
         </button>
       ))}
     </div>
@@ -58,6 +64,7 @@ function ModeToggle({ value, onChange }: { value: Mode; onChange: (m: Mode) => v
 }
 
 export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
+  const { t } = useTranslation();
   const [genre, setGenre] = useState<FieldState>(EMPTY);
   const [mood, setMood] = useState<FieldState>(EMPTY);
   const [producer, setProducer] = useState<FieldState>(EMPTY);
@@ -79,11 +86,11 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
     setBusy(true);
     try {
       const r = await bulk.update(ids, patch);
-      useToastStore.getState().show("success", `已更新 ${r.updated_count} 首`);
+      useToastStore.getState().show("success", t("dialogs.bulkEdit.updated", { count: r.updated_count }));
       await useTrackStore.getState().refresh();
       onDone();
     } catch {
-      useToastStore.getState().show("error", "批量编辑失败");
+      useToastStore.getState().show("error", t("dialogs.bulkEdit.failed"));
     } finally {
       setBusy(false);
     }
@@ -93,13 +100,13 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
     setBusy(true);
     try {
       const r = await bulk.applyLicenseTemplate(ids);
-      useToastStore.getState().show("success", `已套用 license 到 ${r.applied} 首`);
+      useToastStore.getState().show("success", t("dialogs.bulkEdit.licenseApplied", { count: r.applied }));
       await useTrackStore.getState().refresh();
       onDone();
     } catch {
       useToastStore
         .getState()
-        .show("error", "套用 license 模板失败（是否已在 Settings 配置默认 tiers？）");
+        .show("error", t("dialogs.bulkEdit.licenseFailed"));
     } finally {
       setBusy(false);
     }
@@ -109,13 +116,13 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>批量编辑 {ids.length} 首</DialogTitle>
-          <DialogDescription>留空的字段不会改动。</DialogDescription>
+          <DialogTitle>{t("dialogs.bulkEdit.title", { count: ids.length })}</DialogTitle>
+          <DialogDescription>{t("dialogs.bulkEdit.desc")}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-text-secondary">Genre</span>
+              <span className="text-xs text-text-secondary">{t("editor.genre")}</span>
               <ModeToggle
                 value={genre.mode}
                 onChange={(mode) => setGenre((s) => ({ ...s, mode }))}
@@ -128,13 +135,13 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
                 label: formatVocabLabel(g.en, "genre", vocabLocale),
               }))}
               onChange={(v) => setGenre((s) => ({ ...s, values: v }))}
-              placeholder="Add genre..."
-              popoverTitle="Genres"
+              placeholder={t("editor.addGenre")}
+              popoverTitle={t("editor.genres")}
             />
           </div>
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-text-secondary">Mood</span>
+              <span className="text-xs text-text-secondary">{t("editor.mood")}</span>
               <ModeToggle value={mood.mode} onChange={(mode) => setMood((s) => ({ ...s, mode }))} />
             </div>
             <ChipMultiSelect
@@ -145,13 +152,13 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
                 group: m.group,
               }))}
               onChange={(v) => setMood((s) => ({ ...s, values: v }))}
-              placeholder="Add mood..."
-              popoverTitle="Moods"
+              placeholder={t("editor.addMood")}
+              popoverTitle={t("editor.moods")}
             />
           </div>
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-text-secondary">Producer</span>
+              <span className="text-xs text-text-secondary">{t("editor.producer")}</span>
               <ModeToggle
                 value={producer.mode}
                 onChange={(mode) => setProducer((s) => ({ ...s, mode }))}
@@ -162,8 +169,8 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
               options={producer.values.map((v) => ({ value: v, label: v }))}
               onChange={(v) => setProducer((s) => ({ ...s, values: v }))}
               allowCustomAdd
-              placeholder="Add producer..."
-              popoverTitle="Producers"
+              placeholder={t("editor.addProducer")}
+              popoverTitle={t("editor.producers")}
             />
           </div>
           <button
@@ -172,12 +179,12 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
             onClick={() => void applyLicense()}
             className="self-start rounded-md border border-border-subtle px-3 py-1.5 text-xs hover:bg-bg-row-hover disabled:opacity-50"
           >
-            套用默认 license tiers
+            {t("dialogs.bulkEdit.applyDefaultTiers")}
           </button>
         </div>
         <DialogFooter className="mt-2">
           <button type="button" onClick={onClose} className="px-3 py-1.5 text-sm">
-            取消
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -185,7 +192,7 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
             onClick={() => void apply()}
             className="rounded-md px-3 py-1.5 text-sm disabled:opacity-50 btn-primary"
           >
-            应用到 {ids.length} 首
+            {t("dialogs.bulkEdit.apply", { count: ids.length })}
           </button>
         </DialogFooter>
       </DialogContent>

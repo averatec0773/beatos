@@ -37,8 +37,8 @@ describe("LicenseTiersSection share input", () => {
   it("edits share and persists it as a number", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<LicenseTiersSection trackId={1} isFree={false} />);
-    const inputs = await screen.findAllByLabelText(/分成/);
-    // first 分成 input belongs to the filled MP3 tier
+    const inputs = await screen.findAllByLabelText(/Share %/i);
+    // first Share % input belongs to the filled MP3 tier
     await user.type(inputs[0], "25");
     await vi.advanceTimersByTimeAsync(800);
     await waitFor(() => expect(updateMock).toHaveBeenCalled());
@@ -61,8 +61,8 @@ describe("LicenseTiersSection share input", () => {
     });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<LicenseTiersSection trackId={1} isFree={false} />);
-    // empty preset rows (WAV/STEMS) now expose a 分成 input too — there are 3 total
-    const inputs = await screen.findAllByLabelText(/分成/);
+    // empty preset rows (WAV/STEMS) now expose a Share % input too — there are 3 total
+    const inputs = await screen.findAllByLabelText(/Share %/i);
     expect(inputs.length).toBe(3); // MP3 (filled) + WAV + STEMS (empty)
     await user.type(inputs[1], "30"); // WAV empty row
     await vi.advanceTimersByTimeAsync(800);
@@ -90,8 +90,8 @@ describe("LicenseTiersSection share input", () => {
     await screen.findByText("MP3"); // loaded
     await user.click(screen.getByText("Add tier"));
     await user.type(screen.getByLabelText("Tier name"), "MIDI");
-    // the pending custom row now has its own 分成 input — the last one
-    const shareInputs = screen.getAllByLabelText(/分成/);
+    // the pending custom row now has its own Share % input — the last one
+    const shareInputs = screen.getAllByLabelText(/Share %/i);
     await user.type(shareInputs[shareInputs.length - 1], "40");
     await user.keyboard("{Enter}"); // commit
     await waitFor(() => expect(createMock).toHaveBeenCalled());

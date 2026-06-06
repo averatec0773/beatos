@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -13,6 +14,7 @@ function shouldShowBack(pathname: string): boolean {
 }
 
 export function TopBar(): React.JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const showBack = shouldShowBack(location.pathname);
@@ -38,7 +40,7 @@ export function TopBar(): React.JSX.Element {
         type="button"
         onClick={() => navigate("/")}
         className="text-[15px] font-semibold tracking-tight hover:text-accent"
-        aria-label="Go to All Beats"
+        aria-label={t("topbar.goAllBeats")}
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         BeatOS
@@ -50,8 +52,8 @@ export function TopBar(): React.JSX.Element {
             type="button"
             onClick={handleBack}
             className="text-text-secondary hover:text-text-primary hover:bg-bg-row-hover p-1.5 -ml-1 rounded-md transition-colors"
-            aria-label="Back"
-            title="Back"
+            aria-label={t("topbar.back")}
+            title={t("topbar.back")}
             data-topbar-back
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >

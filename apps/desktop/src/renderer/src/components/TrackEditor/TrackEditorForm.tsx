@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Wand2, Share2 } from "lucide-react";
 
 import type { Track } from "@/api/tracks";
@@ -23,6 +24,7 @@ export interface TrackEditorFormProps {
 }
 
 export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [exportOpen, setExportOpen] = useState(false);
 
   const vocabLocale = useVocabLocaleStore((s) => s.locale);
@@ -57,20 +59,20 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
               disabled={!track.has_audio || analyzing}
               onClick={runAnalyze}
               className="w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-border-subtle px-3 py-2 text-xs text-text-primary hover:bg-bg-row-hover disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-              title={!track.has_audio ? "Attach audio first" : "Analyze BPM and Key"}
+              title={!track.has_audio ? t("editor.analyzeTitleNeedsAudio") : t("editor.analyzeTitle")}
             >
               <Wand2 className="h-3.5 w-3.5" />
-              {analyzing ? "Analyzing…" : "Analyze audio"}
+              {analyzing ? t("editor.analyzing") : t("editor.analyze")}
             </button>
             <button
               type="button"
               data-export-button
               onClick={() => setExportOpen(true)}
               className="w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-border-subtle px-3 py-2 text-xs text-text-primary hover:bg-bg-row-hover"
-              title="导出元数据到平台"
+              title={t("editor.exportTitle")}
             >
               <Share2 className="h-3.5 w-3.5" />
-              导出元数据
+              {t("editor.export")}
             </button>
           </div>
 
@@ -81,7 +83,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                   htmlFor="track-title"
                   className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary"
                 >
-                  Title
+                  {t("editor.fieldTitle")}
                 </label>
                 <SaveIndicator
                   titleEmpty={titleEmpty}
@@ -134,7 +136,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
               </div>
               <div data-field="genre">
                 <label className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1">
-                  Genre
+                  {t("editor.genre")}
                 </label>
                 <ChipMultiSelect
                   value={track.genre ?? []}
@@ -143,8 +145,8 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                     label: formatVocabLabel(g.en, "genre", vocabLocale),
                   }))}
                   onChange={(v) => patch("genre", v.length ? v : null)}
-                  popoverTitle="Genres"
-                  placeholder="Add genre..."
+                  popoverTitle={t("editor.genres")}
+                  placeholder={t("editor.addGenre")}
                   maxSelections={1}
                 />
               </div>
@@ -153,7 +155,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
             <div className="grid grid-cols-2 gap-4">
               <div data-field="mood">
                 <label className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1">
-                  Mood
+                  {t("editor.mood")}
                 </label>
                 <ChipMultiSelect
                   value={track.mood ?? []}
@@ -163,22 +165,22 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
                     group: m.group,
                   }))}
                   onChange={(v) => patch("mood", v.length ? v : null)}
-                  popoverTitle="Moods"
-                  placeholder="Add mood..."
+                  popoverTitle={t("editor.moods")}
+                  placeholder={t("editor.addMood")}
                   maxSelections={3}
                 />
               </div>
               <div data-field="producer">
                 <label className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1">
-                  Producer
+                  {t("editor.producer")}
                 </label>
                 <ChipMultiSelect
                   value={track.producer ?? []}
                   options={producerOptions}
                   onChange={(v) => patch("producer", v.length ? v : null)}
                   allowCustomAdd
-                  popoverTitle="Producers"
-                  placeholder="Add producer..."
+                  popoverTitle={t("editor.producers")}
+                  placeholder={t("editor.addProducer")}
                   onRenameOption={async (oldV, newV) => {
                     await producersApi.rewrite([oldV], newV);
                     await refreshProducerOptions();
@@ -229,14 +231,14 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
 
         <section className="space-y-4">
           <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-            备注
+            {t("editor.notes")}
           </h3>
           <div>
             <label
               htmlFor="track-tags"
               className="block text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary mb-1"
             >
-              Tags (comma-separated)
+              {t("editor.tags")}
             </label>
             <input
               id="track-tags"

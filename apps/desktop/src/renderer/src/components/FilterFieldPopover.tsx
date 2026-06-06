@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { distinct } from "@/api/distinct";
 import { formatVocabLabel } from "@/data/vocab-label";
@@ -36,6 +37,7 @@ function MultiValuePicker({
   onApply: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const filters = useTrackQueryStore((s) => s.filters);
   const setProducerFilter = useTrackQueryStore((s) => s.setProducerFilter);
   const setGenreFilter = useTrackQueryStore((s) => s.setGenreFilter);
@@ -102,10 +104,10 @@ function MultiValuePicker({
         {FIELD_LABELS[field]}
       </div>
       <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5">
-        {loading && <span className="text-xs text-text-tertiary px-1 py-1">Loading…</span>}
-        {error && <span className="text-xs text-text-tertiary px-1 py-1">Failed to load</span>}
+        {loading && <span className="text-xs text-text-tertiary px-1 py-1">{t("filters.loading")}</span>}
+        {error && <span className="text-xs text-text-tertiary px-1 py-1">{t("filters.failedToLoad")}</span>}
         {!loading && !error && values.length === 0 && (
-          <span className="text-xs text-text-tertiary px-1 py-1">No values found</span>
+          <span className="text-xs text-text-tertiary px-1 py-1">{t("filters.noValuesFound")}</span>
         )}
         {!loading &&
           !error &&
@@ -130,10 +132,10 @@ function MultiValuePicker({
           onClick={onCancel}
           className="text-xs px-3 py-1.5 rounded text-text-tertiary hover:text-text-secondary"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button type="button" onClick={apply} className="text-xs px-3 py-1.5 rounded btn-primary">
-          Apply
+          {t("common.apply")}
         </button>
       </div>
     </div>
@@ -141,6 +143,7 @@ function MultiValuePicker({
 }
 
 function BpmPicker({ onApply, onCancel }: { onApply: () => void; onCancel: () => void }) {
+  const { t } = useTranslation();
   const filters = useTrackQueryStore((s) => s.filters);
   const setBpmRange = useTrackQueryStore((s) => s.setBpmRange);
 
@@ -157,12 +160,12 @@ function BpmPicker({ onApply, onCancel }: { onApply: () => void; onCancel: () =>
   return (
     <div className="flex flex-col gap-2">
       <div className="text-xs font-semibold text-text-tertiary uppercase tracking-wide px-1">
-        BPM Range
+        {t("filters.bpmRange")}
       </div>
       <div className="flex items-center gap-2">
         <input
           type="number"
-          placeholder="Min"
+          placeholder={t("filters.minPlaceholder")}
           value={minVal}
           onChange={(e) => setMinVal(e.target.value)}
           className="w-20 px-2 py-1 text-sm rounded border border-border-subtle bg-bg-base text-text-primary focus:outline-none focus:border-accent"
@@ -170,7 +173,7 @@ function BpmPicker({ onApply, onCancel }: { onApply: () => void; onCancel: () =>
         <span className="text-text-tertiary text-sm">–</span>
         <input
           type="number"
-          placeholder="Max"
+          placeholder={t("filters.maxPlaceholder")}
           value={maxVal}
           onChange={(e) => setMaxVal(e.target.value)}
           className="w-20 px-2 py-1 text-sm rounded border border-border-subtle bg-bg-base text-text-primary focus:outline-none focus:border-accent"
@@ -182,10 +185,10 @@ function BpmPicker({ onApply, onCancel }: { onApply: () => void; onCancel: () =>
           onClick={onCancel}
           className="text-xs px-3 py-1.5 rounded text-text-tertiary hover:text-text-secondary"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button type="button" onClick={apply} className="text-xs px-3 py-1.5 rounded btn-primary">
-          Apply
+          {t("common.apply")}
         </button>
       </div>
     </div>
@@ -195,6 +198,7 @@ function BpmPicker({ onApply, onCancel }: { onApply: () => void; onCancel: () =>
 type HasAudioValue = boolean | null;
 
 function HasAudioPicker({ onApply, onCancel }: { onApply: () => void; onCancel: () => void }) {
+  const { t } = useTranslation();
   const filters = useTrackQueryStore((s) => s.filters);
   const setHasAudio = useTrackQueryStore((s) => s.setHasAudio);
 
@@ -206,15 +210,15 @@ function HasAudioPicker({ onApply, onCancel }: { onApply: () => void; onCancel: 
   }
 
   const options: { label: string; val: HasAudioValue }[] = [
-    { label: "Any", val: null },
-    { label: "Yes", val: true },
-    { label: "No", val: false },
+    { label: t("filters.any"), val: null },
+    { label: t("filters.yes"), val: true },
+    { label: t("filters.no"), val: false },
   ];
 
   return (
     <div className="flex flex-col gap-2">
       <div className="text-xs font-semibold text-text-tertiary uppercase tracking-wide px-1">
-        Has Audio
+        {t("filters.hasAudio")}
       </div>
       <div className="flex flex-col gap-1">
         {options.map((opt) => (
@@ -238,10 +242,10 @@ function HasAudioPicker({ onApply, onCancel }: { onApply: () => void; onCancel: 
           onClick={onCancel}
           className="text-xs px-3 py-1.5 rounded text-text-tertiary hover:text-text-secondary"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button type="button" onClick={apply} className="text-xs px-3 py-1.5 rounded btn-primary">
-          Apply
+          {t("common.apply")}
         </button>
       </div>
     </div>

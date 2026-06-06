@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useTrackQueryStore } from "@/stores/track-query";
 import { useColumnWidthStore } from "@/stores/column-widths";
 import { ColumnResizer } from "@/components/ColumnResizer";
@@ -31,6 +32,7 @@ function SortButton({ column, label, buttonRef }: SortButtonProps): React.JSX.El
 }
 
 export function TableHeader(): React.JSX.Element {
+  const { t } = useTranslation();
   const widths = useColumnWidthStore((s) => s.widths);
 
   // Measure the title *grid track* (the cell wrapper), not the inner text
@@ -69,7 +71,7 @@ export function TableHeader(): React.JSX.Element {
       <button type="button" disabled className="cursor-default" data-column-cell="cover" />
 
       <div ref={titleCellRef} className="relative min-w-0" data-column-cell="title">
-        <SortButton column="title" label="Title" />
+        <SortButton column="title" label={t("tableHeader.title")} />
         <ColumnResizer
           columnKey="title"
           currentWidth={widths.title}
@@ -78,22 +80,22 @@ export function TableHeader(): React.JSX.Element {
       </div>
 
       <div className="relative min-w-0" data-column-cell="bpm">
-        <SortButton column="bpm" label="BPM" />
+        <SortButton column="bpm" label={t("tableHeader.bpm")} />
         <ColumnResizer columnKey="bpm" currentWidth={widths.bpm} onResizeStart={freezeTitle} />
       </div>
 
       <div className="relative min-w-0" data-column-cell="key_signature">
-        <SortButton column="key_signature" label="Key" />
+        <SortButton column="key_signature" label={t("tableHeader.key")} />
         <ColumnResizer columnKey="key" currentWidth={widths.key} onResizeStart={freezeTitle} />
       </div>
 
       <div className="relative min-w-0" data-column-cell="genre">
-        <SortButton column="genre" label="Genre" />
+        <SortButton column="genre" label={t("tableHeader.genre")} />
         <ColumnResizer columnKey="genre" currentWidth={widths.genre} onResizeStart={freezeTitle} />
       </div>
 
       <div className="min-w-0" data-column-cell="updated_at">
-        <SortButton column="updated_at" label="Updated" />
+        <SortButton column="updated_at" label={t("tableHeader.updated")} />
       </div>
     </div>
   );

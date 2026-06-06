@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Check, Copy, Rocket } from "lucide-react";
 
 import {
@@ -20,11 +21,12 @@ interface Props {
 }
 
 function CopyButton({ text }: { text: string }) {
+  const { t } = useTranslation();
   const [done, setDone] = useState(false);
   return (
     <button
       type="button"
-      aria-label="复制"
+      aria-label={t("dialogs.export.copyAria")}
       disabled={!text}
       onClick={async () => {
         await navigator.clipboard.writeText(text);
@@ -68,6 +70,7 @@ function FieldRow({ field }: { field: ExportField }) {
 }
 
 export function ExportDialog({ open, trackId, onClose }: Props) {
+  const { t } = useTranslation();
   const [platforms, setPlatforms] = useState<string[]>([]);
   const [platform, setPlatform] = useState<string>("netease");
   const [result, setResult] = useState<ExportResult | null>(null);
@@ -91,7 +94,7 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
       .forTrack(trackId, platform)
       .then((r) => !cancelled && setResult(r))
       .catch(() => {
-        if (!cancelled) useToastStore.getState().show("error", "导出失败");
+        if (!cancelled) useToastStore.getState().show("error", t("dialogs.export.failed"));
       });
     return () => {
       cancelled = true;
@@ -102,12 +105,12 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>导出元数据</DialogTitle>
-          <DialogDescription>逐字段复制到平台上传表单。</DialogDescription>
+          <DialogTitle>{t("dialogs.export.title")}</DialogTitle>
+          <DialogDescription>{t("dialogs.export.desc")}</DialogDescription>
         </DialogHeader>
         <div className="mb-2 flex items-center gap-2">
           <select
-            aria-label="平台"
+            aria-label={t("dialogs.export.platformAria")}
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
             className="rounded-md border border-border-subtle bg-transparent px-2 py-1 text-sm"
@@ -122,10 +125,10 @@ export function ExportDialog({ open, trackId, onClose }: Props) {
             type="button"
             onClick={() => setPublishOpen(true)}
             disabled={!publishAvailable || platforms.length === 0}
-            title={publishAvailable ? undefined : "Pro 功能 · 购买解锁"}
+            title={publishAvailable ? undefined : t("dialogs.export.proLocked")}
             className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-sm text-text-primary hover:bg-bg-row-hover disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Rocket className="h-3.5 w-3.5" /> 发布到平台
+            <Rocket className="h-3.5 w-3.5" /> {t("dialogs.export.publish")}
           </button>
         </div>
         <div className="max-h-[60vh] overflow-y-auto beatos-scroll">

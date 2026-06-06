@@ -1,5 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { useToastStore } from "@/stores/toast";
 
@@ -11,6 +12,7 @@ const VARIANT_CLASSES: Record<string, string> = {
 };
 
 export function Toast(): React.JSX.Element | null {
+  const { t } = useTranslation();
   const current = useToastStore((s) => s.current);
   if (!current) return null;
   const classes = VARIANT_CLASSES[current.variant] ?? VARIANT_CLASSES.info;
@@ -27,7 +29,7 @@ export function Toast(): React.JSX.Element | null {
           type="button"
           onClick={() => useToastStore.getState().dismiss()}
           className="text-zinc-400 hover:text-zinc-100"
-          aria-label="Dismiss"
+          aria-label={t("common.dismiss")}
         >
           <X className="h-4 w-4" />
         </button>

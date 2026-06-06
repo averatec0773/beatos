@@ -1,5 +1,6 @@
 import React from "react";
 import { Plus, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type Variant =
   | { variant: "no-tracks"; onAddTrack: () => void }
@@ -9,17 +10,18 @@ type Variant =
 type Props = Variant;
 
 export function EmptyState(props: Props): React.JSX.Element {
+  const { t } = useTranslation();
   if (props.variant === "no-tracks") {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-sm">
-          <h2 className="text-xl font-semibold text-text-primary">No tracks yet</h2>
-          <p className="mt-2 text-text-secondary text-sm">Add your first track to get started.</p>
+          <h2 className="text-xl font-semibold text-text-primary">{t("emptyState.noTracks")}</h2>
+          <p className="mt-2 text-text-secondary text-sm">{t("emptyState.noTracksDesc")}</p>
           <button
             onClick={props.onAddTrack}
             className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium btn-primary"
           >
-            <Plus size={14} /> Add Track
+            <Plus size={14} /> {t("emptyState.addTrack")}
           </button>
         </div>
       </div>
@@ -30,10 +32,10 @@ export function EmptyState(props: Props): React.JSX.Element {
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-sm">
           <h2 className="text-xl font-semibold text-text-primary">
-            List &ldquo;{props.listName}&rdquo; is empty
+            {t("emptyState.emptyList", { name: props.listName })}
           </h2>
           <p className="mt-2 text-text-secondary text-sm">
-            Drag tracks from All Beats to add them here.
+            {t("emptyState.emptyListDesc")}
           </p>
         </div>
       </div>
@@ -43,14 +45,14 @@ export function EmptyState(props: Props): React.JSX.Element {
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center max-w-sm">
         <h2 className="text-xl font-semibold text-text-primary">
-          No tracks match &ldquo;{props.query}&rdquo;
+          {t("emptyState.noResults", { query: props.query })}
         </h2>
-        <p className="mt-2 text-text-secondary text-sm">Try a shorter or different search.</p>
+        <p className="mt-2 text-text-secondary text-sm">{t("emptyState.noResultsDesc")}</p>
         <button
           onClick={props.onClear}
           className="mt-4 inline-flex items-center gap-2 text-sm text-text-tertiary hover:text-text-primary"
         >
-          <X size={12} /> Clear search
+          <X size={12} /> {t("emptyState.clearSearch")}
         </button>
       </div>
     </div>

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Rocket, Loader2, CheckCircle2, AlertCircle, MonitorSmartphone } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 import {
   Dialog,
@@ -19,27 +21,13 @@ interface Props {
   onClose: () => void;
 }
 
-const STAGE_LABELS: Record<string, string> = {
-  queued: "Queued",
-  launching: "Launching browser",
-  navigating: "Opening upload page",
-  uploading_audio: "Uploading preview audio",
-  uploading_cover: "Uploading cover",
-  filling_metadata: "Filling metadata",
-  uploading_deliverables: "Uploading deliverables",
-  submitting: "Submitting",
-  awaiting_review: "Waiting for you",
-  awaiting_sms: "Waiting for you",
-  done: "Done",
-  failed: "Failed",
-};
+// Stage labels are resolved via t() inside the component (see stageLabel below).
 
 // A publish stops polling on any of these terminal stages. awaiting_* are the
 // human gates: the engine filled+uploaded everything a machine can, and a person
 // finishes in the browser (read the agreement + SMS verify).
 const TERMINAL = new Set(["done", "failed", "awaiting_review", "awaiting_sms"]);
-const AWAITING_MSG =
-  "Auto-uploaded — finish the last step in the browser (read the agreement, then SMS-verify).";
+// Moved to publishDialog.awaitingMsg i18n key — rendered via t() inside the component.
 
 // Streamable PREVIEW (public): prefer tagged so the clean file isn't exposed.
 const PREVIEW_ROLE_PRIORITY = [
@@ -118,6 +106,7 @@ export function PublishDialog({
   platform = "netease",
   onClose,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [result, setResult] = useState<ExportResult | null>(null);
   const [trackAssets, setTrackAssets] = useState<Asset[]>([]);
   const [audioAssetId, setAudioAssetId] = useState<number | null>(null);
@@ -188,7 +177,7 @@ export function PublishDialog({
             }
             if (!mountedRef.current) return;
             setLoggingIn(false);
-            useToastStore.getState().show("error", "Login not completed");
+            useToastStore.getState().show("error", t("publishDialog.loginNotCompleted"));
           }
         } catch {
           /* keep polling */
@@ -197,7 +186,7 @@ export function PublishDialog({
     } catch {
       if (!mountedRef.current) return;
       setLoggingIn(false);
-      useToastStore.getState().show("error", "Couldn't start login");
+      useToastStore.getState().show("error", t("publishDialog.couldntStartLogin"));
     }
   }
 
@@ -229,7 +218,7 @@ export function PublishDialog({
       .forTrack(trackId, platform)
       .then((r) => !cancelled && setResult(r))
       .catch(() => {
-        if (!cancelled) useToastStore.getState().show("error", "Failed to load metadata");
+        if (!cancelled) useToastStore.getState().show("error", t("publishDialog.failedToLoadMetadata"));
       });
 
     assetsApi
@@ -251,7 +240,7 @@ export function PublishDialog({
         if (video) setVideoAssetId(video.id);
       })
       .catch(() => {
-        if (!cancelled) useToastStore.getState().show("error", "Failed to load assets");
+        if (!cancelled) useToastStore.getState().show("error", t("publishDialog.failedToLoadAssets"));
       });
 
     publishApi
@@ -271,7 +260,7 @@ export function PublishDialog({
     if (isDouyin ? videoAssetId == null : audioAssetId == null) {
       useToastStore
         .getState()
-        .show("warning", isDouyin ? "Select a promo video first" : "Select a preview audio first");
+        .show("warning", isDouyin ? t("publishDialog.selectPromoVideoFirst") : t("publishDialog.selectPreviewAudioFirst"));
       return;
     }
     setPublishing(true);
@@ -307,7 +296,7 @@ export function PublishDialog({
         }
       }, 1500);
     } catch {
-      useToastStore.getState().show("error", "Publish failed");
+      useToastStore.getState().show("error", t("publishDialog.publishFailed"));
       setPublishing(false);
     }
   }
@@ -315,7 +304,22 @@ export function PublishDialog({
   const stage = job?.stage;
   const isAwaiting = stage === "awaiting_review" || stage === "awaiting_sms";
   const inProgress = Boolean(job) && !TERMINAL.has(stage ?? "");
-  const stageLabel = stage ? (STAGE_LABELS[stage] ?? stage) : null;
+  const STAGE_KEY: Record<string, string> = {
+    queued: "publishDialog.stageQueued",
+    launching: "publishDialog.stageLaunching",
+    navigating: "publishDialog.stageNavigating",
+    uploading_audio: "publishDialog.stageUploadingAudio",
+    uploading_cover: "publishDialog.stageUploadingCover",
+    filling_metadata: "publishDialog.stageFillingMetadata",
+    uploading_deliverables: "publishDialog.stageUploadingDeliverables",
+    submitting: "publishDialog.stageSubmitting",
+    awaiting_review: "publishDialog.stageAwaitingReview",
+    awaiting_sms: "publishDialog.stageAwaitingSms",
+    done: "publishDialog.stageDone",
+    failed: "publishDialog.stageFailed",
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stageLabel = stage ? (STAGE_KEY[stage] ? i18n.t(STAGE_KEY[stage] as any) as string : stage) : null;
 
   const sectionCls = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-tertiary";
 
@@ -324,7 +328,7 @@ export function PublishDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Publish to platform
+            {t("publishDialog.publishToPlatform")}
             <span className="rounded border border-border-subtle px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-text-tertiary">
               {platform}
             </span>
@@ -335,7 +339,7 @@ export function PublishDialog({
           <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             <span className="flex items-center gap-2">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              Log in first
+              {t("publishDialog.logInFirst")}
             </span>
             <button
               type="button"
@@ -343,13 +347,13 @@ export function PublishDialog({
               onClick={() => void startLogin()}
               className="rounded border border-warning/50 px-2 py-0.5 text-warning hover:bg-warning/20 disabled:opacity-50"
             >
-              {loggingIn ? "Browser open…" : "Log in"}
+              {loggingIn ? t("publishDialog.browserOpen") : t("publishDialog.logIn")}
             </button>
           </div>
         )}
 
         {/* — upload slots — */}
-        <div className={`${sectionCls} mb-2`}>Files</div>
+        <div className={`${sectionCls} mb-2`}>{t("publishDialog.files")}</div>
         <div className="mb-4 flex flex-col gap-1.5">
           {isDouyin ? (
             <>
@@ -412,7 +416,7 @@ export function PublishDialog({
         </div>
 
         {/* — metadata review — */}
-        <div className={`${sectionCls} mb-2`}>Metadata</div>
+        <div className={`${sectionCls} mb-2`}>{t("publishDialog.metadata")}</div>
         <div className="max-h-[34vh] overflow-y-auto beatos-scroll pr-1">
           {specFields.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
@@ -429,7 +433,7 @@ export function PublishDialog({
           )}
           <div className="flex flex-col gap-2">
             {blockFields.map((f) => {
-              const v = f.value || (f.options.length ? f.options.join("、") : "");
+              const v = f.value || (f.options.length ? f.options.join("\u3001") : "");
               return (
                 <div key={f.key} className="flex flex-col gap-0.5">
                   <span className="text-[10px] uppercase tracking-wide text-text-tertiary">
@@ -450,19 +454,19 @@ export function PublishDialog({
             {isAwaiting && (
               <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
                 <MonitorSmartphone className="mt-0.5 h-4 w-4 shrink-0" />
-                <span className="leading-snug">{AWAITING_MSG}</span>
+                <span className="leading-snug">{t("publishDialog.awaitingMsg")}</span>
               </div>
             )}
             {stage === "done" && (
               <div className="flex items-center gap-2 rounded-md border border-success/40 bg-success/10 px-3 py-2 text-xs text-success">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>
-                  Published
+                  {t("publishDialog.published")}
                   {job?.result?.url && (
                     <>
                       {" — "}
                       <a href={job.result.url} target="_blank" rel="noreferrer" className="underline">
-                        View
+                        {t("publishDialog.view")}
                       </a>
                     </>
                   )}
@@ -472,7 +476,7 @@ export function PublishDialog({
             {stage === "failed" && (
               <div className="flex items-start gap-2 rounded-md border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span className="leading-snug">Publish failed: {job?.result?.error ?? job?.message}</span>
+                <span className="leading-snug">{t("publishDialog.publishFailedDetail", { error: job?.result?.error ?? job?.message })}</span>
               </div>
             )}
           </div>
@@ -482,7 +486,7 @@ export function PublishDialog({
           {inProgress && (
             <span className="flex items-center gap-1.5 text-xs text-text-secondary">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {stageLabel}…
+              {stageLabel ?? ""}…
             </span>
           )}
           <button
@@ -491,7 +495,7 @@ export function PublishDialog({
             disabled={publishing || sessionOk === false || (isDouyin ? videoAssetId == null : audioAssetId == null)}
             className="inline-flex items-center gap-1.5 rounded-md bg-text-primary px-3.5 py-1.5 text-sm font-medium text-bg-base hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Rocket className="h-3.5 w-3.5" /> Publish
+            <Rocket className="h-3.5 w-3.5" /> {t("publishDialog.publish")}
           </button>
         </div>
       </DialogContent>

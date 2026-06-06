@@ -8,11 +8,14 @@ TODO.md
 # Kept local-only: these stay on disk for Claude to read, but are not
 # published to this public repo. Cloud sync is handled separately via a
 # private repo (TODO); do NOT re-track them here.
-/.claude/
+# NOTE: no trailing slash — in git worktrees the post-checkout hook installs
+# these as SYMLINKS (not dirs), and a trailing-slash pattern matches dirs only,
+# so `git add -A` in a worktree would otherwise re-track the harness symlinks.
+/.claude
 /CLAUDE.md
 /AGENTS.md
-/conventions/
-/.codex/
+/conventions
+/.codex
 /memory/
 /docs/
 

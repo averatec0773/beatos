@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Image as ImageIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   assetId: number | null;
@@ -28,6 +29,7 @@ export function CoverImage({
   className = "",
   rounded = true,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [errored, setErrored] = useState(false);
   // Retry transient load failures (e.g. an aborted protocol fetch during rapid
   // track switching) instead of sticking on the placeholder forever. Reset on
@@ -54,7 +56,7 @@ export function CoverImage({
       <div
         style={wrapperStyle}
         className={`${wrapperClass} flex items-center justify-center bg-bg-elevated-hover text-text-tertiary`}
-        aria-label="No cover"
+        aria-label={t("common.noCover")}
       >
         <ImageIcon size={Math.max(12, size / 3)} />
       </div>

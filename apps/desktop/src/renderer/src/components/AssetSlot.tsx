@@ -7,6 +7,7 @@ import {
   Music,
   RefreshCw,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { useAssetStore } from "@/stores/assets";
 import { CoverImage } from "@/components/CoverImage";
@@ -36,6 +37,7 @@ function formatSize(bytes: number | null): string {
 }
 
 export function AssetSlot({ trackId, role, label, extensions }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const assetsForTrack = useAssetStore((s) => s.byTrack[trackId] ?? EMPTY);
   const attach = useAssetStore((s) => s.attach);
   const detach = useAssetStore((s) => s.detach);
@@ -69,7 +71,7 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
     try {
       await attach(trackId, role, picked, { replace });
     } catch (e) {
-      alert(`Attach failed: ${e instanceof Error ? e.message : String(e)}`);
+      alert(t("fileRows.attachFailed", { error: e instanceof Error ? e.message : String(e) }));
     }
   }
 
@@ -87,7 +89,7 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
     try {
       await relocate(trackId, asset.id, picked);
     } catch (e) {
-      alert(`Relocate failed: ${e instanceof Error ? e.message : String(e)}`);
+      alert(t("fileRows.relocateFailed", { error: e instanceof Error ? e.message : String(e) }));
     }
   }
 
@@ -116,13 +118,13 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
     return (
       <div className="aspect-square flex flex-col items-center justify-center gap-2 bg-bg-elevated border border-danger rounded-md text-danger p-2 text-center">
         <AlertTriangle size={16} />
-        <span className="text-xs">{label} · Missing</span>
+        <span className="text-xs">{label} · {t("fileRows.missing")}</span>
         <button
           type="button"
           onClick={onRelocate}
           className="mt-1 inline-flex items-center gap-1 text-xs underline hover:no-underline"
         >
-          <RefreshCw size={10} /> Find file
+          <RefreshCw size={10} /> {t("fileRows.findFile")}
         </button>
       </div>
     );
@@ -169,21 +171,21 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
             onClick={onReveal}
             className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
-            Reveal in Finder
+            {t("fileRows.revealInFinder")}
           </button>
           <button
             type="button"
             onClick={() => pickAndAttach(true)}
             className="w-full text-left px-3 py-2 hover:bg-bg-row-hover"
           >
-            Replace file…
+            {t("fileRows.replaceFile")}
           </button>
           <button
             type="button"
             onClick={onDetach}
             className="w-full text-left px-3 py-2 text-danger hover:bg-bg-row-hover"
           >
-            Detach
+            {t("fileRows.detach")}
           </button>
         </div>
       )}

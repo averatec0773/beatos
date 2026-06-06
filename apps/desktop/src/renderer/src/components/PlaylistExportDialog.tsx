@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FileArchive, FolderOpen, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   Dialog,
@@ -50,6 +51,7 @@ export function PlaylistExportDialog({
   listName,
   onClose,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [manifest, setManifest] = useState<ExportManifestItem[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [mode, setMode] = useState<ExportMode>("zip");
@@ -66,11 +68,11 @@ export function PlaylistExportDialog({
         setManifest(m);
         // Pre-check every existing (non-missing) file.
         const init = new Set<number>();
-        for (const t of m) for (const f of t.files) if (!f.missing) init.add(f.asset_id);
+        for (const track of m) for (const f of track.files) if (!f.missing) init.add(f.asset_id);
         setSelected(init);
       })
       .catch(() => {
-        if (!cancelled) useToastStore.getState().show("error", "无法读取歌单文件清单");
+        if (!cancelled) useToastStore.getState().show("error", t("dialogs.playlistExport.manifestFailed"));
       });
     return () => {
       cancelled = true;
@@ -80,8 +82,8 @@ export function PlaylistExportDialog({
   const { count, bytes } = useMemo(() => {
     let n = 0;
     let b = 0;
-    for (const t of manifest ?? [])
-      for (const f of t.files)
+    for (const track of manifest ?? [])
+      for (const f of track.files)
         if (selected.has(f.asset_id)) {
           n += 1;
           b += f.size_bytes ?? 0;
@@ -93,8 +95,8 @@ export function PlaylistExportDialog({
   const { allIds, groupIds } = useMemo(() => {
     const all: number[] = [];
     const groups: Record<string, number[]> = {};
-    for (const t of manifest ?? [])
-      for (const f of t.files) {
+    for (const track of manifest ?? [])
+      for (const f of track.files) {
         if (f.missing) continue;
         all.push(f.asset_id);
         for (const g of ROLE_GROUPS)
@@ -146,23 +148,23 @@ export function PlaylistExportDialog({
     const dest = await window.beatos.openFolderDialog();
     if (!dest) return;
     const items = manifest
-      .map((t) => ({
-        track_id: t.track_id,
-        asset_ids: t.files.filter((f) => selected.has(f.asset_id)).map((f) => f.asset_id),
+      .map((track) => ({
+        track_id: track.track_id,
+        asset_ids: track.files.filter((f) => selected.has(f.asset_id)).map((f) => f.asset_id),
       }))
       .filter((i) => i.asset_ids.length > 0);
     setBusy(true);
     try {
       const res = await listsApi.exportPackage(listId, { mode, dest, items });
       const toast = useToastStore.getState();
-      const skip = res.skipped.length ? `（跳过 ${res.skipped.length} 个缺失文件）` : "";
-      toast.show("success", `已导出 ${res.file_count} 个文件${skip}`);
+      const skip = res.skipped.length ? t("dialogs.playlistExport.skipped", { count: res.skipped.length }) : "";
+      toast.show("success", t("dialogs.playlistExport.exported", { count: res.file_count }) + skip);
       void window.beatos.revealInFinder(res.output_path);
       onClose();
     } catch (e) {
       useToastStore
         .getState()
-        .show("error", `导出失败：${e instanceof Error ? e.message : String(e)}`);
+        .show("error", t("dialogs.playlistExport.exportFailed", { error: e instanceof Error ? e.message : String(e) }));
     } finally {
       setBusy(false);
     }
@@ -172,9 +174,9 @@ export function PlaylistExportDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>导出歌单「{listName}」</DialogTitle>
+          <DialogTitle>{t("dialogs.playlistExport.title", { name: listName })}</DialogTitle>
           <DialogDescription>
-            勾选要打包的文件，按 track 分文件夹。可打包为 ZIP 或直接复制到文件夹。
+            {t("dialogs.playlistExport.desc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -189,27 +191,27 @@ export function PlaylistExportDialog({
               }`}
             >
               {m === "zip" ? <FileArchive size={14} /> : <FolderOpen size={14} />}
-              {m === "zip" ? "ZIP 压缩包" : "复制到文件夹"}
+              {m === "zip" ? t("dialogs.playlistExport.modeZip") : t("dialogs.playlistExport.modeCopy")}
             </button>
           ))}
         </div>
 
         {manifest != null && manifest.length > 0 && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <span className="beatos-eyebrow mr-1">批量</span>
+            <span className="beatos-eyebrow mr-1">{t("dialogs.playlistExport.bulk")}</span>
             <button
               type="button"
               onClick={() => setMany(allIds, true)}
               className="rounded-md border border-border-subtle px-2 py-0.5 text-xs hover:bg-bg-row-hover"
             >
-              全选
+              {t("common.selectAll")}
             </button>
             <button
               type="button"
               onClick={() => setSelected(new Set())}
               className="rounded-md border border-border-subtle px-2 py-0.5 text-xs hover:bg-bg-row-hover"
             >
-              清空
+              {t("common.clear")}
             </button>
             {ROLE_GROUPS.filter((g) => (groupIds[g.key]?.length ?? 0) > 0).map((g) => {
               const ids = groupIds[g.key];
@@ -234,30 +236,30 @@ export function PlaylistExportDialog({
 
         <div className="max-h-[46vh] overflow-y-auto beatos-scroll -mx-1 px-1">
           {manifest == null ? (
-            <div className="py-8 text-center text-sm text-text-tertiary">读取中…</div>
+            <div className="py-8 text-center text-sm text-text-tertiary">{t("dialogs.playlistExport.loading")}</div>
           ) : manifest.length === 0 ? (
-            <div className="py-8 text-center text-sm text-text-tertiary">歌单是空的。</div>
+            <div className="py-8 text-center text-sm text-text-tertiary">{t("dialogs.playlistExport.emptyList")}</div>
           ) : (
-            manifest.map((t) => {
-              const existing = t.files.filter((f) => !f.missing).map((f) => f.asset_id);
+            manifest.map((track) => {
+              const existing = track.files.filter((f) => !f.missing).map((f) => f.asset_id);
               const allOn = existing.length > 0 && existing.every((id) => selected.has(id));
               return (
-                <div key={t.track_id} className="border-b border-border-subtle py-2">
+                <div key={track.track_id} className="border-b border-border-subtle py-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       className="accent-white"
                       checked={allOn}
                       disabled={existing.length === 0}
-                      onChange={() => toggleTrack(t)}
+                      onChange={() => toggleTrack(track)}
                     />
-                    <span className="text-sm font-medium truncate">{t.title}</span>
-                    {t.files.length === 0 && (
-                      <span className="text-xs text-text-tertiary">无文件</span>
+                    <span className="text-sm font-medium truncate">{track.title}</span>
+                    {track.files.length === 0 && (
+                      <span className="text-xs text-text-tertiary">{t("dialogs.playlistExport.noFiles")}</span>
                     )}
                   </label>
                   <div className="mt-1 ml-6 flex flex-col gap-1">
-                    {t.files.map((f) => (
+                    {track.files.map((f) => (
                       <label
                         key={f.asset_id}
                         className={`flex items-center gap-2 text-xs ${
@@ -276,7 +278,7 @@ export function PlaylistExportDialog({
                         </span>
                         <span className="flex-1 truncate text-text-primary" title={f.filename}>
                           {f.filename}
-                          {f.missing && " (缺失)"}
+                          {f.missing && ` ${t("dialogs.playlistExport.missing")}`}
                         </span>
                         <span className="font-mono text-text-tertiary">
                           {formatBytes(f.size_bytes)}
@@ -292,7 +294,7 @@ export function PlaylistExportDialog({
 
         <div className="mt-3 flex items-center gap-3">
           <span className="text-xs text-text-tertiary">
-            已选 {count} 个文件{count > 0 ? ` · ${formatBytes(bytes)}` : ""}
+            {t("dialogs.playlistExport.selected", { count }) + (count > 0 ? ` · ${formatBytes(bytes)}` : "")}
           </span>
           <div className="flex-1" />
           <button
@@ -300,7 +302,7 @@ export function PlaylistExportDialog({
             onClick={onClose}
             className="rounded-md border border-border-subtle px-3 py-1.5 text-sm hover:bg-bg-row-hover"
           >
-            取消
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -309,7 +311,7 @@ export function PlaylistExportDialog({
             className="btn-primary inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             {busy ? <Loader2 size={14} className="animate-spin" /> : <FolderOpen size={14} />}
-            选择位置并导出
+            {t("dialogs.playlistExport.submit")}
           </button>
         </div>
       </DialogContent>

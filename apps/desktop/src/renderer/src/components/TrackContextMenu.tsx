@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Edit, Folder, Trash2, ListPlus, ListMinus, Share2 } from "lucide-react";
 
 import {
@@ -36,6 +37,7 @@ export function TrackContextMenu({
   onRemoveFromList,
   children,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   // IMPORTANT: select the stable `all` array, then derive userLists with useMemo.
   // Inline `s.all.filter(...)` would return a new array each call, causing
   // useSyncExternalStore to spin in an infinite re-render loop.
@@ -49,7 +51,7 @@ export function TrackContextMenu({
   }
 
   function onConfirmDelete(): void {
-    if (confirm(`Delete "${trackTitle}"?`)) onDelete();
+    if (confirm(t("contextMenu.deleteConfirm", { title: trackTitle }))) onDelete();
   }
 
   return (
@@ -57,12 +59,12 @@ export function TrackContextMenu({
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="w-52">
         <ContextMenuItem onClick={onEdit}>
-          <Edit size={14} className="mr-2" /> Edit
+          <Edit size={14} className="mr-2" /> {t("contextMenu.edit")}
         </ContextMenuItem>
         {userLists.length > 0 && (
           <ContextMenuSub>
             <ContextMenuSubTrigger>
-              <ListPlus size={14} className="mr-2" /> Add to list
+              <ListPlus size={14} className="mr-2" /> {t("contextMenu.addToList")}
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
               {userLists.map((l) => (
@@ -80,19 +82,19 @@ export function TrackContextMenu({
               onRemoveFromList?.();
             }}
           >
-            <ListMinus size={14} className="mr-2" /> Remove from this list
+            <ListMinus size={14} className="mr-2" /> {t("contextMenu.removeFromList")}
           </ContextMenuItem>
         )}
         <ContextMenuItem disabled={!audioPath} onClick={onReveal}>
-          <Folder size={14} className="mr-2" /> Reveal in Finder
+          <Folder size={14} className="mr-2" /> {t("contextMenu.revealInFinder")}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={onExport}>
-          <Share2 size={14} className="mr-2" /> 导出到平台…
+          <Share2 size={14} className="mr-2" /> {t("contextMenu.exportToPlatform")}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem className="text-danger" onClick={onConfirmDelete}>
-          <Trash2 size={14} className="mr-2" /> Delete
+          <Trash2 size={14} className="mr-2" /> {t("contextMenu.delete")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

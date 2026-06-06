@@ -23,18 +23,18 @@ describe("UploadTemplatesSection", () => {
 
   it("renders the four templates with current values", () => {
     render(<UploadTemplatesSection />);
-    expect(screen.getByLabelText("专辑名模板")).toHaveValue(DEFAULT_TEMPLATES.album_name);
-    expect(screen.getByLabelText("Beat 名称模板")).toHaveValue(DEFAULT_TEMPLATES.beat_name);
-    expect(screen.getByLabelText("Beat 说明模板")).toHaveValue(DEFAULT_TEMPLATES.beat_description);
-    expect(screen.getByLabelText("专辑描述模板")).toHaveValue(DEFAULT_TEMPLATES.album_description);
-    expect(screen.getByLabelText("制作人连接符")).toHaveValue(DEFAULT_TEMPLATES.prod_separator);
+    expect(screen.getByLabelText("Album name template")).toHaveValue(DEFAULT_TEMPLATES.album_name);
+    expect(screen.getByLabelText("Beat name template")).toHaveValue(DEFAULT_TEMPLATES.beat_name);
+    expect(screen.getByLabelText("Beat description template")).toHaveValue(DEFAULT_TEMPLATES.beat_description);
+    expect(screen.getByLabelText("Album description template")).toHaveValue(DEFAULT_TEMPLATES.album_description);
+    expect(screen.getByLabelText("Producer joiner")).toHaveValue(DEFAULT_TEMPLATES.prod_separator);
     expect(screen.queryByLabelText("制作人署名")).toBeNull();
   });
 
   it("editing a template persists to app_setting", async () => {
     const user = userEvent.setup();
     render(<UploadTemplatesSection />);
-    const input = screen.getByLabelText("Beat 名称模板");
+    const input = screen.getByLabelText("Beat name template");
     await user.clear(input);
     await user.type(input, "X");
     const lastCall = setMock.mock.calls.at(-1);
@@ -45,7 +45,7 @@ describe("UploadTemplatesSection", () => {
   it("editing the separator persists", async () => {
     const user = userEvent.setup();
     render(<UploadTemplatesSection />);
-    const input = screen.getByLabelText("制作人连接符");
+    const input = screen.getByLabelText("Producer joiner");
     await user.clear(input);
     await user.type(input, " & ");
     const lastCall = setMock.mock.calls.at(-1);
@@ -55,10 +55,10 @@ describe("UploadTemplatesSection", () => {
   it("edits the free prefix template field", async () => {
     const user = userEvent.setup();
     render(<UploadTemplatesSection />);
-    const input = await screen.findByLabelText("免费前缀");
+    const input = await screen.findByLabelText("Free prefix");
     await user.clear(input);
     await user.type(input, "【免费】");
-    await waitFor(() => expect(screen.getByLabelText("免费前缀")).toHaveValue("【免费】"));
+    await waitFor(() => expect(screen.getByLabelText("Free prefix")).toHaveValue("【免费】"));
   });
 
   it("reset restores defaults", async () => {
@@ -69,7 +69,7 @@ describe("UploadTemplatesSection", () => {
       }),
     );
     render(<UploadTemplatesSection />);
-    await user.click(screen.getByRole("button", { name: "重置默认" }));
+    await user.click(screen.getByRole("button", { name: "Reset to defaults" }));
     expect(useUploadTemplatesStore.getState().templates.prod_separator).toBe(
       DEFAULT_TEMPLATES.prod_separator,
     );

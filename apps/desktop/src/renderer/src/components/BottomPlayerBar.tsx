@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Play,
   Pause,
@@ -23,6 +24,7 @@ import { Button } from "./ui/button";
 import { formatPlayerSubtitle, formatTime } from "@/lib/format-player";
 
 export function BottomPlayerBar() {
+  const { t } = useTranslation();
   const currentTrackId = usePlayerStore((s) => s.currentTrackId);
   const status = usePlayerStore((s) => s.status);
   const position = usePlayerStore((s) => s.position);
@@ -40,7 +42,7 @@ export function BottomPlayerBar() {
   const selectedTrack = useTrackStore((s) => s.current);
   const track = useMemo(() => {
     if (currentTrackId == null) return selectedTrack;
-    return trackList.find((t) => t.id === currentTrackId) ?? null;
+    return trackList.find((item) => item.id === currentTrackId) ?? null;
   }, [currentTrackId, trackList, selectedTrack]);
 
   // UI-level engine bridge: initial volume / forceMuted + decode-error toast.
@@ -55,7 +57,7 @@ export function BottomPlayerBar() {
       console.warn("[player] decode error", err);
       useToastStore
         .getState()
-        .show("error", "Playback failed (decode). Click play to retry.", 6000);
+        .show("error", t("player.decodeFailedToast"), 6000);
     });
   }, []);
 
@@ -64,7 +66,7 @@ export function BottomPlayerBar() {
   const errored = status === "error";
 
   function getVisibleIds(): number[] {
-    return useTrackStore.getState().list.map((t) => t.id);
+    return useTrackStore.getState().list.map((item) => item.id);
   }
 
   function handleTogglePlay(): void {
@@ -144,7 +146,7 @@ export function BottomPlayerBar() {
             variant="ghost"
             disabled={!enabled}
             onClick={handlePrev}
-            aria-label="Previous"
+            aria-label={t("player.previous")}
           >
             <SkipBack className="h-4 w-4" />
           </Button>
@@ -155,8 +157,8 @@ export function BottomPlayerBar() {
             onClick={handleTogglePlay}
             data-play-button
             data-status={status}
-            aria-label={errored ? "Retry" : playing ? "Pause" : "Play"}
-            title={errored ? "Playback failed — click to retry" : undefined}
+            aria-label={errored ? t("player.retry") : playing ? t("player.pause") : t("player.play")}
+            title={errored ? t("player.retryTitle") : undefined}
             className={errored ? "ring-2 ring-red-500/60" : undefined}
           >
             {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -166,7 +168,7 @@ export function BottomPlayerBar() {
             variant="ghost"
             disabled={!enabled}
             onClick={handleNext}
-            aria-label="Next"
+            aria-label={t("player.next")}
           >
             <SkipForward className="h-4 w-4" />
           </Button>
@@ -198,7 +200,7 @@ export function BottomPlayerBar() {
           variant="ghost"
           disabled={!enabled}
           onClick={() => usePlayerStore.getState().toggleShuffle()}
-          aria-label="Shuffle"
+          aria-label={t("player.shuffle")}
           data-active={shuffle ? "true" : "false"}
         >
           <Shuffle className={`h-4 w-4 ${shuffle ? "text-accent" : ""}`} />
@@ -208,7 +210,7 @@ export function BottomPlayerBar() {
           variant="ghost"
           disabled={!enabled}
           onClick={() => usePlayerStore.getState().cycleRepeat()}
-          aria-label="Repeat"
+          aria-label={t("player.repeat")}
           data-mode={repeat}
         >
           {repeat === "one" ? (
@@ -221,7 +223,7 @@ export function BottomPlayerBar() {
           size="icon"
           variant="ghost"
           onClick={() => usePlayerStore.getState().toggleMute()}
-          aria-label={muted ? "Unmute" : "Mute"}
+          aria-label={muted ? t("player.unmute") : t("player.mute")}
         >
           {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </Button>
@@ -232,7 +234,7 @@ export function BottomPlayerBar() {
           value={[muted ? 0 : volume]}
           onValueChange={([v]) => usePlayerStore.getState().setVolume(v)}
           className="w-24"
-          aria-label="Volume"
+          aria-label={t("player.volume")}
         />
       </div>
     </footer>

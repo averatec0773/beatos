@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDndContext, useDroppable } from "@dnd-kit/core";
@@ -35,6 +36,7 @@ function SidebarListRow({
     id: `list-drop:${list.id}`,
     disabled: !activeIsTrack,
   });
+  const { t } = useTranslation();
   const rename = useListStore((s) => s.rename);
   const remove = useListStore((s) => s.remove);
   const collapsed = useSidebarPanelStore((s) => s.collapsed);
@@ -125,7 +127,7 @@ function SidebarListRow({
             <span className="flex-1 min-w-0 flex flex-col">
               <span className="truncate text-[15px] font-medium leading-tight">{list.name}</span>
               <span className="truncate text-[13px] text-text-tertiary leading-tight mt-0.5">
-                Playlist · {count} {count === 1 ? "track" : "tracks"}
+                {t("sidebar.listSubtitle", { count })}
               </span>
             </span>
           )}
@@ -135,8 +137,8 @@ function SidebarListRow({
       <DeleteSidebarItemDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={`Delete List "${list.name}"?`}
-        description="The list is removed but member tracks stay in your library."
+        title={t("sidebar.deleteListConfirm", { name: list.name })}
+        description={t("sidebar.deleteListDesc")}
         onConfirm={confirmDelete}
       />
     </>
@@ -170,6 +172,7 @@ function SortableListRow({
 }
 
 export function ListsSection({ activeListId }: { activeListId: number | null }): React.JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const allLists = useListStore((s) => s.all);
   const createList = useListStore((s) => s.create);
@@ -215,13 +218,13 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
             : "px-3 mb-1 flex items-center justify-between"
         }
       >
-        {!collapsed && <span className="beatos-eyebrow">Lists</span>}
+        {!collapsed && <span className="beatos-eyebrow">{t("sidebar.lists")}</span>}
         <button
           type="button"
           onClick={onAddListClick}
           className="text-text-tertiary hover:text-text-primary p-1.5 -mr-1 rounded-md hover:bg-bg-row-hover"
-          aria-label="Add List"
-          title="New playlist"
+          aria-label={t("sidebar.addList")}
+          title={t("sidebar.newPlaylist")}
         >
           <Plus size={18} />
         </button>
@@ -238,7 +241,7 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
               else if (e.key === "Escape") cancelNewList();
             }}
             onBlur={commitNewList}
-            placeholder="List name"
+            placeholder={t("sidebar.listNamePlaceholder")}
             className="w-full bg-bg-elevated border border-border-subtle rounded-md px-2 py-1 text-sm focus:outline-none focus:border-accent"
           />
         </div>
