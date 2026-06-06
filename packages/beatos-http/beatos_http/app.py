@@ -30,6 +30,7 @@ from beatos_http.routes import (
     batch_analysis,
     bulk,
     export,
+    fs,
     inject,
     licenses,
     lists,
@@ -171,6 +172,7 @@ def create_app() -> FastAPI:
     app.include_router(app_settings.router)
     app.include_router(tokens.router)
     app.include_router(batch_analysis.router)
+    app.include_router(fs.router)
 
     app.mount("/mcp", mcp_asgi_app)
 
