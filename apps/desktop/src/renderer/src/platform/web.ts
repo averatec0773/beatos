@@ -1,4 +1,13 @@
 import type { AssetKind, Platform } from "./types";
+import { useFileBrowserStore } from "@/stores/file-browser";
+
+async function postFs(path: string, body: unknown): Promise<Response> {
+  return fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
 /** Browser implementation. Phase 0 implements same-origin networking + the
  *  always-safe methods; file/system methods are degraded stubs that never throw
@@ -14,29 +23,43 @@ export const webPlatform: Platform = {
     window.open(url, "_blank", "noopener,noreferrer");
     return Promise.resolve();
   },
-  // --- Degraded stubs (Phase 1/2) — safe no-ops, never throw. ---
-  openFolderDialog: () => Promise.resolve(null),
-  openFileDialog: () => Promise.resolve(null),
-  // User-initiated native actions with no browser equivalent: warn so the
-  // degradation is visible during Phase-0 web testing instead of silently doing
-  // nothing (Phase 1 wires real downloads / a backend file browser).
-  revealInFinder: (path) => {
-    console.warn("[platform/web] revealInFinder is unavailable in the web build", path);
-    return Promise.resolve();
+  // --- Phase 1: wired to FileBrowserDialog + /api/fs endpoints ---
+  openFolderDialog: () => useFileBrowserStore.getState().request("folder"),
+  openFileDialog: (filters) => useFileBrowserStore.getState().request("file", filters),
+  // Same as openFolderDialog — both map to the folder file-browser in the web build
+  // (distinct IPC channels only on the Electron side).
+  pickFolder: () => useFileBrowserStore.getState().request("folder"),
+  revealInFinder: async (path) => {
+    await postFs("/api/fs/reveal", { path }).catch(() => {});
   },
-  openPath: () => Promise.resolve(""),
+  openPath: async (path) => {
+    try {
+      const res = await postFs("/api/fs/open", { path });
+      const body = (await res.json()) as { ok?: boolean; error?: string; detail?: string };
+      // Non-2xx (e.g. 404 path-not-found) returns FastAPI's {detail}, not {ok,error}.
+      if (!res.ok) return body.detail ?? "open failed";
+      return body.ok ? "" : (body.error ?? "open failed");
+    } catch (e) {
+      return e instanceof Error ? e.message : String(e);
+    }
+  },
   quitApp: () => Promise.resolve(),
   getHomePath: () => Promise.resolve(""),
   ensureDir: (dir) => Promise.resolve(dir),
   getDbPath: () => Promise.resolve(""),
   getRepoRoot: () => Promise.resolve(""),
   setDbPath: () => Promise.resolve({ restartRequired: false }),
-  pickFolder: () => Promise.resolve(null),
   testMcpConnection: () =>
     Promise.resolve({ ok: false as const, error: "MCP test is unavailable in the web app" }),
   onSidecarCrashed: () => () => {},
   startDragFile: (absPath) => {
-    console.warn("[platform/web] startDragFile is unavailable in the web build", absPath);
+    // Browsers can't drag a file to the OS; download it instead.
+    const a = document.createElement("a");
+    a.href = `/api/fs/download?path=${encodeURIComponent(absPath)}`;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   },
   getPathForFile: () => "",
   isAudioForceMuted: () => false,
