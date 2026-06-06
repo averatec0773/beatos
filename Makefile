@@ -1,11 +1,12 @@
 # BeatOS Makefile — top-level command runner.
 
-.PHONY: help dev dev-pro sync build test test-py clean
+.PHONY: help dev dev-pro web sync build test test-py clean
 
 help:
 	@echo "BeatOS targets:"
 	@echo "  make dev            — run uv sync, then electron-vite dev"
 	@echo "  make dev-pro        — dev with the private Pro engine (sync → install engine → dev)"
+	@echo "  make web            — build the browser SPA + serve it from the sidecar, open the browser"
 	@echo "  make sync           — uv sync (resolve Python workspace)"
 	@echo "  make test           — run Python tests (pytest)"
 	@echo "  make test-py        — uv run pytest packages/"
@@ -17,6 +18,9 @@ dev:
 
 dev-pro:
 	bash scripts/dev-pro.sh
+
+web:
+	bash scripts/web.sh
 
 sync:
 	uv sync
