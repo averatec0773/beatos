@@ -168,6 +168,9 @@ make web                               # browser: build the SPA + serve it from 
 npm run logs:tail                      # follow main.log + sidecar.jsonl  (from apps/desktop)
 ```
 
+> **No terminal?** Double-click **`start-beatos.bat`** (Windows) or **`start-beatos.command`** (macOS)
+> at the repo root — it checks/installs the prerequisites, then launches the browser or desktop app.
+
 ### Wire up the MCP server (Claude Desktop / Claude Code)
 
 The MCP server lives at `packages/beatos-mcp` and speaks stdio. Add to your MCP client config:
