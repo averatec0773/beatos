@@ -4,12 +4,18 @@ from __future__ import annotations
 import asyncio
 import datetime as _dt
 import json
-from typing import Awaitable, Callable, Literal
+from typing import Literal
 
 import aiosqlite
 from fastapi import APIRouter, HTTPException, Query
 from sse_starlette.sse import EventSourceResponse
 
+from beatos_core.approvals import (
+    ApplyHandlerNotFound,
+    apply_token,
+    register_apply_handler as register_approve_handler,
+    _APPLY_HANDLERS as _APPROVE_HANDLERS,
+)
 from beatos_core.db import resolve_db_path
 from beatos_core.two_phase import (
     RowVanishedError,
@@ -21,15 +27,10 @@ from beatos_core.two_phase import (
 
 router = APIRouter(prefix="/api/tokens", tags=["tokens"])
 
-
-_APPROVE_HANDLERS: dict[str, Callable[[aiosqlite.Connection, str], Awaitable[dict]]] = {}
-
-
-def register_approve_handler(tool_name: str):
-    def decorator(fn):
-        _APPROVE_HANDLERS[tool_name] = fn
-        return fn
-    return decorator
+# The 2PC apply registry + dispatcher now live in beatos_core.approvals so the
+# MCP auto-approve path can share them (see that module). `register_approve_handler`
+# and `_APPROVE_HANDLERS` are re-exported above for back-compat: handler modules and
+# tests import them from here unchanged; they register into the core registry.
 
 
 def _now() -> str:
@@ -96,15 +97,15 @@ async def approve_token(token: str) -> dict:
             raise HTTPException(
                 status_code=409, detail=f"Token not in pending state: {status}"
             )
-        handler = _APPROVE_HANDLERS.get(tool_name)
-        if not handler:
+
+        try:
+            result = await apply_token(conn, token)
+            await conn.commit()
+        except ApplyHandlerNotFound:
+            await conn.rollback()
             raise HTTPException(
                 status_code=400, detail=f"Unknown tool for approve: {tool_name}"
             )
-
-        try:
-            result = await handler(conn, token)
-            await conn.commit()
         except TokenError as e:
             await conn.rollback()
             raise HTTPException(status_code=409, detail=str(e))
