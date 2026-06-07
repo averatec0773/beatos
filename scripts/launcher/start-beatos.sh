@@ -32,6 +32,16 @@ open_url() {
   fi
 }
 
+# Open the SPA as a chromeless app window (Chrome/Edge --app=) so it looks like
+# a desktop app; fall back to a normal browser tab when neither is installed.
+open_app_window() {
+  if command -v open >/dev/null 2>&1; then
+    open -na "Google Chrome" --args --app="$1" 2>/dev/null && return
+    open -na "Microsoft Edge" --args --app="$1" 2>/dev/null && return
+  fi
+  open_url "$1"
+}
+
 echo ""
 printf '\033[35m  BeatOS 启动器\033[0m\n'
 echo "  ------------------------------------"
@@ -74,7 +84,22 @@ ok "前端依赖就绪"
 
 # ---------------------------------------------------------------- 4/5 uv sync + Pro
 step "[4/5] 同步 Python 依赖"
-uv sync || fail "Python 依赖同步失败（uv sync）。请检查网络后重试。"
+# A running instance holds the venv (Pro engine imports) and can break uv
+# sync's prune — if BeatOS is already up, just open the window.
+if port_busy "$PORT"; then
+  warn "BeatOS 已经在运行了 — 直接为你打开窗口。"
+  open_app_window "$URL"
+  sleep 2
+  exit 0
+fi
+if ! uv sync; then
+  # Most common cause: an orphan sidecar (python -m beatos_http, parent gone)
+  # still holds the venv — close it and retry once (same idea as dev:fresh).
+  warn "同步失败 — 正在关闭残留的 BeatOS 后台进程后重试…"
+  pkill -f "python -m beatos_http" 2>/dev/null || true
+  sleep 1
+  uv sync || fail "Python 依赖同步失败（uv sync）。请关闭所有 BeatOS 窗口后重试；若仍失败请检查网络。"
+fi
 ok "Python 依赖就绪"
 
 # Pro engine: uv sync prunes it every run (not a workspace member) — reinstall
@@ -107,13 +132,6 @@ if [ "$choice" = "2" ]; then
   exec npm run dev
 fi
 
-if port_busy "$PORT"; then
-  warn "BeatOS 已经在运行了 — 直接为你打开浏览器。"
-  open_url "$URL"
-  sleep 2
-  exit 0
-fi
-
 need_build=true
 head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
 if [ "$choice" != "3" ] && [ -f "$WEB_DIR/index.html" ] && [ -f "$MARKER" ] && [ -n "$head" ] \
@@ -132,7 +150,7 @@ step "正在启动 BeatOS…"
 (
   for _ in $(seq 1 60); do
     sleep 0.5
-    if port_busy "$PORT"; then open_url "$URL"; exit 0; fi
+    if port_busy "$PORT"; then open_app_window "$URL"; exit 0; fi
   done
 ) &
 

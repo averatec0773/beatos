@@ -43,6 +43,22 @@ function Refresh-Path {
               [Environment]::GetEnvironmentVariable("Path", "User")
 }
 
+# Open the SPA as a chromeless app window (Edge/Chrome --app=) so it looks like
+# a desktop app; fall back to a normal browser tab when neither is installed.
+function Open-AppWindow($url) {
+  $candidates = @(
+    "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+    "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+    "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+  )
+  foreach ($exe in $candidates) {
+    if ($exe -and (Test-Path $exe)) { Start-Process $exe -ArgumentList "--app=$url"; return }
+  }
+  Start-Process $url
+}
+
 try {
 
 Write-Host ""
@@ -102,8 +118,29 @@ Ok "前端依赖就绪"
 
 # ---------------------------------------------------------------- 4/5 uv sync + Pro
 Step "[4/5] 同步 Python 依赖"
+# A running instance locks venv DLLs (greenlet etc. via the Pro engine), which
+# breaks uv sync's prune — if BeatOS is already up, just open the window.
+if (Test-Port $Port) {
+  Warn "BeatOS 已经在运行了 — 直接为你打开窗口。"
+  Open-AppWindow $Url
+  Start-Sleep 2
+  exit 0
+}
 uv sync
-if ($LASTEXITCODE -ne 0) { Fail "Python 依赖同步失败（uv sync）。请检查网络后重试。" }
+if ($LASTEXITCODE -ne 0) {
+  # Most common cause: an orphan sidecar (python -m beatos_http, parent gone)
+  # still holds venv DLLs — close it and retry once (same idea as dev:fresh).
+  Warn "同步失败 — 正在关闭残留的 BeatOS 后台进程后重试…"
+  Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match "beatos_http" } |
+    ForEach-Object {
+      Warn "关闭残留进程 pid=$($_.ProcessId)"
+      Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+  Start-Sleep 1
+  uv sync
+  if ($LASTEXITCODE -ne 0) { Fail "Python 依赖同步失败（uv sync）。请关闭所有 BeatOS 窗口后重试；若仍失败请检查网络。" }
+}
 Ok "Python 依赖就绪"
 
 # Pro engine: uv sync prunes it every run (not a workspace member) — reinstall
@@ -140,13 +177,6 @@ if ($choice -eq "2") {
   exit $LASTEXITCODE
 }
 
-if (Test-Port $Port) {
-  Warn "BeatOS 已经在运行了 — 直接为你打开浏览器。"
-  Start-Process $Url
-  Start-Sleep 2
-  exit 0
-}
-
 $needBuild = $true
 $head = (git -C $Root rev-parse HEAD) 2>$null
 if (($choice -ne "3") -and (-not $Rebuild) -and (Test-Path (Join-Path $WebDir "index.html"))) {
@@ -180,7 +210,7 @@ foreach ($i in 1..60) {
 }
 if (-not $up) { Fail "服务启动失败。日志：apps\desktop\logs\sidecar.jsonl" }
 
-Start-Process $Url
+Open-AppWindow $Url
 Write-Host ""
 Ok "BeatOS 正在运行：$Url"
 Warn "保持本窗口开着；关闭本窗口即退出 BeatOS。"
