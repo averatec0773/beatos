@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from beatos_core.db import resolve_db_path, run_migrations
 from beatos_core.two_phase import cleanup_terminal_tokens
 from beatos_http import __version__
+from beatos_http.mcp_auth import get_mcp_token, guard_mcp_app
 from beatos_http.routes import (
     analysis,
     app_settings,
@@ -175,7 +176,10 @@ def create_app() -> FastAPI:
     app.include_router(batch_analysis.router)
     app.include_router(fs.router)
 
-    app.mount("/mcp", mcp_asgi_app)
+    # Guard /mcp with a per-process local token (advertised via the handshake,
+    # sent by the launcher). No-op when BEATOS_MCP_DISABLE_AUTH=1. /api/* and the
+    # web SPA are unaffected — they never use /mcp.
+    app.mount("/mcp", guard_mcp_app(mcp_asgi_app, get_mcp_token()))
 
     # Serve the built web SPA (browser frontend) when a build directory is
     # configured. Mounted LAST so /api/* and /mcp routes always win. HashRouter

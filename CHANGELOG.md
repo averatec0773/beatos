@@ -21,7 +21,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **Backdrop easter egg.** A small fraction of the ASCII glyph-rain columns spell a producer tag instead of random glyphs (editable list in `AsciiBackdrop.tsx`).
 - **MCP `search_tracks` pagination.** The agent-facing search tool now accepts an `offset` (mirroring `list_tracks`), so an MCP client can page through result sets larger than `limit` instead of being capped at the first page.
 - **Agent permission policy.** A single Settings → AI Integration control governs how MCP write tools are gated, with three modes (mirroring an AI coding agent's permission modes): **Confirm every action** (default — every agent write waits for your approval in Agent Actions), **Auto-approve all** (writes apply immediately — switching it on requires confirming a warning, and a persistent banner reminds you it's active), and **Read-only** (agent can read but not write). Auto-approved writes are still recorded in the Agent Actions history, so nothing the agent does is invisible.
-- **MCP publish tools (Pro).** Agents can now drive a publish responsibly up to the human gate: `list_publish_platforms`, `publish_session_status` (is the platform logged in?), and `list_publish_jobs` (recover an in-flight publish), plus `publish_track` gained a `dry_run` rehearsal, buyer-deliverable WAV/stems inputs, and platform validation. `publish_track` now also obeys the permission policy — under Confirm mode the browser opens only after you approve in Agent Actions, closing the one agent write that previously bypassed the approval gate.
+- **MCP publish tools (Pro).** Agents can now drive a publish responsibly up to the human gate: `list_publish_platforms`, `publish_session_status` (is the platform logged in?), and `list_publish_jobs` (recover an in-flight publish), plus `publish_track` gained a `dry_run` rehearsal, buyer-deliverable WAV/stems inputs, and platform validation. `publish_track` now also obeys the permission policy — under Confirm mode the browser opens only after you approve in Agent Actions, closing the one agent write that previously bypassed the approval gate. Publish job status now persists, so an in-flight publish survives a sidecar restart and `list_publish_jobs` can recover it.
 
 ### Changed
 
@@ -38,6 +38,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **Dropping a track into an empty playlist updates its cover immediately.** The cover mosaic / hero were keyed only on the list id, so a 0→1 membership change didn't re-fetch; they now track a membership version.
 - **Coverflow no longer overlaps the title.** The magnified focused cover could paint over the track title (worst with a two-line Genre/Mood block) because the fixed-height stage was being compressed inside the flex column; it's now `shrink-0`.
 - **Cover/focus no longer breaks when switching between a list and All Beats.** The focused track was kept stale across view changes, so the coverflow either rendered nothing or caught the focused cover mid-flight (floating off-center with an empty middle). The focused track is now reconciled against the new view (kept if present, else the first row auto-focuses), and the coverflow snaps to the new layout instead of animating covers across from their old slots.
+
+### Security
+
+- **Local MCP endpoint hardening.** The `/mcp` transport now requires a per-process token: the sidecar mints one, advertises it to the launcher via the handshake file, and the launcher passes it back as an `Authorization` header — so a stray local process can no longer reach the agent surface (it could before, with no auth). This matters most with Auto-approve on. The renderer and web SPA are unaffected (they use `/api/*`, never `/mcp`). Kill-switch: `BEATOS_MCP_DISABLE_AUTH=1`.
 
 ## [0.0.46] — 2026-06-02 — ASCII backdrop + waveform seek, floating top bar, panel opacity, player persistence
 

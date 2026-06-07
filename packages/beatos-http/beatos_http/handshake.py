@@ -14,6 +14,7 @@ class Handshake:
     port: int
     started_at: str
     pid: int
+    token: str | None = None
 
 
 def default_handshake_path() -> pathlib.Path:
@@ -36,8 +37,13 @@ def default_handshake_path() -> pathlib.Path:
     return base / "runtime" / "handshake.json"
 
 
-def write_handshake(port: int, path: pathlib.Path | None = None) -> pathlib.Path:
-    """Write the handshake JSON atomically. Returns the path written."""
+def write_handshake(
+    port: int, path: pathlib.Path | None = None, *, token: str | None = None
+) -> pathlib.Path:
+    """Write the handshake JSON atomically. Returns the path written.
+
+    `token` (when set) is the local /mcp auth token the launcher must echo back as
+    an Authorization header; omitted from the payload when None (auth disabled)."""
     path = path or default_handshake_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -45,6 +51,8 @@ def write_handshake(port: int, path: pathlib.Path | None = None) -> pathlib.Path
         "started_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
         "pid": os.getpid(),
     }
+    if token:
+        payload["token"] = token
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(payload), encoding="utf-8")
     tmp.replace(path)
@@ -59,4 +67,5 @@ def read_handshake(path: pathlib.Path | None = None) -> Handshake:
         port=int(data["port"]),
         started_at=str(data["started_at"]),
         pid=int(data["pid"]),
+        token=data.get("token"),
     )

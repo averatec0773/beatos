@@ -61,6 +61,7 @@ def run_launcher(
         data = json.loads(path.read_text())
         port = int(data["port"])
         pid = int(data["pid"])
+        token = data.get("token")  # optional: absent when /mcp auth is disabled
     except (json.JSONDecodeError, KeyError, ValueError) as e:
         raise DiscoveryError(f"handshake file malformed: {e}") from e
 
@@ -78,7 +79,12 @@ def run_launcher(
     target = f"http://127.0.0.1:{port}/mcp"
     # mcp-proxy >=0.10: --transport=streamablehttp targets the sidecar's
     # Streamable HTTP /mcp endpoint; bridges Claude Desktop stdio to it.
-    _exec(["mcp-proxy", "--transport=streamablehttp", target])
+    args = ["mcp-proxy"]
+    if token:
+        # Echo the sidecar's local token so the /mcp guard accepts the connection.
+        args += ["--headers", "Authorization", f"Bearer {token}"]
+    args += ["--transport=streamablehttp", target]
+    _exec(args)
 
 
 def main() -> None:

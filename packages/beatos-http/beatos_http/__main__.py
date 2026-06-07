@@ -61,7 +61,10 @@ class _HandshakeServer(uvicorn.Server):
 
     async def startup(self, sockets: list | None = None) -> None:
         await super().startup(sockets=sockets)
-        write_handshake(port=self._handshake_port)
+        # Advertise the /mcp local token (same cached value the guard enforces) so
+        # the launcher can echo it back as an Authorization header.
+        from beatos_http.mcp_auth import get_mcp_token
+        write_handshake(port=self._handshake_port, token=get_mcp_token())
 
 
 async def _serve(main_sock: socket.socket, main_port: int) -> None:

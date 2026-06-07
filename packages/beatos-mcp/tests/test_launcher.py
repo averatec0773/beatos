@@ -73,3 +73,25 @@ def test_healthy_calls_exec_with_mcp_proxy(tmp_path: Path) -> None:
     assert args[0] == "mcp-proxy"
     assert "--transport=streamablehttp" in args
     assert "http://127.0.0.1:9999/mcp" in args
+    assert "--headers" not in args  # no token in handshake → no auth header
+
+
+def test_token_in_handshake_adds_auth_header(tmp_path: Path) -> None:
+    path = tmp_path / "handshake.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "port": 9999, "pid": os.getpid(), "started_at": "x", "token": "sekret",
+    }))
+    captured = []
+    run_launcher(
+        handshake_path=path,
+        _exec=lambda args: captured.append(args),
+        _health_probe=lambda p: True,
+    )
+    args = captured[0]
+    i = args.index("--headers")
+    assert args[i + 1] == "Authorization"
+    assert args[i + 2] == "Bearer sekret"
+    # Still bridges to the same endpoint.
+    assert "--transport=streamablehttp" in args
+    assert "http://127.0.0.1:9999/mcp" in args
