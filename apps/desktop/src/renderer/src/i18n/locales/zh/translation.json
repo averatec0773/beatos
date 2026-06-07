@@ -95,6 +95,12 @@
     "freePrefixAria": "免费前缀",
     "resetDefaults": "重置默认"
   },
+  "banner": {
+    "autoApprove": {
+      "message": "Agent 自动批准已开启 —— MCP 写入工具将直接执行，无需确认。",
+      "dismiss": "关闭"
+    }
+  },
   "ai": {
     "title": "AI Integration",
     "desc": "让 Claude Desktop 等 AI 客户端通过 MCP 读取你的 BeatOS 曲库。v0.0.20 为只读。",
@@ -305,6 +311,19 @@
       "title": "标签显示",
       "desc": "编辑器、筛选器与曲目列表中 genre / mood 选项的显示语言。已存储的值不受影响。",
       "bilingual": "双语"
+    },
+    "agentPermissions": {
+      "title": "Agent 权限",
+      "desc": "控制 AI agent 连接时 MCP 写入工具的审批方式。",
+      "confirm": "逐条确认",
+      "confirmDesc": "每次 agent 写入都需要在 Agent Actions 中批准。",
+      "autoApprove": "全部自动批准",
+      "autoApproveDesc": "agent 写入将立即执行，无需确认。",
+      "readOnly": "只读",
+      "readOnlyDesc": "拒绝 agent 写入；读取仍正常。",
+      "autoApproveDialogTitle": "启用自动批准？",
+      "autoApproveDialogDesc": "agent 将能够直接写入你的曲库，无需每次请求批准。你随时可以关闭此选项。",
+      "autoApproveDialogContinue": "继续"
     },
     "storage": {
       "title": "存储",

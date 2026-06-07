@@ -21,6 +21,7 @@ import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { useAppLanguageStore } from "@/stores/app-language";
 import { usePlayerStore } from "@/stores/player";
 import { useProStore } from "@/stores/pro";
+import { useAgentPermissionStore } from "@/stores/agent-permission";
 
 interface ActiveDrag {
   trackId: number;
@@ -44,6 +45,8 @@ export default function App(): React.JSX.Element {
     // Probe the Pro engine once: the publish UI greys out unless the buyout
     // build answers /api/pro/status with {publish: true}.
     void useProStore.getState().loadProStatus();
+    // Load the persisted agent permission mode (defaults to "confirm").
+    void useAgentPermissionStore.getState().hydrate();
   }, []);
 
   // Distance-based activation prevents click-to-select from triggering a drag.

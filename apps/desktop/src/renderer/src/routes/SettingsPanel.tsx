@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { platform } from "@/platform";
+import { AgentPermissionSection } from "@/components/Settings/AgentPermissionSection";
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
 import { AppearanceSection } from "@/components/Settings/AppearanceSection";
 import { DefaultLicenseTiersSection } from "@/components/Settings/DefaultLicenseTiersSection";
@@ -149,6 +150,7 @@ export function SettingsPanel(): React.JSX.Element {
           {platform.kind === "electron" && (
             <>
               <StorageSection dbPath={dbPath} onDbPathChange={setDbPath} />
+              <AgentPermissionSection />
               <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
             </>
           )}
