@@ -13,6 +13,8 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
+from beatos_mcp.policy import submit_write
+from beatos_mcp.preview import build_preview
 from beatos_mcp.pro import pro_available
 from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
@@ -396,50 +398,99 @@ async def detach_assets(
 # --- Pro tools (registered only when the beatos-publish engine is present) ---
 
 if pro_available():
-    # Strong refs to in-flight publish tasks — asyncio only holds weak refs, so a
-    # fire-and-forget create_task() could be GC'd mid-run. Discarded on completion.
-    _publish_tasks: set = set()
+
+    @mcp.tool(annotations=_READ_ANNOTATIONS)
+    async def list_publish_platforms() -> dict:
+        """List platforms BeatOS can PUBLISH to (e.g. 'netease', 'douyin').
+
+        Distinct from list_export_platforms (which lists metadata-export targets):
+        call this before publish_track so you use a valid platform key."""
+        from beatos_publish.platforms import available
+        return {"platforms": available()}
+
+    @mcp.tool(annotations=_READ_ANNOTATIONS)
+    async def publish_session_status(
+        platform: Annotated[str | None, Field(description="Platform key to check; omit to check all publishable platforms.")] = None,
+    ) -> dict:
+        """Check login/session state per platform before publishing. Returns
+        {sessions: {platform: 'valid'|'expired'|'not_logged_in'}}. A valid session
+        is the #1 precondition for publish_track. NOTE: this launches a headless
+        browser per platform (seconds + cost) — call it deliberately, not in a loop."""
+        from beatos_publish.platforms import available
+        from beatos_publish.service import validate_session
+        platforms = [platform] if platform else available()
+        return {"sessions": {p: await validate_session(p) for p in platforms}}
+
+    @mcp.tool(annotations=_READ_ANNOTATIONS)
+    async def list_publish_jobs() -> dict:
+        """List all publish jobs known this session, for recovery after losing a
+        job_id. Returns {jobs: [{job_id, track_id, platform, stage, message,
+        result?}, ...]}. (Status is in-memory; a sidecar restart may clear it.)"""
+        from beatos_publish.jobs import REGISTRY
+        return {"jobs": [j.model_dump(mode="json") for j in REGISTRY.all()]}
 
     @mcp.tool(
         annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=True),
     )
     async def publish_track(
         track_id: Annotated[int, Field(description="Track id to publish.")],
-        platform: Annotated[str, Field(description="Platform key (e.g. 'netease', 'douyin').")],
+        platform: Annotated[str, Field(description="Platform key from list_publish_platforms (e.g. 'netease', 'douyin').")],
         audio_asset_id: Annotated[int | None, Field(description="Audio asset id (untagged) — required for music platforms like netease.")] = None,
         video_asset_id: Annotated[int | None, Field(description="Promo-video asset id — required for video platforms like douyin.")] = None,
         cover_asset_id: Annotated[int | None, Field(description="Cover image asset id, optional.")] = None,
+        deliverable_wav_asset_id: Annotated[int | None, Field(description="Buyer-deliverable lossless WAV asset id (netease 授权设置).")] = None,
+        deliverable_stems_asset_id: Annotated[int | None, Field(description="Buyer-deliverable stems-zip asset id (netease 授权设置).")] = None,
+        dry_run: Annotated[bool, Field(description="Fill the form but do NOT submit — a safe rehearsal.")] = False,
         account: Annotated[str, Field(description="Session account; default 'default'.")] = "default",
     ) -> dict:
-        """START publishing a track to a platform (Pro). Returns IMMEDIATELY with a
-        job_id — this does NOT complete the publish. It opens a (visible) browser on
-        the user's machine, fills the form and uploads files (which can be slow), then
-        PAUSES for a human at the platform's gate (netease: SMS code; douyin: review +
-        click 发布). Poll publish_status(job_id) for progress; a person must finish at
-        the browser. Requires a prior login and a desktop session with a display. Do NOT
-        retry on timeout — the job keeps running; check status."""
-        import asyncio
+        """START publishing a track to a platform (Pro). Subject to the agent
+        permission policy: under 'confirm' (default) this returns a 2PC token to
+        approve in BeatOS → Agent Actions (the browser opens only after approval);
+        under 'auto_approve' it starts immediately and returns a job_id.
 
-        from beatos_publish.jobs import REGISTRY
-        from beatos_publish.models import PublishRequest
-        from beatos_publish.service import run_job
-        req = PublishRequest(track_id=track_id, platform=platform,
-                             audio_asset_id=audio_asset_id, video_asset_id=video_asset_id,
-                             cover_asset_id=cover_asset_id, account=account)
-        job_id = REGISTRY.create(req)
-        task = asyncio.create_task(run_job(job_id, req))
-        _publish_tasks.add(task)
-        task.add_done_callback(_publish_tasks.discard)
-        return {
-            "job_id": job_id,
-            "status": "started",
-            "note": "Publish started in a browser; a human must finish at the platform's "
-                    "verification gate. Poll publish_status(job_id). Do not retry on timeout.",
+        This does NOT complete the publish: it opens a (visible) browser, fills the
+        form and uploads files (slow), then PAUSES for a human at the platform's gate
+        (netease: SMS code; douyin: review + click 发布). After approval, poll
+        publish_status(job_id). Requires a prior login (check publish_session_status)
+        and a desktop session with a display. Do NOT retry on timeout — check status.
+        Use dry_run=true to rehearse without submitting."""
+        from beatos_publish.platforms import available
+        if platform not in available():
+            raise ValueError(
+                f"unknown platform {platform!r}; call list_publish_platforms() for valid keys"
+            )
+        payload = {
+            "request": {
+                "track_id": track_id,
+                "platform": platform,
+                "account": account,
+                "audio_asset_id": audio_asset_id,
+                "video_asset_id": video_asset_id,
+                "cover_asset_id": cover_asset_id,
+                "deliverable_wav_asset_id": deliverable_wav_asset_id,
+                "deliverable_stems_asset_id": deliverable_stems_asset_id,
+                "dry_run": dry_run,
+            },
+            "preview": build_preview(
+                headline=f"Publish track #{track_id} to {platform}"
+                + (" (dry run — no submit)" if dry_run else ""),
+                sample=[
+                    f"platform: {platform}",
+                    f"audio_asset_id: {audio_asset_id}",
+                    f"video_asset_id: {video_asset_id}",
+                ],
+                warnings=[
+                    "Opens a real browser and uploads files; a human must finish at "
+                    "the platform's verification gate.",
+                ],
+                risk="external",
+            ),
         }
+        return await submit_write("publish_track", payload)
 
     @mcp.tool(annotations=_READ_ANNOTATIONS)
     async def publish_status(
-        job_id: Annotated[str, Field(description="The job_id returned by publish_track.")],
+        job_id: Annotated[str, Field(description="The job_id returned by publish_track (in await_approval's result, or list_publish_jobs).")],
     ) -> dict:
         """Poll a publish job started by publish_track (Pro). Returns
         {job_id, stage, message, result?}. Stages: queued/launching/navigating/

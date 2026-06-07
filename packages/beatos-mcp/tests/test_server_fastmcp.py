@@ -42,6 +42,9 @@ async def test_registered_tool_names() -> None:
     if pro_available():
         expected.add("publish_track")
         expected.add("publish_status")
+        expected.add("list_publish_platforms")
+        expected.add("publish_session_status")
+        expected.add("list_publish_jobs")
     assert names == expected
 
 

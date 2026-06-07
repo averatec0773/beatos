@@ -27,10 +27,14 @@ async def test_list_tools_includes_create_list_and_await_approval():
     assert "list_export_platforms" in names
     assert "export_metadata" in names
     # 8 read tools + create_list + await_approval + 3 lifecycle tools + 5 list-curation tools + 2 metadata tools + 3 ingest tools + set_license_tiers
-    # (+ publish_track and publish_status when the pro engine is present)
+    # (+ publish_track / publish_status / list_publish_platforms / publish_session_status
+    #  / list_publish_jobs when the pro engine is present)
     from beatos_mcp.pro import pro_available
     if pro_available():
         assert "publish_track" in names
         assert "publish_status" in names
-    expected_count = 26 if pro_available() else 24
+        assert "list_publish_platforms" in names
+        assert "publish_session_status" in names
+        assert "list_publish_jobs" in names
+    expected_count = 29 if pro_available() else 24
     assert len(tools) == expected_count
