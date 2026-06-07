@@ -20,6 +20,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **Playlist inline rename.** A playlist hero now has a rename affordance (pencil / double-click), not just the right-click menu.
 - **Backdrop easter egg.** A small fraction of the ASCII glyph-rain columns spell a producer tag instead of random glyphs (editable list in `AsciiBackdrop.tsx`).
 - **MCP `search_tracks` pagination.** The agent-facing search tool now accepts an `offset` (mirroring `list_tracks`), so an MCP client can page through result sets larger than `limit` instead of being capped at the first page.
+- **Agent permission policy.** A single Settings → AI Integration control governs how MCP write tools are gated, with three modes (mirroring an AI coding agent's permission modes): **Confirm every action** (default — every agent write waits for your approval in Agent Actions), **Auto-approve all** (writes apply immediately — switching it on requires confirming a warning, and a persistent banner reminds you it's active), and **Read-only** (agent can read but not write). Auto-approved writes are still recorded in the Agent Actions history, so nothing the agent does is invisible.
+- **MCP publish tools (Pro).** Agents can now drive a publish responsibly up to the human gate: `list_publish_platforms`, `publish_session_status` (is the platform logged in?), and `list_publish_jobs` (recover an in-flight publish), plus `publish_track` gained a `dry_run` rehearsal, buyer-deliverable WAV/stems inputs, and platform validation. `publish_track` now also obeys the permission policy — under Confirm mode the browser opens only after you approve in Agent Actions, closing the one agent write that previously bypassed the approval gate.
 
 ### Changed
 

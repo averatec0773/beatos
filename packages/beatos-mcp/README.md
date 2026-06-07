@@ -4,7 +4,9 @@ stdio MCP server exposing the BeatOS library to AI clients (Claude Desktop, Curs
 
 ## What this gives you
 
-24 tools — **9 read** + **15 write** in the free build (26 with Pro, which adds `publish_track` + `publish_status`). Note `grep -c '@mcp.tool' beatos_mcp/server.py` reports 26: the two Pro tools are defined under an `if pro_available()` guard and only register when the engine is present.
+24 tools — **9 read** + **15 write** in the free build (29 with Pro, which adds `publish_track`, `publish_status`, `list_publish_platforms`, `publish_session_status` + `list_publish_jobs`). Note `grep -c '@mcp.tool' beatos_mcp/server.py` reports 29: the Pro tools are defined under an `if pro_available()` guard and only register when the engine is present.
+
+MCP write tools obey a global **agent permission policy** (`agent_permission_mode` app setting): `confirm` (default — pending token, human approves in Agent Actions), `auto_approve` (apply immediately, still recorded), or `read_only` (writes refused). See `beatos_mcp/policy.py`.
 
 ### Read tools
 

@@ -50,7 +50,7 @@ A real SQLite database for every beat: title, BPM, key, genre (multi-value), moo
 
 ### 2. AI co-pilot (MCP)
 
-A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client — **24 tools** in the free build (**26** with Pro): read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Approvals panel.
+A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client — **24 tools** in the free build (**29** with Pro): read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Agent Actions panel. A permission setting lets you tune that: confirm every action (default), auto-approve all, or read-only.
 
 </td>
 <td width="33%" valign="top">
@@ -89,7 +89,7 @@ Both are **local-first and offline** — the browser app talks only to `127.0.0.
   <br/>
 </div>
 
-**Tools shipping today** (24 in the free build; the Pro build adds `publish_track` + `publish_status` for **26**):
+**Tools shipping today** (24 in the free build; the Pro build adds `publish_track`, `publish_status`, `list_publish_platforms`, `publish_session_status` + `list_publish_jobs` for **29**):
 
 | Surface | Tools |
 |---|---|
@@ -100,7 +100,7 @@ Both are **local-first and offline** — the browser app talks only to `127.0.0.
 | **Assets** | `attach_assets`, `detach_assets` |
 | **Flow control** | `await_approval` |
 
-**Why two-phase commit?** Every write tool returns a `token` (preview only) — nothing touches the database. The token surfaces in the **Approvals panel** in BeatOS; you review the diff, then confirm. The agent calls `await_approval` to learn the outcome. **An AI can never silently mutate your catalog**, batch-edit your producer credits, or trash a track without you signing off.
+**Why two-phase commit?** Every write tool returns a `token` (preview only) — nothing touches the database. The token surfaces in the **Agent Actions panel** in BeatOS; you review the diff, then confirm. The agent calls `await_approval` to learn the outcome. By default **an AI can never silently mutate your catalog**, batch-edit your producer credits, or trash a track without you signing off — unless you deliberately switch the permission setting to auto-approve (or lock it to read-only).
 
 **Why batches?** A folder-import of 50 tracks × 2 audio assets would otherwise be 100 approval clicks. `create_tracks` (≤100), `attach_assets` (≤500), `detach_assets` (≤500) all batch — one token, one click, atomic rollback if any file vanishes mid-approve.
 
