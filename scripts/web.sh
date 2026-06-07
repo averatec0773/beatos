@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# scripts/web.sh — build + serve the BeatOS web frontend (browser SPA).
+# scripts/web.sh — build + serve the BeatOS web frontend (browser SPA), FREE build.
 #
-# Unlike `make dev` (where Electron owns the sidecar), web mode serves the built
-# SPA AND the API from a single sidecar on a fixed port, then opens the browser.
+# The browser counterpart of `make dev`: serves the built SPA AND the API from a
+# single sidecar on a fixed port, then opens the browser. `uv sync` prunes the
+# private Pro engine (not a uv workspace member), so this is a clean non-Pro build
+# — the Publish Center stays a locked upsell. For the Pro variant use `make web-pro`.
 # Override the port with BEATOS_HTTP_PORT (default 8765) and the library with
 # BEATOS_DB_PATH (default ~/Music/BeatOS/global.db).
 
@@ -14,6 +16,9 @@ cd "$ROOT"
 PORT="${BEATOS_HTTP_PORT:-8765}"
 WEB_DIR="$ROOT/apps/desktop/out/web"
 URL="http://127.0.0.1:${PORT}/"
+
+echo "[web] uv sync (free build — prunes the Pro engine if it was installed)"
+uv sync
 
 echo "[web] building SPA…"
 ( cd "$ROOT/apps/desktop" && npm run build:web )

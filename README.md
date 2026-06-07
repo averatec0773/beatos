@@ -156,7 +156,7 @@ cd apps/desktop && npm install
 > **Pro build (publishing).** Publishing is a Pro feature in the private `packages/pro/`
 > submodule. With access to it: `git submodule update --init packages/pro`, then
 > `uv pip install -e packages/pro/beatos-publish --no-deps` + `uv pip install "patchright>=1.40"`, then
-> run with **`make dev-pro`** (reinstalls the engine after each `uv sync`, which `make dev` would otherwise prune).
+> run with **`make dev-pro`** (desktop) or **`make web-pro`** (browser) — each reinstalls the engine after `uv sync`, which the free `make dev` / `make web` prune.
 > Full steps in [`packages/pro-mount-notes.md`](packages/pro-mount-notes.md). Without it,
 > the free build runs normally and greys out the publish entry.
 
