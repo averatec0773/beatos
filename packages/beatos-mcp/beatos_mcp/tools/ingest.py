@@ -9,8 +9,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from beatos_core.two_phase import create_token
 from beatos_mcp.db import connect_writable
+from beatos_mcp.policy import submit_write
 from beatos_mcp.preview import build_preview
 
 _MAX_CREATE_ITEMS = 100
@@ -65,17 +65,7 @@ async def create_tracks(items: list[dict[str, Any]]) -> dict:
             warnings=[],
         ),
     }
-    async with connect_writable() as conn:
-        token = await create_token(conn, "create_tracks", payload)
-        async with conn.execute(
-            "SELECT expires_at FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            row = await cur.fetchone()
-    return {
-        "token": token,
-        "expires_at": row[0],
-        "message": "Awaiting human approval. Open BeatOS → Approvals.",
-    }
+    return await submit_write("create_tracks", payload)
 
 
 def _validate_role(value: Any, *, where: str) -> str:
@@ -204,17 +194,7 @@ async def attach_assets(items: list[dict[str, Any]]) -> dict:
         "items": items,
         "preview": build_preview(headline=headline, sample=sample, warnings=warnings),
     }
-    async with connect_writable() as conn:
-        token = await create_token(conn, "attach_assets", payload)
-        async with conn.execute(
-            "SELECT expires_at FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            row = await cur.fetchone()
-    return {
-        "token": token,
-        "expires_at": row[0],
-        "message": "Awaiting human approval. Open BeatOS → Approvals.",
-    }
+    return await submit_write("attach_assets", payload)
 
 
 async def detach_assets(items: list[dict[str, Any]]) -> dict:
@@ -253,14 +233,4 @@ async def detach_assets(items: list[dict[str, Any]]) -> dict:
         "items": items,
         "preview": build_preview(headline=headline, sample=sample, warnings=[]),
     }
-    async with connect_writable() as conn:
-        token = await create_token(conn, "detach_assets", payload)
-        async with conn.execute(
-            "SELECT expires_at FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            row = await cur.fetchone()
-    return {
-        "token": token,
-        "expires_at": row[0],
-        "message": "Awaiting human approval. Open BeatOS → Approvals.",
-    }
+    return await submit_write("detach_assets", payload)

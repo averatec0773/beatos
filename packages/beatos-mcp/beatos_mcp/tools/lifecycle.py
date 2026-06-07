@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import aiosqlite
 
-from beatos_core.two_phase import create_token
 from beatos_mcp.db import connect_writable
+from beatos_mcp.policy import submit_write
 from beatos_mcp.preview import build_preview, format_track_sample
 from beatos_mcp.validate import validate_ids
 
@@ -29,17 +29,9 @@ async def _fetch_titles(
 
 
 async def _emit_token(tool_name: str, payload: dict) -> dict:
-    async with connect_writable() as conn:
-        token = await create_token(conn, tool_name=tool_name, payload=payload)
-        async with conn.execute(
-            "SELECT expires_at FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            row = await cur.fetchone()
-    return {
-        "token": token,
-        "expires_at": row[0],
-        "message": "Awaiting human approval. Open BeatOS → Approvals.",
-    }
+    # Routes through the agent permission policy: pending token (confirm),
+    # immediate apply (auto_approve), or refusal (read_only).
+    return await submit_write(tool_name, payload)
 
 
 async def trash_tracks(ids: list[int]) -> dict:

@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from beatos_core.two_phase import create_token
 from beatos_mcp.db import connect_writable
+from beatos_mcp.policy import submit_write
 from beatos_mcp.preview import build_preview
 
 
@@ -190,14 +190,4 @@ async def set_license_tiers(track_id: int, tiers: list[dict[str, Any]]) -> dict:
         "tiers": normalized,
         "preview": build_preview(headline=headline, sample=sample_lines, warnings=[]),
     }
-    async with connect_writable() as conn:
-        token = await create_token(conn, "set_license_tiers", payload)
-        async with conn.execute(
-            "SELECT expires_at FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            exp = await cur.fetchone()
-    return {
-        "token": token,
-        "expires_at": exp[0],
-        "message": "Awaiting human approval. Open BeatOS → Approvals.",
-    }
+    return await submit_write("set_license_tiers", payload)

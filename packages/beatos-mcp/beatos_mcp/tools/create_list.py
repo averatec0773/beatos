@@ -7,9 +7,7 @@ confirmations (routed through POST /api/tokens/{t}/approve in beatos-http).
 AI can call await_approval(token) to read the eventual outcome."""
 from __future__ import annotations
 
-from beatos_core.two_phase import create_token
-
-from beatos_mcp.db import connect_writable
+from beatos_mcp.policy import submit_write
 
 _MAX_NAME_LEN = 200
 
@@ -22,24 +20,4 @@ async def create_list(name: str) -> dict:
     if len(name) > _MAX_NAME_LEN:
         raise ValueError(f"name must be at most {_MAX_NAME_LEN} characters")
 
-    async with connect_writable() as conn:
-        token = await create_token(
-            conn,
-            tool_name="create_list",
-            payload={"name": name},
-        )
-        async with conn.execute(
-            "SELECT expires_at FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            row = await cur.fetchone()
-        expires_at = row[0]
-
-    return {
-        "token": token,
-        "expires_at": expires_at,
-        "message": (
-            "Awaiting human approval. Open BeatOS → Settings → AI Integration "
-            "→ Pending confirmations, and click Approve. You can call "
-            "await_approval(token) to check status."
-        ),
-    }
+    return await submit_write("create_list", {"name": name})

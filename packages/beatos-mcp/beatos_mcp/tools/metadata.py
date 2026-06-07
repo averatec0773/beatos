@@ -12,8 +12,8 @@ from typing import Any
 
 import aiosqlite
 
-from beatos_core.two_phase import create_token
 from beatos_mcp.db import connect_writable
+from beatos_mcp.policy import submit_write
 from beatos_mcp.preview import build_preview, format_track_sample
 from beatos_mcp.validate import validate_ids
 
@@ -113,17 +113,7 @@ async def update_tracks(ids: list[int], patch: dict[str, Any]) -> dict:
             warnings=warnings,
         ),
     }
-    async with connect_writable() as conn:
-        token = await create_token(conn, "update_tracks", payload)
-        async with conn.execute(
-            "SELECT expires_at FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            row = await cur.fetchone()
-    return {
-        "token": token,
-        "expires_at": row[0],
-        "message": "Awaiting human approval. Open BeatOS → Approvals.",
-    }
+    return await submit_write("update_tracks", payload)
 
 
 async def merge_metadata(field: str, from_: list[str], to: str) -> dict:
@@ -169,14 +159,4 @@ async def merge_metadata(field: str, from_: list[str], to: str) -> dict:
         # Cache affected ids so handler does not need to scan again.
         "_affected_ids": affected_ids,
     }
-    async with connect_writable() as conn:
-        token = await create_token(conn, "merge_metadata", payload)
-        async with conn.execute(
-            "SELECT expires_at FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            row = await cur.fetchone()
-    return {
-        "token": token,
-        "expires_at": row[0],
-        "message": "Awaiting human approval. Open BeatOS → Approvals.",
-    }
+    return await submit_write("merge_metadata", payload)
