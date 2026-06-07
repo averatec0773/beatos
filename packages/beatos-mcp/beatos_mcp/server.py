@@ -13,7 +13,6 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from beatos_mcp.db import DBNotConfigured
 from beatos_mcp.pro import pro_available
 from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
@@ -127,10 +126,16 @@ async def list_distinct_values(
 async def search_tracks(
     query: Annotated[str, Field(description="Search string. Supports field tokens (genre:, mood:, producer:, key:, tag:), bpm:>140 / bpm:140-160, has:audio, quoted \"two words\", and bare words matched across title/description/producer/genre/mood/key.")],
     limit: Annotated[int | None, Field(ge=1, le=500, description="Default 50, max 500.")] = None,
+    offset: Annotated[int | None, Field(ge=0, description="Default 0. Page through results larger than `limit` (mirrors list_tracks).")] = None,
 ) -> dict:
     """Search tracks with the same query syntax humans use in the BeatOS search box.
-    Returns identical results to the in-app search. Returns {items, total, returned, limit, offset, hint?}."""
-    return await _search_tracks_impl(query=query, limit=limit if limit is not None else 50)
+    Returns identical results to the in-app search. Returns {items, total, returned, limit, offset, hint?}.
+    Use offset to page when total exceeds the returned count."""
+    return await _search_tracks_impl(
+        query=query,
+        limit=limit if limit is not None else 50,
+        offset=offset if offset is not None else 0,
+    )
 
 
 @mcp.tool(annotations=_READ_ANNOTATIONS)

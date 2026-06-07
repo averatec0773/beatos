@@ -23,6 +23,7 @@ from fastapi.staticfiles import StaticFiles
 
 from beatos_core.db import resolve_db_path, run_migrations
 from beatos_core.two_phase import cleanup_terminal_tokens
+from beatos_http import __version__
 from beatos_http.routes import (
     analysis,
     app_settings,
@@ -126,7 +127,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="BeatOS HTTP", version="0.0.4", lifespan=lifespan)
+    app = FastAPI(title="BeatOS HTTP", version=__version__, lifespan=lifespan)
 
     app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
 

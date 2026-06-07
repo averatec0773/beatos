@@ -19,6 +19,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **Playlist export.** A list can be packaged for sending out (beat pack for a singer, a loopkit): pick per-track and per-file what to include (with bulk-select by type — all WAVs, all MP3s, etc.), then export as a **ZIP** or a **plain folder copy**, one subfolder per track.
 - **Playlist inline rename.** A playlist hero now has a rename affordance (pencil / double-click), not just the right-click menu.
 - **Backdrop easter egg.** A small fraction of the ASCII glyph-rain columns spell a producer tag instead of random glyphs (editable list in `AsciiBackdrop.tsx`).
+- **MCP `search_tracks` pagination.** The agent-facing search tool now accepts an `offset` (mirroring `list_tracks`), so an MCP client can page through result sets larger than `limit` instead of being capped at the first page.
 
 ### Changed
 
@@ -30,6 +31,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Fixed
 
+- **MCP `ping` reported a stale version.** The version string was a hand-maintained literal that had drifted from the real release (stuck at `0.0.44`); it's now derived from the installed package metadata, so `ping` — and the sidecar's OpenAPI metadata — always report the actual version.
 - **Producer names are matched case-insensitively.** "Metro" and "metro" used to be two separate producers (an agent over MCP would create the divergent casing). Writes now reuse an existing producer's casing on a case-insensitive match across every path (UI edit, bulk edit, MCP create). A one-time merge of existing case-variants is available at `POST /api/producers/normalize-case` (merges to the most-used casing; `{"dry_run": true}` previews).
 - **Dropping a track into an empty playlist updates its cover immediately.** The cover mosaic / hero were keyed only on the list id, so a 0→1 membership change didn't re-fetch; they now track a membership version.
 - **Coverflow no longer overlaps the title.** The magnified focused cover could paint over the track title (worst with a two-line Genre/Mood block) because the fixed-height stage was being compressed inside the flex column; it's now `shrink-0`.

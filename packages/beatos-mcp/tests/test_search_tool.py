@@ -46,6 +46,24 @@ async def test_search_bpm_operator(fresh_db):
 
 
 @pytest.mark.asyncio
+async def test_search_offset_paginates(fresh_db):
+    """offset pages through results larger than limit (parity with list_tracks)."""
+    await _seed_track(fresh_db, title="A", genre=["trap"])
+    await _seed_track(fresh_db, title="B", genre=["trap"])
+    await _seed_track(fresh_db, title="C", genre=["trap"])
+    page1 = await search_tracks(query="genre:trap", limit=2, offset=0)
+    page2 = await search_tracks(query="genre:trap", limit=2, offset=2)
+    assert page1["total"] == 3
+    assert page1["offset"] == 0
+    assert len(page1["items"]) == 2
+    assert page2["offset"] == 2
+    assert len(page2["items"]) == 1
+    # Two pages together cover all three, no overlap.
+    titles = [t["title"] for t in page1["items"]] + [t["title"] for t in page2["items"]]
+    assert sorted(titles) == ["A", "B", "C"]
+
+
+@pytest.mark.asyncio
 async def test_search_underscore_is_literal(fresh_db):
     """'_' in the query must be a literal underscore, not a single-char wildcard."""
     await _seed_track(fresh_db, title="abc")

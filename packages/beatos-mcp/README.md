@@ -4,7 +4,7 @@ stdio MCP server exposing the BeatOS library to AI clients (Claude Desktop, Curs
 
 ## What this gives you
 
-22 tools — **7 read** + **15 write** (verify with `grep -c '@mcp.tool' beatos_mcp/server.py`).
+24 tools — **9 read** + **15 write** in the free build (26 with Pro, which adds `publish_track` + `publish_status`). Note `grep -c '@mcp.tool' beatos_mcp/server.py` reports 26: the two Pro tools are defined under an `if pro_available()` guard and only register when the engine is present.
 
 ### Read tools
 
@@ -16,6 +16,8 @@ stdio MCP server exposing the BeatOS library to AI clients (Claude Desktop, Curs
 | `list_lists()` | All user + system lists |
 | `list_distinct_values(field)` | producer / genre / mood / key vocabulary + counts |
 | `search_tracks(query)` | Full-text + structured-token search (`genre:trap`, `bpm:>=140`, …) |
+| `list_export_platforms()` | Platforms metadata can be exported for (e.g. `netease`) |
+| `export_metadata(track_id, platform)` | One track's metadata shaped for a platform's upload form |
 | `await_approval(token)` | Poll the status/result of any write token |
 
 ### Write tools (two-phase commit)

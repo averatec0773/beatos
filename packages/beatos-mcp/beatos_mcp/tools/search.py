@@ -5,7 +5,7 @@ from beatos_core.tracks.query_parser import parse_query
 from beatos_mcp.tools.tracks import list_tracks
 
 
-async def search_tracks(*, query: str, limit: int = 50) -> dict:
+async def search_tracks(*, query: str, limit: int = 50, offset: int = 0) -> dict:
     spec = parse_query(query)
     # tag: tokens have no dedicated filter column -> fold into free text,
     # IDENTICAL to the HTTP route (Task 4) so agent search == human search.
@@ -20,4 +20,5 @@ async def search_tracks(*, query: str, limit: int = 50) -> dict:
         has_audio=spec.has_audio,
         text=text,
         limit=limit,
+        offset=offset,
     )
