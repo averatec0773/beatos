@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/averatec0773-beatos-badge.png)](https://mseep.ai/app/averatec0773-beatos)
+
 <div align="center">
 
 <img src="apps/desktop/resources/icon.png" width="96" alt="BeatOS" />
