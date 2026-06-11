@@ -150,7 +150,11 @@ function stopSidecar(): void {
   sidecar = null;
   child.kill("SIGTERM");
   const killTimer = setTimeout(() => {
-    if (!child.killed) child.kill("SIGKILL");
+    // `child.killed` only means a signal was *sent*, not that the process died,
+    // so it's true immediately after SIGTERM and would gate out the SIGKILL.
+    // Check the real exit state instead, so a sidecar that ignores/hangs on
+    // SIGTERM still gets force-killed (no orphan uvicorn).
+    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
   }, SIDECAR_KILL_GRACE_MS);
   child.once("exit", () => clearTimeout(killTimer));
 }

@@ -253,7 +253,19 @@ export function useTrackEditorState(): TrackEditorState {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
-      if (e.key === "Escape") flushAndClose();
+      if (e.key !== "Escape") return;
+      // Don't double-fire: if a dialog (e.g. the analyze-result modal) already
+      // consumed Escape, or the user is mid-edit in a text field, let that win
+      // instead of ejecting them from the whole editor in the same keystroke.
+      if (e.defaultPrevented) return;
+      const el = e.target;
+      if (el instanceof HTMLElement) {
+        const tag = el.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable) {
+          return;
+        }
+      }
+      flushAndClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

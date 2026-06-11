@@ -67,4 +67,16 @@ describe("useTrackStore.refresh reconciles current against the new view", () => 
     await useTrackStore.getState().refresh();
     expect(useTrackStore.getState().current).toBeNull();
   });
+
+  it("surfaces a fetch error instead of silently showing an empty library", async () => {
+    listMock.mockRejectedValue(new Error("sidecar down"));
+    await useTrackStore.getState().refresh();
+    expect(useTrackStore.getState().list).toEqual([]);
+    expect(useTrackStore.getState().error).toBe("sidecar down");
+    expect(useTrackStore.getState().loading).toBe(false);
+    // A subsequent successful refresh clears the error.
+    listMock.mockResolvedValue([track(1)]);
+    await useTrackStore.getState().refresh();
+    expect(useTrackStore.getState().error).toBeNull();
+  });
 });

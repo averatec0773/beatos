@@ -69,6 +69,12 @@ class AudioEngine {
   private offsetAtStart = 0;
   private contextTimeAtStart = 0;
   private status: EngineStatus = "idle";
+  // Monotonic guard so two interleaved load() calls can't clobber each other.
+  // load() yields on the buffer-decode await; if a newer load() starts during
+  // that gap it takes ownership, and the older call must not overwrite the
+  // (possibly playing) player the newer one installed — that produced zombie
+  // audio playing under a frozen "paused" UI on a fast-switch after a slow load.
+  private loadToken = 0;
   private volume = 1;
   private muted = false;
   private forceMuted = false;
@@ -97,6 +103,8 @@ class AudioEngine {
       return;
     }
 
+    const token = ++this.loadToken;
+
     this.stopRaf();
     if (this.player) {
       this.player.stop();
@@ -118,14 +126,23 @@ class AudioEngine {
         buf = await new Tone.ToneAudioBuffer().load(platform.assetUrl("audio", assetId));
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e));
-        this.currentAssetId = null;
-        this.cachedDuration = 0;
-        this.setStatus("error");
-        this.emit("error", err);
+        // Only surface the failure if this load still owns the engine — a
+        // superseded load's error must not clobber the newer track's state.
+        if (token === this.loadToken) {
+          this.currentAssetId = null;
+          this.cachedDuration = 0;
+          this.setStatus("error");
+          this.emit("error", err);
+        }
         throw err;
       }
       this.cacheBuffer(assetId, buf);
     }
+
+    // A newer load() started while we were decoding — it now owns the player /
+    // asset / status. Bail without touching them (our buffer is cached above
+    // for reuse), else we'd overwrite a playing track with this stale buffer.
+    if (token !== this.loadToken) return;
 
     this.currentAssetId = assetId;
     this.cachedDuration = buf.duration;

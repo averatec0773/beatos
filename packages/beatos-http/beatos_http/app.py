@@ -47,11 +47,20 @@ from beatos_mcp.server import app as mcp_asgi_app, mcp
 
 log = logging.getLogger(__name__)
 
-_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "null",
-]
+def _allowed_origins() -> list[str]:
+    """CORS allowlist for the no-auth /api surface.
+
+    The dev Vite origins are always allowed. ``"null"`` — the packaged Electron
+    file:// origin — is included ONLY when we're not serving the web SPA. In web
+    mode (``BEATOS_WEB_DIR`` set) the SPA is same-origin (``http://127.0.0.1:<port>``),
+    so a file:// page is never a legitimate caller; allowing ``"null"`` there
+    would let any local ``.html`` the user opens read/write this unauthenticated
+    API (flip the agent-approval mode, read files via /api/fs). Drop it.
+    """
+    origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    if not os.environ.get("BEATOS_WEB_DIR"):
+        origins.append("null")
+    return origins
 
 # Module-level runtime state (per-process singletons).
 _cleanup_task: Optional[asyncio.Task] = None
@@ -149,7 +158,7 @@ def create_app() -> FastAPI:
     # pending write tokens cross-origin — defeating the human-in-the-loop gate.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_ALLOWED_ORIGINS,
+        allow_origins=_allowed_origins(),
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
     )

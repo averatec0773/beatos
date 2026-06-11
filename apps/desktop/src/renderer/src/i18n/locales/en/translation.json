@@ -343,6 +343,7 @@
   },
   "trackList": {
     "addTrack": "Add Track",
+    "loading": "Loading…",
     "analyzeAll": "Analyze all unanalyzed ({{count}})",
     "exportPlaylist": "Export playlist",
     "exportPlaylistTitle": "Export playlist files",

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Package, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, Package, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -32,6 +32,8 @@ import { useAnalysisJobStore } from "@/stores/analysis-job";
 export function TrackListPanel(): React.JSX.Element {
   const { t } = useTranslation();
   const list = useTrackStore((s) => s.list);
+  const loading = useTrackStore((s) => s.loading);
+  const error = useTrackStore((s) => s.error);
   const current = useTrackStore((s) => s.current);
   const refresh = useTrackStore((s) => s.refresh);
   const select = useTrackStore((s) => s.select);
@@ -323,7 +325,27 @@ export function TrackListPanel(): React.JSX.Element {
 
   if (list.length === 0) {
     let emptyEl: React.ReactNode;
-    if (currentList) {
+    if (error) {
+      // Backend unreachable / fetch failed — be honest instead of showing the
+      // "no tracks yet" empty state (which reads as "your library is empty").
+      emptyEl = (
+        <div className="max-w-md px-6 text-center space-y-3">
+          <AlertCircle size={40} className="text-danger mx-auto" />
+          <h2 className="text-lg font-semibold text-text-primary">
+            {t("errors.backendUnreachable")}
+          </h2>
+          <p className="text-text-secondary text-sm">{t("errors.backendUnreachableDesc")}</p>
+          <button
+            onClick={() => void refresh(listId != null ? { list_id: listId } : undefined)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium btn-primary"
+          >
+            <RotateCcw size={14} /> {t("errors.retry")}
+          </button>
+        </div>
+      );
+    } else if (loading) {
+      emptyEl = <div className="text-text-tertiary text-sm">{t("trackList.loading")}</div>;
+    } else if (currentList) {
       emptyEl = <EmptyState variant="empty-list" listName={currentList.name} />;
     } else if (searchQuery) {
       emptyEl = (

@@ -13,6 +13,9 @@ interface TrackState {
   total: number | null;
   current: Track | null;
   loading: boolean;
+  // Last refresh error (e.g. sidecar unreachable). Lets the library show an
+  // honest "can't reach backend" state instead of a misleading "no tracks yet".
+  error: string | null;
   selectedIds: Set<number>;
   anchorId: number | null;
   // The list currently being viewed (null = whole library). The route owner
@@ -37,6 +40,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
   total: null,
   current: null,
   loading: false,
+  error: null,
   selectedIds: new Set(),
   anchorId: null,
   activeListId: null,
@@ -52,7 +56,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
     }
   },
   async refresh(opts) {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const queryState = useTrackQueryStore.getState();
       const { filters } = queryState;
@@ -85,8 +89,8 @@ export const useTrackStore = create<TrackState>((set, get) => ({
       const cur = get().current;
       const current = cur ? (list.find((t) => t.id === cur.id) ?? null) : null;
       set({ list, loading: false, selectedIds: new Set(), anchorId: null, current });
-    } catch {
-      set({ list: [], loading: false });
+    } catch (e) {
+      set({ list: [], loading: false, error: e instanceof Error ? e.message : String(e) });
     }
   },
   select(id) {

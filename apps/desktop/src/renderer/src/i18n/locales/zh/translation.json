@@ -343,6 +343,7 @@
   },
   "trackList": {
     "addTrack": "添加曲目",
+    "loading": "加载中…",
     "analyzeAll": "分析全部未分析（{{count}}）",
     "exportPlaylist": "导出歌单",
     "exportPlaylistTitle": "导出歌单文件",
