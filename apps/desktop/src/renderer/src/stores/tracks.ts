@@ -15,7 +15,13 @@ interface TrackState {
   loading: boolean;
   selectedIds: Set<number>;
   anchorId: number | null;
+  // The list currently being viewed (null = whole library). The route owner
+  // (TrackListPanel) sets it so query-driven refreshes — the sort/filter/search
+  // subscription below, and background refreshes — stay inside the active list
+  // instead of silently snapping back to the full library.
+  activeListId: number | null;
   refresh(opts?: { list_id?: number }): Promise<void>;
+  setActiveListId(id: number | null): void;
   refreshTotal(): Promise<void>;
   select(id: number | null): void;
   selectOne(id: number, mode: "replace" | "toggle" | "range"): void;
@@ -33,6 +39,10 @@ export const useTrackStore = create<TrackState>((set, get) => ({
   loading: false,
   selectedIds: new Set(),
   anchorId: null,
+  activeListId: null,
+  setActiveListId(id) {
+    set({ activeListId: id });
+  },
   async refreshTotal() {
     try {
       const total = await api.count();
@@ -46,9 +56,12 @@ export const useTrackStore = create<TrackState>((set, get) => ({
     try {
       const queryState = useTrackQueryStore.getState();
       const { filters } = queryState;
-      const inList = opts?.list_id != null;
+      // Explicit opts win; otherwise inherit the active list scope so a
+      // sort/filter/search refresh on /lists/:id doesn't escape to the library.
+      const list_id = opts?.list_id ?? get().activeListId ?? undefined;
+      const inList = list_id != null;
       const list = await api.list({
-        list_id: opts?.list_id,
+        list_id,
         // Only forward sort when not in a list (lists use position order)
         sort_by: inList ? undefined : queryState.sortBy,
         sort_dir: inList ? undefined : queryState.sortDir,

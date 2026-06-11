@@ -137,5 +137,9 @@ async def delete_list(list_id: int) -> None:
 
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
+        # FK enforcement is per-connection and OFF by default, so without this
+        # the track_list ON DELETE CASCADE is a silent no-op and membership rows
+        # orphan (Critical rule 9).
+        await conn.execute("PRAGMA foreign_keys = ON")
         await conn.execute("DELETE FROM list WHERE id = ?", (list_id,))
         await conn.commit()

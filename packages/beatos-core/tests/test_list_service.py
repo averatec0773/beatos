@@ -64,6 +64,30 @@ async def test_delete_user_list():
 
 
 @pytest.mark.asyncio
+async def test_delete_list_cascades_membership_rows():
+    """Deleting a non-empty list must remove its track_list rows via the
+    ON DELETE CASCADE — requires FK enforcement on the connection (rule 9)."""
+    import aiosqlite
+
+    from beatos_core.db import resolve_db_path
+    from beatos_core.lists.membership import add_track_to_list
+    from beatos_core.tracks.service import create_track
+
+    new = await create_list(name="Trap", kind="user")
+    track = await create_track("T1")
+    await add_track_to_list(track.id, new.id)
+
+    await delete_list(new.id)
+
+    async with aiosqlite.connect(resolve_db_path()) as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) FROM track_list WHERE list_id = ?", (new.id,)
+        ) as cur:
+            (orphans,) = await cur.fetchone()
+    assert orphans == 0
+
+
+@pytest.mark.asyncio
 async def test_delete_system_list_blocked():
     """System list 'All Beats' must not be deletable."""
     system = next(l for l in await list_lists() if l.kind == "system")

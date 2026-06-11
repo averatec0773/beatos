@@ -334,13 +334,30 @@ app.whenReady().then(async () => {
   }
 
   // No splash on macOS dock-icon reopen — intentional (user just hid the app).
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  app.on("activate", async () => {
+    if (BrowserWindow.getAllWindows().length > 0) return;
+    // The sidecar may have stopped/crashed while the app had no windows. Bring
+    // it back before opening a window — otherwise the new window is a dead shell
+    // (apiPort is null, so every request fails with no in-app way to recover).
+    if (sidecar == null) {
+      try {
+        startSidecar();
+        apiPort = await waitForHandshake();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.error(`[main] sidecar restart on activate failed: ${msg}`);
+        dialog.showErrorBox("BeatOS could not restart", msg);
+        return;
+      }
+    }
+    createWindow();
   });
 });
 
 app.on("window-all-closed", () => {
-  stopSidecar();
+  // macOS keeps the app (and its sidecar) alive when the last window closes so
+  // the dock icon reopens a working window; before-quit stops the sidecar on a
+  // real quit. Other platforms quit with the last window.
   if (process.platform !== "darwin") app.quit();
 });
 

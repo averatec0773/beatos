@@ -17,7 +17,7 @@ import { tracks } from "@/api/tracks";
 describe("useTrackStore refresh", () => {
   beforeEach(() => {
     (tracks.list as ReturnType<typeof vi.fn>).mockReset();
-    useTrackStore.setState({ list: [], current: null, loading: false });
+    useTrackStore.setState({ list: [], current: null, loading: false, activeListId: null });
     useTrackQueryStore.setState({
       sortBy: "updated_at",
       sortDir: "desc",
@@ -55,5 +55,17 @@ describe("useTrackStore refresh", () => {
     const listCall = calls.find((c) => (c[0] as Record<string, unknown>).list_id === 3);
     expect(listCall).toBeDefined();
     expect((listCall![0] as Record<string, unknown>).sort_by).toBeUndefined();
+  });
+
+  it("refresh() inherits the active list scope (no scope leak on sort/filter/search)", async () => {
+    // Simulate viewing /lists/7 — the panel records the scope.
+    useTrackStore.getState().setActiveListId(7);
+    (tracks.list as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    // A query change fires refresh() with NO opts (the subscription path).
+    await useTrackStore.getState().refresh();
+    const calls = (tracks.list as ReturnType<typeof vi.fn>).mock.calls as unknown[][];
+    const last = calls[calls.length - 1][0] as Record<string, unknown>;
+    expect(last.list_id).toBe(7); // stayed in the list, not the whole library
+    expect(last.sort_by).toBeUndefined(); // lists use position order
   });
 });

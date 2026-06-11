@@ -41,6 +41,7 @@ export function TrackListPanel(): React.JSX.Element {
   const clearSelection = useTrackStore((s) => s.clearSelection);
   const remove = useTrackStore((s) => s.remove);
   const createTrack = useTrackStore((s) => s.create);
+  const setActiveListId = useTrackStore((s) => s.setActiveListId);
   const searchQuery = useTrackQueryStore((s) => s.q);
   const allLists = useListStore((s) => s.all);
   const membershipVersion = useListStore((s) => s.membershipVersion);
@@ -54,8 +55,10 @@ export function TrackListPanel(): React.JSX.Element {
   // `membershipVersion` is a dep so adding a track to the list you're viewing
   // (0→1, listId unchanged) re-fetches and the hero/table/cover update at once.
   useEffect(() => {
+    // Record the scope first so the query subscription's refresh() inherits it.
+    setActiveListId(listId);
     refresh(listId != null ? { list_id: listId } : undefined);
-  }, [refresh, listId, membershipVersion]);
+  }, [refresh, setActiveListId, listId, membershipVersion]);
 
   // Defensive: if the underlying list goes empty (e.g. all selected tracks
   // were trashed via MCP, or the user emptied a list) while a multi-select

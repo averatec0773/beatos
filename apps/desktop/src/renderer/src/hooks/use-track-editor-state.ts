@@ -214,26 +214,40 @@ export function useTrackEditorState(): TrackEditorState {
   // time the promise resolves the editor has unmounted, but the API call
   // still lands in the store. Skips if save is in-flight (it'll complete
   // on its own) or if title is empty (would error out).
+  // Persist a sub-debounce edit before we leave. The old guard required
+  // saveState === "idle", but saveState never returns to "idle" after the first
+  // save (it stays "saved"/"error"), which silently disabled this flush for the
+  // rest of the session — losing the last edit. Flush whenever there's a dirty,
+  // valid edit and no save is already in flight or errored.
+  const flushPendingSave = useCallback(() => {
+    if (track && isDirty && saveState !== "saving" && saveState !== "error" && track.title.trim()) {
+      void performSave(track);
+    }
+  }, [track, isDirty, saveState, performSave]);
+
   const flushAndClose = useCallback(() => {
     if (maybeDiscardNew()) {
       navigate("/");
       return;
     }
-    if (track && isDirty && saveState === "idle" && track.title.trim()) {
-      void performSave(track);
-    }
+    flushPendingSave();
     navigate("/");
-  }, [maybeDiscardNew, track, isDirty, saveState, performSave, navigate]);
+  }, [maybeDiscardNew, flushPendingSave, navigate]);
 
   // Navigating away without ESC/Cancel (e.g. clicking a sidebar item) unmounts
-  // the editor — discard an untouched new row on that path too.
+  // the editor. Discard an untouched new row; otherwise flush a pending edit —
+  // the autosave timer is cleared on unmount, so without this a change younger
+  // than the debounce would be dropped on the way out.
   const maybeDiscardRef = useRef(maybeDiscardNew);
+  const flushRef = useRef(flushPendingSave);
   useEffect(() => {
     maybeDiscardRef.current = maybeDiscardNew;
+    flushRef.current = flushPendingSave;
   });
   useEffect(() => {
     return () => {
-      maybeDiscardRef.current();
+      if (maybeDiscardRef.current()) return;
+      flushRef.current();
     };
   }, []);
 
