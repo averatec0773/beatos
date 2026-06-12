@@ -59,7 +59,7 @@ export function AppShell(): React.JSX.Element {
       {/* Spotify-style canvas: the three regions float as rounded cards over the
           backdrop, the resize handles (or a spacer when collapsed) living in the
           gutters between so the inter-card gap survives collapse. */}
-      <div className="relative z-10 flex-1 flex px-2 py-2 overflow-hidden min-h-0">
+      <div className="relative z-10 flex-1 flex px-3 py-3 overflow-hidden min-h-0">
         <SidebarPanel />
         {!sidebarCollapsed ? (
           <GutterResizer
@@ -73,7 +73,7 @@ export function AppShell(): React.JSX.Element {
         ) : (
           // Collapsed: no resizer, but keep the gutter width so the rail does
           // not sit flush against the middle card.
-          <div className="w-2 shrink-0" aria-hidden />
+          <div className="w-3 shrink-0" aria-hidden />
         )}
         <main className="flex-1 flex overflow-hidden min-w-0">
           <Outlet />

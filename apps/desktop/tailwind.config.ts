@@ -8,7 +8,6 @@ const config: Config = {
         "bg-base": "var(--bg-base)",
         "bg-elevated": "var(--bg-elevated)",
         "bg-elevated-hover": "var(--bg-elevated-hover)",
-        "bg-sidebar": "var(--bg-sidebar)",
         "bg-row-hover": "var(--bg-row-hover)",
         "bg-row-selected": "var(--bg-row-selected)",
         "bg-row-active": "var(--bg-row-active)",

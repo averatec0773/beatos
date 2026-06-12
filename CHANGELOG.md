@@ -26,6 +26,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Changed
 
+- **Visual refresh (subtle).** A small evolution of the existing look — same monochrome palette and ASCII backdrop, just airier and a touch more legible: wider gutters between the cards (8 → 12px), softer card corners (12 → 16px radius), micro-labels set in JetBrains Mono to echo the terminal feel, slightly brighter secondary text, snappier hover transitions, and marginally more see-through panels by default (the Panel opacity slider in Settings → Appearance still overrides it).
 - **Approvals → Agent Actions.** The MCP approval queue's sidebar entry + panel title were renamed so it's clear these are agent-initiated actions awaiting your approval (the old name didn't signal that). The sidebar order is now All Beats · Publish Center · Agent Actions · Trash. Route unchanged.
 - **Track editor layout.** Files now sit directly under the metadata fields; tags + description moved to a bottom 备注 section.
 - **MCP-created tracks inherit creation defaults.** The configured default license tiers + free flag (Settings) are now applied server-side on `create_tracks`, so a track imported by an agent over MCP lands the same catalog state as one created in the UI (previously those defaults were applied only by the renderer, so MCP imports came in with no license/price).

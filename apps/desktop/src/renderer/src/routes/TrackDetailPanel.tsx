@@ -26,7 +26,7 @@ export function PreviewGutter(): React.JSX.Element {
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
   // Collapsed: the detail panel now renders a persistent rail (not null), so the
   // gutter must keep its width too — render a non-interactive spacer.
-  if (!open) return <div className="w-2 shrink-0" aria-hidden />;
+  if (!open) return <div className="w-3 shrink-0" aria-hidden />;
   return (
     <GutterResizer
       ariaLabel={t("detail.resizePreview")}
