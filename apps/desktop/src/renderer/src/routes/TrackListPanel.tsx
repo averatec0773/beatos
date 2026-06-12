@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { attachAudioToTrack, importAsNewTracks } from "@/lib/create-track-from-file";
+import { trashTracksWithUndo } from "@/lib/trash-actions";
 import { platform } from "@/platform";
 
 import { useTrackStore } from "@/stores/tracks";
@@ -25,7 +26,6 @@ import { AddToListPopover } from "@/components/AddToListPopover";
 import { BulkEditDialog } from "@/components/BulkEditDialog";
 import { ExportDialog } from "@/components/ExportDialog";
 import { PlaylistExportDialog } from "@/components/PlaylistExportDialog";
-import { tracks as tracksApi } from "@/api/tracks";
 import { analysis } from "@/api/analysis";
 import { useAnalysisJobStore } from "@/stores/analysis-job";
 
@@ -41,7 +41,6 @@ export function TrackListPanel(): React.JSX.Element {
   const selectOne = useTrackStore((s) => s.selectOne);
   const selectAll = useTrackStore((s) => s.selectAll);
   const clearSelection = useTrackStore((s) => s.clearSelection);
-  const remove = useTrackStore((s) => s.remove);
   const createTrack = useTrackStore((s) => s.create);
   const setActiveListId = useTrackStore((s) => s.setActiveListId);
   const searchQuery = useTrackQueryStore((s) => s.q);
@@ -290,28 +289,14 @@ export function TrackListPanel(): React.JSX.Element {
             )
           )
             return;
-          for (const id of ids) {
-            try {
-              await tracksApi.remove(id);
-            } catch (e) {
-              console.warn("[bulk-trash] failed for", id, e);
-            }
-          }
           clearSelection();
-          await refresh(listId != null ? { list_id: listId } : undefined);
-          void useTrackStore.getState().refreshTotal();
-          useToastStore
-            .getState()
-            .show(
-              "success",
-              ids.length === 1
-                ? t("trackList.movedToTrash")
-                : t("trackList.movedToTrashMany", { count: ids.length }),
-            );
+          // Trashes, refreshes, and shows a toast with an Undo action that
+          // restores exactly the rows that were trashed.
+          await trashTracksWithUndo(ids, t);
         },
       },
     ],
-    [selectedIds, listId, refresh, clearSelection, t],
+    [selectedIds, listId, clearSelection, t],
   );
 
   async function onAddTrack(): Promise<void> {
@@ -483,7 +468,7 @@ export function TrackListPanel(): React.JSX.Element {
                 audioPath={null}
                 currentListId={listId}
                 onEdit={() => navigate(`/tracks/${track.id}/edit`)}
-                onDelete={() => remove(track.id)}
+                onDelete={() => void trashTracksWithUndo([track.id], t)}
                 onExport={() => setExportTrackId(track.id)}
                 onRemoveFromList={() => refresh(listId != null ? { list_id: listId } : undefined)}
               >
@@ -507,10 +492,7 @@ export function TrackListPanel(): React.JSX.Element {
                       }
                     }}
                     onOpen={() => navigate(`/tracks/${track.id}/edit`)}
-                    onDelete={() => {
-                      if (confirm(t("contextMenu.deleteConfirm", { title: track.title })))
-                        remove(track.id);
-                    }}
+                    onDelete={() => void trashTracksWithUndo([track.id], t)}
                   />
                 </div>
               </TrackContextMenu>

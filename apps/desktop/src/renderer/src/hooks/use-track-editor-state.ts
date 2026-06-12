@@ -11,6 +11,7 @@ import type { AudioAnalysisResult } from "@/api/analysis";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { useToastStore } from "@/stores/toast";
+import { restoreTracks } from "@/lib/trash-actions";
 import { useAnalyzingStore } from "@/lib/auto-analyze";
 import { shallowEqualEditable } from "@/lib/shallow-equal-track";
 import {
@@ -278,8 +279,14 @@ export function useTrackEditorState(): TrackEditorState {
     if (!track) return;
     // removeInStore is a restorable trash move, not a hard delete — say so.
     if (!confirm(t("editor.deleteConfirm", { title: track.title }))) return;
-    await removeInStore(track.id);
+    const id = track.id;
+    await removeInStore(id);
     navigate("/");
+    // Offer Undo on the library we just navigated to (the editor is unmounting).
+    useToastStore.getState().show("success", t("trackList.movedToTrash"), 7000, {
+      label: t("common.undo"),
+      onClick: () => void restoreTracks([id], t),
+    });
   }, [t, track, removeInStore, navigate]);
 
   const patch = useCallback(<K extends keyof Track>(field: K, value: Track[K]): void => {

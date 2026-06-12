@@ -1,6 +1,7 @@
 {
   "common": {
     "cancel": "取消",
+    "undo": "撤销",
     "ok": "确定",
     "save": "保存",
     "delete": "删除",

@@ -26,6 +26,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Changed
 
+- **Trashing a track now offers Undo.** Moving tracks to Trash — from the bulk bar, a row, the right-click menu, or the editor — pops a toast with an **Undo** button that restores exactly what you just trashed (7-second window). Single-track delete from the list is now immediate-with-Undo instead of a blocking confirm dialog (the two inconsistent single-delete paths are unified); bulk delete still asks first, and the editor's delete keeps its confirm. The success toast now reports how many actually moved, not how many were attempted.
 - **Visual refresh (subtle).** A small evolution of the existing look — same monochrome palette and ASCII backdrop, just airier and a touch more legible: wider gutters between the cards (8 → 12px), softer card corners (12 → 16px radius), micro-labels set in JetBrains Mono to echo the terminal feel, slightly brighter secondary text, snappier hover transitions, and marginally more see-through panels by default (the Panel opacity slider in Settings → Appearance still overrides it).
 - **Approvals → Agent Actions.** The MCP approval queue's sidebar entry + panel title were renamed so it's clear these are agent-initiated actions awaiting your approval (the old name didn't signal that). The sidebar order is now All Beats · Publish Center · Agent Actions · Trash. Route unchanged.
 - **Track editor layout.** Files now sit directly under the metadata fields; tags + description moved to a bottom 备注 section.

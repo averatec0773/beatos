@@ -27,10 +27,23 @@ export function Toast(): React.JSX.Element | null {
     >
       <div className="flex items-start gap-3">
         <div className="flex-1 text-sm leading-snug">{current.message}</div>
+        {current.action && (
+          <button
+            type="button"
+            onClick={() => {
+              const action = current.action!;
+              useToastStore.getState().dismiss();
+              action.onClick();
+            }}
+            className="shrink-0 text-sm font-medium text-accent hover:text-text-primary"
+          >
+            {current.action.label}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => useToastStore.getState().dismiss()}
-          className="text-zinc-400 hover:text-zinc-100"
+          className="shrink-0 text-text-tertiary hover:text-text-primary"
           aria-label={t("common.dismiss")}
         >
           <X className="h-4 w-4" />
