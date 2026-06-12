@@ -12,6 +12,7 @@ import { GutterResizer } from "@/components/GutterResizer";
 import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH, useSidebarPanelStore } from "@/stores/sidebar-panel";
 import { useAppearanceStore } from "@/stores/appearance";
 import { useAgentPermissionStore } from "@/stores/agent-permission";
+import { PREVIEW_AUTO_COLLAPSE_WIDTH, usePreviewPanelStore } from "@/stores/preview-panel";
 
 export function AppShell(): React.JSX.Element {
   const { t } = useTranslation();
@@ -32,6 +33,19 @@ export function AppShell(): React.JSX.Element {
     root.setProperty("--card-alpha", String(alpha));
     root.setProperty("--card-blur", `${(alpha * 14).toFixed(1)}px`);
   }, [cardOpacity]);
+
+  // Responsive: fold the detail panel to its rail when the window is too narrow
+  // to show it without crushing the track table, and restore the user's
+  // preference when there's room again. matchMedia fires only on threshold
+  // crossings (cheap), and we apply once on mount for a narrow initial size.
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return; // jsdom guard
+    const mq = window.matchMedia(`(max-width: ${PREVIEW_AUTO_COLLAPSE_WIDTH - 1}px)`);
+    const apply = (): void => usePreviewPanelStore.getState().applyResponsive(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
 
   return (
     <div className="app-canvas relative isolate h-screen text-text-primary flex flex-col overflow-hidden">
