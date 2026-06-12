@@ -54,7 +54,7 @@ function Badge({ state }: { state: SessionState }): React.JSX.Element {
       );
     case "expired":
       return (
-        <span className="flex items-center gap-1 text-xs text-error">
+        <span className="flex items-center gap-1 text-xs text-danger">
           <AlertCircle size={13} /> {t("publishCenter.expired")}
         </span>
       );

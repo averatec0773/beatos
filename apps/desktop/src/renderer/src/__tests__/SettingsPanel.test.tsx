@@ -21,6 +21,8 @@ vi.mock("@/stores/lists", () => ({
   },
 }));
 
+vi.mock("@/stores/confirm-dialog", () => ({ confirmDialog: vi.fn().mockResolvedValue(true) }));
+
 describe("SettingsPanel", () => {
   beforeEach(() => {
     (global.fetch as any) = vi.fn().mockResolvedValue({

@@ -17,7 +17,6 @@ import { useListStore } from "@/stores/lists";
 
 interface Props {
   trackId: number;
-  trackTitle: string;
   audioPath: string | null;
   currentListId?: number | null;
   onEdit: () => void;
@@ -29,7 +28,6 @@ interface Props {
 
 export function TrackContextMenu({
   trackId,
-  trackTitle,
   audioPath,
   currentListId,
   onEdit,
@@ -49,10 +47,6 @@ export function TrackContextMenu({
 
   function onReveal(): void {
     if (audioPath) platform.revealInFinder(audioPath);
-  }
-
-  function onConfirmDelete(): void {
-    if (confirm(t("contextMenu.deleteConfirm", { title: trackTitle }))) onDelete();
   }
 
   return (
@@ -94,7 +88,7 @@ export function TrackContextMenu({
           <Share2 size={14} className="mr-2" /> {t("contextMenu.exportToPlatform")}
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem className="text-danger" onClick={onConfirmDelete}>
+        <ContextMenuItem className="text-danger" onClick={onDelete}>
           <Trash2 size={14} className="mr-2" /> {t("contextMenu.delete")}
         </ContextMenuItem>
       </ContextMenuContent>

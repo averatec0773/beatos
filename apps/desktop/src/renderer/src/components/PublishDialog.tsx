@@ -487,7 +487,7 @@ export function PublishDialog({
               </div>
             )}
             {stage === "failed" && (
-              <div className="flex items-start gap-2 rounded-md border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
+              <div className="flex items-start gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="leading-snug">
                   {t("publishDialog.publishFailedDetail", {

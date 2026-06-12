@@ -7,6 +7,7 @@ import { useTrashStore } from "@/stores/trash";
 import { useTrackStore } from "@/stores/tracks";
 import { useToastStore } from "@/stores/toast";
 import { useAppLanguageStore } from "@/stores/app-language";
+import { confirmDialog } from "@/stores/confirm-dialog";
 import { formatRelativeTime, formatDate } from "@/i18n/format";
 import { CoverImage } from "@/components/CoverImage";
 import { BulkActionBar, type BulkAction } from "@/components/BulkActionBar";
@@ -75,7 +76,12 @@ export function TrashPanel(): React.JSX.Element {
       ids.length === 1
         ? t("trash.deleteOneConfirm", { name: names ?? `#${ids[0]}` })
         : t("trash.deleteManyConfirm", { count: ids.length });
-    if (!confirm(msg)) return;
+    const ok = await confirmDialog({
+      title: msg,
+      confirmLabel: t("common.delete"),
+      variant: "danger",
+    });
+    if (!ok) return;
     for (const id of ids) {
       try {
         await tracks.purge(id);
@@ -89,7 +95,12 @@ export function TrashPanel(): React.JSX.Element {
 
   async function onEmptyAll(): Promise<void> {
     if (list.length === 0) return;
-    if (!confirm(t("trash.deleteAllConfirm", { count: list.length }))) return;
+    const ok = await confirmDialog({
+      title: t("trash.deleteAllConfirm", { count: list.length }),
+      confirmLabel: t("trash.emptyAll"),
+      variant: "danger",
+    });
+    if (!ok) return;
     const r = await tracks.purgeAllTrash();
     await refresh();
     useToastStore.getState().show("success", t("trash.emptied", { count: r.purged }));

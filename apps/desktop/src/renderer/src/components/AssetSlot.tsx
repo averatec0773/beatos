@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { platform } from "@/platform";
 import { useAssetStore } from "@/stores/assets";
+import { useToastStore } from "@/stores/toast";
 import { CoverImage } from "@/components/CoverImage";
 import type { Asset } from "@/api/assets";
 
@@ -65,14 +66,17 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
   const filterExtensions = extensions.map((e) => e.replace(/^\./, ""));
 
   async function pickAndAttach(replace: boolean): Promise<void> {
-    const picked = await platform.openFileDialog([
-      { name: label, extensions: filterExtensions },
-    ]);
+    const picked = await platform.openFileDialog([{ name: label, extensions: filterExtensions }]);
     if (!picked) return;
     try {
       await attach(trackId, role, picked, { replace });
     } catch (e) {
-      alert(t("fileRows.attachFailed", { error: e instanceof Error ? e.message : String(e) }));
+      useToastStore
+        .getState()
+        .show(
+          "error",
+          t("fileRows.attachFailed", { error: e instanceof Error ? e.message : String(e) }),
+        );
     }
   }
 
@@ -83,14 +87,17 @@ export function AssetSlot({ trackId, role, label, extensions }: Props): React.JS
 
   async function onRelocate(): Promise<void> {
     if (!asset) return;
-    const picked = await platform.openFileDialog([
-      { name: label, extensions: filterExtensions },
-    ]);
+    const picked = await platform.openFileDialog([{ name: label, extensions: filterExtensions }]);
     if (!picked) return;
     try {
       await relocate(trackId, asset.id, picked);
     } catch (e) {
-      alert(t("fileRows.relocateFailed", { error: e instanceof Error ? e.message : String(e) }));
+      useToastStore
+        .getState()
+        .show(
+          "error",
+          t("fileRows.relocateFailed", { error: e instanceof Error ? e.message : String(e) }),
+        );
     }
   }
 

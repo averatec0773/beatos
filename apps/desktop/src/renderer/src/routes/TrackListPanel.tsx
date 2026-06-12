@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { attachAudioToTrack, importAsNewTracks } from "@/lib/create-track-from-file";
 import { trashTracksWithUndo } from "@/lib/trash-actions";
+import { confirmDialog } from "@/stores/confirm-dialog";
 import { platform } from "@/platform";
 
 import { useTrackStore } from "@/stores/tracks";
@@ -281,14 +282,15 @@ export function TrackListPanel(): React.JSX.Element {
         icon: <Trash2 size={14} />,
         onClick: async () => {
           const ids = Array.from(selectedIds);
-          if (
-            !confirm(
+          const ok = await confirmDialog({
+            title:
               ids.length === 1
                 ? t("trackList.moveToTrashConfirm")
                 : t("trackList.moveToTrashConfirmMany", { count: ids.length }),
-            )
-          )
-            return;
+            confirmLabel: t("trackList.moveToTrash"),
+            variant: "danger",
+          });
+          if (!ok) return;
           clearSelection();
           // Trashes, refreshes, and shows a toast with an Undo action that
           // restores exactly the rows that were trashed.
@@ -464,7 +466,6 @@ export function TrackListPanel(): React.JSX.Element {
               <TrackContextMenu
                 key={track.id}
                 trackId={track.id}
-                trackTitle={track.title}
                 audioPath={null}
                 currentListId={listId}
                 onEdit={() => navigate(`/tracks/${track.id}/edit`)}

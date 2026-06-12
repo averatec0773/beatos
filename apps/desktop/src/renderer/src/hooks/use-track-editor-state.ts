@@ -277,8 +277,8 @@ export function useTrackEditorState(): TrackEditorState {
 
   const onDelete = useCallback(async () => {
     if (!track) return;
-    // removeInStore is a restorable trash move, not a hard delete — say so.
-    if (!confirm(t("editor.deleteConfirm", { title: track.title }))) return;
+    // Reversible trash move — act immediately and offer Undo (consistent with
+    // the row / context-menu delete), no blocking confirm.
     const id = track.id;
     await removeInStore(id);
     navigate("/");

@@ -53,9 +53,7 @@ export function useAssetSlot(
 
   const relocate = async () => {
     if (!asset) return;
-    const picked = await platform.openFileDialog([
-      { name: label, extensions: filterExtensions },
-    ]);
+    const picked = await platform.openFileDialog([{ name: label, extensions: filterExtensions }]);
     if (!picked) return;
     try {
       await relocateAction(trackId, asset.id, picked);

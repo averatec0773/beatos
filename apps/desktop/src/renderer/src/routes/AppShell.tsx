@@ -6,6 +6,7 @@ import { TopBar } from "@/components/TopBar";
 import { SidebarPanel } from "@/components/Sidebar/SidebarPanel";
 import { BottomPlayerBar } from "@/components/BottomPlayerBar";
 import { Toast } from "@/components/Toast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AnalysisProgressBar } from "@/components/AnalysisProgressBar";
 import { AsciiBackdrop } from "@/components/AsciiBackdrop";
 import { GutterResizer } from "@/components/GutterResizer";
@@ -95,6 +96,7 @@ export function AppShell(): React.JSX.Element {
       </div>
       <BottomPlayerBar />
       <Toast />
+      <ConfirmDialog />
     </div>
   );
 }

@@ -18,6 +18,7 @@ vi.mock("@/api/distinct", () => ({
 }));
 vi.mock("@/api/producers", () => ({ producers: { rewrite: vi.fn(async () => {}) } }));
 vi.mock("@/stores/tracks", () => ({ useTrackStore: (sel: any) => sel({ refresh: vi.fn() }) }));
+vi.mock("@/stores/confirm-dialog", () => ({ confirmDialog: vi.fn().mockResolvedValue(true) }));
 
 import { ProducersSection } from "@/components/Settings/ProducersSection";
 

@@ -33,7 +33,7 @@ export function LiveJobRow({ job, title, onRepublish }: Props): React.JSX.Elemen
               <CheckCircle2 size={12} /> {t("publishCenter.published")}
             </span>
           ) : stage === "failed" ? (
-            <span className="flex items-center gap-1 text-error">
+            <span className="flex items-center gap-1 text-danger">
               <XCircle size={12} /> {t("publishCenter.failedJob", { message: job.message })}
             </span>
           ) : (

@@ -6,6 +6,7 @@ import { platform } from "@/platform";
 import { useAssetSlot } from "@/hooks/useAssetSlot";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { formatBytes } from "@/lib/format-bytes";
+import { useToastStore } from "@/stores/toast";
 
 interface Props {
   trackId: number;
@@ -60,7 +61,12 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
       return;
     }
     if (!extensionAccepted(file.name)) {
-      alert(t("fileRows.dropWrongType", { label, exts: extensions.join(", "), name: file.name }));
+      useToastStore
+        .getState()
+        .show(
+          "error",
+          t("fileRows.dropWrongType", { label, exts: extensions.join(", "), name: file.name }),
+        );
       return;
     }
     let absPath: string;
@@ -68,12 +74,12 @@ export function AudioFileRow({ trackId, role, label, extensions }: Props) {
       absPath = platform.getPathForFile(file);
     } catch (err) {
       console.warn("[file-row drop] getPathForFile threw", err);
-      alert(t("fileRows.getPathFailed"));
+      useToastStore.getState().show("error", t("fileRows.getPathFailed"));
       return;
     }
     if (!absPath) {
       console.warn("[file-row drop] getPathForFile returned empty");
-      alert(t("fileRows.emptyPath"));
+      useToastStore.getState().show("error", t("fileRows.emptyPath"));
       return;
     }
     await pickAndAttach(asset != null, absPath);

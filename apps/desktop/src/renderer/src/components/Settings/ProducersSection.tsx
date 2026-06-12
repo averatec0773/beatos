@@ -12,6 +12,7 @@ import {
 } from "@/lib/known-producers";
 import { useToastStore } from "@/stores/toast";
 import { useTrackStore } from "@/stores/tracks";
+import { confirmDialog } from "@/stores/confirm-dialog";
 
 /**
  * Producer-name manager. Renders the union of (producers attached to tracks)
@@ -60,7 +61,12 @@ export function ProducersSection(): React.JSX.Element {
 
   async function onRemove(name: string, isOrphan: boolean): Promise<void> {
     const suffix = isOrphan ? "" : t("producers.removeSuffixEveryTrack");
-    if (!confirm(t("producers.removeConfirm", { name, suffix }))) return;
+    const ok = await confirmDialog({
+      title: t("producers.removeConfirm", { name, suffix }),
+      confirmLabel: t("common.delete"),
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusy(name);
     try {
       if (!isOrphan) {

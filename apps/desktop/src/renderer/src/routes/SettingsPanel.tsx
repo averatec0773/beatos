@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { platform } from "@/platform";
+import { useToastStore } from "@/stores/toast";
 import { AgentPermissionSection } from "@/components/Settings/AgentPermissionSection";
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
 import { AppearanceSection } from "@/components/Settings/AppearanceSection";
@@ -43,13 +44,16 @@ function StorageSection({
     try {
       const r = await platform.setDbPath(fullPath);
       if (r.restartRequired) {
-        alert(t("settings.storage.restartAlert"));
+        useToastStore.getState().show("info", t("settings.storage.restartAlert"), 8000);
       }
       onDbPathChange(fullPath);
     } catch (e) {
-      alert(
-        t("settings.storage.updateFailed", { error: e instanceof Error ? e.message : String(e) }),
-      );
+      useToastStore
+        .getState()
+        .show(
+          "error",
+          t("settings.storage.updateFailed", { error: e instanceof Error ? e.message : String(e) }),
+        );
     }
   }
 
