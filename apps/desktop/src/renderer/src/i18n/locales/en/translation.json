@@ -118,6 +118,7 @@
   },
   "editor": {
     "loading": "Loading…",
+    "deleteConfirm": "Move \"{{title}}\" to trash?",
     "analyzeTitleNeedsAudio": "Attach audio first",
     "analyzeTitle": "Analyze BPM and Key",
     "analyzing": "Analyzing…",
@@ -412,7 +413,13 @@
     "backendUnreachableDesc": "The Python sidecar didn't respond. This usually means it failed to start.",
     "retry": "Retry",
     "sidecarDisconnected": "Backend disconnected",
-    "sidecarExited": "The sidecar process exited (code {{code}}, signal {{signal}}). Restart the app to reconnect."
+    "sidecarExited": "The sidecar process exited (code {{code}}, signal {{signal}}). Restart the app to reconnect.",
+    "attachFailed": "Attach failed: {{detail}}",
+    "relocateFailed": "Relocate failed: {{detail}}",
+    "listRenameFailed": "Couldn't rename the list: {{detail}}",
+    "listDeleteFailed": "Couldn't delete the list: {{detail}}",
+    "listCreateFailed": "Couldn't create the list: {{detail}}",
+    "analysisFailed": "Analysis failed: {{detail}}"
   },
   "keyPicker": {
     "add": "Add key",

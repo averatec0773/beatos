@@ -4,11 +4,13 @@ import { useTranslation } from "react-i18next";
 
 import { useToastStore } from "@/stores/toast";
 
+// On-brand: every toast sits on the opaque elevated surface; the variant is
+// carried by the border colour (semantic tokens), not a tinted background.
 const VARIANT_CLASSES: Record<string, string> = {
-  info: "border-zinc-700 bg-zinc-900 text-zinc-100",
-  success: "border-emerald-700 bg-emerald-950 text-emerald-100",
-  warning: "border-amber-700 bg-amber-950 text-amber-100",
-  error: "border-red-700 bg-red-950 text-red-100",
+  info: "border-border-subtle bg-bg-elevated text-text-primary",
+  success: "border-success bg-bg-elevated text-text-primary",
+  warning: "border-warning bg-bg-elevated text-text-primary",
+  error: "border-danger bg-bg-elevated text-text-primary",
 };
 
 export function Toast(): React.JSX.Element | null {

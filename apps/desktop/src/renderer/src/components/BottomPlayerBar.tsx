@@ -160,7 +160,7 @@ export function BottomPlayerBar() {
               errored ? t("player.retry") : playing ? t("player.pause") : t("player.play")
             }
             title={errored ? t("player.retryTitle") : undefined}
-            className={errored ? "ring-2 ring-red-500/60" : undefined}
+            className={errored ? "ring-2 ring-danger" : undefined}
           >
             {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>

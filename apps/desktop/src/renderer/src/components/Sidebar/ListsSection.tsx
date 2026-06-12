@@ -8,6 +8,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { type List } from "@/api/lists";
 import { useListStore } from "@/stores/lists";
+import { useToastStore } from "@/stores/toast";
 import { useSidebarPanelStore } from "@/stores/sidebar-panel";
 import { SidebarItemContextMenu } from "@/components/SidebarItemContextMenu";
 import { DeleteSidebarItemDialog } from "@/components/DeleteSidebarItemDialog";
@@ -62,7 +63,8 @@ function SidebarListRow({
     try {
       await rename(list.id, trimmed);
     } catch (e) {
-      alert(`Failed to rename: ${e instanceof Error ? e.message : String(e)}`);
+      const detail = e instanceof Error ? e.message : String(e);
+      useToastStore.getState().show("error", t("errors.listRenameFailed", { detail }));
     }
   }
 
@@ -77,7 +79,8 @@ function SidebarListRow({
       await remove(list.id);
       onDeleted?.();
     } catch (e) {
-      alert(`Failed to delete: ${e instanceof Error ? e.message : String(e)}`);
+      const detail = e instanceof Error ? e.message : String(e);
+      useToastStore.getState().show("error", t("errors.listDeleteFailed", { detail }));
     }
   }
 
@@ -200,7 +203,8 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
       setNewListName("");
       navigate(`/lists/${created.id}`);
     } catch (e) {
-      alert(`Failed to create list: ${e instanceof Error ? e.message : String(e)}`);
+      const detail = e instanceof Error ? e.message : String(e);
+      useToastStore.getState().show("error", t("errors.listCreateFailed", { detail }));
     }
   }
 

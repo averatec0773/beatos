@@ -1,5 +1,8 @@
+import { useTranslation } from "react-i18next";
+
 import { platform } from "@/platform";
 import { useAssetStore } from "@/stores/assets";
+import { useToastStore } from "@/stores/toast";
 import type { Asset } from "@/api/assets";
 
 // Stable reference for the empty case so the selector doesn't return a fresh []
@@ -21,6 +24,7 @@ export function useAssetSlot(
   label: string,
   extensions: string[],
 ): UseAssetSlotResult {
+  const { t } = useTranslation();
   const assetsForTrack = useAssetStore((s) => s.byTrack[trackId] ?? EMPTY);
   const attachAction = useAssetStore((s) => s.attach);
   const detachAction = useAssetStore((s) => s.detach);
@@ -37,7 +41,8 @@ export function useAssetSlot(
     try {
       await attachAction(trackId, role, picked, { replace });
     } catch (e) {
-      alert(`Attach failed: ${e instanceof Error ? e.message : String(e)}`);
+      const detail = e instanceof Error ? e.message : String(e);
+      useToastStore.getState().show("error", t("errors.attachFailed", { detail }));
     }
   };
 
@@ -55,7 +60,8 @@ export function useAssetSlot(
     try {
       await relocateAction(trackId, asset.id, picked);
     } catch (e) {
-      alert(`Relocate failed: ${e instanceof Error ? e.message : String(e)}`);
+      const detail = e instanceof Error ? e.message : String(e);
+      useToastStore.getState().show("error", t("errors.relocateFailed", { detail }));
     }
   };
 

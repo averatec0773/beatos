@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { tracks } from "@/api/tracks";
 import type { Track } from "@/api/tracks";
@@ -9,6 +10,7 @@ import { loadAllProducerNames } from "@/lib/known-producers";
 import type { AudioAnalysisResult } from "@/api/analysis";
 import { useTrackStore } from "@/stores/tracks";
 import { useAssetStore } from "@/stores/assets";
+import { useToastStore } from "@/stores/toast";
 import { useAnalyzingStore } from "@/lib/auto-analyze";
 import { shallowEqualEditable } from "@/lib/shallow-equal-track";
 import {
@@ -42,6 +44,7 @@ export interface TrackEditorState {
 }
 
 export function useTrackEditorState(): TrackEditorState {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -273,10 +276,11 @@ export function useTrackEditorState(): TrackEditorState {
 
   const onDelete = useCallback(async () => {
     if (!track) return;
-    if (!confirm(`Delete "${track.title}"? This cannot be undone.`)) return;
+    // removeInStore is a restorable trash move, not a hard delete — say so.
+    if (!confirm(t("editor.deleteConfirm", { title: track.title }))) return;
     await removeInStore(track.id);
     navigate("/");
-  }, [track, removeInStore, navigate]);
+  }, [t, track, removeInStore, navigate]);
 
   const patch = useCallback(<K extends keyof Track>(field: K, value: Track[K]): void => {
     setTrack((cur) => (cur ? { ...cur, [field]: value } : cur));
@@ -295,13 +299,13 @@ export function useTrackEditorState(): TrackEditorState {
       setAnalyzeResult(result);
       setAnalyzeDialogOpen(true);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      alert(`Analysis failed: ${msg}`);
+      const detail = e instanceof Error ? e.message : String(e);
+      useToastStore.getState().show("error", t("errors.analysisFailed", { detail }));
     } finally {
       setAnalyzing(false);
       useAnalyzingStore.getState().setInflight(track.id, false);
     }
-  }, [track]);
+  }, [t, track]);
 
   return {
     track,

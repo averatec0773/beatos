@@ -118,6 +118,7 @@
   },
   "editor": {
     "loading": "加载中…",
+    "deleteConfirm": "将\"{{title}}\"移入回收站？",
     "analyzeTitleNeedsAudio": "请先附加音频",
     "analyzeTitle": "分析 BPM 和 Key",
     "analyzing": "分析中…",
@@ -412,7 +413,13 @@
     "backendUnreachableDesc": "Python sidecar 未响应，通常意味着启动失败。",
     "retry": "重试",
     "sidecarDisconnected": "后端已断开",
-    "sidecarExited": "sidecar 进程已退出（code {{code}}，signal {{signal}}）。重启应用以重新连接。"
+    "sidecarExited": "sidecar 进程已退出（code {{code}}，signal {{signal}}）。重启应用以重新连接。",
+    "attachFailed": "附加失败：{{detail}}",
+    "relocateFailed": "重新定位失败：{{detail}}",
+    "listRenameFailed": "重命名歌单失败：{{detail}}",
+    "listDeleteFailed": "删除歌单失败：{{detail}}",
+    "listCreateFailed": "新建歌单失败：{{detail}}",
+    "analysisFailed": "分析失败：{{detail}}"
   },
   "keyPicker": {
     "add": "添加 Key",

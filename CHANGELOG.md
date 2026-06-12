@@ -48,6 +48,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **The library is honest when the backend is unreachable.** A failed fetch used to collapse into the "no tracks yet — add your first" screen, which read as an empty library even when the Python sidecar was simply down. It now shows a clear "can't reach the backend" message with a Retry button (and a brief loading state on first load) instead.
 - **The background sidecar is reliably stopped on quit.** The force-kill fallback never actually fired (it checked a flag that flips the instant the first signal is sent, not when the process exits), so a sidecar that hung on shutdown could linger as an orphan. It's now force-killed if it doesn't exit within the grace period.
 - **Esc in the track editor no longer fires through dialogs and text fields.** Pressing Esc to close the analyze-result dialog (or while typing in a field) also ejected you from the whole editor in the same keystroke; it now respects a dialog that already handled the key and ignores Esc while you're in an input.
+- **Errors show as in-app toasts instead of raw browser alerts.** Attaching/relocating a file, renaming/deleting/creating a playlist, and analyzing a track now report failures through the normal toast (consistent, dismissible, translated) rather than a blocking native `alert()` popup.
+- **The editor's delete prompt no longer claims it's permanent.** Deleting a track from the editor moves it to Trash (restorable), but the confirmation said "this cannot be undone" — it now reads "Move to Trash?" so a safe action stops looking destructive.
+- **The window has a minimum size.** Shrinking the window very small used to squeeze the track table toward zero width (the side panels don't shrink); the window now stops at a sane minimum.
 
 ### Security
 

@@ -163,6 +163,10 @@ function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
+    // Below this the fixed-width sidebar + detail rails squeeze the middle
+    // table toward zero (no responsive collapse yet), so floor the window.
+    minWidth: 900,
+    minHeight: 600,
     show: false,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     trafficLightPosition: process.platform === "darwin" ? { x: 14, y: 18 } : undefined,
