@@ -51,6 +51,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **Errors show as in-app toasts instead of raw browser alerts.** Attaching/relocating a file, renaming/deleting/creating a playlist, and analyzing a track now report failures through the normal toast (consistent, dismissible, translated) rather than a blocking native `alert()` popup.
 - **The editor's delete prompt no longer claims it's permanent.** Deleting a track from the editor moves it to Trash (restorable), but the confirmation said "this cannot be undone" — it now reads "Move to Trash?" so a safe action stops looking destructive.
 - **The window has a minimum size.** Shrinking the window very small used to squeeze the track table toward zero width (the side panels don't shrink); the window now stops at a sane minimum.
+- **Startup is more forgiving.** The desktop app now waits longer for the backend on a cold start (a first launch after an update, where dependency resolution runs before the server boots, no longer trips a spurious "couldn't start"), and it finds `uv` even when launched from the macOS Dock instead of a terminal (the minimal Dock environment used to break the sidecar spawn).
 
 ### Security
 

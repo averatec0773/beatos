@@ -14,7 +14,9 @@ import { assertSidecarLayout } from "./sidecar-helpers";
 import { createSplashWindow, closeSplashAndShowMain } from "./splash";
 import { testMcpConnection } from "./mcp/test-connection";
 
-const HANDSHAKE_TIMEOUT_MS = 5000;
+// Cold starts after a pull (uv resolving a changed lockfile before uvicorn even
+// boots) can legitimately exceed 5s; the splash covers the wait, so be patient.
+const HANDSHAKE_TIMEOUT_MS = 15000;
 const HANDSHAKE_POLL_MS = 50;
 const SIDECAR_KILL_GRACE_MS = 3000;
 
@@ -95,14 +97,24 @@ function startSidecar(): void {
   const sidecarLogPath = process.env.BEATOS_LOG_PATH ?? join(logsDir, "sidecar.jsonl");
   mkdirSync(dirname(sidecarLogPath), { recursive: true });
 
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    BEATOS_HANDSHAKE_PATH: hp,
+    BEATOS_DB_PATH: dbPath,
+    BEATOS_LOG_PATH: sidecarLogPath,
+  };
+  // GUI launches (macOS Dock / a packaged app) inherit a minimal PATH that
+  // often lacks uv's default install dir (~/.local/bin) and Homebrew, so
+  // spawning "uv" fails with ENOENT. Prepend the common locations on POSIX.
+  // Windows installs uv onto the user PATH already, so leave it untouched there.
+  if (process.platform !== "win32") {
+    const extra = [`${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin"];
+    env.PATH = [...extra, process.env.PATH ?? ""].filter(Boolean).join(":");
+  }
+
   sidecar = spawn("uv", ["run", "python", "-m", "beatos_http"], {
     cwd: repoRoot(),
-    env: {
-      ...process.env,
-      BEATOS_HANDSHAKE_PATH: hp,
-      BEATOS_DB_PATH: dbPath,
-      BEATOS_LOG_PATH: sidecarLogPath,
-    },
+    env,
     stdio: ["ignore", "pipe", "pipe"],
   });
 

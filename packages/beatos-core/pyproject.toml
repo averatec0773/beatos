@@ -10,7 +10,6 @@ dependencies = [
     "beatos-platforms",
     "pydantic>=2.9",
     "mutagen>=1.47",
-    "watchdog>=5.0",
     "librosa>=0.10,<0.11",
 ]
 
