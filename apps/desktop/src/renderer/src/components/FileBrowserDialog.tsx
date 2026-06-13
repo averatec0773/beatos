@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useFileBrowserStore, type FileFilter } from "@/stores/file-browser";
 
 interface FsEntry {
@@ -145,31 +146,17 @@ export function FileBrowserDialog(): React.JSX.Element {
               {t("fileBrowser.filteredHint", { exts: exts.join(", ") })}
             </span>
           )}
-          <button
-            type="button"
-            onClick={cancel}
-            className="px-3 py-1.5 rounded border border-border-subtle text-sm hover:bg-bg-row-hover"
-          >
+          <Button variant="ghost" size="sm" onClick={cancel}>
             {t("common.cancel")}
-          </button>
+          </Button>
           {mode === "folder" ? (
-            <button
-              type="button"
-              disabled={!listing}
-              onClick={() => listing && select(listing.cwd)}
-              className="px-3 py-1.5 rounded bg-accent text-bg-base text-sm disabled:opacity-40"
-            >
+            <Button size="sm" disabled={!listing} onClick={() => listing && select(listing.cwd)}>
               {t("fileBrowser.selectFolder")}
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              disabled={!selected}
-              onClick={() => selected && select(selected)}
-              className="px-3 py-1.5 rounded bg-accent text-bg-base text-sm disabled:opacity-40"
-            >
+            <Button size="sm" disabled={!selected} onClick={() => selected && select(selected)}>
               {t("fileBrowser.select")}
-            </button>
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

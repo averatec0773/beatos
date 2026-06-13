@@ -3,7 +3,14 @@ import { Rocket, Loader2, CheckCircle2, AlertCircle, MonitorSmartphone } from "l
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { exportApi, type ExportResult } from "@/api/export";
 import { assets as assetsApi, type Asset } from "@/api/assets";
 import { publishApi, type PublishJob } from "@/api/publish";
@@ -499,26 +506,28 @@ export function PublishDialog({
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-end gap-3">
+        <DialogFooter className="items-center">
           {inProgress && (
-            <span className="flex items-center gap-1.5 text-xs text-text-secondary">
+            <span className="mr-auto flex items-center gap-1.5 text-xs text-text-secondary">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               {stageLabel ?? ""}…
             </span>
           )}
-          <button
-            type="button"
+          <Button variant="ghost" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            className="gap-1.5"
             onClick={handlePublish}
             disabled={
               publishing ||
               sessionOk === false ||
               (isDouyin ? videoAssetId == null : audioAssetId == null)
             }
-            className="inline-flex items-center gap-1.5 rounded-md bg-text-primary px-3.5 py-1.5 text-sm font-medium text-bg-base hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Rocket className="h-3.5 w-3.5" /> {t("publishDialog.publish")}
-          </button>
-        </div>
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

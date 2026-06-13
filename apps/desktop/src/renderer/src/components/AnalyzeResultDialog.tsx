@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import type { AudioAnalysisResult } from "@/api/analysis";
 import { BPM_AUTOFILL_THRESHOLD, KEY_AUTOFILL_THRESHOLD } from "@/lib/audio-analysis-constants";
 
@@ -157,21 +158,11 @@ export function AnalyzeResultDialog({
           {t("dialogs.analyzeResult.replaceExisting")}
         </label>
 
-        <DialogFooter className="flex-row gap-2 sm:justify-start mt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-md border border-border-subtle text-text-primary hover:bg-bg-row-hover text-sm font-medium"
-          >
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
             {t("common.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={handleApply}
-            className="px-4 py-2 rounded-md font-medium text-sm btn-primary"
-          >
-            {t("common.apply")}
-          </button>
+          </Button>
+          <Button onClick={handleApply}>{t("common.apply")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

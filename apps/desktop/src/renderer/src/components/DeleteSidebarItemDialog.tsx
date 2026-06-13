@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   open: boolean;
@@ -33,22 +34,12 @@ export function DeleteSidebarItemDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="px-4 py-2 rounded-md border border-border-subtle text-sm hover:bg-bg-row-hover"
-          >
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {t("common.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              void onConfirm();
-            }}
-            className="px-4 py-2 rounded-md bg-danger text-white text-sm hover:opacity-90"
-          >
+          </Button>
+          <Button variant="danger" onClick={() => void onConfirm()}>
             {t("common.delete")}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
