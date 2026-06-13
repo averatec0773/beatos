@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from beatos_core.db import resolve_db_path, run_migrations
 from beatos_core.two_phase import cleanup_terminal_tokens
 from beatos_http import __version__
+from beatos_http.seed.demo import seed_demo_if_needed
 from beatos_http.mcp_auth import get_mcp_token, guard_mcp_app
 from beatos_http.routes import (
     analysis,
@@ -87,6 +88,9 @@ async def lifespan(app: FastAPI):
 
     await run_migrations(resolve_db_path())
     log.info("sidecar startup: migrations applied")
+
+    # Seed a demo track on a brand-new, empty install (best-effort, never raises).
+    await seed_demo_if_needed()
 
     # Cleanup once on startup so a fresh sidecar sees a tidy table.
     db_path_str = str(resolve_db_path())

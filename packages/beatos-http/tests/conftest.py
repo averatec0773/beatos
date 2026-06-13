@@ -42,3 +42,19 @@ def _reset_mcp_session_manager():
     yield
     sm._has_started = False
     sm._task_group = None
+
+
+@pytest.fixture(autouse=True)
+def _disable_demo_seed(monkeypatch):
+    """Stub the first-launch demo seed that app.lifespan runs on startup.
+
+    Every test that opens ``app.router.lifespan_context(app)`` against a fresh
+    temp DB would otherwise trigger a real seed (copying the bundled ~5 MB
+    assets + inserting a track), which is slow and would surprise any future
+    test that assumes an empty baseline. ``test_seed_demo.py`` exercises the
+    real function directly (not via the app), so it is unaffected by this."""
+    async def _noop(*_args, **_kwargs):
+        return False
+
+    monkeypatch.setattr("beatos_http.app.seed_demo_if_needed", _noop)
+    yield
