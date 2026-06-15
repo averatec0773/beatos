@@ -1,28 +1,68 @@
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Plus } from "lucide-react";
 
+import { useAssetStore } from "@/stores/assets";
 import { AudioFileRow } from "./AudioFileRow";
 import { ProjectFolderRow } from "./ProjectFolderRow";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "./ui/dropdown-menu";
 
-// Slot identity is (role, format) now that audio format is decoupled from role.
-// Each audio format is its own row (same one-file-per-slot UI as before).
-const ROWS = [
+type Row = { role: string; format: string; label: string; extensions: string[] };
+
+// Default audio slots — the common case: WAV + MP3 (tagged/untagged), loop, stems.
+const BASE_ROWS: Row[] = [
   { role: "audio_tagged", format: "wav", label: "WAV (tagged)", extensions: [".wav"] },
   { role: "audio_untagged", format: "wav", label: "WAV (untagged)", extensions: [".wav"] },
   { role: "audio_tagged", format: "mp3", label: "MP3 (tagged)", extensions: [".mp3"] },
   { role: "audio_untagged", format: "mp3", label: "MP3 (untagged)", extensions: [".mp3"] },
-  { role: "audio_tagged", format: "flac", label: "FLAC (tagged)", extensions: [".flac"] },
-  { role: "audio_untagged", format: "flac", label: "FLAC (untagged)", extensions: [".flac"] },
+];
+const LOOP_STEMS_ROWS: Row[] = [
   { role: "loop", format: "", label: "Loop", extensions: [".wav", ".mp3"] },
   { role: "stems", format: "", label: "Stems", extensions: [".zip", ".rar", ".7z"] },
-] as const;
+];
+
+// Extra audio formats — rare in practice, so they are NOT shown by default; the
+// user adds a slot on demand via "+ Add format" (and an already-present file in
+// such a format reveals its slots automatically). The data model fully supports
+// these — adding one here is all it takes (mirror beatos_core SUPPORTED_AUDIO_FORMATS).
+const EXTRA_FORMATS: { format: string; ext: string; label: string }[] = [
+  { format: "flac", ext: ".flac", label: "FLAC" },
+];
+
+function extraRows(format: string, ext: string, label: string): Row[] {
+  return [
+    { role: "audio_tagged", format, label: `${label} (tagged)`, extensions: [ext] },
+    { role: "audio_untagged", format, label: `${label} (untagged)`, extensions: [ext] },
+  ];
+}
 
 // Promo videos for publishing to video platforms (Douyin/WeChat Video/Bilibili…). Fixed aspect
 // slots reuse the one-asset-per-role model — same AudioFileRow slot, video exts.
-const PROMO_VIDEO_ROWS = [
-  { role: "promo_video_vertical", format: "", label: "Promo 9:16", extensions: [".mp4", ".mov", ".webm"] },
-  { role: "promo_video_landscape", format: "", label: "Promo 16:9", extensions: [".mp4", ".mov", ".webm"] },
-  { role: "promo_video_square", format: "", label: "Promo 1:1", extensions: [".mp4", ".mov", ".webm"] },
-] as const;
+const PROMO_VIDEO_ROWS: Row[] = [
+  {
+    role: "promo_video_vertical",
+    format: "",
+    label: "Promo 9:16",
+    extensions: [".mp4", ".mov", ".webm"],
+  },
+  {
+    role: "promo_video_landscape",
+    format: "",
+    label: "Promo 16:9",
+    extensions: [".mp4", ".mov", ".webm"],
+  },
+  {
+    role: "promo_video_square",
+    format: "",
+    label: "Promo 1:1",
+    extensions: [".mp4", ".mov", ".webm"],
+  },
+];
 
 export function FileRowsSection({
   trackId,
@@ -34,6 +74,29 @@ export function FileRowsSection({
   onChangeProjectPath: (path: string | null) => void;
 }) {
   const { t } = useTranslation();
+  const assets = useAssetStore((s) => s.byTrack[trackId]);
+  const [added, setAdded] = useState<Set<string>>(new Set());
+
+  // An extra format is shown if the user added it, or the track already holds a
+  // file in it (existing / MCP-attached FLAC stays visible without re-adding).
+  const present = useMemo(() => {
+    const s = new Set<string>();
+    for (const a of assets ?? [])
+      if (a.format && a.format !== "wav" && a.format !== "mp3") s.add(a.format);
+    return s;
+  }, [assets]);
+
+  const audioRows = useMemo(() => {
+    const shown = EXTRA_FORMATS.filter((f) => added.has(f.format) || present.has(f.format));
+    return [
+      ...BASE_ROWS,
+      ...shown.flatMap((f) => extraRows(f.format, f.ext, f.label)),
+      ...LOOP_STEMS_ROWS,
+    ];
+  }, [added, present]);
+
+  const addable = EXTRA_FORMATS.filter((f) => !added.has(f.format) && !present.has(f.format));
+
   return (
     <section className="space-y-2">
       <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
@@ -41,7 +104,7 @@ export function FileRowsSection({
       </h3>
       <div className="flex flex-col gap-1.5">
         <ProjectFolderRow projectPath={projectPath} onChange={onChangeProjectPath} />
-        {ROWS.map((r) => (
+        {audioRows.map((r) => (
           <AudioFileRow
             key={`${r.role}:${r.format}`}
             trackId={trackId}
@@ -51,6 +114,28 @@ export function FileRowsSection({
             extensions={[...r.extensions]}
           />
         ))}
+        {addable.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="self-start inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary"
+              >
+                <Plus size={14} /> {t("fileRows.addFormat")}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {addable.map((f) => (
+                <DropdownMenuItem
+                  key={f.format}
+                  onClick={() => setAdded((prev) => new Set(prev).add(f.format))}
+                >
+                  {f.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       <h3 className="pt-2 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
         {t("fileRows.promoVideos")}
