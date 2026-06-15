@@ -1,4 +1,4 @@
-import type { ColumnKey } from "@/stores/column-widths";
+import { MIN_WIDTH, type ColumnKey } from "@/stores/column-widths";
 
 /**
  * The library table column tracks, shared between `<TableHeader>` and every
@@ -16,7 +16,12 @@ import type { ColumnKey } from "@/stores/column-widths";
  * `position: absolute` instead of consuming its own grid track.
  */
 export function getGridTemplateColumns(widths: Record<ColumnKey, number>): string {
-  const title = widths.title === 0 ? "1fr" : `${widths.title}px`;
+  // Unfrozen (`title === 0`) the title track is flexible, but it MUST carry its
+  // MIN_WIDTH floor — a bare `1fr` has a 0 auto-minimum (the cell is min-w-0 +
+  // truncate), so shrinking the container (growing the preview panel) collapsed
+  // title to invisible until a column-resizer click happened to freeze it to px.
+  // `minmax(min, 1fr)` keeps it flexible AND floored from first paint.
+  const title = widths.title === 0 ? `minmax(${MIN_WIDTH.title}px, 1fr)` : `${widths.title}px`;
   return `52px ${title} ${widths.bpm}px ${widths.key}px ${widths.genre}px minmax(${widths.updated}px, 1fr)`;
 }
 

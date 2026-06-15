@@ -16,7 +16,10 @@ const DEFAULTS: Record<ColumnKey, number> = {
   updated: 96,
 };
 
-const MIN_WIDTH: Record<ColumnKey, number> = {
+// Per-column minimum px. `setWidth` clamps to these, and `getGridTemplateColumns`
+// floors the flexible `title`/`updated` tracks at theirs so they can't collapse
+// to nothing when the table container shrinks (e.g. the preview panel grows).
+export const MIN_WIDTH: Record<ColumnKey, number> = {
   title: 80,
   bpm: 48,
   key: 56,
