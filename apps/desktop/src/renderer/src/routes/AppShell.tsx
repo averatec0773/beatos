@@ -9,6 +9,7 @@ import { Toast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AnalysisProgressBar } from "@/components/AnalysisProgressBar";
 import { AsciiBackdrop } from "@/components/AsciiBackdrop";
+import { UnicornBackdrop } from "@/components/UnicornBackdrop";
 import { GutterResizer } from "@/components/GutterResizer";
 import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH, useSidebarPanelStore } from "@/stores/sidebar-panel";
 import { useAppearanceStore } from "@/stores/appearance";
@@ -28,6 +29,7 @@ export function AppShell(): React.JSX.Element {
   // opacity so a more-transparent panel also un-blurs, letting the ASCII
   // backdrop read crisply through it instead of as mush.
   const cardOpacity = useAppearanceStore((s) => s.cardOpacity);
+  const backdropStyle = useAppearanceStore((s) => s.backdropStyle);
   useEffect(() => {
     const alpha = cardOpacity / 100;
     const root = document.documentElement.style;
@@ -50,10 +52,12 @@ export function AppShell(): React.JSX.Element {
 
   return (
     <div className="app-canvas relative isolate h-screen text-text-primary flex flex-col overflow-hidden">
-      {/* Ambient ASCII glyph-rain, painted behind everything (negative z). The
-          translucent `.beatos-card` columns float over it; gutters + the now
-          transparent top bar reveal it directly. */}
-      <AsciiBackdrop />
+      {/* Ambient backdrop, painted behind everything (z-0). The translucent
+          `.beatos-card` columns float over it; gutters + the now transparent
+          top bar reveal it directly. The user picks the style in Settings →
+          Appearance: "aurora" (Unicorn WebGL field) or "ascii" (glyph-rain). */}
+      {backdropStyle === "aurora" && <UnicornBackdrop />}
+      {backdropStyle === "ascii" && <AsciiBackdrop />}
       <TopBar />
       {agentMode === "auto_approve" && (
         <div className="relative z-10 flex items-center justify-between gap-3 px-4 py-1.5 bg-warning/15 border-b border-warning/30 text-warning text-xs">

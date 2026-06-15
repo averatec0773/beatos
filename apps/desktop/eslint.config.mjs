@@ -6,7 +6,9 @@ import eslintPluginReactHooks from "eslint-plugin-react-hooks";
 import eslintPluginReactRefresh from "eslint-plugin-react-refresh";
 
 export default defineConfig(
-  { ignores: ["**/node_modules", "**/dist", "**/out"] },
+  // The vendored Unicorn Studio WebGL runtime is third-party minified code, not
+  // our source — don't lint it.
+  { ignores: ["**/node_modules", "**/dist", "**/out", "**/unicornStudio.umd.js"] },
   tseslint.configs.recommended,
   eslintPluginReact.configs.flat.recommended,
   eslintPluginReact.configs.flat["jsx-runtime"],

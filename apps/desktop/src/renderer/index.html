@@ -11,10 +11,14 @@
       - Web: same-origin ('self') media/img/connect for /api/assets + the API
         (the SPA is served by the sidecar), plus ws: for the Vite HMR socket.
       font-src includes data: because @fontsource ships some woff2 as data URLs.
+      script-src/connect-src include blob: so the aurora backdrop can inject the
+      bundled Unicorn Studio runtime + scene as same-origin Blob URLs (the one
+      load path that works under file:// in packaged Electron — see
+      components/UnicornBackdrop.tsx).
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: beatos-asset:; media-src 'self' beatos-asset:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://localhost:* ws://127.0.0.1:* beatos-asset:; worker-src 'self' blob:"
+      content="default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: beatos-asset:; media-src 'self' beatos-asset:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://localhost:* ws://127.0.0.1:* beatos-asset: blob:; worker-src 'self' blob:"
     />
   </head>
 
