@@ -27,7 +27,7 @@ def attach_audio_helper(tmp_path):
     """Return an async helper that attaches an audio file asset to a track."""
     from beatos_core.assets.service import attach_asset
 
-    async def _helper(track_id: int, role: str = "audio_tagged_wav") -> None:
+    async def _helper(track_id: int, role: str = "audio_tagged") -> None:
         audio = tmp_path / f"audio_{track_id}_{role}.wav"
         audio.write_bytes(b"\x00" * 64)
         await attach_asset(track_id, role=role, path=audio)
@@ -90,7 +90,7 @@ async def test_lists_for_track_returns_member_lists():
 async def test_tracks_in_list_returns_has_audio(attach_audio_helper):
     lst = await create_list(name="Test", kind="user")
     t = await create_track("with audio")
-    await attach_audio_helper(t.id, role="audio_tagged_mp3")
+    await attach_audio_helper(t.id, role="audio_tagged")
     await add_track_to_list(t.id, lst.id)
     rows = await tracks_in_list(lst.id)
     assert rows[0].has_audio is True

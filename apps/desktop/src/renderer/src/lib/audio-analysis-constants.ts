@@ -1,10 +1,4 @@
-export const AUDIO_ROLES = [
-  "audio_tagged_wav",
-  "audio_untagged_wav",
-  "audio_tagged_mp3",
-  "audio_untagged_mp3",
-  "loop",
-] as const;
+export const AUDIO_ROLES = ["audio_tagged", "audio_untagged", "loop"] as const;
 
 // Keep in sync with packages/beatos-core/beatos_core/audio_analysis/constants.py
 // (server-side batch autofill uses the Python copy; both must change together).

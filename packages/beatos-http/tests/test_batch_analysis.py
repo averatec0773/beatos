@@ -20,8 +20,8 @@ async def db_path(tmp_path, monkeypatch):
             (now, now),
         )
         await conn.execute(
-            "INSERT INTO asset (track_id, role, abs_path, missing, created_at, updated_at) "
-            "VALUES (1, 'audio_untagged_wav', '/tmp/a.wav', 0, ?, ?)",
+            "INSERT INTO asset (track_id, role, format, abs_path, missing, created_at, updated_at) "
+            "VALUES (1, 'audio_untagged', 'wav', '/tmp/a.wav', 0, ?, ?)",
             (now, now),
         )
         await conn.commit()

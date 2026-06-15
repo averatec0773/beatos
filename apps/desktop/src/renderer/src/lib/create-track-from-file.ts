@@ -7,10 +7,15 @@ import { applyDefaultIsFree } from "@/lib/default-free";
 
 export type AudioTag = "tagged" | "untagged";
 
+// Supported audio import formats. Mirrors beatos_core EXT_TO_FORMAT — keep in
+// sync (the server derives + validates the format from the extension on attach).
+const AUDIO_IMPORT_EXTS = [".wav", ".mp3", ".flac"];
+
 function roleFor(ext: string, tag: AudioTag): string | null {
-  if (ext === ".wav") return tag === "tagged" ? "audio_tagged_wav" : "audio_untagged_wav";
-  if (ext === ".mp3") return tag === "tagged" ? "audio_tagged_mp3" : "audio_untagged_mp3";
-  return null;
+  // Role is purely tagged/untagged now; the format rides on the file extension
+  // and is derived server-side on attach.
+  if (!AUDIO_IMPORT_EXTS.includes(ext)) return null;
+  return tag === "tagged" ? "audio_tagged" : "audio_untagged";
 }
 
 export interface ImportResult {
@@ -32,7 +37,7 @@ function resolveFiles(files: File[]): { ok: PathedFile[]; errors: string[]; skip
   let skipped = 0;
   for (const file of files) {
     const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-    if (ext !== ".wav" && ext !== ".mp3") {
+    if (!AUDIO_IMPORT_EXTS.includes(ext)) {
       skipped++;
       continue;
     }
@@ -62,7 +67,7 @@ export async function importAsNewTracks(files: File[], tag: AudioTag): Promise<I
       result.skipped++;
       continue;
     }
-    const titleStem = f.name.replace(/\.(wav|mp3)$/i, "");
+    const titleStem = f.name.replace(/\.(wav|mp3|flac)$/i, "");
     let created: Awaited<ReturnType<typeof tracks.create>>;
     try {
       created = await tracks.create(titleStem);

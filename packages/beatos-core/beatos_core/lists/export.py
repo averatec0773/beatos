@@ -17,11 +17,11 @@ from beatos_core.lists.membership import tracks_in_list
 from beatos_core.lists.service import get_list
 
 # Roles a producer would ship. The cover is excluded (artwork, not a deliverable).
+# Roles are semantic now; the file format rides on `asset.format` / the file
+# extension, so every audio format under a packageable role is included.
 _PACKAGEABLE = frozenset({
-    "audio_tagged_wav",
-    "audio_untagged_wav",
-    "audio_tagged_mp3",
-    "audio_untagged_mp3",
+    "audio_tagged",
+    "audio_untagged",
     "loop",
     "stems",
 })
@@ -46,6 +46,7 @@ async def build_export_manifest(list_id: int) -> list[dict]:
             {
                 "asset_id": a.id,
                 "role": a.role,
+                "format": a.format,
                 "filename": pathlib.Path(a.abs_path).name,
                 "size_bytes": a.size_bytes,
                 "missing": a.missing,

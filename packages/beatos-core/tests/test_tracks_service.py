@@ -31,7 +31,7 @@ def attach_audio_helper(tmp_path):
     """Return an async helper that attaches an audio file asset to a track."""
     from beatos_core.assets.service import attach_asset
 
-    async def _helper(track_id: int, role: str = "audio_tagged_wav"):
+    async def _helper(track_id: int, role: str = "audio_tagged"):
         audio = tmp_path / f"audio_{track_id}_{role}.wav"
         audio.write_bytes(b"\x00" * 64)
         return await attach_asset(track_id, role=role, path=audio)
@@ -124,7 +124,7 @@ async def test_update_track_can_set_producer():
 @pytest.mark.asyncio
 async def test_list_tracks_has_audio_true_when_audio_asset_attached(attach_audio_helper):
     t = await create_track("New")
-    await attach_audio_helper(t.id, role="audio_tagged_wav")
+    await attach_audio_helper(t.id, role="audio_tagged")
     rows = await list_tracks()
     [row] = [r for r in rows if r.id == t.id]
     assert row.has_audio is True
@@ -142,7 +142,7 @@ async def test_list_tracks_has_audio_false_for_cover_only(attach_cover_helper):
 @pytest.mark.asyncio
 async def test_list_tracks_has_audio_true_when_mp3_attached(attach_audio_helper):
     t = await create_track("New")
-    await attach_audio_helper(t.id, role="audio_tagged_mp3")
+    await attach_audio_helper(t.id, role="audio_tagged")
     rows = await list_tracks()
     [row] = [r for r in rows if r.id == t.id]
     assert row.has_audio is True
@@ -151,7 +151,7 @@ async def test_list_tracks_has_audio_true_when_mp3_attached(attach_audio_helper)
 @pytest.mark.asyncio
 async def test_list_tracks_has_audio_true_when_untagged_mp3_attached(attach_audio_helper):
     t = await create_track("New")
-    await attach_audio_helper(t.id, role="audio_untagged_mp3")
+    await attach_audio_helper(t.id, role="audio_untagged")
     rows = await list_tracks()
     [row] = [r for r in rows if r.id == t.id]
     assert row.has_audio is True
@@ -160,7 +160,7 @@ async def test_list_tracks_has_audio_true_when_untagged_mp3_attached(attach_audi
 @pytest.mark.asyncio
 async def test_list_tracks_has_audio_true_when_untagged_wav_attached(attach_audio_helper):
     t = await create_track("New")
-    await attach_audio_helper(t.id, role="audio_untagged_wav")
+    await attach_audio_helper(t.id, role="audio_untagged")
     rows = await list_tracks()
     [row] = [r for r in rows if r.id == t.id]
     assert row.has_audio is True
@@ -180,7 +180,7 @@ async def test_count_tracks_excludes_trashed():
 @pytest.mark.asyncio
 async def test_has_audio_false_when_audio_asset_is_missing(attach_audio_helper):
     t = await create_track("New")
-    asset = await attach_audio_helper(t.id, role="audio_tagged_wav")
+    asset = await attach_audio_helper(t.id, role="audio_tagged")
     async with aiosqlite.connect(resolve_db_path()) as conn:
         await conn.execute("UPDATE asset SET missing = 1 WHERE id = ?", (asset.id,))
         await conn.commit()

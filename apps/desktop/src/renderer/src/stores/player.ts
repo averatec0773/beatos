@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { assets as assetsApi } from "@/api/assets";
-import { resolveAudioAsset } from "@/lib/audio-resolve";
-import type { AudioRole } from "@/lib/audio-resolve";
+import { resolveAudioAsset, variantKey } from "@/lib/audio-resolve";
+import type { VariantKey } from "@/lib/audio-resolve";
 import { audioEngine } from "@/lib/audio-engine";
 
 export type PlayerStatus = "idle" | "loading" | "playing" | "paused" | "error";
@@ -16,8 +16,8 @@ export interface QueueOrigin {
 interface PlayerState {
   currentTrackId: number | null;
   currentAssetId: number | null;
-  currentRole: AudioRole | null;
-  preferredRole: AudioRole | null;
+  currentRole: VariantKey | null;
+  preferredRole: VariantKey | null;
   status: PlayerStatus;
   position: number;
   duration: number;
@@ -57,7 +57,7 @@ interface PlayerState {
   syncQueue(trackIds: number[], anchorTrackId: number | null): void;
   next(opts?: { wrap?: boolean; autoplay?: boolean }): Promise<void>;
   prev(opts?: { wrap?: boolean }): Promise<void>;
-  setPreferredRole(role: AudioRole): Promise<void>;
+  setPreferredRole(role: VariantKey): Promise<void>;
   _onEnded(): Promise<void>;
   /**
    * Restore the persisted resume point on boot: re-load the last track PAUSED
@@ -82,7 +82,7 @@ interface PersistedPlayer {
   muted: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
-  preferredRole: AudioRole | null;
+  preferredRole: VariantKey | null;
   lastTrackId: number | null;
   lastPosition: number;
 }
@@ -112,7 +112,7 @@ function loadPersistedPlayer(): PersistedPlayer {
       repeat: REPEAT_ORDER.includes(p.repeat as RepeatMode)
         ? (p.repeat as RepeatMode)
         : PLAYER_DEFAULTS.repeat,
-      preferredRole: (p.preferredRole as AudioRole | null) ?? null,
+      preferredRole: (p.preferredRole as VariantKey | null) ?? null,
       lastTrackId:
         typeof p.lastTrackId === "number" && Number.isFinite(p.lastTrackId) ? p.lastTrackId : null,
       lastPosition:
@@ -181,7 +181,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
    */
   async function loadAndPlay(
     trackId: number,
-    preferred: AudioRole | null,
+    preferred: VariantKey | null,
     targetStatus: "playing" | "preserve" = "playing",
   ): Promise<void> {
     // Latest-wins guard: rapid track switches fire overlapping loadAndPlay
@@ -211,7 +211,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     set({
       currentTrackId: trackId,
       currentAssetId: asset.id,
-      currentRole: asset.role as AudioRole,
+      currentRole: variantKey(asset.role, asset.format),
       status: "loading",
       position: 0,
       duration: 0,
@@ -442,7 +442,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         set({
           currentTrackId: lastTrackId,
           currentAssetId: asset.id,
-          currentRole: asset.role as AudioRole,
+          currentRole: variantKey(asset.role, asset.format),
           status: "loading",
           position: 0,
           duration: 0,

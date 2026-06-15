@@ -87,12 +87,7 @@ async def cover_stream(asset_id: int) -> FileResponse:
     )
 
 
-_AUDIO_MIME = {
-    "audio_tagged_mp3": "audio/mpeg",
-    "audio_untagged_mp3": "audio/mpeg",
-    "audio_tagged_wav": "audio/wav",
-    "audio_untagged_wav": "audio/wav",
-}
+_FORMAT_MIME = {"wav": "audio/wav", "mp3": "audio/mpeg", "flac": "audio/flac"}
 
 
 @router.get("/api/assets/audio/{asset_id}")
@@ -105,16 +100,17 @@ async def audio_stream(asset_id: int) -> Response:
     p = pathlib.Path(asset.abs_path)
     if not p.exists():
         raise HTTPException(status_code=404, detail="Audio file missing.")
-    # `loop` can be wav OR mp3, so it has no fixed entry in _AUDIO_MIME — fall
-    # back to the file extension (and finally mpeg) when mime_type is unset.
-    fallback = _AUDIO_MIME.get(asset.role) or (
-        "audio/wav" if p.suffix.lower() == ".wav" else "audio/mpeg"
+    # Format (asset.format: wav/mp3/flac) is authoritative for content-type now;
+    # fall back to the stored mime / extension only if format is somehow unset.
+    media = (
+        _FORMAT_MIME.get(asset.format)
+        or asset.mime_type
+        or ("audio/wav" if p.suffix.lower() == ".wav" else "audio/mpeg")
     )
-    media = asset.mime_type or fallback
     if media in ("audio/x-wav", "audio/vnd.wave"):
         media = "audio/wav"
 
-    is_wav = media == "audio/wav" or p.suffix.lower() == ".wav"
+    is_wav = asset.format == "wav" or p.suffix.lower() == ".wav"
     if is_wav:
         # Clean WAVs stay on a range-capable FileResponse (decodeAudioData and
         # the audio element handle them fine). Only DAW WAVs with extra RIFF

@@ -76,8 +76,8 @@ async def test_approve_create_tracks_inserts_rows(client, db_path):
 @pytest.mark.asyncio
 async def test_agent_attached_audio_lands_a_playable_role(client, db_path, tmp_path):
     """Regression: an agent attaching role='audio' through the MCP tool must land
-    a canonical AUDIO_ROLE (audio_untagged_wav/mp3), not the literal 'audio' —
-    else the asset is invisible to playback, analysis and /api/assets/audio."""
+    a semantic AUDIO_ROLE + format (audio_untagged / wav), not the literal 'audio'
+    — else the asset is invisible to playback, analysis and /api/assets/audio."""
     from beatos_core.assets import AUDIO_ROLES
     from beatos_mcp.tools.ingest import attach_assets
 
@@ -87,10 +87,10 @@ async def test_agent_attached_audio_lands_a_playable_role(client, db_path, tmp_p
     res = await client.post(f"/api/tokens/{r['token']}/approve")
     assert res.status_code == 200
     async with aiosqlite.connect(db_path) as conn:
-        async with conn.execute("SELECT role FROM asset WHERE track_id = 1") as cur:
-            role = (await cur.fetchone())[0]
+        async with conn.execute("SELECT role, format FROM asset WHERE track_id = 1") as cur:
+            role, fmt = await cur.fetchone()
     assert role in AUDIO_ROLES, f"audio landed as {role!r}, invisible to audio paths"
-    assert role == "audio_untagged_wav"
+    assert (role, fmt) == ("audio_untagged", "wav")
 
 
 @pytest.mark.asyncio
@@ -235,7 +235,7 @@ async def test_approve_detach_audio_removes_canonical_audio_role(client, db_path
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
-            "VALUES (1, 'audio_untagged_wav', '/a.wav', ?, ?)",
+            "VALUES (1, 'audio_untagged', '/a.wav', ?, ?)",
             (now, now),
         )
         tok = await create_token(
@@ -261,7 +261,7 @@ async def test_approve_detach_assets_removes_rows(client, db_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
-            "VALUES (1, 'audio_untagged_wav', '/a.wav', ?, ?)",
+            "VALUES (1, 'audio_untagged', '/a.wav', ?, ?)",
             (now, now),
         )
         await conn.execute(
@@ -298,7 +298,7 @@ async def test_approve_detach_assets_idempotent_on_missing(client, db_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
-            "VALUES (1, 'audio_untagged_wav', '/a.wav', ?, ?)",
+            "VALUES (1, 'audio_untagged', '/a.wav', ?, ?)",
             (now, now),
         )
         tok = await create_token(

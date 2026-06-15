@@ -24,7 +24,7 @@ async def _fresh_db(tmp_path, monkeypatch):
 def attach_audio_helper(tmp_path):
     from beatos_core.assets.service import attach_asset
 
-    async def _helper(track_id: int, role: str = "audio_tagged_wav"):
+    async def _helper(track_id: int, role: str = "audio_tagged"):
         audio = tmp_path / f"audio_{track_id}_{role}.wav"
         audio.write_bytes(b"\x00" * 64)
         return await attach_asset(track_id, role=role, path=audio)

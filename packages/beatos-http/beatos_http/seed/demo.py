@@ -91,7 +91,7 @@ async def seed_demo_if_needed(*, source_dir: pathlib.Path | None = None) -> bool
 
         track = await create_track(_DEMO_TITLE)
         await update_track(track.id, dict(_DEMO_META))
-        await attach_asset(track.id, "audio_tagged_mp3", audio_dst)
+        await attach_asset(track.id, "audio_tagged", audio_dst)
         await attach_asset(track.id, "cover", cover_dst)
         await create_tier(
             track.id, name="MP3", deliverables=["mp3"], prices=dict(_DEMO_PRICE)

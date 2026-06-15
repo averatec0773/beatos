@@ -7,10 +7,8 @@ from typing import Optional, Literal
 from pydantic import BaseModel, Field
 
 AssetRole = Literal[
-    "audio_tagged_mp3",
-    "audio_untagged_mp3",
-    "audio_tagged_wav",
-    "audio_untagged_wav",
+    "audio_tagged",
+    "audio_untagged",
     "loop",
     "stems",
     "cover",
@@ -37,6 +35,10 @@ class Asset(BaseModel):
     sha256: Optional[str] = Field(default=None, description="Content hash for recovery.")
     size_bytes: Optional[int] = None
     mime_type: Optional[str] = None
+    format: str = Field(
+        default="",
+        description="Normalized audio format: 'wav'|'mp3'|'flac' for audio roles; '' otherwise.",
+    )
     missing: bool = False
     created_at: _dt.datetime
 

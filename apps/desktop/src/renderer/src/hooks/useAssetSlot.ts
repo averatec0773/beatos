@@ -21,6 +21,7 @@ interface UseAssetSlotResult {
 export function useAssetSlot(
   trackId: number,
   role: string,
+  format: string,
   label: string,
   extensions: string[],
 ): UseAssetSlotResult {
@@ -30,7 +31,8 @@ export function useAssetSlot(
   const detachAction = useAssetStore((s) => s.detach);
   const relocateAction = useAssetStore((s) => s.relocate);
 
-  const asset = assetsForTrack.find((a) => a.role === role) ?? null;
+  // Slot identity is (role, format) now — format rides on the file's extension.
+  const asset = assetsForTrack.find((a) => a.role === role && a.format === format) ?? null;
   const filterExtensions = extensions.map((e) => e.replace(/^\./, ""));
 
   const pickAndAttach = async (replace: boolean, explicitPath?: string) => {

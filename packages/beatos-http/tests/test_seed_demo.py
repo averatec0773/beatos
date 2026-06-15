@@ -46,7 +46,7 @@ async def test_seeds_empty_library(db, fake_source):
     assert t.is_free is True
 
     roles = {a.role for a in await list_assets(t.id)}
-    assert roles == {"audio_tagged_mp3", "cover"}
+    assert roles == {"audio_tagged", "cover"}
 
     # Files copied into the stable user-data demo dir (next to the db).
     demo_dir = db.parent / "demo"

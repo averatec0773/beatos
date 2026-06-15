@@ -12,7 +12,12 @@ from typing import Optional
 
 import aiosqlite
 
-from beatos_core.assets._constants import ASSET_ROLES, AUDIO_ROLES
+from beatos_core.assets._constants import (
+    ASSET_ROLES,
+    AUDIO_ROLES,
+    EXT_TO_FORMAT,
+    SUPPORTED_AUDIO_FORMATS,
+)
 from beatos_core.assets.hashing import sha256_file
 from beatos_core.assets import metadata as _metadata_mod
 from beatos_core.db import resolve_db_path
@@ -20,7 +25,7 @@ from beatos_core.models import Asset
 
 _SELECT_COLS = (
     "id, track_id, role, mode, abs_path, rel_path, sha256, "
-    "size_bytes, mime, missing, created_at"
+    "size_bytes, mime, format, missing, created_at"
 )
 
 
@@ -39,8 +44,9 @@ def _row_to_asset(row: tuple) -> Asset:
         sha256=row[6],
         size_bytes=row[7],
         mime_type=row[8],
-        missing=bool(row[9]),
-        created_at=_dt.datetime.fromisoformat(row[10]),
+        format=row[9] or "",
+        missing=bool(row[10]),
+        created_at=_dt.datetime.fromisoformat(row[11]),
     )
 
 
@@ -67,6 +73,19 @@ async def attach_asset(
     if not file.exists():
         raise ValueError(f"File does not exist: {file}")
 
+    # Format is decoupled from role: audio roles carry a normalized wav/mp3/flac
+    # derived from the extension; non-audio roles (cover/stems/promo) carry ''.
+    ext = file.suffix.lower()
+    if role in AUDIO_ROLES:
+        fmt = EXT_TO_FORMAT.get(ext)
+        if fmt is None:
+            raise ValueError(
+                f"Unsupported audio format {ext!r}; "
+                f"allowed: {sorted(SUPPORTED_AUDIO_FORMATS)}"
+            )
+    else:
+        fmt = ""
+
     sha = await sha256_file(file)
     size = file.stat().st_size
     mime, _ = mimetypes.guess_type(str(file))
@@ -75,21 +94,25 @@ async def attach_asset(
     db_path = resolve_db_path()
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute("PRAGMA foreign_keys = ON")  # cascade analysis_cache on replace; see purge_track
+        # Uniqueness is (track_id, role, format): the same semantic slot may hold
+        # multiple formats, so a replace targets the matching format only.
         async with conn.execute(
-            "SELECT id FROM asset WHERE track_id = ? AND role = ?", (track_id, role)
+            "SELECT id FROM asset WHERE track_id = ? AND role = ? AND format = ?",
+            (track_id, role, fmt),
         ) as cur:
             existing = await cur.fetchone()
 
         if existing:
             if not replace:
-                raise ValueError(f"Track already has a {role} asset.")
+                label = f"{role}/{fmt}" if fmt else role
+                raise ValueError(f"Track already has a {label} asset.")
             await conn.execute("DELETE FROM asset WHERE id = ?", (existing[0],))
 
         async with conn.execute(
             "INSERT INTO asset (track_id, role, mode, abs_path, sha256, size_bytes, "
-            "mime, missing, created_at, updated_at) "
-            "VALUES (?, ?, 'linked', ?, ?, ?, ?, 0, ?, ?)",
-            (track_id, role, str(file), sha, size, mime, now, now),
+            "mime, format, missing, created_at, updated_at) "
+            "VALUES (?, ?, 'linked', ?, ?, ?, ?, ?, 0, ?, ?)",
+            (track_id, role, str(file), sha, size, mime, fmt, now, now),
         ) as cur:
             asset_id = cur.lastrowid
         await conn.commit()

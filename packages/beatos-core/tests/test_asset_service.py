@@ -57,11 +57,11 @@ async def test_attach_returns_asset_with_sha256(tmp_path):
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
 
-    asset = await attach_asset(track_id, role="audio_tagged_mp3", path=audio)
+    asset = await attach_asset(track_id, role="audio_tagged", path=audio)
 
     assert asset.id > 0
     assert asset.track_id == track_id
-    assert asset.role == "audio_tagged_mp3"
+    assert asset.role == "audio_tagged"
     assert asset.mode == "linked"
     assert asset.abs_path == str(audio.resolve())
     assert asset.sha256 is not None
@@ -84,7 +84,7 @@ async def test_attach_audio_prefills_track_bpm_if_empty(tmp_path):
     original = _meta_mod.read_audio_metadata
     _meta_mod.read_audio_metadata = fake_meta
     try:
-        await attach_asset(track_id, role="audio_tagged_mp3", path=audio)
+        await attach_asset(track_id, role="audio_tagged", path=audio)
     finally:
         _meta_mod.read_audio_metadata = original
 
@@ -101,7 +101,7 @@ async def test_detach_removes_asset_row(tmp_path):
     track_id = await _create_track()
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
-    asset = await attach_asset(track_id, role="audio_tagged_mp3", path=audio)
+    asset = await attach_asset(track_id, role="audio_tagged", path=audio)
 
     await detach_asset(asset.id)
 
@@ -113,7 +113,7 @@ async def test_relocate_silent_when_sha256_matches(tmp_path):
     track_id = await _create_track()
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
-    asset = await attach_asset(track_id, role="audio_tagged_mp3", path=audio)
+    asset = await attach_asset(track_id, role="audio_tagged", path=audio)
 
     new_loc = tmp_path / "renamed.wav"
     audio.rename(new_loc)
@@ -129,7 +129,7 @@ async def test_relocate_raises_when_sha256_differs(tmp_path):
     track_id = await _create_track()
     audio = tmp_path / "beat.wav"
     _make_wav(audio, duration_seconds=2.0)
-    asset = await attach_asset(track_id, role="audio_tagged_mp3", path=audio)
+    asset = await attach_asset(track_id, role="audio_tagged", path=audio)
 
     different = tmp_path / "different.wav"
     _make_wav(different, duration_seconds=5.0)
@@ -144,7 +144,7 @@ async def test_missing_sweep_marks_vanished_files(tmp_path):
     track_id = await _create_track()
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
-    asset = await attach_asset(track_id, role="audio_tagged_mp3", path=audio)
+    asset = await attach_asset(track_id, role="audio_tagged", path=audio)
     audio.unlink()
 
     result = await missing_sweep()
@@ -194,7 +194,51 @@ async def test_attach_accepts_path_outside_any_source(tmp_path):
         rogue = pathlib.Path(rogue_dir) / "outside.wav"
         rogue.write_bytes(b"\x00" * 64)
 
-        asset = await attach_asset(t_id, "audio_tagged_mp3", rogue)
+        asset = await attach_asset(t_id, "audio_tagged", rogue)
         assert asset.abs_path == str(rogue.resolve())
+
+
+@pytest.mark.asyncio
+async def test_attach_derives_format_from_extension(tmp_path):
+    track_id = await _create_track()
+    audio = tmp_path / "beat.wav"
+    _make_wav(audio)
+    asset = await attach_asset(track_id, role="audio_untagged", path=audio)
+    assert asset.role == "audio_untagged"
+    assert asset.format == "wav"
+
+
+@pytest.mark.asyncio
+async def test_attach_accepts_flac(tmp_path):
+    track_id = await _create_track()
+    f = tmp_path / "beat.flac"
+    f.write_bytes(b"fLaC" + b"\x00" * 64)
+    asset = await attach_asset(track_id, role="audio_untagged", path=f)
+    assert asset.format == "flac"
+
+
+@pytest.mark.asyncio
+async def test_attach_rejects_unsupported_audio_format(tmp_path):
+    track_id = await _create_track()
+    aiff = tmp_path / "x.aiff"
+    aiff.write_bytes(b"\x00" * 64)
+    with pytest.raises(ValueError, match="[Uu]nsupported audio format"):
+        await attach_asset(track_id, role="audio_untagged", path=aiff)
+
+
+@pytest.mark.asyncio
+async def test_attach_same_role_two_formats_coexist(tmp_path):
+    """The decoupled model: one semantic role may hold multiple formats — the
+    (track_id, role, format) uniqueness lets wav + mp3 of the same slot coexist."""
+    track_id = await _create_track()
+    wav = tmp_path / "b.wav"
+    _make_wav(wav)
+    mp3 = tmp_path / "b.mp3"
+    mp3.write_bytes(b"\xff\xfb" + b"\x00" * 64)
+    await attach_asset(track_id, role="audio_untagged", path=wav)
+    a2 = await attach_asset(track_id, role="audio_untagged", path=mp3)
+    assert a2.format == "mp3"
+    assets = await list_assets(track_id)
+    assert {x.format for x in assets if x.role == "audio_untagged"} == {"wav", "mp3"}
 
 

@@ -31,8 +31,8 @@ async def _track_with_files(tmp_path, title, files):
 @pytest.fixture
 async def populated_list(db, tmp_path):
     lst = await create_list("BEATTAPE")
-    a = await _track_with_files(tmp_path, "PAINLUV", [("audio_tagged_wav", ".wav"), ("loop", ".wav")])
-    b = await _track_with_files(tmp_path, "ANOTHER", [("audio_untagged_mp3", ".mp3")])
+    a = await _track_with_files(tmp_path, "PAINLUV", [("audio_tagged", ".wav"), ("loop", ".wav")])
+    b = await _track_with_files(tmp_path, "ANOTHER", [("audio_untagged", ".mp3")])
     await add_track_to_list(a, lst.id)
     await add_track_to_list(b, lst.id)
     return {"list_id": lst.id, "a": a, "b": b}
@@ -44,7 +44,7 @@ async def test_manifest_lists_packageable_files(populated_list):
     titles = {m["title"]: m for m in manifest}
     assert set(titles) == {"PAINLUV", "ANOTHER"}
     roles = {f["role"] for f in titles["PAINLUV"]["files"]}
-    assert roles == {"audio_tagged_wav", "loop"}
+    assert roles == {"audio_tagged", "loop"}
 
 
 @pytest.mark.asyncio

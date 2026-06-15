@@ -14,6 +14,7 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
   const { asset, pickAndAttach, detach, relocate, reveal } = useAssetSlot(
     trackId,
     "cover",
+    "",
     "Cover",
     COVER_EXTENSIONS,
   );

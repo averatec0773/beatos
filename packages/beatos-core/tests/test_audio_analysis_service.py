@@ -41,7 +41,7 @@ async def _attach_fixture(tmp_path: pathlib.Path, track_id: int) -> int:
     """Copy the fixture WAV into tmp_path and attach it."""
     dest = tmp_path / "click_120bpm_c_major.wav"
     shutil.copy(FIXTURE_WAV, dest)
-    asset = await attach_asset(track_id, role="audio_tagged_wav", path=dest)
+    asset = await attach_asset(track_id, role="audio_tagged", path=dest)
     return asset.id
 
 

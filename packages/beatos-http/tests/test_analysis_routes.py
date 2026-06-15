@@ -35,7 +35,7 @@ def _attach_fixture_wav(client: TestClient, tmp_path: pathlib.Path, track_id: in
     shutil.copy(FIXTURE_WAV, dest)
     res = client.post(
         f"/api/tracks/{track_id}/assets",
-        json={"role": "audio_tagged_wav", "path": str(dest)},
+        json={"role": "audio_tagged", "path": str(dest)},
     )
     assert res.status_code == 200, res.text
 

@@ -31,15 +31,19 @@ interface Props {
 const TERMINAL = new Set(["done", "failed", "awaiting_review", "awaiting_sms"]);
 // Moved to publishDialog.awaitingMsg i18n key — rendered via t() inside the component.
 
-// Streamable PREVIEW (public): prefer tagged so the clean file isn't exposed.
-const PREVIEW_ROLE_PRIORITY = [
-  "audio_tagged_wav",
-  "audio_tagged_mp3",
-  "audio_untagged_wav",
-  "audio_untagged_mp3",
-];
-// Buyer DELIVERABLE WAV (lossless, no watermark).
-const DELIVERABLE_WAV_PRIORITY = ["audio_untagged_wav", "audio_tagged_wav"];
+// Audio selection ranks. Format is decoupled from role now, so we rank on
+// (role, format) instead of format-encoded role names.
+const _FMT_RANK: Record<string, number> = { wav: 0, flac: 1, mp3: 2 };
+// Streamable PREVIEW (public): prefer tagged so the clean file isn't exposed;
+// within a tag-state prefer lossless.
+function previewRank(a: Asset): number {
+  const tag = a.role === "audio_tagged" ? 0 : a.role === "audio_untagged" ? 1 : 9;
+  return tag * 3 + (_FMT_RANK[a.format] ?? 8);
+}
+// Buyer DELIVERABLE WAV (lossless, no watermark): untagged before tagged.
+function deliverableWavRank(a: Asset): number {
+  return a.role === "audio_untagged" ? 0 : 1;
+}
 // Promo video for video platforms (douyin): prefer vertical 9:16.
 const PROMO_VIDEO_ROLE_PRIORITY = [
   "promo_video_vertical",
@@ -51,9 +55,6 @@ const SPEC_KEYS = ["bpm", "key", "genre", "mood"];
 
 function isAudioRole(role: string): boolean {
   return role.startsWith("audio_");
-}
-function isWavRole(role: string): boolean {
-  return role.startsWith("audio_") && role.endsWith("_wav");
 }
 function isPromoVideoRole(role: string): boolean {
   return role.startsWith("promo_video");
@@ -131,7 +132,10 @@ export function PublishDialog({
   );
 
   const audioAssets = useMemo(() => trackAssets.filter((a) => isAudioRole(a.role)), [trackAssets]);
-  const wavAssets = useMemo(() => trackAssets.filter((a) => isWavRole(a.role)), [trackAssets]);
+  const wavAssets = useMemo(
+    () => trackAssets.filter((a) => isAudioRole(a.role) && a.format === "wav"),
+    [trackAssets],
+  );
   const coverAssets = useMemo(() => trackAssets.filter((a) => a.role === "cover"), [trackAssets]);
   const stemsAssets = useMemo(() => trackAssets.filter((a) => a.role === "stems"), [trackAssets]);
   const videoAssets = useMemo(
@@ -231,11 +235,12 @@ export function PublishDialog({
       .then((list) => {
         if (cancelled) return;
         setTrackAssets(list);
-        const preview =
-          pickFirst(list, PREVIEW_ROLE_PRIORITY) ?? list.find((a) => isAudioRole(a.role));
+        const audio = list.filter((a) => isAudioRole(a.role));
+        const preview = [...audio].sort((x, y) => previewRank(x) - previewRank(y))[0];
         if (preview) setAudioAssetId(preview.id);
-        const wav =
-          pickFirst(list, DELIVERABLE_WAV_PRIORITY) ?? list.find((a) => isWavRole(a.role));
+        const wav = audio
+          .filter((a) => a.format === "wav")
+          .sort((x, y) => deliverableWavRank(x) - deliverableWavRank(y))[0];
         if (wav) setWavAssetId(wav.id);
         const stems = list.find((a) => a.role === "stems");
         if (stems) setStemsAssetId(stems.id);

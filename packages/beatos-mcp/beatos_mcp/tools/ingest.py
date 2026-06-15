@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from beatos_core.assets import AUDIO_ROLES
+from beatos_core.assets import AUDIO_ROLES, EXT_TO_FORMAT
 from beatos_mcp.db import connect_writable
 from beatos_mcp.policy import submit_write
 from beatos_mcp.preview import build_preview
@@ -20,20 +20,20 @@ _CREATE_ITEM_FIELDS = {"title", "bpm", "key", "producer", "genre", "mood"}
 _ATTACH_ITEM_FIELDS = {"track_id", "role", "path"}
 _DETACH_ITEM_FIELDS = {"track_id", "role"}
 # The agent-facing role vocabulary is deliberately simple ("audio"/"cover"); the
-# DB stores canonical roles. On attach the extension resolves "audio" → a
-# concrete role; .flac/.aiff have no representable role so are not accepted.
+# DB stores semantic roles + a separate `format`. On attach, "audio" resolves to
+# the untagged master role and the extension picks the format. Supported formats
+# live in beatos_core EXT_TO_FORMAT — adding one there (e.g. .aiff) is all it takes.
 _VALID_ROLES = ("audio", "cover")
-_AUDIO_ROLE_BY_EXT = {".wav": "audio_untagged_wav", ".mp3": "audio_untagged_mp3"}
-_AUDIO_EXT = set(_AUDIO_ROLE_BY_EXT)
+_AUDIO_EXT = set(EXT_TO_FORMAT)
 _COVER_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 
 
-def _resolve_attach_role(role: str, ext: str) -> str:
-    """Map the agent-facing role to the canonical DB role. 'cover' is already
-    canonical; 'audio' resolves by extension (agent uploads are untagged)."""
+def _resolve_attach_role(role: str, ext: str) -> tuple[str, str]:
+    """Map the agent-facing role to a (canonical_role, format) pair. 'cover' has
+    no format; 'audio' resolves to the untagged master role + the file's format."""
     if role == "cover":
-        return "cover"
-    return _AUDIO_ROLE_BY_EXT[ext]
+        return "cover", ""
+    return "audio_untagged", EXT_TO_FORMAT[ext]
 
 
 def _detach_present(track_id: int, role: str, existing: set[tuple[int, str]]) -> bool:
@@ -104,13 +104,13 @@ def _validate_track_id(value: Any, *, where: str) -> int:
 
 def _validate_attach_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Validate the batch and return a normalized copy with the agent-facing role
-    resolved to its canonical DB role. Dedup is on the resolved role, so the same
-    track may receive an audio WAV and an audio MP3 in one batch."""
+    resolved to a (canonical role, format) pair. Dedup is on (role, format), so the
+    same track may receive an audio WAV and an audio MP3 in one batch."""
     if not isinstance(items, list) or not items:
         raise ValueError("items must be a non-empty list")
     if len(items) > _MAX_ASSET_ITEMS:
         raise ValueError(f"items list too large: max {_MAX_ASSET_ITEMS}")
-    seen: set[tuple[int, str]] = set()
+    seen: set[tuple[int, str, str]] = set()
     normalized: list[dict[str, Any]] = []
     for i, it in enumerate(items):
         if not isinstance(it, dict):
@@ -137,15 +137,17 @@ def _validate_attach_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 f"items[{i}]: extension {ext!r} does not match role={role!r} "
                 f"(allowed: {sorted(allowed)})"
             )
-        canonical_role = _resolve_attach_role(role, ext)
-        key = (track_id, canonical_role)
+        canonical_role, fmt = _resolve_attach_role(role, ext)
+        key = (track_id, canonical_role, fmt)
         if key in seen:
+            label = f"{canonical_role}/{fmt}" if fmt else canonical_role
             raise ValueError(
-                f"items[{i}]: duplicate (track_id={track_id}, role={canonical_role!r}) "
-                "in batch"
+                f"items[{i}]: duplicate (track_id={track_id}, role={label!r}) in batch"
             )
         seen.add(key)
-        normalized.append({"track_id": track_id, "role": canonical_role, "path": path})
+        normalized.append(
+            {"track_id": track_id, "role": canonical_role, "format": fmt, "path": path}
+        )
     return normalized
 
 
@@ -188,15 +190,15 @@ async def attach_assets(items: list[dict[str, Any]]) -> dict:
         missing_tracks = sorted(set(track_ids) - existing_tracks)
         if missing_tracks:
             raise ValueError(f"track ids not found: {missing_tracks}")
-        # Detect replacements (existing role-slots) in one query.
-        replacements: set[tuple[int, str]] = set()
+        # Detect replacements (existing role+format slots) in one query.
+        replacements: set[tuple[int, str, str]] = set()
         async with conn.execute(
-            f"SELECT track_id, role FROM asset WHERE track_id IN ({placeholders})",
+            f"SELECT track_id, role, format FROM asset WHERE track_id IN ({placeholders})",
             track_ids,
         ) as cur:
-            existing_assets = {(r[0], r[1]) for r in await cur.fetchall()}
+            existing_assets = {(r[0], r[1], r[2] or "") for r in await cur.fetchall()}
         for it in items:
-            key = (int(it["track_id"]), it["role"])
+            key = (int(it["track_id"]), it["role"], it["format"])
             if key in existing_assets:
                 replacements.add(key)
 
@@ -206,8 +208,12 @@ async def attach_assets(items: list[dict[str, Any]]) -> dict:
         f"Attach {n} asset{'s' if n != 1 else ''} "
         f"({n_new} new, {len(replacements)} replacing)"
     )
+
+    def _slot(role: str, fmt: str) -> str:
+        return f"{role}/{fmt}" if fmt else role
+
     sample = [
-        f"#{it['track_id']} {it['role']}: {os.path.basename(it['path'])}"
+        f"#{it['track_id']} {_slot(it['role'], it['format'])}: {os.path.basename(it['path'])}"
         for it in items[:5]
     ]
     warnings: list[str] = []
@@ -215,7 +221,7 @@ async def attach_assets(items: list[dict[str, Any]]) -> dict:
         sample_replacements = sorted(replacements)[:3]
         warnings.append(
             f"{len(replacements)} existing asset(s) will be replaced: "
-            + ", ".join(f"#{tid}/{role}" for tid, role in sample_replacements)
+            + ", ".join(f"#{tid}/{_slot(role, fmt)}" for tid, role, fmt in sample_replacements)
             + ("..." if len(replacements) > 3 else "")
         )
 

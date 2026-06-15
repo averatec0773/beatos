@@ -13,6 +13,7 @@ export interface Asset {
   sha256: string | null;
   size_bytes: number | null;
   mime_type: string | null;
+  format: string;
   missing: boolean;
   created_at: string;
 }

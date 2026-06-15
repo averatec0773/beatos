@@ -36,11 +36,11 @@ def test_attach_audio_returns_asset(tmp_path):
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
 
-    res = client.post(f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged_mp3", "path": str(audio)})
+    res = client.post(f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged", "path": str(audio)})
 
     assert res.status_code == 200
     body = res.json()
-    assert body["role"] == "audio_tagged_mp3"
+    assert body["role"] == "audio_tagged"
     assert body["mode"] == "linked"
     assert body["sha256"]
 
@@ -50,9 +50,9 @@ def test_attach_rejects_duplicate_role(tmp_path):
     track_id = _create_track(client)
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
-    client.post(f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged_mp3", "path": str(audio)})
+    client.post(f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged", "path": str(audio)})
 
-    res = client.post(f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged_mp3", "path": str(audio)})
+    res = client.post(f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged", "path": str(audio)})
 
     assert res.status_code == 409
 
@@ -63,7 +63,7 @@ def test_detach_returns_204(tmp_path):
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
     asset_id = client.post(
-        f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged_mp3", "path": str(audio)}
+        f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged", "path": str(audio)}
     ).json()["id"]
 
     res = client.delete(f"/api/tracks/{track_id}/assets/{asset_id}")
@@ -77,7 +77,7 @@ def test_relocate_sha256_match_silent_relink(tmp_path):
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
     asset_id = client.post(
-        f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged_mp3", "path": str(audio)}
+        f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged", "path": str(audio)}
     ).json()["id"]
     new_loc = tmp_path / "renamed.wav"
     audio.rename(new_loc)
@@ -97,7 +97,7 @@ def test_relocate_sha256_mismatch_returns_409(tmp_path):
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
     asset_id = client.post(
-        f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged_mp3", "path": str(audio)}
+        f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged", "path": str(audio)}
     ).json()["id"]
     different = tmp_path / "different.wav"
     _make_wav(different, duration_seconds=5.0)
@@ -115,7 +115,7 @@ def test_sweep_marks_missing(tmp_path):
     track_id = _create_track(client)
     audio = tmp_path / "beat.wav"
     _make_wav(audio)
-    client.post(f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged_mp3", "path": str(audio)})
+    client.post(f"/api/tracks/{track_id}/assets", json={"role": "audio_tagged", "path": str(audio)})
     audio.unlink()
 
     res = client.post("/api/sweep/assets")
@@ -167,7 +167,7 @@ def test_attach_accepts_arbitrary_absolute_path(tmp_path):
 
     res = client.post(
         f"/api/tracks/{track_id}/assets",
-        json={"role": "audio_tagged_mp3", "path": str(rogue)},
+        json={"role": "audio_tagged", "path": str(rogue)},
     )
 
     assert res.status_code == 200, res.text
@@ -187,7 +187,7 @@ def test_audio_endpoint_returns_file(tmp_path):
     _make_wav(wav)
     asset_id = client.post(
         f"/api/tracks/{track_id}/assets",
-        json={"role": "audio_tagged_wav", "path": str(wav)},
+        json={"role": "audio_tagged", "path": str(wav)},
     ).json()["id"]
 
     res = client.get(f"/api/assets/audio/{asset_id}")
@@ -227,7 +227,7 @@ def test_audio_endpoint_supports_range(tmp_path):
     _make_wav(wav)
     asset_id = client.post(
         f"/api/tracks/{track_id}/assets",
-        json={"role": "audio_tagged_wav", "path": str(wav)},
+        json={"role": "audio_tagged", "path": str(wav)},
     ).json()["id"]
 
     res = client.get(
@@ -262,7 +262,7 @@ def test_audio_endpoint_repairs_dirty_wav(tmp_path):
     _make_dirty_wav(wav)
     asset_id = client.post(
         f"/api/tracks/{track_id}/assets",
-        json={"role": "audio_tagged_wav", "path": str(wav)},
+        json={"role": "audio_tagged", "path": str(wav)},
     ).json()["id"]
 
     res = client.get(f"/api/assets/audio/{asset_id}")

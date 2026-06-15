@@ -145,18 +145,22 @@ async def _approve_attach_assets(conn: aiosqlite.Connection, token: str) -> dict
         for it in items:
             track_id = it["track_id"]
             role = it["role"]
+            fmt = it.get("format", "")
             path = it["path"]
             size = os.path.getsize(path)
             mime, _ = mimetypes.guess_type(path)
+            # Uniqueness is (track_id, role, format): the same semantic slot may
+            # hold multiple formats, so a replace targets the matching format only.
             async with conn.execute(
-                "SELECT id FROM asset WHERE track_id=? AND role=?", (track_id, role)
+                "SELECT id FROM asset WHERE track_id=? AND role=? AND format=?",
+                (track_id, role, fmt),
             ) as c0:
                 existing = await c0.fetchone()
             if existing is None:
                 cur = await conn.execute(
                     "INSERT INTO asset (track_id, role, abs_path, size_bytes, mime, "
-                    "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (track_id, role, path, size, mime, now, now),
+                    "format, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (track_id, role, path, size, mime, fmt, now, now),
                 )
                 asset_id = cur.lastrowid
                 replaced = False
@@ -172,6 +176,7 @@ async def _approve_attach_assets(conn: aiosqlite.Connection, token: str) -> dict
                 {
                     "track_id": track_id,
                     "role": role,
+                    "format": fmt,
                     "asset_id": asset_id,
                     "replaced": replaced,
                 }

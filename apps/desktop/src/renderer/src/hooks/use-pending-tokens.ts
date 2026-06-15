@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { apiPost } from "@/api/client";
 import { useApiBase } from "@/hooks/use-api-base";
 import { useListStore } from "@/stores/lists";
+import { useTrackStore } from "@/stores/tracks";
+import { useAssetStore } from "@/stores/assets";
 
 export type PendingToken = {
   token: string;
@@ -49,7 +51,17 @@ export function usePendingTokens(): {
       await apiPost(`/api/tokens/${token}/approve`).catch((e) =>
         console.warn("[approvals] approve failed", e),
       );
-      await useListStore.getState().refresh();
+      // The approval mutated server-side state this hook does not own. Invalidate
+      // every renderer cache an MCP write can touch: curation lists, the track
+      // library (title/bpm/has_audio/cover), and per-track assets. The asset
+      // bump is what un-stales the player's RoleSwitcher — without it, an
+      // MCP-attached format stays unswitchable/unhighlighted until a restart.
+      // Guarded so a refresh failure never rejects the approval itself.
+      await Promise.all([
+        useListStore.getState().refresh(),
+        useTrackStore.getState().refresh(),
+      ]).catch((e) => console.warn("[approvals] post-approve refresh failed", e));
+      useAssetStore.getState().bump();
     },
     [apiBase],
   );

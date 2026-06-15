@@ -11,15 +11,17 @@ import { useToastStore } from "@/stores/toast";
 interface Props {
   trackId: number;
   role: string;
+  format: string;
   label: string;
   extensions: string[];
 }
 
-export function AudioFileRow({ trackId, role, label, extensions }: Props) {
+export function AudioFileRow({ trackId, role, format, label, extensions }: Props) {
   const { t } = useTranslation();
   const { asset, pickAndAttach, detach, relocate, reveal } = useAssetSlot(
     trackId,
     role,
+    format,
     label,
     extensions,
   );

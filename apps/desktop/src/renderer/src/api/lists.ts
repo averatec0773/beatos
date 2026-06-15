@@ -13,6 +13,7 @@ export interface List {
 export interface ExportFile {
   asset_id: number;
   role: string;
+  format: string;
   filename: string;
   size_bytes: number | null;
   missing: boolean;

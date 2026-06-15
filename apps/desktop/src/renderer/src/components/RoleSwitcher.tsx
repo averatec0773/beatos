@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
-import { AUDIO_ROLES, AUDIO_ROLE_LABEL, type AudioRole } from "@/lib/audio-resolve";
+import { availableVariants, type AudioVariant } from "@/lib/audio-resolve";
 import { usePlayerStore } from "@/stores/player";
+import { useAssetStore } from "@/stores/assets";
 import { assets as assetsApi } from "@/api/assets";
 import {
   DropdownMenu,
@@ -14,30 +15,31 @@ import { Button } from "./ui/button";
 
 export function RoleSwitcher() {
   const currentTrackId = usePlayerStore((s) => s.currentTrackId);
-  const currentRole = usePlayerStore((s) => s.currentRole);
-  const [availableRoles, setAvailableRoles] = useState<Set<AudioRole>>(new Set());
+  // currentRole is the playing variant key (role:format) now.
+  const currentKey = usePlayerStore((s) => s.currentRole);
+  // Re-fetch available variants when the track's assets change out-of-band (an
+  // MCP attach approval, or a manual attach to the already-playing track) — not
+  // just when the playing track id changes. See useAssetStore.version.
+  const assetsVersion = useAssetStore((s) => s.version);
+  const [variants, setVariants] = useState<AudioVariant[]>([]);
 
   useEffect(() => {
     if (currentTrackId == null) {
-      setAvailableRoles(new Set());
+      setVariants([]);
       return;
     }
     let cancelled = false;
     assetsApi.listForTrack(currentTrackId).then((list) => {
       if (cancelled) return;
-      const set = new Set<AudioRole>();
-      for (const a of list) {
-        if (a.missing) continue;
-        if ((AUDIO_ROLES as readonly string[]).includes(a.role)) set.add(a.role as AudioRole);
-      }
-      setAvailableRoles(set);
+      setVariants(availableVariants(list));
     });
     return () => {
       cancelled = true;
     };
-  }, [currentTrackId]);
+  }, [currentTrackId, assetsVersion]);
 
-  const label = currentRole ? AUDIO_ROLE_LABEL[currentRole] : "—";
+  const current = variants.find((v) => v.key === currentKey);
+  const label = current ? current.label : "—";
 
   return (
     <DropdownMenu>
@@ -48,16 +50,19 @@ export function RoleSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {AUDIO_ROLES.map((role) => (
-          <DropdownMenuItem
-            key={role}
-            disabled={!availableRoles.has(role)}
-            onClick={() => usePlayerStore.getState().setPreferredRole(role)}
-          >
-            {AUDIO_ROLE_LABEL[role]}
-            {role === currentRole && <span className="ml-2 text-accent">✓</span>}
-          </DropdownMenuItem>
-        ))}
+        {variants.length === 0 ? (
+          <DropdownMenuItem disabled>—</DropdownMenuItem>
+        ) : (
+          variants.map((v) => (
+            <DropdownMenuItem
+              key={v.key}
+              onClick={() => usePlayerStore.getState().setPreferredRole(v.key)}
+            >
+              {v.label}
+              {v.key === currentKey && <span className="ml-2 text-accent">✓</span>}
+            </DropdownMenuItem>
+          ))
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

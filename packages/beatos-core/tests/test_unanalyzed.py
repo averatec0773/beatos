@@ -24,5 +24,5 @@ async def test_track_with_audio_and_no_bpm_counted(tmp_path):
     f = tmp_path / "beat.wav"
     f.write_bytes(b"RIFF....WAVE")
     t = await create_track("has audio")
-    await attach_asset(t.id, "audio_untagged_wav", str(f))
+    await attach_asset(t.id, "audio_untagged", str(f))
     assert await count_unanalyzed() == 1

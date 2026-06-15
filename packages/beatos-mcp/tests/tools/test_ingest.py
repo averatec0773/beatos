@@ -117,8 +117,8 @@ async def test_attach_assets_happy(db_path, tmp_path):
 
 @pytest.mark.asyncio
 async def test_attach_assets_resolves_audio_role_by_extension(db_path, tmp_path):
-    """The agent-facing role 'audio' must resolve to a canonical DB role
-    (audio_untagged_*) by file extension — storing the literal 'audio' makes the
+    """The agent-facing role 'audio' must resolve to the semantic untagged role +
+    a format derived from the extension — storing the literal 'audio' makes the
     asset invisible to playback/analysis/serving."""
     r = await attach_assets(
         items=[
@@ -127,18 +127,28 @@ async def test_attach_assets_resolves_audio_role_by_extension(db_path, tmp_path)
         ]
     )
     p = await _payload(db_path, r["token"])
-    assert [it["role"] for it in p["items"]] == [
-        "audio_untagged_wav",
-        "audio_untagged_mp3",
+    assert [(it["role"], it["format"]) for it in p["items"]] == [
+        ("audio_untagged", "wav"),
+        ("audio_untagged", "mp3"),
     ]
 
 
 @pytest.mark.asyncio
-async def test_attach_assets_rejects_unsupported_audio_ext(db_path, tmp_path):
-    """Audio extensions with no representable DB role (.flac/.aiff) are rejected
-    rather than silently stored as an invalid role."""
+async def test_attach_assets_accepts_flac(db_path, tmp_path):
+    """flac is a supported format now and resolves to (audio_untagged, flac)."""
     f = tmp_path / "b.flac"
     f.write_bytes(b"fLaC")
+    r = await attach_assets(items=[{"track_id": 1, "role": "audio", "path": str(f)}])
+    p = await _payload(db_path, r["token"])
+    assert (p["items"][0]["role"], p["items"][0]["format"]) == ("audio_untagged", "flac")
+
+
+@pytest.mark.asyncio
+async def test_attach_assets_rejects_unsupported_audio_ext(db_path, tmp_path):
+    """Audio extensions with no supported format (.aiff/.m4a) are rejected rather
+    than silently stored."""
+    f = tmp_path / "b.aiff"
+    f.write_bytes(b"FORM")
     with pytest.raises(ValueError, match="extension"):
         await attach_assets(items=[{"track_id": 1, "role": "audio", "path": str(f)}])
 
@@ -239,8 +249,8 @@ async def test_attach_assets_classifies_replacements(db_path, tmp_path):
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
-            "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
-            "VALUES (1, 'audio_untagged_wav', '/old.wav', ?, ?)",
+            "INSERT INTO asset (track_id, role, format, abs_path, created_at, updated_at) "
+            "VALUES (1, 'audio_untagged', 'wav', '/old.wav', ?, ?)",
             (now, now),
         )
         await conn.commit()
@@ -262,8 +272,8 @@ async def test_detach_assets_happy(db_path):
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
-            "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
-            "VALUES (1, 'audio_untagged_wav', '/a.wav', ?, ?)",
+            "INSERT INTO asset (track_id, role, format, abs_path, created_at, updated_at) "
+            "VALUES (1, 'audio_untagged', 'wav', '/a.wav', ?, ?)",
             (now, now),
         )
         await conn.execute(

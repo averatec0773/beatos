@@ -1,48 +1,61 @@
 import { describe, it, expect } from "vitest";
-import { resolveAudioAsset, availableAudioRoles } from "../audio-resolve";
+import { resolveAudioAsset, availableVariants, variantKey } from "../audio-resolve";
 
-const mkAsset = (id: number, role: string, missing = false) =>
-  ({ id, role, missing, track_id: 1, abs_path: "/x", mime_type: null }) as any;
+const mkAsset = (id: number, role: string, format: string, missing = false) =>
+  ({ id, role, format, missing, track_id: 1, abs_path: "/x", mime_type: null }) as any;
 
 describe("resolveAudioAsset", () => {
   it("returns null when no audio assets", () => {
-    expect(resolveAudioAsset([mkAsset(1, "cover")])).toBeNull();
+    expect(resolveAudioAsset([mkAsset(1, "cover", "")])).toBeNull();
   });
 
-  it("follows priority tagged_wav > untagged_wav > tagged_mp3 > untagged_mp3", () => {
+  it("follows priority: wav before mp3, tagged before untagged within a format", () => {
     const a = [
-      mkAsset(1, "audio_untagged_mp3"),
-      mkAsset(2, "audio_tagged_mp3"),
-      mkAsset(3, "audio_untagged_wav"),
-      mkAsset(4, "audio_tagged_wav"),
+      mkAsset(1, "audio_untagged", "mp3"),
+      mkAsset(2, "audio_tagged", "mp3"),
+      mkAsset(3, "audio_untagged", "wav"),
+      mkAsset(4, "audio_tagged", "wav"),
     ];
-    expect(resolveAudioAsset(a)?.id).toBe(4);
+    expect(resolveAudioAsset(a)?.id).toBe(4); // tagged wav wins
   });
 
-  it("falls back when higher-priority role is missing", () => {
-    const a = [mkAsset(1, "audio_untagged_mp3"), mkAsset(2, "audio_tagged_wav", true)];
+  it("ranks flac between wav and mp3", () => {
+    const a = [mkAsset(1, "audio_untagged", "mp3"), mkAsset(2, "audio_untagged", "flac")];
+    expect(resolveAudioAsset(a)?.id).toBe(2);
+  });
+
+  it("falls back when the higher-priority variant is missing", () => {
+    const a = [mkAsset(1, "audio_untagged", "mp3"), mkAsset(2, "audio_tagged", "wav", true)];
     expect(resolveAudioAsset(a)?.id).toBe(1);
   });
 
-  it("honors preferred role when present", () => {
-    const a = [mkAsset(1, "audio_tagged_wav"), mkAsset(2, "audio_tagged_mp3")];
-    expect(resolveAudioAsset(a, "audio_tagged_mp3")?.id).toBe(2);
+  it("honors a preferred variant key when present", () => {
+    const a = [mkAsset(1, "audio_tagged", "wav"), mkAsset(2, "audio_tagged", "mp3")];
+    expect(resolveAudioAsset(a, "audio_tagged:mp3")?.id).toBe(2);
   });
 
-  it("falls back to priority when preferred role missing", () => {
-    const a = [mkAsset(1, "audio_tagged_wav")];
-    expect(resolveAudioAsset(a, "audio_untagged_mp3")?.id).toBe(1);
+  it("falls back to priority when the preferred variant is missing", () => {
+    const a = [mkAsset(1, "audio_tagged", "wav")];
+    expect(resolveAudioAsset(a, "audio_untagged:mp3")?.id).toBe(1);
   });
 });
 
-describe("availableAudioRoles", () => {
-  it("returns roles in priority order", () => {
-    const a = [mkAsset(1, "audio_untagged_mp3"), mkAsset(2, "audio_tagged_wav")];
-    expect(availableAudioRoles(a)).toEqual(["audio_tagged_wav", "audio_untagged_mp3"]);
+describe("availableVariants", () => {
+  it("returns variants in priority order with keys + labels", () => {
+    const a = [mkAsset(1, "audio_untagged", "mp3"), mkAsset(2, "audio_tagged", "wav")];
+    expect(availableVariants(a).map((v) => v.key)).toEqual([
+      "audio_tagged:wav",
+      "audio_untagged:mp3",
+    ]);
+    expect(availableVariants(a)[0].label).toBe("WAV (tagged)");
   });
 
   it("excludes missing assets", () => {
-    const a = [mkAsset(1, "audio_tagged_wav", true)];
-    expect(availableAudioRoles(a)).toEqual([]);
+    const a = [mkAsset(1, "audio_tagged", "wav", true)];
+    expect(availableVariants(a)).toEqual([]);
+  });
+
+  it("keys loop without a format dimension", () => {
+    expect(variantKey("loop", "")).toBe("loop");
   });
 });

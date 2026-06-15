@@ -3,21 +3,25 @@ import { useTranslation } from "react-i18next";
 import { AudioFileRow } from "./AudioFileRow";
 import { ProjectFolderRow } from "./ProjectFolderRow";
 
+// Slot identity is (role, format) now that audio format is decoupled from role.
+// Each audio format is its own row (same one-file-per-slot UI as before).
 const ROWS = [
-  { role: "audio_tagged_wav", label: "WAV (tagged)", extensions: [".wav"] },
-  { role: "audio_untagged_wav", label: "WAV (untagged)", extensions: [".wav"] },
-  { role: "audio_tagged_mp3", label: "MP3 (tagged)", extensions: [".mp3"] },
-  { role: "audio_untagged_mp3", label: "MP3 (untagged)", extensions: [".mp3"] },
-  { role: "loop", label: "Loop", extensions: [".wav", ".mp3"] },
-  { role: "stems", label: "Stems", extensions: [".zip", ".rar", ".7z"] },
+  { role: "audio_tagged", format: "wav", label: "WAV (tagged)", extensions: [".wav"] },
+  { role: "audio_untagged", format: "wav", label: "WAV (untagged)", extensions: [".wav"] },
+  { role: "audio_tagged", format: "mp3", label: "MP3 (tagged)", extensions: [".mp3"] },
+  { role: "audio_untagged", format: "mp3", label: "MP3 (untagged)", extensions: [".mp3"] },
+  { role: "audio_tagged", format: "flac", label: "FLAC (tagged)", extensions: [".flac"] },
+  { role: "audio_untagged", format: "flac", label: "FLAC (untagged)", extensions: [".flac"] },
+  { role: "loop", format: "", label: "Loop", extensions: [".wav", ".mp3"] },
+  { role: "stems", format: "", label: "Stems", extensions: [".zip", ".rar", ".7z"] },
 ] as const;
 
 // Promo videos for publishing to video platforms (Douyin/WeChat Video/Bilibili…). Fixed aspect
 // slots reuse the one-asset-per-role model — same AudioFileRow slot, video exts.
 const PROMO_VIDEO_ROWS = [
-  { role: "promo_video_vertical", label: "Promo 9:16", extensions: [".mp4", ".mov", ".webm"] },
-  { role: "promo_video_landscape", label: "Promo 16:9", extensions: [".mp4", ".mov", ".webm"] },
-  { role: "promo_video_square", label: "Promo 1:1", extensions: [".mp4", ".mov", ".webm"] },
+  { role: "promo_video_vertical", format: "", label: "Promo 9:16", extensions: [".mp4", ".mov", ".webm"] },
+  { role: "promo_video_landscape", format: "", label: "Promo 16:9", extensions: [".mp4", ".mov", ".webm"] },
+  { role: "promo_video_square", format: "", label: "Promo 1:1", extensions: [".mp4", ".mov", ".webm"] },
 ] as const;
 
 export function FileRowsSection({
@@ -39,9 +43,10 @@ export function FileRowsSection({
         <ProjectFolderRow projectPath={projectPath} onChange={onChangeProjectPath} />
         {ROWS.map((r) => (
           <AudioFileRow
-            key={r.role}
+            key={`${r.role}:${r.format}`}
             trackId={trackId}
             role={r.role}
+            format={r.format}
             label={r.label}
             extensions={[...r.extensions]}
           />
@@ -56,6 +61,7 @@ export function FileRowsSection({
             key={r.role}
             trackId={trackId}
             role={r.role}
+            format={r.format}
             label={r.label}
             extensions={[...r.extensions]}
           />

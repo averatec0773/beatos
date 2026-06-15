@@ -145,9 +145,10 @@ describe("toggleShuffle", () => {
   });
 });
 
-const mockAsset = (id: number, role: string) => ({
+const mockAsset = (id: number, role: string, format = "") => ({
   id,
   role,
+  format,
   missing: false,
   track_id: 0,
   abs_path: "/x",
@@ -162,8 +163,8 @@ const mockAsset = (id: number, role: string) => ({
 describe("playFromQueue", () => {
   it("resolves audio asset and sets currentTrackId/Role", async () => {
     vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([
-      mockAsset(10, "audio_tagged_wav"),
-      mockAsset(11, "audio_tagged_mp3"),
+      mockAsset(10, "audio_tagged", "wav"),
+      mockAsset(11, "audio_tagged", "mp3"),
     ]);
     await usePlayerStore.getState().playFromQueue({
       trackIds: [1, 2, 3],
@@ -173,7 +174,7 @@ describe("playFromQueue", () => {
     const s = usePlayerStore.getState();
     expect(s.currentTrackId).toBe(2);
     expect(s.currentAssetId).toBe(10);
-    expect(s.currentRole).toBe("audio_tagged_wav");
+    expect(s.currentRole).toBe("audio_tagged:wav");
     expect(s.queueIndex).toBe(1);
     expect(s.status).toBe("playing");
   });
@@ -191,7 +192,7 @@ describe("playFromQueue", () => {
 
 describe("next/prev with repeat", () => {
   beforeEach(() => {
-    vi.mocked(assetsApi.listForTrack).mockResolvedValue([mockAsset(10, "audio_tagged_wav")]);
+    vi.mocked(assetsApi.listForTrack).mockResolvedValue([mockAsset(10, "audio_tagged", "wav")]);
   });
 
   it("next advances queueIndex", async () => {
@@ -291,7 +292,7 @@ describe("togglePlay recovery", () => {
     expect(usePlayerStore.getState().status).toBe("error");
 
     // Now an audio asset is available — togglePlay should retry
-    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([mockAsset(10, "audio_tagged_wav")]);
+    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([mockAsset(10, "audio_tagged", "wav")]);
     usePlayerStore.getState().togglePlay();
     // wait microtask for the async loadAndPlay to settle
     await new Promise((r) => setTimeout(r, 0));
@@ -306,7 +307,7 @@ describe("togglePlay recovery", () => {
       currentRole: null,
       status: "idle",
     });
-    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([mockAsset(20, "audio_tagged_wav")]);
+    vi.mocked(assetsApi.listForTrack).mockResolvedValueOnce([mockAsset(20, "audio_tagged", "wav")]);
     usePlayerStore.getState().togglePlay();
     await new Promise((r) => setTimeout(r, 0));
     expect(usePlayerStore.getState().status).toBe("playing");
@@ -327,7 +328,7 @@ describe("concurrent loadAndPlay (rapid track switch)", () => {
     });
     vi.mocked(assetsApi.listForTrack)
       .mockImplementationOnce(() => aPending as Promise<never>) // track 1: slow
-      .mockResolvedValueOnce([mockAsset(20, "audio_tagged_wav")]); // track 2: fast
+      .mockResolvedValueOnce([mockAsset(20, "audio_tagged", "wav")]); // track 2: fast
 
     // Fire two switches back-to-back; the second (track 2) is the user's latest intent.
     const pA = usePlayerStore.getState().playFromQueue({
@@ -342,7 +343,7 @@ describe("concurrent loadAndPlay (rapid track switch)", () => {
     });
     await pB;
     // Now the stale earlier request resolves — it must NOT win.
-    resolveA([mockAsset(10, "audio_tagged_wav")]);
+    resolveA([mockAsset(10, "audio_tagged", "wav")]);
     await pA;
 
     expect(usePlayerStore.getState().currentTrackId).toBe(2);
@@ -353,8 +354,8 @@ describe("concurrent loadAndPlay (rapid track switch)", () => {
 describe("setPreferredRole", () => {
   it("re-resolves asset if preferred role is available", async () => {
     vi.mocked(assetsApi.listForTrack).mockResolvedValue([
-      mockAsset(10, "audio_tagged_wav"),
-      mockAsset(11, "audio_tagged_mp3"),
+      mockAsset(10, "audio_tagged", "wav"),
+      mockAsset(11, "audio_tagged", "mp3"),
     ]);
     await usePlayerStore.getState().playFromQueue({
       trackIds: [1],
@@ -362,9 +363,9 @@ describe("setPreferredRole", () => {
       origin: { kind: "all" },
     });
     expect(usePlayerStore.getState().currentAssetId).toBe(10);
-    await usePlayerStore.getState().setPreferredRole("audio_tagged_mp3");
+    await usePlayerStore.getState().setPreferredRole("audio_tagged:mp3");
     expect(usePlayerStore.getState().currentAssetId).toBe(11);
-    expect(usePlayerStore.getState().currentRole).toBe("audio_tagged_mp3");
+    expect(usePlayerStore.getState().currentRole).toBe("audio_tagged:mp3");
     expect(usePlayerStore.getState().position).toBe(0);
   });
 });

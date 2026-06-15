@@ -18,6 +18,9 @@ import type { Asset } from "@/api/assets";
 interface Props {
   trackId: number;
   role: string;
+  /** Slot format ('wav'|'mp3'|'flac' for audio; '' for cover/stems). The slot's
+   *  identity is (role, format) now that format is decoupled from role. */
+  format: string;
   label: string;
   extensions: string[];
 }
@@ -38,16 +41,17 @@ function formatSize(bytes: number | null): string {
   return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
 }
 
-export function AssetSlot({ trackId, role, label, extensions }: Props): React.JSX.Element {
+export function AssetSlot({ trackId, role, format, label, extensions }: Props): React.JSX.Element {
   const { t } = useTranslation();
   const assetsForTrack = useAssetStore((s) => s.byTrack[trackId] ?? EMPTY);
   const attach = useAssetStore((s) => s.attach);
   const detach = useAssetStore((s) => s.detach);
   const relocate = useAssetStore((s) => s.relocate);
 
-  // Derive the asset for this role in component body — never inside the selector
-  // (see feedback_zustand_stable_selectors).
-  const asset: Asset | null = assetsForTrack.find((a) => a.role === role) ?? null;
+  // Derive the asset for this (role, format) slot in component body — never
+  // inside the selector (see feedback_zustand_stable_selectors).
+  const asset: Asset | null =
+    assetsForTrack.find((a) => a.role === role && a.format === format) ?? null;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);

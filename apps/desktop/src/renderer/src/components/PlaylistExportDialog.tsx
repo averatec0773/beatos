@@ -14,22 +14,27 @@ import { lists as listsApi, type ExportManifestItem, type ExportMode } from "@/a
 import { formatBytes } from "@/lib/format-bytes";
 import { useToastStore } from "@/stores/toast";
 
-const ROLE_LABEL: Record<string, string> = {
-  audio_tagged_wav: "WAV (tagged)",
-  audio_untagged_wav: "WAV (untagged)",
-  audio_tagged_mp3: "MP3 (tagged)",
-  audio_untagged_mp3: "MP3 (untagged)",
-  loop: "Loop",
-  stems: "Stems",
-};
+// File label from (role, format) — format is decoupled from role now.
+function fileLabel(f: { role: string; format: string }): string {
+  if (f.role === "stems") return "Stems";
+  if (f.role === "loop") return "Loop";
+  const tag = f.role === "audio_tagged" ? "tagged" : "untagged";
+  return f.format ? `${f.format.toUpperCase()} (${tag})` : tag;
+}
 
 // Quick-select groups: one click toggles every file of that type across all
-// tracks (e.g. "all WAVs"), the bulk-selection ask.
-const ROLE_GROUPS: { key: string; label: string; roles: string[] }[] = [
-  { key: "wav", label: "WAV", roles: ["audio_tagged_wav", "audio_untagged_wav"] },
-  { key: "mp3", label: "MP3", roles: ["audio_tagged_mp3", "audio_untagged_mp3"] },
-  { key: "loop", label: "Loop", roles: ["loop"] },
-  { key: "stems", label: "Stems", roles: ["stems"] },
+// tracks (e.g. "all WAVs"), the bulk-selection ask. Audio groups match on the
+// format attribute; loop/stems match on role.
+const ROLE_GROUPS: {
+  key: string;
+  label: string;
+  match: (f: { role: string; format: string }) => boolean;
+}[] = [
+  { key: "wav", label: "WAV", match: (f) => f.format === "wav" },
+  { key: "flac", label: "FLAC", match: (f) => f.format === "flac" },
+  { key: "mp3", label: "MP3", match: (f) => f.format === "mp3" },
+  { key: "loop", label: "Loop", match: (f) => f.role === "loop" },
+  { key: "stems", label: "Stems", match: (f) => f.role === "stems" },
 ];
 
 interface Props {
@@ -101,8 +106,7 @@ export function PlaylistExportDialog({
       for (const f of track.files) {
         if (f.missing) continue;
         all.push(f.asset_id);
-        for (const g of ROLE_GROUPS)
-          if (g.roles.includes(f.role)) (groups[g.key] ??= []).push(f.asset_id);
+        for (const g of ROLE_GROUPS) if (g.match(f)) (groups[g.key] ??= []).push(f.asset_id);
       }
     return { allIds: all, groupIds: groups };
   }, [manifest]);
@@ -286,9 +290,7 @@ export function PlaylistExportDialog({
                           disabled={f.missing}
                           onChange={() => toggleAsset(f.asset_id)}
                         />
-                        <span className="w-28 shrink-0 text-text-secondary">
-                          {ROLE_LABEL[f.role] ?? f.role}
-                        </span>
+                        <span className="w-28 shrink-0 text-text-secondary">{fileLabel(f)}</span>
                         <span className="flex-1 truncate text-text-primary" title={f.filename}>
                           {f.filename}
                           {f.missing && ` ${t("dialogs.playlistExport.missing")}`}

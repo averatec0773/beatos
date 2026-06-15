@@ -361,9 +361,10 @@ async def attach_assets(
             description=(
                 "Each item: {track_id (int), role ('audio'|'cover'), "
                 "path (absolute filesystem path)}. "
-                "Audio: .mp3/.wav/.flac/.aif/.aiff. Cover: .jpg/.jpeg/.png/.webp. "
-                "Files must exist; existing role-slots are replaced in place. "
-                "Duplicate (track_id, role) pairs within the batch are rejected."
+                "Audio: .wav/.mp3/.flac. Cover: .jpg/.jpeg/.png/.webp. "
+                "Files must exist; an existing slot of the same format is replaced "
+                "in place. Duplicate (track_id, role, format) items within the "
+                "batch are rejected."
             ),
         ),
     ],
