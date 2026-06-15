@@ -6,22 +6,33 @@ import {
   BACKDROP_INTENSITY_MIN,
   BACKDROP_SPEED_MAX,
   BACKDROP_SPEED_MIN,
+  BACKDROP_STYLES,
+  type BackdropStyle,
   CARD_OPACITY_MAX,
   CARD_OPACITY_MIN,
   useAppearanceStore,
 } from "@/stores/appearance";
 
+// Label + description i18n keys per backdrop style (kept beside the store enum
+// so adding a style is a one-line change here + the store).
+const STYLE_KEYS = {
+  aurora: { label: "appearance.styleAurora", desc: "appearance.styleAuroraDesc" },
+  ascii: { label: "appearance.styleAscii", desc: "appearance.asciiRainDesc" },
+  off: { label: "appearance.styleOff", desc: "appearance.styleOffDesc" },
+} as const satisfies Record<BackdropStyle, { label: string; desc: string }>;
+
 /**
- * Appearance settings — currently the ASCII glyph-rain backdrop. Changes apply
- * live (AsciiBackdrop reads the store) and persist across restarts.
+ * Appearance settings — panel translucency + the ambient backdrop style
+ * (aurora / ascii / off). Changes apply live (AppShell + the backdrop
+ * components read the store) and persist across restarts.
  */
 export function AppearanceSection(): React.JSX.Element {
   const { t } = useTranslation();
-  const enabled = useAppearanceStore((s) => s.backdropEnabled);
+  const style = useAppearanceStore((s) => s.backdropStyle);
   const intensity = useAppearanceStore((s) => s.backdropIntensity);
   const speed = useAppearanceStore((s) => s.backdropSpeed);
   const cardOpacity = useAppearanceStore((s) => s.cardOpacity);
-  const setEnabled = useAppearanceStore((s) => s.setBackdropEnabled);
+  const setStyle = useAppearanceStore((s) => s.setBackdropStyle);
   const setIntensity = useAppearanceStore((s) => s.setBackdropIntensity);
   const setSpeed = useAppearanceStore((s) => s.setBackdropSpeed);
   const setCardOpacity = useAppearanceStore((s) => s.setCardOpacity);
@@ -50,23 +61,36 @@ export function AppearanceSection(): React.JSX.Element {
 
       <h2 className="text-lg font-semibold mb-3 mt-8">{t("appearance.background")}</h2>
 
-      <label className="flex items-center justify-between gap-4 py-2">
-        <span className="text-sm">
-          <span className="text-text-primary">{t("appearance.asciiRain")}</span>
-          <span className="block text-xs text-text-tertiary mt-0.5">
-            {t("appearance.asciiRainDesc")}
-          </span>
-        </span>
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.target.checked)}
-          className="h-4 w-4 accent-white"
-          aria-label={t("appearance.enableBackdrop")}
-        />
+      <label className="block text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-2">
+        {t("appearance.backgroundStyle")}
       </label>
+      <div
+        role="radiogroup"
+        aria-label={t("appearance.backgroundStyle")}
+        className="grid grid-cols-3 gap-1 rounded-lg bg-bg-elevated p-1"
+      >
+        {BACKDROP_STYLES.map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="radio"
+            aria-checked={style === s}
+            onClick={() => setStyle(s)}
+            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+              style === s
+                ? "bg-white/15 text-text-primary font-medium"
+                : "text-text-secondary hover:bg-white/5"
+            }`}
+          >
+            {t(STYLE_KEYS[s].label)}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-text-tertiary">{t(STYLE_KEYS[style].desc)}</p>
 
-      <div className={enabled ? "" : "opacity-40 pointer-events-none"}>
+      {/* Intensity/speed shape the ASCII rain only — the aurora draws its look
+          from the bundled scene, so hide them for the other styles. */}
+      <div className={style === "ascii" ? "" : "hidden"}>
         <div className="mt-4">
           <label className="flex items-center justify-between text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-2">
             <span>{t("appearance.intensity")}</span>
@@ -79,7 +103,6 @@ export function AppearanceSection(): React.JSX.Element {
             min={BACKDROP_INTENSITY_MIN}
             max={BACKDROP_INTENSITY_MAX}
             value={intensity}
-            disabled={!enabled}
             onChange={(e) => setIntensity(Number(e.target.value))}
             className="w-full accent-white"
             aria-label={t("appearance.backdropIntensity")}
@@ -98,7 +121,6 @@ export function AppearanceSection(): React.JSX.Element {
             min={BACKDROP_SPEED_MIN}
             max={BACKDROP_SPEED_MAX}
             value={speed}
-            disabled={!enabled}
             onChange={(e) => setSpeed(Number(e.target.value))}
             className="w-full accent-white"
             aria-label={t("appearance.backdropSpeed")}

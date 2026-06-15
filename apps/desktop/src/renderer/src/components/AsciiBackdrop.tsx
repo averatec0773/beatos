@@ -54,7 +54,7 @@ function spawnDrop(startY: number): Drop {
 
 export function AsciiBackdrop(): React.JSX.Element {
   const ref = useRef<HTMLCanvasElement | null>(null);
-  const enabled = useAppearanceStore((s) => s.backdropEnabled);
+  const enabled = useAppearanceStore((s) => s.backdropStyle === "ascii");
   const intensity = useAppearanceStore((s) => s.backdropIntensity);
   const speed = useAppearanceStore((s) => s.backdropSpeed);
   // Live refs so intensity/speed changes apply without tearing down the loop.
