@@ -109,9 +109,10 @@ describe("ApprovalsPanel", () => {
     (global.fetch as any).mockClear();
     (global.fetch as any).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
     await userEvent.click(btn);
-    expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens/p1/approve`, {
-      method: "POST",
-    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${FAKE_BASE}/api/tokens/p1/approve`,
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("Reject button calls reject endpoint", async () => {
@@ -125,9 +126,10 @@ describe("ApprovalsPanel", () => {
     (global.fetch as any).mockClear();
     (global.fetch as any).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
     await userEvent.click(btn);
-    expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens/p1/reject`, {
-      method: "POST",
-    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${FAKE_BASE}/api/tokens/p1/reject`,
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("hides Pending header when pending list is empty (history-only)", async () => {

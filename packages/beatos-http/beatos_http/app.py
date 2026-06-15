@@ -187,7 +187,12 @@ def create_app() -> FastAPI:
     app.include_router(app_settings.router)
     app.include_router(tokens.router)
     app.include_router(batch_analysis.router)
-    app.include_router(fs.router)
+    # /api/fs (whole-disk browse + open) serves the WEB file browser only; the
+    # Electron renderer uses native dialogs via the preload bridge. The Electron
+    # main sets BEATOS_DISABLE_FS_API=1 so the file:// attack surface (CORS allows
+    # the "null" origin there) is absent in the desktop app.
+    if not os.environ.get("BEATOS_DISABLE_FS_API"):
+        app.include_router(fs.router)
 
     # Guard /mcp with a per-process local token (advertised via the handshake,
     # sent by the launcher). No-op when BEATOS_MCP_DISABLE_AUTH=1. /api/* and the

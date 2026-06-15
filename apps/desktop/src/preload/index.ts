@@ -3,6 +3,8 @@ import { IPC_CHANNELS } from "../shared/ipc-channels";
 
 const beatos = {
   getApiBase: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.GET_API_BASE),
+  /** Per-process local token for the agent-control /api endpoints. */
+  getApiToken: (): Promise<string | null> => ipcRenderer.invoke(IPC_CHANNELS.GET_API_TOKEN),
   openFolderDialog: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC_CHANNELS.DIALOG_OPEN_FOLDER),
   openFileDialog: (filters: { name: string; extensions: string[] }[]): Promise<string | null> =>

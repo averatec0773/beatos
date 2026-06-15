@@ -318,6 +318,20 @@ describe("handleAssetRequest", () => {
     expect(resp.status).toBe(404);
   });
 
+  it("rejects a non-numeric asset id with 400 without hitting the sidecar", async () => {
+    const f = mockFetch(() => {
+      throw new Error("fetch must not be called for an invalid asset id");
+    });
+    for (const url of ["beatos-asset://audio/abc", "beatos-asset://cover/"]) {
+      const resp = await handleAssetRequest(new Request(url), {
+        apiPort: () => 8000,
+        fetchImpl: f,
+      });
+      expect(resp.status).toBe(400);
+    }
+    expect(f).not.toHaveBeenCalled();
+  });
+
   it("dispatches cover to /api/assets/cover/<id>", async () => {
     const f = mockFetch((url) => {
       expect(url).toBe("http://127.0.0.1:8000/api/assets/cover/42");

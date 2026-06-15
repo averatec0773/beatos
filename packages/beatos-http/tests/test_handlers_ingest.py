@@ -74,6 +74,26 @@ async def test_approve_create_tracks_inserts_rows(client, db_path):
 
 
 @pytest.mark.asyncio
+async def test_agent_attached_audio_lands_a_playable_role(client, db_path, tmp_path):
+    """Regression: an agent attaching role='audio' through the MCP tool must land
+    a canonical AUDIO_ROLE (audio_untagged_wav/mp3), not the literal 'audio' —
+    else the asset is invisible to playback, analysis and /api/assets/audio."""
+    from beatos_core.assets import AUDIO_ROLES
+    from beatos_mcp.tools.ingest import attach_assets
+
+    wav = tmp_path / "beat.wav"
+    wav.write_bytes(b"RIFF\x00\x00\x00\x00WAVEfmt ")
+    r = await attach_assets(items=[{"track_id": 1, "role": "audio", "path": str(wav)}])
+    res = await client.post(f"/api/tokens/{r['token']}/approve")
+    assert res.status_code == 200
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT role FROM asset WHERE track_id = 1") as cur:
+            role = (await cur.fetchone())[0]
+    assert role in AUDIO_ROLES, f"audio landed as {role!r}, invisible to audio paths"
+    assert role == "audio_untagged_wav"
+
+
+@pytest.mark.asyncio
 async def test_approve_attach_assets_inserts_multiple(client, db_path, tmp_path):
     a1 = tmp_path / "a1.wav"
     a1.write_bytes(b"x" * 100)
@@ -207,12 +227,41 @@ async def test_approve_attach_assets_missing_file_aborts_batch(
 
 
 @pytest.mark.asyncio
+async def test_approve_detach_audio_removes_canonical_audio_role(client, db_path):
+    """Regression companion to attach: the agent says role='audio' on detach, but
+    audio is stored under canonical roles (audio_untagged_wav/...). Detach must
+    expand 'audio' to AUDIO_ROLES so agent-attached audio is actually removed."""
+    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute(
+            "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
+            "VALUES (1, 'audio_untagged_wav', '/a.wav', ?, ?)",
+            (now, now),
+        )
+        tok = await create_token(
+            conn,
+            "detach_assets",
+            {
+                "items": [{"track_id": 1, "role": "audio"}],
+                "preview": {"headline": "x", "sample": [], "warnings": []},
+            },
+        )
+        await conn.commit()
+    res = await client.post(f"/api/tokens/{tok}/approve")
+    assert res.status_code == 200
+    assert res.json()["results"][0]["removed"] is True
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT COUNT(*) FROM asset") as cur:
+            assert (await cur.fetchone())[0] == 0
+
+
+@pytest.mark.asyncio
 async def test_approve_detach_assets_removes_rows(client, db_path):
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
-            "VALUES (1, 'audio', '/a.wav', ?, ?)",
+            "VALUES (1, 'audio_untagged_wav', '/a.wav', ?, ?)",
             (now, now),
         )
         await conn.execute(
@@ -249,7 +298,7 @@ async def test_approve_detach_assets_idempotent_on_missing(client, db_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
-            "VALUES (1, 'audio', '/a.wav', ?, ?)",
+            "VALUES (1, 'audio_untagged_wav', '/a.wav', ?, ?)",
             (now, now),
         )
         tok = await create_token(

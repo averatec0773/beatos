@@ -7,13 +7,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Body, Response
+from fastapi import APIRouter, Body, Request, Response
 
 from beatos_core.app_settings.service import (
     delete_setting,
     get_setting,
     set_setting,
 )
+from beatos_http.api_auth import SENSITIVE_SETTING_KEYS, require_api_token
 
 
 router = APIRouter(prefix="/api/app_settings", tags=["app-settings"])
@@ -29,15 +30,19 @@ async def get(key: str) -> dict:
 
 
 @router.put("/{key}")
-async def put(key: str, body: dict[str, Any] = Body(...)) -> dict:
+async def put(key: str, request: Request, body: dict[str, Any] = Body(...)) -> dict:
     """Upsert. Body shape: `{"value": <json>}`. The value may be any
     JSON-serializable shape (array, object, scalar)."""
+    if key in SENSITIVE_SETTING_KEYS:
+        require_api_token(request)
     value = body.get("value")
     await set_setting(key, value)
     return {"key": key, "value": value}
 
 
 @router.delete("/{key}", status_code=204)
-async def remove(key: str) -> Response:
+async def remove(key: str, request: Request) -> Response:
+    if key in SENSITIVE_SETTING_KEYS:
+        require_api_token(request)
     await delete_setting(key)
     return Response(status_code=204)

@@ -7,8 +7,10 @@ import json
 from typing import Literal
 
 import aiosqlite
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from sse_starlette.sse import EventSourceResponse
+
+from beatos_http.api_auth import require_api_token
 
 from beatos_core.approvals import (
     ApplyHandlerNotFound,
@@ -80,7 +82,10 @@ async def token_stream():
 
 
 @router.post("/{token}/approve")
-async def approve_token(token: str) -> dict:
+async def approve_token(token: str, request: Request) -> dict:
+    # Approving a pending write IS the human-in-the-loop gate — guard it like the
+    # agent_permission_mode flip (no-op when no local token is configured).
+    require_api_token(request)
     async with aiosqlite.connect(resolve_db_path(), timeout=5) as conn:
         # SQLite ships with FK enforcement OFF per-connection. Enable it here
         # so every ON DELETE CASCADE (asset→track, track_list→track,
@@ -119,9 +124,10 @@ async def approve_token(token: str) -> dict:
 
 
 @router.post("/{token}/reject")
-async def reject_endpoint(token: str) -> dict:
+async def reject_endpoint(token: str, request: Request) -> dict:
     """Mark a pending token rejected. No-op on already-terminal tokens
     (race tolerance). 404 if token doesn't exist."""
+    require_api_token(request)
     async with aiosqlite.connect(resolve_db_path()) as conn:
         async with conn.execute(
             "SELECT 1 FROM tokens WHERE token=?", (token,)

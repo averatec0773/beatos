@@ -1,5 +1,6 @@
 export const IPC_CHANNELS = {
   GET_API_BASE: "get-api-base",
+  GET_API_TOKEN: "get-api-token",
   DIALOG_OPEN_FOLDER: "dialog:open-folder",
   DIALOG_OPEN_FILE: "dialog:open-file",
   SHELL_REVEAL_IN_FINDER: "shell:reveal-in-finder",
