@@ -26,6 +26,13 @@ export const CARD_OPACITY_MIN = 0;
 export const CARD_OPACITY_MAX = 100;
 export const CARD_OPACITY_DEFAULT = 24;
 
+// Ambient-backdrop opacity, 0–100 → `--backdrop-opacity` = value / 100. Fades
+// the whole aurora/ascii layer toward the dark base. 100 = full strength.
+// Unlike the ASCII-only intensity/speed, this applies to every backdrop style.
+export const BACKDROP_OPACITY_MIN = 0;
+export const BACKDROP_OPACITY_MAX = 100;
+export const BACKDROP_OPACITY_DEFAULT = 100;
+
 // Which ambient backdrop renders behind the floating cards:
 //   "aurora" — the Unicorn Studio WebGL field (default on fresh installs)
 //   "ascii"  — the original CPU glyph-rain
@@ -38,6 +45,7 @@ interface Persisted {
   backdropStyle: BackdropStyle;
   backdropIntensity: number; // 0–100 → ASCII backdrop peak alpha is intensity / 100
   backdropSpeed: number; // 0–20, 7 = the original rain cadence
+  backdropOpacity: number; // 0–100 → --backdrop-opacity (all styles)
   cardOpacity: number; // 0–100 → --card-alpha
 }
 
@@ -45,6 +53,7 @@ const DEFAULTS: Persisted = {
   backdropStyle: BACKDROP_STYLE_DEFAULT,
   backdropIntensity: BACKDROP_INTENSITY_DEFAULT,
   backdropSpeed: BACKDROP_SPEED_DEFAULT,
+  backdropOpacity: BACKDROP_OPACITY_DEFAULT,
   cardOpacity: CARD_OPACITY_DEFAULT,
 };
 
@@ -78,6 +87,10 @@ function loadPersisted(): Persisted {
         typeof p.backdropSpeed === "number" && Number.isFinite(p.backdropSpeed)
           ? clamp(p.backdropSpeed, BACKDROP_SPEED_MIN, BACKDROP_SPEED_MAX)
           : DEFAULTS.backdropSpeed,
+      backdropOpacity:
+        typeof p.backdropOpacity === "number" && Number.isFinite(p.backdropOpacity)
+          ? clamp(p.backdropOpacity, BACKDROP_OPACITY_MIN, BACKDROP_OPACITY_MAX)
+          : DEFAULTS.backdropOpacity,
       cardOpacity:
         typeof p.cardOpacity === "number" && Number.isFinite(p.cardOpacity)
           ? clamp(p.cardOpacity, CARD_OPACITY_MIN, CARD_OPACITY_MAX)
@@ -100,6 +113,7 @@ interface AppearanceState extends Persisted {
   setBackdropStyle(style: BackdropStyle): void;
   setBackdropIntensity(intensity: number): void;
   setBackdropSpeed(speed: number): void;
+  setBackdropOpacity(opacity: number): void;
   setCardOpacity(opacity: number): void;
 }
 
@@ -118,6 +132,11 @@ export const useAppearanceStore = create<AppearanceState>((set, get) => ({
     const backdropSpeed = clamp(speed, BACKDROP_SPEED_MIN, BACKDROP_SPEED_MAX);
     set({ backdropSpeed });
     persist({ ...get(), backdropSpeed });
+  },
+  setBackdropOpacity(opacity) {
+    const backdropOpacity = clamp(opacity, BACKDROP_OPACITY_MIN, BACKDROP_OPACITY_MAX);
+    set({ backdropOpacity });
+    persist({ ...get(), backdropOpacity });
   },
   setCardOpacity(opacity) {
     const cardOpacity = clamp(opacity, CARD_OPACITY_MIN, CARD_OPACITY_MAX);

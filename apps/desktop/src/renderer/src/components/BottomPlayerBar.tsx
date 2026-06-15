@@ -118,7 +118,10 @@ export function BottomPlayerBar() {
     <footer
       data-bottom-player
       data-playing={playing ? "true" : "false"}
-      className="glass relative z-10 flex h-[72px] shrink-0 items-center gap-4 border-t border-border-subtle px-4"
+      // Floats as a rounded card like the three columns (mx/mb gap + full
+      // border + 16px radius) instead of a full-width bar pinned to the window
+      // edge — the body's bottom padding supplies the gap above it.
+      className="glass relative z-10 mx-2 mb-2 flex h-[72px] shrink-0 items-center gap-4 rounded-2xl border border-border-subtle px-4"
     >
       {/* Left: cover + meta */}
       <div className="flex w-[28%] min-w-0 items-center gap-3">

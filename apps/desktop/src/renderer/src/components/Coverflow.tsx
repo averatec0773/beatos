@@ -55,12 +55,12 @@ export function Coverflow({
   // tracks still animates normally.
   const listSig = `${list.length}:${list[0]?.id ?? 0}:${list[list.length - 1]?.id ?? 0}`;
 
-  const size = Math.max(120, Math.min(232, Math.round(panelWidth * 0.56)));
+  const size = Math.max(112, Math.min(210, Math.round(panelWidth * 0.5)));
   const step = Math.round(size * 0.64);
   // Fit the magnified center cover plus a small gap before the title (its
   // glow/shadow needs to clear the title beneath it). Kept tight to save the
-  // detail panel's vertical budget so a medium window fits without scrolling.
-  const stageHeight = Math.round(size * CENTER_MAGNIFY) + 24;
+  // detail panel's vertical budget so the default window fits without scrolling.
+  const stageHeight = Math.round(size * CENTER_MAGNIFY) + 14;
   // Snapshot at render time — Electron users effectively never toggle
   // prefers-reduced-motion mid-session, so no MediaQueryList subscription needed.
   const reduced =

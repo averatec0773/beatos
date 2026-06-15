@@ -36,7 +36,9 @@
     "intensity": "Intensity",
     "backdropIntensity": "Backdrop intensity",
     "speed": "Speed",
-    "backdropSpeed": "Backdrop speed"
+    "backdropSpeed": "Backdrop speed",
+    "opacity": "Opacity",
+    "backdropOpacity": "Background opacity"
   },
   "producers": {
     "title": "Producers",
@@ -310,7 +312,11 @@
   },
   "settings": {
     "title": "Settings",
-    "groups": { "appearance": "Appearance", "beatsUpload": "Beats & Upload", "general": "General" },
+    "groups": {
+      "appearance": "Appearance",
+      "beatsUpload": "Beats & Upload",
+      "general": "General"
+    },
     "language": {
       "title": "Language",
       "desc": "Application interface language. Genre/mood tag values are unaffected — set those under Tag display."

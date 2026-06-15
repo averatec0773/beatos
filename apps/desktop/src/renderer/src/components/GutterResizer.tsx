@@ -58,7 +58,7 @@ export function GutterResizer({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className="group relative z-10 w-3 self-stretch shrink-0 flex items-center justify-center cursor-col-resize"
+      className="group relative z-10 w-2 self-stretch shrink-0 flex items-center justify-center cursor-col-resize"
       {...(dataAttr ? { [dataAttr]: "" } : {})}
     >
       {/* Runs the full height of the cards; invisible until hovered. */}

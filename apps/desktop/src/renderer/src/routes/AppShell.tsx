@@ -30,12 +30,17 @@ export function AppShell(): React.JSX.Element {
   // backdrop read crisply through it instead of as mush.
   const cardOpacity = useAppearanceStore((s) => s.cardOpacity);
   const backdropStyle = useAppearanceStore((s) => s.backdropStyle);
+  const backdropOpacity = useAppearanceStore((s) => s.backdropOpacity);
   useEffect(() => {
     const alpha = cardOpacity / 100;
     const root = document.documentElement.style;
     root.setProperty("--card-alpha", String(alpha));
     root.setProperty("--card-blur", `${(alpha * 14).toFixed(1)}px`);
   }, [cardOpacity]);
+  // Backdrop translucency → the aurora/ascii layers read `--backdrop-opacity`.
+  useEffect(() => {
+    document.documentElement.style.setProperty("--backdrop-opacity", String(backdropOpacity / 100));
+  }, [backdropOpacity]);
 
   // Responsive: fold the detail panel to its rail when the window is too narrow
   // to show it without crushing the track table, and restore the user's
@@ -51,7 +56,10 @@ export function AppShell(): React.JSX.Element {
   }, []);
 
   return (
-    <div className="app-canvas relative isolate h-screen text-text-primary flex flex-col overflow-hidden">
+    <div
+      data-backdrop={backdropStyle}
+      className="app-canvas relative isolate h-screen text-text-primary flex flex-col overflow-hidden"
+    >
       {/* Ambient backdrop, painted behind everything (z-0). The translucent
           `.beatos-card` columns float over it; gutters + the now transparent
           top bar reveal it directly. The user picks the style in Settings →
@@ -78,7 +86,7 @@ export function AppShell(): React.JSX.Element {
       {/* Spotify-style canvas: the three regions float as rounded cards over the
           backdrop, the resize handles (or a spacer when collapsed) living in the
           gutters between so the inter-card gap survives collapse. */}
-      <div className="relative z-10 flex-1 flex px-3 py-3 overflow-hidden min-h-0">
+      <div className="relative z-10 flex-1 flex px-2 py-2 overflow-hidden min-h-0">
         <SidebarPanel />
         {!sidebarCollapsed ? (
           <GutterResizer
@@ -92,7 +100,7 @@ export function AppShell(): React.JSX.Element {
         ) : (
           // Collapsed: no resizer, but keep the gutter width so the rail does
           // not sit flush against the middle card.
-          <div className="w-3 shrink-0" aria-hidden />
+          <div className="w-2 shrink-0" aria-hidden />
         )}
         <main className="flex-1 flex overflow-hidden min-w-0">
           <Outlet />

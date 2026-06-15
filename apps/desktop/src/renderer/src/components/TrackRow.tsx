@@ -60,12 +60,16 @@ function TrackRowImpl({
         if (e.key === "Enter") onOpen();
       }}
       style={{ gridTemplateColumns: gridCols, columnGap: TABLE_COL_GAP, minWidth: "min-content" }}
-      className={`h-16 px-4 grid items-center cursor-grab active:cursor-grabbing cursor-pointer relative select-none transition-[transform,background-color] [transition-duration:var(--dur-hover)] [transition-timing-function:var(--spring)]
+      // `h-[61px] mb-[3px]` keeps the 64px virtual-row stride (ROW_HEIGHT) but
+      // carves a 3px transparent gap below every row. A hover lift of 2px stays
+      // INSIDE that gap, so a floating row can never visually collide with the
+      // (often highlighted) row above or below it — the overlap the gap fixes.
+      className={`h-[61px] mb-[3px] px-4 grid items-center cursor-grab active:cursor-grabbing cursor-pointer relative select-none transition-[transform,background-color] [transition-duration:var(--dur-hover)] [transition-timing-function:var(--spring)]
         ${isDragging ? "opacity-50" : ""}
         ${
           highlighted
             ? "bg-accent-soft text-text-primary"
-            : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary hover:-translate-y-[3px] hover:shadow-[0_14px_30px_-18px_rgba(0,0,0,.9)] hover:z-10 motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-none"
+            : "text-text-secondary hover:bg-bg-row-hover hover:text-text-primary hover:-translate-y-[2px] hover:shadow-[0_10px_24px_-16px_rgba(0,0,0,.85)] hover:z-10 motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-none"
         }`}
     >
       {highlighted && !isDragging && (

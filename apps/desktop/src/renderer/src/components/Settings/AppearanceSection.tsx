@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import {
   BACKDROP_INTENSITY_MAX,
   BACKDROP_INTENSITY_MIN,
+  BACKDROP_OPACITY_MAX,
+  BACKDROP_OPACITY_MIN,
   BACKDROP_SPEED_MAX,
   BACKDROP_SPEED_MIN,
   BACKDROP_STYLES,
@@ -31,10 +33,12 @@ export function AppearanceSection(): React.JSX.Element {
   const style = useAppearanceStore((s) => s.backdropStyle);
   const intensity = useAppearanceStore((s) => s.backdropIntensity);
   const speed = useAppearanceStore((s) => s.backdropSpeed);
+  const opacity = useAppearanceStore((s) => s.backdropOpacity);
   const cardOpacity = useAppearanceStore((s) => s.cardOpacity);
   const setStyle = useAppearanceStore((s) => s.setBackdropStyle);
   const setIntensity = useAppearanceStore((s) => s.setBackdropIntensity);
   const setSpeed = useAppearanceStore((s) => s.setBackdropSpeed);
+  const setOpacity = useAppearanceStore((s) => s.setBackdropOpacity);
   const setCardOpacity = useAppearanceStore((s) => s.setCardOpacity);
 
   return (
@@ -87,6 +91,26 @@ export function AppearanceSection(): React.JSX.Element {
         ))}
       </div>
       <p className="mt-2 text-xs text-text-tertiary">{t(STYLE_KEYS[style].desc)}</p>
+
+      {/* Opacity fades the whole backdrop layer (aurora OR ascii) toward the dark
+          base, so it's shown for any style except "off". */}
+      <div className={style === "off" ? "hidden" : "mt-4"}>
+        <label className="flex items-center justify-between text-xs uppercase tracking-wider font-semibold text-text-tertiary mb-2">
+          <span>{t("appearance.opacity")}</span>
+          <span className="font-mono normal-case tracking-normal text-text-secondary">
+            {opacity}
+          </span>
+        </label>
+        <input
+          type="range"
+          min={BACKDROP_OPACITY_MIN}
+          max={BACKDROP_OPACITY_MAX}
+          value={opacity}
+          onChange={(e) => setOpacity(Number(e.target.value))}
+          className="w-full accent-white"
+          aria-label={t("appearance.backdropOpacity")}
+        />
+      </div>
 
       {/* Intensity/speed shape the ASCII rain only — the aurora draws its look
           from the bundled scene, so hide them for the other styles. */}

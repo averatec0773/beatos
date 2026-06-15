@@ -190,6 +190,8 @@ export function AsciiBackdrop(): React.JSX.Element {
       data-ascii-backdrop
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-0"
+      // User-tunable backdrop translucency (Settings → Appearance). 1 = full.
+      style={{ opacity: "var(--backdrop-opacity, 1)" }}
     />
   );
 }

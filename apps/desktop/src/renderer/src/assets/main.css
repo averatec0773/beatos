@@ -43,6 +43,11 @@
   /* 16px — set on the class (unlayered, so it wins over the per-card rounded-xl
      utility) to give the outer cards a slightly softer, more "floating" edge. */
   border-radius: 1rem;
+  /* Keep the blurred-backdrop layer promoted. With an animated aurora behind the
+     cards the compositor would otherwise re-evaluate (and sometimes re-upload)
+     each card's blur layer every frame; the hint pins it (same rationale as
+     `.glass`). */
+  will-change: backdrop-filter;
 }
 
 /* App canvas behind the floating cards + ASCII backdrop. A whisper of depth
@@ -52,6 +57,18 @@
   background:
     radial-gradient(130% 90% at 50% -8%, rgba(40, 45, 56, 0.3), transparent 55%),
     var(--bg-base);
+}
+
+/* Background = Off → there's no animated/moving layer behind the cards, only the
+   static app-canvas gradient. A blur over a static gradient buys nothing but
+   still costs a compositor layer, so drop backdrop-filter (and the promotion
+   hint) entirely in this mode. Higher specificity than the bare `.beatos-card`
+   / `.glass` rules, so it wins without !important. */
+.app-canvas[data-backdrop="off"] .beatos-card,
+.app-canvas[data-backdrop="off"] .glass {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  will-change: auto;
 }
 
 /* Collapsed left rail (sidebar). Width is CSS-driven (not the inline store
@@ -207,6 +224,11 @@ body[data-gutter-resizing] .detail-panel {
   --card-bg:      rgba(var(--card-rgb), var(--card-alpha));
   --card-blur:    4.2px;
   --border-card:  rgba(255,255,255,.06);
+
+  /* Ambient-backdrop opacity (Settings → Appearance → Background opacity). Driven
+     live by the appearance store; applied to the aurora/ascii backdrop layers.
+     1 = full strength. Fallback mirrors BACKDROP_OPACITY_DEFAULT. */
+  --backdrop-opacity: 1;
 
   /* collapsed rail widths + hover-peek (left = sidebar, right = detail) */
   --rail-w-left:        76px;

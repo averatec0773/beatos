@@ -40,7 +40,11 @@ export function UnicornBackdrop(): React.JSX.Element {
         // blurred cards, so the softer resolution is invisible.
         dpi: 1,
         scale: 1,
-        fps: 60,
+        // 30fps, not 60: the aurora is a slow gradient field, so half the frame
+        // rate is imperceptible — and it halves both the WebGL render cost AND
+        // how often the cards' backdrop-filter blur layers must recomposite
+        // (they only recomposite when this layer behind them changes a frame).
+        fps: 30,
       },
       () => cancelled,
     )
@@ -66,6 +70,8 @@ export function UnicornBackdrop(): React.JSX.Element {
       data-unicorn-backdrop
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-0"
+      // User-tunable backdrop translucency (Settings → Appearance). 1 = full.
+      style={{ opacity: "var(--backdrop-opacity, 1)" }}
     />
   );
 }

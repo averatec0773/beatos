@@ -26,7 +26,7 @@ export function PreviewGutter(): React.JSX.Element {
   const setWidth = usePreviewPanelStore((s) => s.setWidth);
   // Collapsed: the detail panel now renders a persistent rail (not null), so the
   // gutter must keep its width too — render a non-interactive spacer.
-  if (!open) return <div className="w-3 shrink-0" aria-hidden />;
+  if (!open) return <div className="w-2 shrink-0" aria-hidden />;
   return (
     <GutterResizer
       ariaLabel={t("detail.resizePreview")}
@@ -105,7 +105,7 @@ function Chip({ children }: { children: React.ReactNode }): React.JSX.Element {
 }
 
 function EtchDivider(): React.JSX.Element {
-  return <div className="my-2 h-px beatos-etch-divider" />;
+  return <div className="my-1.5 h-px beatos-etch-divider" />;
 }
 
 export function TrackDetailPanel(): React.JSX.Element | null {
@@ -177,7 +177,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
   return (
     <aside
-      className="detail-panel relative beatos-scroll beatos-card rounded-xl p-4 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0"
+      className="detail-panel relative beatos-scroll beatos-card rounded-xl p-4 flex flex-col gap-2 overflow-y-auto flex-shrink-0"
       style={{ width }}
     >
       <DetailHeader label={playingThis ? t("detail.nowPlaying") : t("detail.nowFocused")} />
@@ -192,7 +192,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
         }}
       />
       <div>
-        <div className="text-2xl font-bold leading-tight">{current.title}</div>
+        <div className="text-xl font-bold leading-tight">{current.title}</div>
         <div className="text-text-secondary text-sm mt-1">
           {current.genre && current.genre.length > 0 ? (
             current.genre.map((g) => formatVocabLabel(g, "genre", vocabLocale)).join(", ")
