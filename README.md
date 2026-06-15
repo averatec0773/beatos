@@ -173,20 +173,31 @@ npm run logs:tail                      # follow main.log + sidecar.jsonl  (from 
 
 ### Wire up the MCP server (Claude Desktop / Claude Code)
 
-The MCP server lives at `packages/beatos-mcp` and speaks stdio. Add to your MCP client config:
+The MCP server lives at `packages/beatos-mcp`. It does **not** talk to SQLite directly — it bridges your MCP client (stdio) to the **running app's** sidecar over local HTTP. First-time setup, in order:
 
-```json
-{
-  "mcpServers": {
-    "beatos": {
-      "command": "uv",
-      "args": ["run", "--directory", "/absolute/path/to/beatos", "beatos-mcp"]
-    }
-  }
-}
-```
+1. **Install the Python deps** — from the repo root: `uv sync`. This creates `.venv` with every workspace package *and* the `mcp-proxy` stdio bridge the launcher execs. Re-run after pulling.
 
-Then `list_tracks` and friends will be available as tools inside Claude.
+2. **Start BeatOS first.** The bridge attaches to the sidecar of the *running* app: it reads a handshake file and exits with `BeatOS sidecar not running` if the app is down. Launch the desktop app (or `start-beatos.command` / `start-beatos.bat`) and leave it open.
+
+3. **Register the server** in your MCP client config — `--directory` must be the **absolute** repo path:
+
+   ```json
+   {
+     "mcpServers": {
+       "beatos": {
+         "command": "uv",
+         "args": ["run", "--directory", "/absolute/path/to/beatos", "beatos-mcp"]
+       }
+     }
+   }
+   ```
+
+4. **Verify** — restart the client, then call `ping` (or `list_tracks`). Writes are proposed, not applied: each write tool returns a token you approve in the app's **Agent Actions** panel (`token` → `await_approval`). Attaching audio uses `attach_assets` with `role: "audio"` and an absolute `.wav`/`.mp3` path on this machine.
+
+> **Troubleshooting first connect:**
+> - `BeatOS sidecar not running (no handshake…)` → the app isn't open. Do step 2.
+> - `command not found: mcp-proxy` or `beatos-mcp` → deps aren't installed. Do step 1 (`uv sync`).
+> - Tools list is empty after connecting → restart the MCP client so it re-reads the config.
 
 ### Test
 
