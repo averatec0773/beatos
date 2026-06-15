@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { SearchInput } from "@/components/SearchInput";
+import { isMacElectron } from "@/platform";
 
 // Routes where a back-button makes sense. The library root ("/" and
 // "/lists/:id") never shows a back arrow — those are the home-level views
@@ -33,13 +34,20 @@ export function TopBar(): React.JSX.Element {
 
   return (
     <header
-      className="relative z-50 h-14 flex-shrink-0 bg-transparent pr-3 pb-2 flex items-center gap-3 select-none"
-      style={{ paddingLeft: "88px", WebkitAppRegion: "drag" } as React.CSSProperties}
+      // `pt-3` (not `pb-2`) drops the bar's content by half the body's top
+      // padding so the centred search box ends up equidistant from the window
+      // top and the content cards below (measured: 64px bar + 12px body py-3
+      // → centre at 38px). Left inset only on mac-Electron (traffic lights);
+      // Windows uses a native title bar and the web build has no controls.
+      className="relative z-50 h-16 flex-shrink-0 bg-transparent pr-3 pt-3 flex items-center gap-3 select-none"
+      style={
+        { paddingLeft: isMacElectron ? 88 : 16, WebkitAppRegion: "drag" } as React.CSSProperties
+      }
     >
       <button
         type="button"
         onClick={() => navigate("/")}
-        className="text-[15px] font-semibold tracking-tight hover:text-accent"
+        className="text-[17px] font-semibold tracking-tight hover:text-accent"
         aria-label={t("topbar.goAllBeats")}
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
@@ -63,10 +71,12 @@ export function TopBar(): React.JSX.Element {
       )}
       <div className="flex-1" />
       {/* Centered search — absolutely positioned so it sits in the true middle
-          of the bar regardless of the left/right group widths (Spotify-style). */}
+          of the bar regardless of the left/right group widths (Spotify-style).
+          `top` is the bar centre + half the body's top padding (6px) so the box
+          is equidistant from the window top and the content below. */}
       <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{ top: "calc(50% + 6px)", WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         <SearchInput />
       </div>

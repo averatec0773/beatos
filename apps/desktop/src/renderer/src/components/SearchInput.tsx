@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -7,6 +7,7 @@ import { useTrackQueryStore } from "@/stores/track-query";
 import { facetsApi, type FacetValue } from "@/api/facets";
 import { tracks } from "@/api/tracks";
 import { SearchDropdown, type ChipField } from "@/components/SearchDropdown";
+import { SearchOrb } from "@/components/SearchOrb";
 
 const FIELD_TO_CHIP: Record<string, ChipField> = {
   genre: "genres",
@@ -178,8 +179,11 @@ export function SearchInput(): React.JSX.Element {
 
   return (
     <div className="relative w-[460px] max-w-[46vw]">
-      <div className="flex items-center gap-2.5 bg-bg-elevated border border-border-subtle hover:border-text-tertiary focus-within:border-text-secondary rounded-full px-3.5 py-2 transition-colors">
-        <Search size={16} className="text-text-tertiary shrink-0" />
+      {/* Taller pill so the glowing orb (which replaces the search icon) reads
+          at a prominent size; `overflow-hidden` crops the orb + its far-end
+          fade to the rounded shape. The orb sits at z-0; input/clear float above. */}
+      <div className="relative flex items-center h-[52px] bg-bg-elevated border border-border-subtle hover:border-text-tertiary focus-within:border-text-secondary rounded-full overflow-hidden transition-colors">
+        <SearchOrb focused={focused} />
         <input
           ref={inputRef}
           value={box}
@@ -189,16 +193,28 @@ export function SearchInput(): React.JSX.Element {
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           onKeyDown={onInputKeyDown}
           placeholder={t("search.placeholder")}
-          className="flex-1 bg-transparent text-[15px] text-text-primary focus:outline-none"
+          className="relative z-10 flex-1 min-w-0 bg-transparent pl-[58px] pr-2 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none"
+          // Before you type, the placeholder hint dissolves toward the right
+          // (gradient fade). Once there's input, the mask is dropped so typed
+          // text is never clipped.
+          style={
+            box.length === 0
+              ? {
+                  WebkitMaskImage:
+                    "linear-gradient(to right, #000 0 38%, transparent 72%)",
+                  maskImage: "linear-gradient(to right, #000 0 38%, transparent 72%)",
+                }
+              : undefined
+          }
         />
         {box.length > 0 && (
           <button
             type="button"
             onClick={closeAndClear}
-            className="text-text-tertiary hover:text-text-primary shrink-0"
+            className="relative z-10 mr-4 shrink-0 text-text-tertiary hover:text-text-primary"
             aria-label={t("search.clearAria")}
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         )}
       </div>
