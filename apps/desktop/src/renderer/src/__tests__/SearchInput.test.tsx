@@ -117,6 +117,25 @@ describe("SearchInput", () => {
     expect(useTrackQueryStore.getState().q).toBe("dark trap 808");
   });
 
+  it("closes the dropdown immediately when clicking outside the box", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
+    render(
+      <MemoryRouter>
+        <div data-testid="outside">elsewhere</div>
+        <SearchInput />
+      </MemoryRouter>,
+    );
+    const input = screen.getByPlaceholderText(/Search title/i);
+    await user.click(input);
+    expect(await screen.findByText("dark trap 808")).toBeInTheDocument();
+
+    // A pointerdown on a NON-focusable region outside the box must close it at
+    // once — the input's onBlur would never fire for a non-focusable target, so
+    // without the click-outside handler the box would stay open.
+    fireEvent.pointerDown(screen.getByTestId("outside"));
+    expect(screen.queryByText("dark trap 808")).not.toBeInTheDocument();
+  });
+
   it("pending debounce does not clobber an explicit recent-search pick", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
     renderInput();

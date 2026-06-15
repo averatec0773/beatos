@@ -49,6 +49,7 @@ export function SearchInput(): React.JSX.Element {
   const [focused, setFocused] = useState(false);
   const [box, setBox] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<number | null>(null);
 
   // Dropdown data
@@ -132,6 +133,24 @@ export function SearchInput(): React.JSX.Element {
     setFocused(false);
   }, [setText]);
 
+  // Close on click-outside, immediately. The input's `onBlur` alone is
+  // unreliable for this: clicking a non-focusable region (empty space, a label,
+  // the detail panel) does NOT blur the input, so `focused` would otherwise
+  // stay true and the dropdown / bright orb stay "open" until you happen to
+  // click something focusable. Gated on `focused` so it's inert when idle; the
+  // dropdown is a DOM child of `rootRef`, so its own button clicks don't trip it.
+  useEffect(() => {
+    if (!focused) return;
+    function onPointerDown(e: PointerEvent): void {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setFocused(false);
+        inputRef.current?.blur();
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [focused]);
+
   // ⌘F to focus the (always-visible) search box.
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
@@ -178,7 +197,7 @@ export function SearchInput(): React.JSX.Element {
   }
 
   return (
-    <div className="relative w-[460px] max-w-[46vw]">
+    <div ref={rootRef} className="relative w-[460px] max-w-[46vw]">
       {/* Taller pill so the glowing orb (which replaces the search icon) reads
           at a prominent size; `overflow-hidden` crops the orb + its far-end
           fade to the rounded shape. The orb sits at z-0; input/clear float above. */}
