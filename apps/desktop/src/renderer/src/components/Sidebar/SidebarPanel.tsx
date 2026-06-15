@@ -40,7 +40,7 @@ export function SidebarPanel(): React.JSX.Element {
   return (
     <aside
       data-collapsed={collapsed ? "" : undefined}
-      className="beatos-card rounded-xl flex-shrink-0 overflow-y-auto py-3 flex flex-col gap-4 relative beatos-scroll"
+      className="sidebar-panel beatos-card rounded-xl flex-shrink-0 overflow-y-auto py-3 flex flex-col gap-4 relative beatos-scroll"
       style={collapsed ? undefined : { width }}
     >
       {/* Header — mirrors the detail panel's: toggle on the LEFT, then the

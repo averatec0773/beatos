@@ -166,7 +166,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
   if (!current) {
     return (
       <aside
-        className="relative beatos-scroll overflow-y-auto beatos-card rounded-xl p-4 flex-shrink-0"
+        className="detail-panel relative beatos-scroll overflow-y-auto beatos-card rounded-xl p-4 flex-shrink-0"
         style={{ width }}
       >
         <DetailHeader label={t("detail.nowFocused")} />
@@ -177,7 +177,7 @@ export function TrackDetailPanel(): React.JSX.Element | null {
 
   return (
     <aside
-      className="relative beatos-scroll beatos-card rounded-xl p-4 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0"
+      className="detail-panel relative beatos-scroll beatos-card rounded-xl p-4 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0"
       style={{ width }}
     >
       <DetailHeader label={playingThis ? t("detail.nowPlaying") : t("detail.nowFocused")} />

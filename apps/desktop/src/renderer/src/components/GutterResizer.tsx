@@ -28,6 +28,10 @@ export function GutterResizer({
     e.preventDefault();
     start.current = { x: e.clientX, w: getStartWidth() };
     e.currentTarget.setPointerCapture(e.pointerId);
+    // Flag the active drag so the panels drop their width transition and the
+    // edge tracks the pointer 1:1 (see `body[data-gutter-resizing]` in main.css);
+    // the toggle animation keeps the transition outside of a drag.
+    document.body.setAttribute("data-gutter-resizing", "");
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>): void {
@@ -37,6 +41,7 @@ export function GutterResizer({
   }
 
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>): void {
+    document.body.removeAttribute("data-gutter-resizing");
     if (!start.current) return;
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);

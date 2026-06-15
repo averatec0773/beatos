@@ -59,8 +59,6 @@
    the middle column rescale via the aside's `transition-[width]`. */
 .beatos-card[data-collapsed] {
   width: var(--rail-w-left);
-  /* Transition lives ONLY on the collapsed rail so the collapse animation and
-     hover-peek glide, while the expanded panel's resize-drag stays 1:1. */
   transition: width 0.2s var(--ease);
 }
 .beatos-card[data-collapsed]:hover {
@@ -91,6 +89,20 @@
 .beatos-card[data-detail-collapsed]:hover .rail-ghost {
   opacity: var(--rail-peek-ghost);
   transform: translateX(0);
+}
+
+/* Expanded panels animate their width too, so collapse AND expand both glide
+   (and the middle column reflows with them). The one case that must stay 1:1 is
+   the gutter resize-drag — GutterResizer sets `body[data-gutter-resizing]` for
+   the duration of a drag, which suppresses the transition so the panel edge
+   tracks the pointer exactly. */
+.sidebar-panel,
+.detail-panel {
+  transition: width 0.2s var(--ease);
+}
+body[data-gutter-resizing] .sidebar-panel,
+body[data-gutter-resizing] .detail-panel {
+  transition: none;
 }
 
 /* Canonical micro-label ("eyebrow"). Section headers, field labels, stat
