@@ -545,7 +545,7 @@
     "missing": "缺失",
     "findFile": "查找文件",
     "addFile": "+ 添加文件",
-    "addFormat": "+ 添加格式",
+    "addFormat": "添加格式",
     "revealInFinder": "在 Finder 中显示",
     "replaceFile": "替换文件…",
     "detach": "移除",

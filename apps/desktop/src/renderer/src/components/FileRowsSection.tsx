@@ -99,9 +99,35 @@ export function FileRowsSection({
 
   return (
     <section className="space-y-2">
-      <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
-        {t("fileRows.files")}
-      </h3>
+      <header className="flex items-center justify-between">
+        <h3 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
+          {t("fileRows.files")}
+        </h3>
+        {addable.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded border border-border-subtle px-2.5 py-1 text-xs hover:bg-bg-row-hover"
+                data-add-format
+              >
+                <Plus size={12} />
+                {t("fileRows.addFormat")}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {addable.map((f) => (
+                <DropdownMenuItem
+                  key={f.format}
+                  onClick={() => setAdded((prev) => new Set(prev).add(f.format))}
+                >
+                  {f.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </header>
       <div className="flex flex-col gap-1.5">
         <ProjectFolderRow projectPath={projectPath} onChange={onChangeProjectPath} />
         {audioRows.map((r) => (
@@ -114,28 +140,6 @@ export function FileRowsSection({
             extensions={[...r.extensions]}
           />
         ))}
-        {addable.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="self-start inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary"
-              >
-                <Plus size={14} /> {t("fileRows.addFormat")}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {addable.map((f) => (
-                <DropdownMenuItem
-                  key={f.format}
-                  onClick={() => setAdded((prev) => new Set(prev).add(f.format))}
-                >
-                  {f.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
       </div>
       <h3 className="pt-2 text-[11px] uppercase tracking-[0.05em] font-semibold text-text-tertiary">
         {t("fileRows.promoVideos")}
