@@ -11,10 +11,23 @@ export const DEFAULT_LICENSE_TIERS_KEY = "default_license_tiers";
 
 export type DefaultLicenseTierTemplate = LicenseTierCreate;
 
+/**
+ * Fresh-install default tier template (MP3 / WAV / STEMS with CNY prices +
+ * revenue share). Used only when the user has never configured their own —
+ * once they save (even an empty set) that explicit value wins.
+ */
+export const DEFAULT_LICENSE_TIERS: DefaultLicenseTierTemplate[] = [
+  { name: "MP3", deliverables: ["mp3"], prices: { CNY: 128 }, share: 25 },
+  { name: "WAV", deliverables: ["wav"], prices: { CNY: 188 }, share: 20 },
+  { name: "STEMS", deliverables: ["stem"], prices: { CNY: 288 }, share: 15 },
+];
+
 export async function loadDefaultLicenseTiers(): Promise<DefaultLicenseTierTemplate[]> {
   try {
     const r = await appSettings.get<DefaultLicenseTierTemplate[]>(DEFAULT_LICENSE_TIERS_KEY);
-    return Array.isArray(r.value) ? r.value : [];
+    // Null = never configured → fall back to the shipped default. An explicit
+    // (even empty) saved array is the user's choice and wins.
+    return Array.isArray(r.value) ? r.value : DEFAULT_LICENSE_TIERS.map((t) => ({ ...t }));
   } catch (e) {
     console.warn("[default-license-tiers] load failed:", e);
     return [];

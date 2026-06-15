@@ -24,19 +24,22 @@ describe("default-free", () => {
     updateMock.mockClear();
   });
 
-  it("defaults to false when unset", async () => {
-    expect(await loadDefaultIsFree()).toBe(false);
+  it("defaults to true when unset (shipped preset)", async () => {
+    expect(await loadDefaultIsFree()).toBe(true);
   });
   it("round-trips the setting", async () => {
+    await saveDefaultIsFree(false);
+    expect(await loadDefaultIsFree()).toBe(false);
     await saveDefaultIsFree(true);
     expect(await loadDefaultIsFree()).toBe(true);
   });
-  it("applyDefaultIsFree PATCHes is_free=true only when default is true", async () => {
+  it("applyDefaultIsFree PATCHes is_free=true when default is true", async () => {
     await saveDefaultIsFree(true);
     await applyDefaultIsFree(7);
     expect(updateMock).toHaveBeenCalledWith(7, { is_free: true });
   });
-  it("applyDefaultIsFree does nothing when default is false", async () => {
+  it("applyDefaultIsFree does nothing when default is explicitly false", async () => {
+    await saveDefaultIsFree(false);
     await applyDefaultIsFree(7);
     expect(updateMock).not.toHaveBeenCalled();
   });

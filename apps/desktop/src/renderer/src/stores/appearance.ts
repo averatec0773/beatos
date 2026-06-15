@@ -24,14 +24,14 @@ export const BACKDROP_SPEED_DEFAULT = 4;
 // see-through panels (text floats on the backdrop). Default mirrors main.css.
 export const CARD_OPACITY_MIN = 0;
 export const CARD_OPACITY_MAX = 100;
-export const CARD_OPACITY_DEFAULT = 24;
+export const CARD_OPACITY_DEFAULT = 80;
 
 // Ambient-backdrop opacity, 0–100 → `--backdrop-opacity` = value / 100. Fades
 // the whole aurora/ascii layer toward the dark base. 100 = full strength.
 // Unlike the ASCII-only intensity/speed, this applies to every backdrop style.
 export const BACKDROP_OPACITY_MIN = 0;
 export const BACKDROP_OPACITY_MAX = 100;
-export const BACKDROP_OPACITY_DEFAULT = 100;
+export const BACKDROP_OPACITY_DEFAULT = 80;
 
 // Which ambient backdrop renders behind the floating cards:
 //   "aurora" — the Unicorn Studio WebGL field (default on fresh installs)

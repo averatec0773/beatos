@@ -7,7 +7,9 @@ export const DEFAULT_IS_FREE_KEY = "default_is_free";
 export async function loadDefaultIsFree(): Promise<boolean> {
   try {
     const r = await appSettings.get<boolean>(DEFAULT_IS_FREE_KEY);
-    return r.value === true;
+    // Fresh install (null/unset) defaults to free; only an explicit `false` opts
+    // out. Mirrors the shipped default-tiers preset.
+    return r.value !== false;
   } catch (e) {
     console.warn("[default-free] load failed:", e);
     return false;

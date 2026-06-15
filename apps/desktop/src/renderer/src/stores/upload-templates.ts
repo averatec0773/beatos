@@ -14,15 +14,15 @@ export interface UploadTemplates {
 }
 
 export const DEFAULT_TEMPLATES: UploadTemplates = {
-  album_name: "{year} {title}",
-  beat_name: '{free}"{title}" - {genre} TYPE BEAT',
+  album_name: '"{title}" - {year}',
+  beat_name: '[FREE] "{title}" - {genre} TYPE BEAT',
   free_prefix: "[FREE] ",
   beat_description:
     "Prod.{prod}\n评论+关注+歌名后缀获取非商用使用权\n" +
-    "!非商用使用权仅允许本平台发歌，上传歌曲需要绑定25%播放收益分成!\n" +
+    "!非商用使用权仅允许本平台发歌，上传歌曲需要绑定对应版本比例播放收益分成!\n" +
     "不允许: 发布其他音乐或短视频平台，以及拍摄MV, 演出等盈利行为\n" +
     "如需完整使用权请进行购买，感谢支持！",
-  album_description: "{publish date} Prod.{prod}",
+  album_description: "Prod.{prod}",
   prod_separator: " x ",
 };
 

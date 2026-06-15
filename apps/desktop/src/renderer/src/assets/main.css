@@ -217,18 +217,18 @@ body[data-gutter-resizing] .detail-panel {
      stay on the opaque `--bg-elevated`. */
   /* `--card-alpha` + `--card-blur` are driven live by the appearance store
      (Settings → Appearance → Panel opacity). These fallbacks mirror the
-     CARD_OPACITY_DEFAULT (24 → alpha .24) so the first paint matches before
-     AppShell's effect runs. */
+     CARD_OPACITY_DEFAULT (80 → alpha .8, blur .8×14 ≈ 11.2px) so the first paint
+     matches before AppShell's effect runs. */
   --card-rgb:     17,19,23;
-  --card-alpha:   .24;
+  --card-alpha:   .8;
   --card-bg:      rgba(var(--card-rgb), var(--card-alpha));
-  --card-blur:    4.2px;
+  --card-blur:    11.2px;
   --border-card:  rgba(255,255,255,.06);
 
   /* Ambient-backdrop opacity (Settings → Appearance → Background opacity). Driven
      live by the appearance store; applied to the aurora/ascii backdrop layers.
-     1 = full strength. Fallback mirrors BACKDROP_OPACITY_DEFAULT. */
-  --backdrop-opacity: 1;
+     1 = full strength. Fallback mirrors BACKDROP_OPACITY_DEFAULT (80 → .8). */
+  --backdrop-opacity: .8;
 
   /* collapsed rail widths + hover-peek (left = sidebar, right = detail) */
   --rail-w-left:        76px;
