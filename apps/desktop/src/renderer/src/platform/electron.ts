@@ -6,6 +6,7 @@ export const electronPlatform: Platform = {
   kind: "electron",
   assetUrl: (kind: AssetKind, assetId: number) => `beatos-asset://${kind}/${assetId}`,
   getApiBase: () => window.beatos.getApiBase(),
+  getApiToken: () => window.beatos.getApiToken(),
   openFolderDialog: () => window.beatos.openFolderDialog(),
   openFileDialog: (filters) => window.beatos.openFileDialog(filters),
   revealInFinder: (path) => window.beatos.revealInFinder(path),

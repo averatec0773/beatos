@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { apiPost } from "@/api/client";
 import { useApiBase } from "@/hooks/use-api-base";
 import { useListStore } from "@/stores/lists";
 
@@ -43,7 +44,11 @@ export function usePendingTokens(): {
   const approve = useCallback(
     async (token: string) => {
       if (!apiBase) return;
-      await fetch(`${apiBase}/api/tokens/${token}/approve`, { method: "POST" });
+      // Via the client so the local API token rides along (the approve endpoint
+      // is token-gated in Electron — it's the human-in-the-loop gate).
+      await apiPost(`/api/tokens/${token}/approve`).catch((e) =>
+        console.warn("[approvals] approve failed", e),
+      );
       await useListStore.getState().refresh();
     },
     [apiBase],
@@ -52,7 +57,9 @@ export function usePendingTokens(): {
   const reject = useCallback(
     async (token: string) => {
       if (!apiBase) return;
-      await fetch(`${apiBase}/api/tokens/${token}/reject`, { method: "POST" });
+      await apiPost(`/api/tokens/${token}/reject`).catch((e) =>
+        console.warn("[approvals] reject failed", e),
+      );
     },
     [apiBase],
   );

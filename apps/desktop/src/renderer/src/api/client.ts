@@ -1,11 +1,37 @@
 import { platform } from "@/platform";
 
 let cachedBase: string | null = null;
+// undefined = not yet resolved; null = resolved, no token (web mode).
+let cachedToken: string | null | undefined;
 
 async function base(): Promise<string> {
   if (cachedBase) return cachedBase;
   cachedBase = await platform.getApiBase();
   return cachedBase;
+}
+
+async function authToken(): Promise<string | null> {
+  if (cachedToken !== undefined) return cachedToken;
+  try {
+    cachedToken = await platform.getApiToken();
+  } catch {
+    cachedToken = null; // bridge absent / unavailable → behave as web mode
+  }
+  return cachedToken;
+}
+
+/** Headers for a JSON-body request, with the local API token when present. */
+async function writeHeaders(): Promise<Record<string, string>> {
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  const t = await authToken();
+  if (t) h.Authorization = `Bearer ${t}`;
+  return h;
+}
+
+/** Auth-only headers (no body) for GET/DELETE. */
+async function authHeaders(): Promise<Record<string, string>> {
+  const t = await authToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
 export class ApiError extends Error {
@@ -44,7 +70,7 @@ async function safeFetch(input: RequestInfo, init?: RequestInit): Promise<Respon
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await safeFetch(`${await base()}${path}`);
+  const res = await safeFetch(`${await base()}${path}`, { headers: await authHeaders() });
   if (!res.ok)
     throw new ApiError(res.status, await parseBody(res), `GET ${path} failed: ${res.status}`);
   return res.json();
@@ -53,7 +79,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
   const res = await safeFetch(`${await base()}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await writeHeaders(),
     body: body == null ? undefined : JSON.stringify(body),
   });
   if (!res.ok)
@@ -64,7 +90,7 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
 export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   const res = await safeFetch(`${await base()}${path}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: await writeHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok)
@@ -75,7 +101,7 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
 export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   const res = await safeFetch(`${await base()}${path}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: await writeHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok)
@@ -84,11 +110,15 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
 }
 
 export async function apiDelete(path: string): Promise<void> {
-  const res = await safeFetch(`${await base()}${path}`, { method: "DELETE" });
+  const res = await safeFetch(`${await base()}${path}`, {
+    method: "DELETE",
+    headers: await authHeaders(),
+  });
   if (!res.ok && res.status !== 204)
     throw new ApiError(res.status, await parseBody(res), `DELETE ${path} failed: ${res.status}`);
 }
 
 export function _resetBaseForTests(): void {
   cachedBase = null;
+  cachedToken = undefined;
 }

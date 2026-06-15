@@ -1,0 +1,32 @@
+# Dependabot keeps the three dependency ecosystems this repo actually uses fresh:
+# the desktop npm app, the Python sidecar workspace (uv-managed), and the GitHub
+# Actions themselves. Grouped + weekly to keep PR noise low for a solo maintainer.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /apps/desktop
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      desktop-deps:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      python-deps:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

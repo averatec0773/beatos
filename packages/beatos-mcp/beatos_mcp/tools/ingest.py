@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from beatos_core.assets import AUDIO_ROLES
 from beatos_mcp.db import connect_writable
 from beatos_mcp.policy import submit_write
 from beatos_mcp.preview import build_preview
@@ -18,9 +19,29 @@ _MAX_ASSET_ITEMS = 500
 _CREATE_ITEM_FIELDS = {"title", "bpm", "key", "producer", "genre", "mood"}
 _ATTACH_ITEM_FIELDS = {"track_id", "role", "path"}
 _DETACH_ITEM_FIELDS = {"track_id", "role"}
+# The agent-facing role vocabulary is deliberately simple ("audio"/"cover"); the
+# DB stores canonical roles. On attach the extension resolves "audio" → a
+# concrete role; .flac/.aiff have no representable role so are not accepted.
 _VALID_ROLES = ("audio", "cover")
-_AUDIO_EXT = {".mp3", ".wav", ".flac", ".aif", ".aiff"}
+_AUDIO_ROLE_BY_EXT = {".wav": "audio_untagged_wav", ".mp3": "audio_untagged_mp3"}
+_AUDIO_EXT = set(_AUDIO_ROLE_BY_EXT)
 _COVER_EXT = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+def _resolve_attach_role(role: str, ext: str) -> str:
+    """Map the agent-facing role to the canonical DB role. 'cover' is already
+    canonical; 'audio' resolves by extension (agent uploads are untagged)."""
+    if role == "cover":
+        return "cover"
+    return _AUDIO_ROLE_BY_EXT[ext]
+
+
+def _detach_present(track_id: int, role: str, existing: set[tuple[int, str]]) -> bool:
+    """Detach has no file extension to resolve, so the agent-facing 'audio' role
+    matches ANY canonical audio role the track holds; 'cover' matches exactly."""
+    if role == "audio":
+        return any((track_id, r) in existing for r in AUDIO_ROLES)
+    return (track_id, role) in existing
 
 
 def _validate_create_items(items: list[dict[str, Any]]) -> None:
@@ -81,12 +102,16 @@ def _validate_track_id(value: Any, *, where: str) -> int:
     return value
 
 
-def _validate_attach_items(items: list[dict[str, Any]]) -> None:
+def _validate_attach_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Validate the batch and return a normalized copy with the agent-facing role
+    resolved to its canonical DB role. Dedup is on the resolved role, so the same
+    track may receive an audio WAV and an audio MP3 in one batch."""
     if not isinstance(items, list) or not items:
         raise ValueError("items must be a non-empty list")
     if len(items) > _MAX_ASSET_ITEMS:
         raise ValueError(f"items list too large: max {_MAX_ASSET_ITEMS}")
     seen: set[tuple[int, str]] = set()
+    normalized: list[dict[str, Any]] = []
     for i, it in enumerate(items):
         if not isinstance(it, dict):
             raise ValueError(f"items[{i}] must be a dict")
@@ -112,12 +137,16 @@ def _validate_attach_items(items: list[dict[str, Any]]) -> None:
                 f"items[{i}]: extension {ext!r} does not match role={role!r} "
                 f"(allowed: {sorted(allowed)})"
             )
-        key = (track_id, role)
+        canonical_role = _resolve_attach_role(role, ext)
+        key = (track_id, canonical_role)
         if key in seen:
             raise ValueError(
-                f"items[{i}]: duplicate (track_id={track_id}, role={role!r}) in batch"
+                f"items[{i}]: duplicate (track_id={track_id}, role={canonical_role!r}) "
+                "in batch"
             )
         seen.add(key)
+        normalized.append({"track_id": track_id, "role": canonical_role, "path": path})
+    return normalized
 
 
 def _validate_detach_items(items: list[dict[str, Any]]) -> None:
@@ -146,7 +175,7 @@ def _validate_detach_items(items: list[dict[str, Any]]) -> None:
 
 
 async def attach_assets(items: list[dict[str, Any]]) -> dict:
-    _validate_attach_items(items)
+    items = _validate_attach_items(items)
 
     # Pre-flight DB: all tracks must exist; classify each as new vs replacement.
     track_ids = sorted({int(it["track_id"]) for it in items})
@@ -211,7 +240,7 @@ async def detach_assets(items: list[dict[str, Any]]) -> dict:
             existing_assets = {(r[0], r[1]) for r in await cur.fetchall()}
 
     present_count = sum(
-        1 for it in items if (int(it["track_id"]), it["role"]) in existing_assets
+        1 for it in items if _detach_present(int(it["track_id"]), it["role"], existing_assets)
     )
     absent_count = len(items) - present_count
 
@@ -222,7 +251,7 @@ async def detach_assets(items: list[dict[str, Any]]) -> dict:
     sample = [
         f"#{it['track_id']} {it['role']}"
         for it in items
-        if (int(it["track_id"]), it["role"]) in existing_assets
+        if _detach_present(int(it["track_id"]), it["role"], existing_assets)
     ][:5]
     if not sample and items:
         # All items refer to assets that don't exist; show first few anyway so

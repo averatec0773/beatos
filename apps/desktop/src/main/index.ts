@@ -2,12 +2,14 @@ import { app, BrowserWindow, dialog, ipcMain, nativeImage, protocol, shell } fro
 import { join, dirname } from "node:path";
 import { existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { spawn, ChildProcess } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import readline from "node:readline";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 
 import { readConfig, writeConfig } from "./config";
 import { configureLogger, logger } from "./logger";
 import { handleAssetRequest } from "./asset-protocol";
+import { isSafeAbsolutePath } from "./path-safety";
 import { parseUvicornLevel } from "./log-parse";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
 import { assertSidecarLayout } from "./sidecar-helpers";
@@ -22,6 +24,11 @@ const SIDECAR_KILL_GRACE_MS = 3000;
 
 let sidecar: ChildProcess | null = null;
 let apiPort: number | null = null;
+// Per-process local token gating the agent-control /api endpoints (permission
+// mode + token approve/reject). Passed to the sidecar and handed to the renderer
+// via the preload bridge; a file:// page the user opens can't reach the bridge,
+// so it can't forge these requests. See beatos_http/api_auth.py.
+const apiToken = randomBytes(32).toString("hex");
 let splashWin: BrowserWindow | null = null;
 let splashShownAt = 0;
 
@@ -102,6 +109,10 @@ function startSidecar(): void {
     BEATOS_HANDSHAKE_PATH: hp,
     BEATOS_DB_PATH: dbPath,
     BEATOS_LOG_PATH: sidecarLogPath,
+    BEATOS_API_TOKEN: apiToken,
+    // The desktop app uses native dialogs, never /api/fs — disable that route so
+    // a file:// page can't read the disk / launch files through it.
+    BEATOS_DISABLE_FS_API: "1",
   };
   // GUI launches (macOS Dock / a packaged app) inherit a minimal PATH that
   // often lacks uv's default install dir (~/.local/bin) and Homebrew, so
@@ -243,14 +254,11 @@ app.whenReady().then(async () => {
     return `http://127.0.0.1:${apiPort}`;
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_API_TOKEN, () => apiToken);
+
   ipcMain.on(IPC_CHANNELS.DRAG_OUT_FILE, (event, payload: { absPath: string }) => {
     const p = payload?.absPath;
-    if (typeof p !== "string") {
-      console.warn("[drag-out] non-string path");
-      return;
-    }
-    const isAbsolute = process.platform === "win32" ? /^[a-zA-Z]:[\\/]/.test(p) : p.startsWith("/");
-    if (!isAbsolute || p.includes("..")) {
+    if (!isSafeAbsolutePath(p)) {
       console.warn("[drag-out] rejected unsafe path:", p);
       return;
     }
@@ -281,6 +289,7 @@ app.whenReady().then(async () => {
   ipcMain.handle(IPC_CHANNELS.PATH_HOME, () => app.getPath("home"));
 
   ipcMain.handle(IPC_CHANNELS.PATH_ENSURE_DIR, (_e, dirPath: string) => {
+    if (!isSafeAbsolutePath(dirPath)) throw new Error("unsafe path");
     mkdirSync(dirPath, { recursive: true });
     return dirPath;
   });
@@ -294,6 +303,7 @@ app.whenReady().then(async () => {
   );
 
   ipcMain.handle(IPC_CHANNELS.STORAGE_SET_DB_PATH, (_e, newPath: string) => {
+    if (!isSafeAbsolutePath(newPath)) throw new Error("unsafe path");
     mkdirSync(dirname(newPath), { recursive: true });
     writeConfig({ dbPath: newPath });
     return { restartRequired: true };

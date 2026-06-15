@@ -19,6 +19,9 @@ export const webPlatform: Platform = {
   // origin. Returning a concrete origin (not "") keeps client.ts's base cache
   // effective (it caches truthy values only).
   getApiBase: () => Promise.resolve(window.location.origin),
+  // Web mode: no token. The SPA is same-origin and CORS preflight-blocks
+  // cross-origin writes, so the sidecar guard stands down (BEATOS_API_TOKEN unset).
+  getApiToken: () => Promise.resolve(null),
   openExternal: (url) => {
     window.open(url, "_blank", "noopener,noreferrer");
     return Promise.resolve();

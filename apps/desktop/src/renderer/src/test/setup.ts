@@ -9,6 +9,7 @@ const noop = (): Promise<any> => Promise.resolve(null);
 
 (window as any).beatos = {
   getApiBase: () => Promise.resolve("http://127.0.0.1:5555"),
+  getApiToken: () => Promise.resolve(null),
   openFolderDialog: noop,
   openFileDialog: noop,
   revealInFinder: noop,

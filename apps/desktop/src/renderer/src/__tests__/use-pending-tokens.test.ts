@@ -64,9 +64,10 @@ describe("usePendingTokens", () => {
     await act(async () => {
       await result.current.approve("abc");
     });
-    expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens/abc/approve`, {
-      method: "POST",
-    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${FAKE_BASE}/api/tokens/abc/approve`,
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("reject calls POST", async () => {
@@ -77,8 +78,9 @@ describe("usePendingTokens", () => {
     await act(async () => {
       await result.current.reject("xyz");
     });
-    expect(global.fetch).toHaveBeenCalledWith(`${FAKE_BASE}/api/tokens/xyz/reject`, {
-      method: "POST",
-    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${FAKE_BASE}/api/tokens/xyz/reject`,
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });

@@ -122,6 +122,10 @@ export async function handleAssetRequest(
   try {
     const url = new URL(request.url);
     const assetId = url.pathname.replace(/^\//, "");
+    // Asset ids are integers. Validate before interpolating into the upstream URL
+    // so a crafted id can't reshape the sidecar request path (defense in depth —
+    // the sidecar also validates, but the trust boundary is here).
+    if (!/^\d+$/.test(assetId)) return new Response(null, { status: 400 });
     const port = deps.apiPort();
     if (port == null) return new Response(null, { status: 503 });
 

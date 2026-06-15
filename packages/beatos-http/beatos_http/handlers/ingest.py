@@ -9,6 +9,7 @@ import sqlite3
 
 import aiosqlite
 
+from beatos_core.assets import AUDIO_ROLES
 from beatos_core.tracks.service import canonicalize_producers
 from beatos_core.two_phase import (
     RowVanishedError,
@@ -20,6 +21,11 @@ from beatos_http.routes.tokens import register_approve_handler
 
 def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()
+
+
+# Stable ordering for the IN (...) placeholders when expanding the agent-facing
+# 'audio' role to the canonical audio roles on detach.
+_AUDIO_ROLES_ORDERED = tuple(sorted(AUDIO_ROLES))
 
 
 _FIELD_TO_COL = {
@@ -191,9 +197,18 @@ async def _approve_detach_assets(conn: aiosqlite.Connection, token: str) -> dict
     for it in items:
         track_id = it["track_id"]
         role = it["role"]
-        cur = await conn.execute(
-            "DELETE FROM asset WHERE track_id=? AND role=?", (track_id, role)
-        )
+        if role == "audio":
+            # Audio is stored under canonical roles (audio_untagged_wav/...); the
+            # agent-facing 'audio' detaches whichever the track holds.
+            placeholders = ",".join("?" * len(_AUDIO_ROLES_ORDERED))
+            cur = await conn.execute(
+                f"DELETE FROM asset WHERE track_id=? AND role IN ({placeholders})",
+                (track_id, *_AUDIO_ROLES_ORDERED),
+            )
+        else:
+            cur = await conn.execute(
+                "DELETE FROM asset WHERE track_id=? AND role=?", (track_id, role)
+            )
         results.append(
             {
                 "track_id": track_id,

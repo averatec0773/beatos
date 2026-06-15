@@ -89,6 +89,12 @@ def _wav(tmp_path, name="b.wav"):
     return str(f)
 
 
+def _mp3(tmp_path, name="b.mp3"):
+    f = tmp_path / name
+    f.write_bytes(b"ID3\x03\x00\x00\x00")
+    return str(f)
+
+
 def _jpg(tmp_path, name="c.jpg"):
     f = tmp_path / name
     f.write_bytes(b"\xff\xd8\xff\xe0")
@@ -107,6 +113,34 @@ async def test_attach_assets_happy(db_path, tmp_path):
     assert "2 asset" in p["preview"]["headline"]
     assert "2 new" in p["preview"]["headline"]
     assert p["preview"]["warnings"] == []
+
+
+@pytest.mark.asyncio
+async def test_attach_assets_resolves_audio_role_by_extension(db_path, tmp_path):
+    """The agent-facing role 'audio' must resolve to a canonical DB role
+    (audio_untagged_*) by file extension — storing the literal 'audio' makes the
+    asset invisible to playback/analysis/serving."""
+    r = await attach_assets(
+        items=[
+            {"track_id": 1, "role": "audio", "path": _wav(tmp_path, "a.wav")},
+            {"track_id": 2, "role": "audio", "path": _mp3(tmp_path, "b.mp3")},
+        ]
+    )
+    p = await _payload(db_path, r["token"])
+    assert [it["role"] for it in p["items"]] == [
+        "audio_untagged_wav",
+        "audio_untagged_mp3",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_attach_assets_rejects_unsupported_audio_ext(db_path, tmp_path):
+    """Audio extensions with no representable DB role (.flac/.aiff) are rejected
+    rather than silently stored as an invalid role."""
+    f = tmp_path / "b.flac"
+    f.write_bytes(b"fLaC")
+    with pytest.raises(ValueError, match="extension"):
+        await attach_assets(items=[{"track_id": 1, "role": "audio", "path": str(f)}])
 
 
 @pytest.mark.asyncio
@@ -206,7 +240,7 @@ async def test_attach_assets_classifies_replacements(db_path, tmp_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
-            "VALUES (1, 'audio', '/old.wav', ?, ?)",
+            "VALUES (1, 'audio_untagged_wav', '/old.wav', ?, ?)",
             (now, now),
         )
         await conn.commit()
@@ -229,7 +263,7 @@ async def test_detach_assets_happy(db_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "INSERT INTO asset (track_id, role, abs_path, created_at, updated_at) "
-            "VALUES (1, 'audio', '/a.wav', ?, ?)",
+            "VALUES (1, 'audio_untagged_wav', '/a.wav', ?, ?)",
             (now, now),
         )
         await conn.execute(
