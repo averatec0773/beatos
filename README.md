@@ -20,7 +20,7 @@ A local-first library for every beat on your drive — catalog it once, run it a
 
 <div align="center">
   <br/>
-  <img src="screenshots/main.png" alt="BeatOS — library view with sidebar, track list, and Now Focused preview panel" width="1100" />
+  <img src="screenshots/beatos-core-product-demo.gif" alt="BeatOS product demo showing library search, playback, playlist export, Publish Center, and Agent Actions" width="1100" />
   <br/>
   <br/>
 </div>
