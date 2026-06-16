@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./client";
+import { apiGet, apiPost, apiDelete } from "./client";
 
 export interface FacetValue {
   value: string;
@@ -19,5 +19,11 @@ export const facetsApi = {
   pushRecent: async (query: string): Promise<string[]> => {
     const res = await apiPost<{ items: string[] }>("/api/tracks/recent-searches", { query });
     return res.items;
+  },
+  removeRecent: async (query: string): Promise<void> => {
+    await apiDelete(`/api/tracks/recent-searches?query=${encodeURIComponent(query)}`);
+  },
+  clearRecent: async (): Promise<void> => {
+    await apiDelete("/api/tracks/recent-searches");
   },
 };

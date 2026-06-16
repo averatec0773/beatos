@@ -267,6 +267,18 @@ export function SearchInput(): React.JSX.Element {
             navigate(`/tracks/${id}/edit`);
             closeAndClear();
           }}
+          onRemoveRecent={(query) => {
+            // Optimistic: drop it locally now, persist in the background. Keep
+            // the input focused so the dropdown stays open.
+            setRecent((prev) => prev.filter((r) => r !== query));
+            void facetsApi.removeRecent(query);
+            inputRef.current?.focus();
+          }}
+          onClearRecent={() => {
+            setRecent([]);
+            void facetsApi.clearRecent();
+            inputRef.current?.focus();
+          }}
         />
       )}
     </div>

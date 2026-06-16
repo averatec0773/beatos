@@ -414,6 +414,8 @@
     "clearAria": "Clear search",
     "suggestions": "Search suggestions",
     "recentSearches": "Recent searches",
+    "removeRecent": "Remove",
+    "clearRecent": "Clear",
     "topProducers": "Top producers",
     "topGenres": "Top genres",
     "topKeys": "Top keys",

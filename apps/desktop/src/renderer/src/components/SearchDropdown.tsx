@@ -1,4 +1,5 @@
 import React from "react";
+import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { FacetValue } from "@/api/facets";
@@ -14,6 +15,8 @@ interface Props {
   onPickQuery(q: string): void;
   onPickChip(field: ChipField, value: string): void;
   onOpenTrack(id: number): void;
+  onRemoveRecent(q: string): void;
+  onClearRecent(): void;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }): React.JSX.Element {
@@ -33,6 +36,8 @@ export function SearchDropdown({
   onPickQuery,
   onPickChip,
   onOpenTrack,
+  onRemoveRecent,
+  onClearRecent,
 }: Props): React.JSX.Element | null {
   const { t } = useTranslation();
   const hasFacets = topProducers.length > 0 || topGenres.length > 0 || topKeys.length > 0;
@@ -48,16 +53,38 @@ export function SearchDropdown({
     >
       {recent.length > 0 && (
         <div>
-          <SectionLabel>{t("search.recentSearches")}</SectionLabel>
-          {recent.map((r) => (
+          <div className="flex items-center justify-between px-2 pt-2 pb-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-text-tertiary">
+              {t("search.recentSearches")}
+            </span>
             <button
-              key={r}
               type="button"
-              onClick={() => onPickQuery(r)}
-              className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-text-secondary hover:bg-bg-row-hover hover:text-text-primary"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onClearRecent}
+              className="rounded px-1 text-xs text-text-tertiary hover:text-text-primary"
             >
-              {r}
+              {t("search.clearRecent")}
             </button>
+          </div>
+          {recent.map((r) => (
+            <div key={r} className="group flex items-center rounded-md hover:bg-bg-row-hover">
+              <button
+                type="button"
+                onClick={() => onPickQuery(r)}
+                className="block min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-left text-sm text-text-secondary group-hover:text-text-primary"
+              >
+                {r}
+              </button>
+              <button
+                type="button"
+                aria-label={t("search.removeRecent")}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onRemoveRecent(r)}
+                className="mr-1 shrink-0 rounded p-1 text-text-tertiary opacity-0 transition-opacity hover:bg-bg-elevated hover:text-text-primary group-hover:opacity-100"
+              >
+                <X size={12} />
+              </button>
+            </div>
           ))}
         </div>
       )}

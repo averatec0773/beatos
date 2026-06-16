@@ -425,6 +425,21 @@ def test_recent_searches_empty_query_ignored(tmp_path):
     assert client.get("/api/tracks/recent-searches").json()["items"] == []
 
 
+def test_recent_searches_delete_one_and_clear_all(tmp_path):
+    client = TestClient(create_app())
+    for q in ["genre:trap", "bpm:>140", "key:Cmin"]:
+        client.post("/api/tracks/recent-searches", json={"query": q})
+    # remove a single entry
+    assert (
+        client.delete("/api/tracks/recent-searches", params={"query": "bpm:>140"}).status_code
+        == 204
+    )
+    assert client.get("/api/tracks/recent-searches").json()["items"] == ["key:Cmin", "genre:trap"]
+    # clear all
+    assert client.delete("/api/tracks/recent-searches").status_code == 204
+    assert client.get("/api/tracks/recent-searches").json()["items"] == []
+
+
 def test_query_quoted_phrase_is_single_term(tmp_path):
     client = TestClient(create_app())
     a = client.post("/api/tracks", json={"title": "A"}).json()["id"]

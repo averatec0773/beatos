@@ -9,6 +9,8 @@ function renderDropdown(overrides: Partial<React.ComponentProps<typeof SearchDro
   const onPickQuery = vi.fn();
   const onPickChip = vi.fn();
   const onOpenTrack = vi.fn();
+  const onRemoveRecent = vi.fn();
+  const onClearRecent = vi.fn();
   render(
     <SearchDropdown
       recent={["dark trap"]}
@@ -19,10 +21,12 @@ function renderDropdown(overrides: Partial<React.ComponentProps<typeof SearchDro
       onPickQuery={onPickQuery}
       onPickChip={onPickChip}
       onOpenTrack={onOpenTrack}
+      onRemoveRecent={onRemoveRecent}
+      onClearRecent={onClearRecent}
       {...overrides}
     />,
   );
-  return { onPickQuery, onPickChip, onOpenTrack };
+  return { onPickQuery, onPickChip, onOpenTrack, onRemoveRecent, onClearRecent };
 }
 
 describe("SearchDropdown", () => {
@@ -58,6 +62,15 @@ describe("SearchDropdown", () => {
     expect(onOpenTrack).toHaveBeenCalledWith(7);
   });
 
+  it("removes a single recent search and clears all", async () => {
+    const user = userEvent.setup();
+    const { onRemoveRecent, onClearRecent } = renderDropdown();
+    await user.click(screen.getByRole("button", { name: /Remove/i }));
+    expect(onRemoveRecent).toHaveBeenCalledWith("dark trap");
+    await user.click(screen.getByText("Clear"));
+    expect(onClearRecent).toHaveBeenCalled();
+  });
+
   it("renders nothing when everything is empty", () => {
     const { container } = render(
       <SearchDropdown
@@ -69,6 +82,8 @@ describe("SearchDropdown", () => {
         onPickQuery={vi.fn()}
         onPickChip={vi.fn()}
         onOpenTrack={vi.fn()}
+        onRemoveRecent={vi.fn()}
+        onClearRecent={vi.fn()}
       />,
     );
     expect(container.firstChild).toBeNull();

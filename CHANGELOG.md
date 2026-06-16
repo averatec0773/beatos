@@ -10,6 +10,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 - **Smoother, cheaper playback.** The bottom player bar no longer re-renders ~60×/second while a track plays — the playback position is quantized to the 0.1s resolution it actually displays — trimming idle CPU/battery during playback.
 - **Publish Center track picker shows cover thumbnails.** The "Publish a track" picker now renders each track's cover beside its title (placeholder when none), so you recognise the beat visually instead of by name alone.
+- **Manage your recent searches.** The search box's Recent Searches now has a × on each entry to remove it and a **Clear** button (right-aligned on the heading) to wipe them all, and the list is capped at the 6 most recent.
 
 ### Fixed
 

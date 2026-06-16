@@ -414,6 +414,8 @@
     "clearAria": "清除搜索",
     "suggestions": "搜索建议",
     "recentSearches": "最近搜索",
+    "removeRecent": "删除",
+    "clearRecent": "清空",
     "topProducers": "热门 Producer",
     "topGenres": "热门 Genre",
     "topKeys": "热门 Key",

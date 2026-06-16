@@ -29,7 +29,7 @@ from beatos_core.app_settings.service import get_setting, set_setting
 router = APIRouter(prefix="/api/tracks", tags=["tracks"])
 
 _RECENT_KEY = "recent_searches"
-_RECENT_CAP = 8
+_RECENT_CAP = 6
 
 
 @router.post("", response_model=Track)
@@ -139,7 +139,18 @@ async def facets(field: str = Query(...), limit: int = Query(default=8)) -> dict
 @router.get("/recent-searches")
 async def get_recent_searches() -> dict:
     items = await get_setting(_RECENT_KEY)
-    return {"items": items if isinstance(items, list) else []}
+    items = items if isinstance(items, list) else []
+    return {"items": items[:_RECENT_CAP]}
+
+
+@router.delete("/recent-searches", status_code=204)
+async def delete_recent_searches(query: str | None = Query(default=None)) -> Response:
+    """Remove one recent search (`?query=`) or clear them all (no query)."""
+    items = await get_setting(_RECENT_KEY)
+    items = items if isinstance(items, list) else []
+    items = [] if query is None else [x for x in items if x != query]
+    await set_setting(_RECENT_KEY, items)
+    return Response(status_code=204)
 
 
 @router.post("/recent-searches")
