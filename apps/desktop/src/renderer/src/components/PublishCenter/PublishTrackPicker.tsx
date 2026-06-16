@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CoverImage } from "@/components/CoverImage";
 import { tracks as tracksApi, type Track } from "@/api/tracks";
 
 interface Props {
@@ -82,11 +83,12 @@ export function PublishTrackPicker({ open, onClose, onPick }: Props): React.JSX.
                 key={t.id}
                 type="button"
                 onClick={() => onPick(t.id)}
-                className="flex items-center justify-between rounded-md px-2.5 py-2 text-left hover:bg-bg-row-hover"
+                className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-bg-row-hover"
               >
-                <span className="truncate text-sm text-text-primary">{t.title}</span>
+                <CoverImage assetId={t.cover_asset_id} size={36} />
+                <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{t.title}</span>
                 {t.bpm != null && (
-                  <span className="ml-2 shrink-0 font-mono text-[11px] tabular-nums text-text-tertiary">
+                  <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-tertiary">
                     {t.bpm} BPM
                   </span>
                 )}

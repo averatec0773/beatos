@@ -4,12 +4,19 @@ import { useTranslation } from "react-i18next";
 
 import { platform } from "@/platform";
 import { useAssetSlot } from "@/hooks/useAssetSlot";
+import { useAssetStore } from "@/stores/assets";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { CoverImage } from "./CoverImage";
 
 const COVER_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
-export function CoverDropZone({ trackId }: { trackId: number }) {
+export function CoverDropZone({
+  trackId,
+  coverAssetId = null,
+}: {
+  trackId: number;
+  coverAssetId?: number | null;
+}) {
   const { t } = useTranslation();
   const { asset, pickAndAttach, detach, relocate, reveal } = useAssetSlot(
     trackId,
@@ -18,6 +25,13 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
     "Cover",
     COVER_EXTENSIONS,
   );
+  // The track row already carries its cover's id, so paint the (cached) cover
+  // immediately on mount instead of flashing the empty "+ Cover" state while the
+  // per-track asset list loads async. Once the store HAS loaded this track's
+  // assets, trust it fully (so a detach clears the cover rather than showing a
+  // stale id). `byTrack[trackId] === undefined` means "not loaded yet".
+  const assetsLoaded = useAssetStore((s) => s.byTrack[trackId] !== undefined);
+  const coverId = asset?.id ?? (assetsLoaded ? null : coverAssetId);
   const [menuOpen, setMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   useClickOutside(
@@ -42,7 +56,7 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
     );
   }
 
-  if (!asset) {
+  if (coverId == null) {
     return (
       <button
         type="button"
@@ -69,7 +83,7 @@ export function CoverDropZone({ trackId }: { trackId: number }) {
       data-cover-dropzone
       className="relative w-[200px] h-[200px] bg-bg-elevated border border-border-subtle rounded-md overflow-hidden group"
     >
-      <CoverImage assetId={asset.id} size={200} />
+      <CoverImage assetId={coverId} size={200} />
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}

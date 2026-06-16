@@ -52,7 +52,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
       <form className="max-w-4xl space-y-6" onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-[200px_1fr] gap-6 items-start">
           <div className="flex flex-col items-stretch gap-2">
-            <CoverDropZone trackId={track.id} />
+            <CoverDropZone trackId={track.id} coverAssetId={track.cover_asset_id} />
             <button
               type="button"
               data-analyze-button
