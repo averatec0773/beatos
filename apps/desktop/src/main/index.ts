@@ -15,6 +15,7 @@ import { IPC_CHANNELS } from "../shared/ipc-channels";
 import { assertSidecarLayout } from "./sidecar-helpers";
 import { createSplashWindow, closeSplashAndShowMain } from "./splash";
 import { testMcpConnection } from "./mcp/test-connection";
+import { installMcpClientConfig, type McpClientTarget } from "./mcp/install-config";
 
 // Cold starts after a pull (uv resolving a changed lockfile before uvicorn even
 // boots) can legitimately exceed 5s; the splash covers the wait, so be patient.
@@ -299,7 +300,17 @@ app.whenReady().then(async () => {
   ipcMain.handle(IPC_CHANNELS.STORAGE_GET_REPO_ROOT, () => repoRoot());
 
   ipcMain.handle(IPC_CHANNELS.MCP_TEST_CONNECTION, () =>
-    testMcpConnection({ repoRoot: repoRoot(), dbPath: resolveDbPath() }),
+    testMcpConnection({ repoRoot: repoRoot() }),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.MCP_INSTALL_CLIENT_CONFIG, (_e, target: McpClientTarget) =>
+    installMcpClientConfig({
+      target,
+      repoRoot: repoRoot(),
+      homeDir: app.getPath("home"),
+      platform: process.platform,
+      appData: process.env.APPDATA,
+    }),
   );
 
   ipcMain.handle(IPC_CHANNELS.STORAGE_SET_DB_PATH, (_e, newPath: string) => {

@@ -12,7 +12,7 @@ A local-first library for every beat on your drive — catalog it once, run it a
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Web-1f1f1f?style=flat-square)](#run)
 [![license](https://img.shields.io/badge/license-Apache--2.0-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
-[![MCP](https://img.shields.io/badge/MCP-Claude%20Code%20%E2%80%A2%20Claude%20Desktop-7c5cff?style=flat-square)](#ai-integration)
+[![MCP](https://img.shields.io/badge/MCP-Claude%20Code%20%E2%80%A2%20Claude%20Desktop%20%E2%80%A2%20Codex-7c5cff?style=flat-square)](#ai-integration)
 
 </div>
 
@@ -50,7 +50,7 @@ A real SQLite database for every beat: title, BPM, key, genre (multi-value), moo
 
 ### 2. AI co-pilot (MCP)
 
-A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, and any MCP client — **24 tools** in the free build (**29** with Pro): read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Agent Actions panel. A permission setting lets you tune that: confirm every action (default), auto-approve all, or read-only.
+A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, Codex, and any MCP client — **24 tools** in the free build (**29** with Pro): read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Agent Actions panel. A permission setting lets you tune that: confirm every action (default), auto-approve all, or read-only.
 
 </td>
 <td width="33%" valign="top">
@@ -78,7 +78,7 @@ Both are **local-first and offline** — the browser app talks only to `127.0.0.
 
 > **BeatOS is the first beat library built for the AI-agent era.** The MCP surface is not a side feature — it's how publishing is going to scale to 10 platforms without manual labor.
 
-**Verified clients:** Claude Code CLI · Claude Desktop · any MCP client speaking stdio JSON-RPC.
+**Verified clients:** Claude Code CLI · Claude Desktop · Codex CLI/App · any MCP client speaking stdio JSON-RPC.
 
 <div align="center">
   <br/>
@@ -171,7 +171,7 @@ npm run logs:tail                      # follow main.log + sidecar.jsonl  (from 
 > **No terminal?** Double-click **`start-beatos.bat`** (Windows) or **`start-beatos.command`** (macOS)
 > at the repo root — it checks/installs the prerequisites, then launches the browser or desktop app.
 
-### Wire up the MCP server (Claude Desktop / Claude Code)
+### Wire up the MCP server (Claude Desktop / Claude Code / Codex)
 
 The MCP server lives at `packages/beatos-mcp`. It does **not** talk to SQLite directly — it bridges your MCP client (stdio) to the **running app's** sidecar over local HTTP. First-time setup, in order:
 
@@ -179,7 +179,17 @@ The MCP server lives at `packages/beatos-mcp`. It does **not** talk to SQLite di
 
 2. **Start BeatOS first.** The bridge attaches to the sidecar of the *running* app: it reads a handshake file and exits with `BeatOS sidecar not running` if the app is down. Launch the desktop app (or `start-beatos.command` / `start-beatos.bat`) and leave it open.
 
-3. **Register the server** in your MCP client config — `--directory` must be the **absolute** repo path:
+3. **Recommended: use the in-app one-click setup.** Open **Settings → AI Integration** and click the target client:
+
+   | Client | What BeatOS writes/runs |
+   |---|---|
+   | Claude Desktop | Merges `mcpServers.beatos` into `claude_desktop_config.json` and writes a `.beatos.bak` backup. |
+   | Claude Code | Runs `claude mcp add --transport stdio --scope user beatos -- uv run --directory <repo> beatos-mcp`. |
+   | Codex | Merges `[mcp_servers.beatos]` into `~/.codex/config.toml` and writes a `.beatos.bak` backup. |
+
+4. **Manual fallback:** register the server yourself. `--directory` must be the **absolute** repo path.
+
+   Claude Desktop / Claude Code JSON:
 
    ```json
    {
@@ -192,7 +202,18 @@ The MCP server lives at `packages/beatos-mcp`. It does **not** talk to SQLite di
    }
    ```
 
-4. **Verify** — restart the client, then call `ping` (or `list_tracks`). Writes are proposed, not applied: each write tool returns a token you approve in the app's **Agent Actions** panel (`token` → `await_approval`). Attaching audio uses `attach_assets` with `role: "audio"` and an absolute `.wav`/`.mp3` path on this machine.
+   Codex `config.toml`:
+
+   ```toml
+   [mcp_servers.beatos]
+   command = "uv"
+   args = ["run", "--directory", "/absolute/path/to/beatos", "beatos-mcp"]
+   startup_timeout_sec = 20
+   tool_timeout_sec = 120
+   enabled = true
+   ```
+
+5. **Verify** — restart the client, then call `ping` (or `list_tracks`). Writes are proposed, not applied: each write tool returns a token you approve in the app's **Agent Actions** panel (`token` → `await_approval`). Attaching audio uses `attach_assets` with `role: "audio"` and an absolute `.wav`/`.mp3` path on this machine.
 
 > **Troubleshooting first connect:**
 > - `BeatOS sidecar not running (no handshake…)` → the app isn't open. Do step 2.

@@ -10,10 +10,7 @@ const TIMEOUT_MS = 5000;
 /** Spawn `uv run beatos-mcp`, send initialize + tools/list, parse response.
  *  All errors are returned (never thrown) so the renderer can render a
  *  friendly message. */
-export async function testMcpConnection(opts: {
-  repoRoot: string;
-  dbPath: string;
-}): Promise<McpTestResult> {
+export async function testMcpConnection(opts: { repoRoot: string }): Promise<McpTestResult> {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (r: McpTestResult): void => {
@@ -28,7 +25,7 @@ export async function testMcpConnection(opts: {
     };
 
     const child = spawn("uv", ["run", "--directory", opts.repoRoot, "beatos-mcp"], {
-      env: { ...process.env, BEATOS_DB_PATH: opts.dbPath },
+      env: { ...process.env },
       stdio: ["pipe", "pipe", "pipe"],
     });
 

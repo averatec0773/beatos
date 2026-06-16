@@ -54,6 +54,12 @@ export const webPlatform: Platform = {
   setDbPath: () => Promise.resolve({ restartRequired: false }),
   testMcpConnection: () =>
     Promise.resolve({ ok: false as const, error: "MCP test is unavailable in the web app" }),
+  installMcpClientConfig: (target) =>
+    Promise.resolve({
+      ok: false as const,
+      target,
+      error: "MCP client setup is only available in the desktop app",
+    }),
   onSidecarCrashed: () => () => {},
   startDragFile: (absPath) => {
     // Browsers can't drag a file to the OS; download it instead.

@@ -16,6 +16,7 @@ export const IPC_CHANNELS = {
   SIDECAR_CRASHED: "sidecar-crashed",
   DRAG_OUT_FILE: "drag-out-file",
   MCP_TEST_CONNECTION: "mcp:test-connection",
+  MCP_INSTALL_CLIENT_CONFIG: "mcp:install-client-config",
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

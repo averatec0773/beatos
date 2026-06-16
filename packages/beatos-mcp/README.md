@@ -1,6 +1,11 @@
 # beatos-mcp
 
-stdio MCP server exposing the BeatOS library to AI clients (Claude Desktop, Cursor, etc.).
+MCP facade exposing the running BeatOS app to AI clients (Claude Desktop, Claude Code, Codex, Cursor, etc.).
+
+The actual FastMCP server runs inside the BeatOS sidecar at `/mcp`. The
+`beatos-mcp` console script is a stdio launcher: it reads the running sidecar's
+handshake file, validates liveness, then execs `mcp-proxy` to bridge stdio
+clients to the Streamable HTTP endpoint.
 
 ## What this gives you
 
@@ -33,10 +38,30 @@ No write tool mutates the DB directly.
 `trash_tracks`, `restore_tracks`, `purge_tracks`, `attach_assets`, `detach_assets`,
 `set_license_tiers`, `merge_metadata`.
 
-## Configure Claude Desktop
+## Setup
 
-Add this to `~/Library/Application Support/Claude/claude_desktop_config.json`
-(macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+1. Install dependencies from the repo root:
+
+   ```bash
+   uv sync
+   ```
+
+2. Start BeatOS and leave it running. The launcher exits with
+   `BeatOS sidecar not running` if no sidecar handshake exists.
+
+3. Recommended: use the in-app one-click setup. Open BeatOS → Settings →
+   AI Integration and click the target client:
+
+   | Client | What BeatOS writes/runs |
+   |---|---|
+   | Claude Desktop | Merges `mcpServers.beatos` into `claude_desktop_config.json` and writes a `.beatos.bak` backup. |
+   | Claude Code | Runs `claude mcp add --transport stdio --scope user beatos -- uv run --directory <repo> beatos-mcp`. |
+   | Codex | Merges `[mcp_servers.beatos]` into `~/.codex/config.toml` and writes a `.beatos.bak` backup. |
+
+4. Manual fallback: register the stdio launcher in your MCP client.
+   `--directory` must be the absolute repo path.
+
+Claude Desktop / Claude Code JSON:
 
 ```json
 {
@@ -46,23 +71,31 @@ Add this to `~/Library/Application Support/Claude/claude_desktop_config.json`
       "args": [
         "run", "--directory", "/absolute/path/to/beatos/repo",
         "beatos-mcp"
-      ],
-      "env": {
-        "BEATOS_DB_PATH": "/absolute/path/to/your/beatos.db"
-      }
+      ]
     }
   }
 }
 ```
 
-The BeatOS Settings → "AI Integration" section renders this snippet
-pre-filled with your actual paths; copy-paste it from there.
+Codex `config.toml`:
+
+```toml
+[mcp_servers.beatos]
+command = "uv"
+args = ["run", "--directory", "/absolute/path/to/beatos/repo", "beatos-mcp"]
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+enabled = true
+```
+
+The BeatOS Settings → "AI Integration" section also renders both snippets
+pre-filled with your actual paths for copy-paste installs.
 
 ## Environment
 
-| Var | Required | Purpose |
-|---|---|---|
-| `BEATOS_DB_PATH` | yes | Absolute path to your `beatos.db` |
+No database environment variable is required for normal use. The sidecar owns
+SQLite and advertises its local `/mcp` endpoint through the handshake file. The
+launcher forwards the sidecar's local auth token automatically when present.
 
 Logs land at:
 - macOS: `~/Library/Logs/beatos/mcp.jsonl`
@@ -71,16 +104,18 @@ Logs land at:
 ## Running locally
 
 ```bash
-BEATOS_DB_PATH=/path/to/beatos.db uv run beatos-mcp
+uv run beatos-mcp
 ```
 
-The server speaks JSON-RPC on stdio. **Never `print()` from any code reachable
-by the server** — stdout is protocol-only; stray writes will corrupt the
-stream and Claude Desktop will silently disconnect.
+The launcher speaks JSON-RPC on stdio after `mcp-proxy` takes over. **Never
+`print()` from launcher code** — stdout is protocol-only; stray writes will
+corrupt the stream and MCP clients may silently disconnect.
 
 ## Architecture notes
 
-- `db.py` opens read-only connections (`PRAGMA query_only=1`)
+- `launcher.py` discovers the running sidecar and execs `mcp-proxy`
+- `server.py` defines the FastMCP instance mounted by `beatos-http`
+- `db.py` opens connections inside the sidecar process; write approval paths use writable connections
 - `beatos_core.two_phase` provides token-table helpers for v0.0.21+ write tools
 - `tools/*.py` — one file per logical surface, all return `dict` payloads
 - `log.py` — structlog → JSONL file + stderr

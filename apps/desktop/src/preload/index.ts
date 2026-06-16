@@ -29,13 +29,30 @@ const beatos = {
   testMcpConnection: (): Promise<
     { ok: true; toolsCount: number; version: string } | { ok: false; error: string }
   > => ipcRenderer.invoke(IPC_CHANNELS.MCP_TEST_CONNECTION),
+  installMcpClientConfig: (
+    target: "claude_desktop" | "claude_code" | "codex",
+  ): Promise<
+    | {
+        ok: true;
+        target: "claude_desktop" | "claude_code" | "codex";
+        message: string;
+        path?: string;
+        backupPath?: string;
+      }
+    | {
+        ok: false;
+        target: "claude_desktop" | "claude_code" | "codex";
+        error: string;
+        path?: string;
+      }
+  > => ipcRenderer.invoke(IPC_CHANNELS.MCP_INSTALL_CLIENT_CONFIG, target),
   onSidecarCrashed: (
     cb: (info: { code: number | null; signal: string | null }) => void,
   ): (() => void) => {
     const handler = (
       _e: Electron.IpcRendererEvent,
       info: { code: number | null; signal: string | null },
-    ) => cb(info);
+    ): void => cb(info);
     ipcRenderer.on(IPC_CHANNELS.SIDECAR_CRASHED, handler);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.SIDECAR_CRASHED, handler);
   },

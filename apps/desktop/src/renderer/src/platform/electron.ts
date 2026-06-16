@@ -20,6 +20,7 @@ export const electronPlatform: Platform = {
   setDbPath: (p) => window.beatos.setDbPath(p),
   pickFolder: () => window.beatos.pickFolder(),
   testMcpConnection: () => window.beatos.testMcpConnection(),
+  installMcpClientConfig: (target) => window.beatos.installMcpClientConfig(target),
   onSidecarCrashed: (cb) => window.beatos.onSidecarCrashed(cb),
   startDragFile: (absPath) => window.beatos.startDragFile(absPath),
   getPathForFile: (file) => window.beatos.getPathForFile(file),
