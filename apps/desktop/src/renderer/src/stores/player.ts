@@ -97,6 +97,19 @@ const PLAYER_DEFAULTS: PersistedPlayer = {
   lastPosition: 0,
 };
 
+// Migrate a persisted `preferredRole` written before the format decouple
+// (v0.0.49). Old keys embedded the format in the role with an underscore
+// ("audio_tagged_mp3"); the new variant key is "role:format" ("audio_tagged:mp3").
+// Without this, a returning user's format preference silently no longer matches
+// and resolveAudioAsset falls back to the priority order (WAV), ignoring it.
+function normalizePreferredRole(raw: unknown): VariantKey | null {
+  if (typeof raw !== "string" || raw === "") return null;
+  // Already the new form (or the formatless "loop") → keep as-is.
+  if (raw.includes(":") || raw === "loop") return raw;
+  const m = /^(audio_tagged|audio_untagged)_(wav|mp3|flac)$/.exec(raw);
+  return m ? `${m[1]}:${m[2]}` : raw;
+}
+
 function loadPersistedPlayer(): PersistedPlayer {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -112,7 +125,7 @@ function loadPersistedPlayer(): PersistedPlayer {
       repeat: REPEAT_ORDER.includes(p.repeat as RepeatMode)
         ? (p.repeat as RepeatMode)
         : PLAYER_DEFAULTS.repeat,
-      preferredRole: (p.preferredRole as VariantKey | null) ?? null,
+      preferredRole: normalizePreferredRole(p.preferredRole),
       lastTrackId:
         typeof p.lastTrackId === "number" && Number.isFinite(p.lastTrackId) ? p.lastTrackId : null,
       lastPosition:
@@ -435,8 +448,34 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         if (myToken !== loadToken) return; // user already started something else
         const asset = resolveAudioAsset(list, get().preferredRole);
         if (!asset) {
-          // Track gone (deleted/purged) or has no audio anymore → fallback to idle.
-          writePersistedPlayer({ ...restored, lastTrackId: null, lastPosition: 0 });
+          if (list.length === 0) {
+            // The track row itself is gone (deleted/purged) → clear the now-stale
+            // pointer and stay idle.
+            writePersistedPlayer({ ...restored, lastTrackId: null, lastPosition: 0 });
+            set({
+              currentTrackId: null,
+              currentAssetId: null,
+              currentRole: null,
+              status: "idle",
+              position: 0,
+              duration: 0,
+            });
+            return;
+          }
+          // Track exists but its audio is unresolvable right now — NOT proof it's
+          // gone. The common case is a `linked` asset whose external folder is
+          // momentarily unavailable at boot (drive not mounted yet). Surface the
+          // track as retriable and KEEP the resume pointer so the next launch (or
+          // a manual Play) recovers. Wiping it here is what made the player come
+          // up empty after a single transient hiccup.
+          set({
+            currentTrackId: lastTrackId,
+            currentAssetId: null,
+            currentRole: null,
+            status: "error",
+            position: 0,
+            duration: 0,
+          });
           return;
         }
         set({
@@ -453,13 +492,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         if (lastPosition > 0) audioEngine.seek(lastPosition);
         set({ position: lastPosition > 0 ? lastPosition : 0 });
       } catch {
-        // File missing / decode failure → clear the stale pointer, stay idle.
-        writePersistedPlayer({ ...restored, lastTrackId: null, lastPosition: 0 });
+        if (myToken !== loadToken) return; // superseded by a user action — don't clobber
+        // Transient load/decode/fetch failure. Do NOT destroy the resume pointer
+        // (that turned a one-off boot hiccup into a permanently empty player on
+        // every subsequent launch). Show the track as retriable — `togglePlay`
+        // reloads from `error` — and persist() keeps `lastTrackId` since
+        // currentTrackId is still set.
         set({
-          currentTrackId: null,
+          currentTrackId: lastTrackId,
           currentAssetId: null,
           currentRole: null,
-          status: "idle",
+          status: "error",
           position: 0,
           duration: 0,
         });

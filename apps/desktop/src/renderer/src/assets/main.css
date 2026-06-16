@@ -267,6 +267,19 @@ body,
   font-variant-numeric: tabular-nums;
 }
 
+/* Strip the native number-input spin buttons (BPM, prices, share %, filter
+   ranges). They only clutter the field on hover/focus — no input here is tuned
+   by stepping. Keeps type="number" semantics (numeric keypad, validation). */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Hide native scrollbar on macOS "Always show" mode for inner content panels.
    Does not affect the AppShell outer scroll, VirtualTrackList, or Sidebar. */
 .beatos-scroll::-webkit-scrollbar {
