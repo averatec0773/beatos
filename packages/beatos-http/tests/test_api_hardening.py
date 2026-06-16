@@ -107,10 +107,29 @@ async def test_token_approve_open_when_token_unset(client, db_path):
 # --- B-H3: /api/fs disabled in Electron mode ---
 
 
+def _all_paths(routes) -> set[str]:
+    # Version-robust route-path collector. FastAPI 0.137+ no longer flattens
+    # include_router routes into app.routes; it wraps them in an _IncludedRouter
+    # whose real routes live on `.original_router`. Older versions expose each
+    # route's `.path` directly (or nested under `.routes`). Handle all shapes.
+    paths: set[str] = set()
+    for r in routes:
+        p = getattr(r, "path", None)
+        if isinstance(p, str):
+            paths.add(p)
+        nested = getattr(r, "routes", None)
+        if nested and not callable(nested):
+            paths |= _all_paths(nested)
+        orig = getattr(r, "original_router", None)
+        if orig is not None and hasattr(orig, "routes"):
+            paths |= _all_paths(orig.routes)
+    return paths
+
+
 def test_fs_routes_absent_when_disabled(monkeypatch):
     monkeypatch.setenv("BEATOS_DISABLE_FS_API", "1")
     app = create_app()
-    paths = {getattr(r, "path", None) for r in app.routes}
+    paths = _all_paths(app.routes)
     assert "/api/fs/list" not in paths
     assert "/api/fs/download" not in paths
     assert "/api/fs/open" not in paths
@@ -119,5 +138,5 @@ def test_fs_routes_absent_when_disabled(monkeypatch):
 def test_fs_routes_present_by_default(monkeypatch):
     monkeypatch.delenv("BEATOS_DISABLE_FS_API", raising=False)
     app = create_app()
-    paths = {getattr(r, "path", None) for r in app.routes}
+    paths = _all_paths(app.routes)
     assert "/api/fs/list" in paths

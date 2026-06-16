@@ -126,9 +126,28 @@ async def test_inject_app_serves_ping_and_formmap():
         assert res.json() == {}
 
 
+def _all_paths(routes) -> set[str]:
+    # Version-robust route-path collector. FastAPI 0.137+ no longer flattens
+    # include_router routes into app.routes; it wraps them in an _IncludedRouter
+    # whose real routes live on `.original_router`. Older versions expose each
+    # route's `.path` directly (or nested under `.routes`). Handle all shapes.
+    paths: set[str] = set()
+    for r in routes:
+        p = getattr(r, "path", None)
+        if isinstance(p, str):
+            paths.add(p)
+        nested = getattr(r, "routes", None)
+        if nested and not callable(nested):
+            paths |= _all_paths(nested)
+        orig = getattr(r, "original_router", None)
+        if orig is not None and hasattr(orig, "routes"):
+            paths |= _all_paths(orig.routes)
+    return paths
+
+
 def test_inject_app_has_no_mcp_mount():
     app = create_inject_app()
-    paths = {r.path for r in app.routes}
+    paths = _all_paths(app.routes)
     assert "/mcp" not in paths
     assert "/api/inject/pending" in paths
     assert "/api/inject/stage" not in paths
