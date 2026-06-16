@@ -368,4 +368,20 @@ describe("setPreferredRole", () => {
     expect(usePlayerStore.getState().currentRole).toBe("audio_tagged:mp3");
     expect(usePlayerStore.getState().position).toBe(0);
   });
+
+  it("quantizes playback position to 0.1s so the player bar doesn't re-render at 60fps", () => {
+    const store = usePlayerStore.getState();
+    store._setPosition(1.3);
+    expect(usePlayerStore.getState().position).toBe(1.3);
+    // sub-0.1s nudges inside the same 0.1s bucket are dropped (no set / re-render)
+    store._setPosition(1.32);
+    store._setPosition(1.34);
+    expect(usePlayerStore.getState().position).toBe(1.3);
+    // crossing into the next 0.1s bucket applies
+    store._setPosition(1.41);
+    expect(usePlayerStore.getState().position).toBe(1.41);
+    // an explicit reset to 0 (stop / seek-to-start) always applies
+    store._setPosition(0);
+    expect(usePlayerStore.getState().position).toBe(0);
+  });
 });

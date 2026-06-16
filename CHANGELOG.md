@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+### Changed
+
+- **Smoother, cheaper playback.** The bottom player bar no longer re-renders ~60×/second while a track plays — the playback position is quantized to the 0.1s resolution it actually displays — trimming idle CPU/battery during playback.
+
 ## [0.0.49] — 2026-06-16 — Web frontend, Pro publishing + Publish Center, bilingual UI, playlist export, FLAC
 
 ### Added

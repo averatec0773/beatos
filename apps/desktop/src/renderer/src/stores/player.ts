@@ -324,6 +324,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     },
 
     _setPosition(p) {
+      // The engine emits ~60fps; the bottom player bar is the only subscriber
+      // and its readout / seek bar are 0.1s-resolution. Skip the set() — and
+      // the bar's re-render — unless the 0.1s-quantized position moved. An
+      // explicit 0 (stop / seek-to-start) always applies.
+      if (p !== 0 && Math.round(p * 10) === Math.round(get().position * 10)) return;
       set({ position: p });
     },
 
