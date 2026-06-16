@@ -13,7 +13,7 @@ export async function assertDropCreateApiPath(ctx) {
     writeFileSync(dropPath, makeTinyWav());
     const dropTrack = await postJson("/api/tracks", { title: "drop-test" });
     await postJson(`/api/tracks/${dropTrack.id}/assets`, {
-      role: "audio_tagged_wav",
+      role: "audio_tagged",
       path: dropPath,
     });
     const allTracks = await (await fetch(`${baseUrl}/api/tracks`)).json();

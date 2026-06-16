@@ -147,7 +147,7 @@ const setupResult = await window.evaluate(
     const att = await fetch(`${base}/api/tracks/${trk.id}/assets`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ role: "audio_tagged_wav", path: audioPath }),
+      body: JSON.stringify({ role: "audio_tagged", path: audioPath }),
     }).then(j);
     return { src, trk, att };
   },

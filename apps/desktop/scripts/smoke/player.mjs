@@ -13,7 +13,7 @@ export async function assertAttachAudioAndBottomBar(ctx) {
   const audioPath = join(userData, "smoke1-audio.wav");
   writeFileSync(audioPath, makeTinyWav());
   const audioAsset = await postJson(`/api/tracks/${t1.id}/assets`, {
-    role: "audio_tagged_wav",
+    role: "audio_tagged",
     path: audioPath,
   });
   if (typeof audioAsset.id !== "number") {
@@ -130,7 +130,7 @@ export async function assertDawWavDecode(ctx) {
     writeFileSync(dawWavPath, makeDawStyleWav());
     const dawTrack = await postJson("/api/tracks", { title: "SmokeDaw" });
     await postJson(`/api/tracks/${dawTrack.id}/assets`, {
-      role: "audio_tagged_wav",
+      role: "audio_tagged",
       path: dawWavPath,
     });
     await window.evaluate(() => {
@@ -183,7 +183,7 @@ export async function assertRealAudioRegression(ctx) {
     // v0.0.22: Source removed — assets attach by absolute path directly.
     const realTrack = await postJson("/api/tracks", { title: "real-audio-smoke" });
     await postJson(`/api/tracks/${realTrack.id}/assets`, {
-      role: "audio_tagged_wav",
+      role: "audio_tagged",
       path: realAudio,
     });
     await window.evaluate(() => {

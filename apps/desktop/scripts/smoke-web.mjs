@@ -100,7 +100,7 @@ try {
   const coverPath = join(userData, "cover.png");
   writeFileSync(wavPath, makeDawStyleWav());
   writeFileSync(coverPath, TINY_PNG);
-  await postJson(`/api/tracks/${track.id}/assets`, { role: "audio_tagged_wav", path: wavPath });
+  await postJson(`/api/tracks/${track.id}/assets`, { role: "audio_tagged", path: wavPath });
   await postJson(`/api/tracks/${track.id}/assets`, { role: "cover", path: coverPath });
 
   browser = await chromium.launch();

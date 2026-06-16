@@ -22,6 +22,9 @@ TODO.md
 # Playwright MCP scratch output (live-debugging snapshots/screenshots)
 .playwright-mcp/
 
+# Local demo/video artifacts generated during dogfooding
+/artifacts/
+
 # Environment / secrets
 .env
 .env.local

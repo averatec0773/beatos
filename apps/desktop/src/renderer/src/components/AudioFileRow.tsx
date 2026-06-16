@@ -34,7 +34,8 @@ export function AudioFileRow({ trackId, role, format, label, extensions }: Props
     menuOpen,
   );
 
-  const filename = asset ? (asset.abs_path.split("/").pop() ?? asset.abs_path) : null;
+  // Split on both separators so Windows backslash paths render the basename too.
+  const filename = asset ? (asset.abs_path.split(/[\\/]/).pop() ?? asset.abs_path) : null;
 
   function extensionAccepted(name: string): boolean {
     const lower = name.toLowerCase();
