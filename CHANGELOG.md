@@ -6,6 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+## [0.0.49] — 2026-06-16 — Web frontend, Pro publishing + Publish Center, bilingual UI, playlist export, FLAC
+
 ### Added
 
 - **Web frontend (experimental).** The renderer now also builds as a browser SPA served by the local sidecar — so BeatOS runs cross-platform (incl. Windows) without an Electron build, sharing the same backend and a near-identical UI. One renderer codebase, two build targets: Electron-only capabilities route through a `platform` seam, and WAV sanitization moved server-side so browsers decode DAW WAVs. Covers library / search / playback / metadata editing, plus file I/O: add audio/cover by browsing your own filesystem (a local file-browser dialog, same linked-mode result as the desktop), reveal/open in Finder, and download — all driven by the sidecar on your machine. (Drag-in of OS files stays desktop-only; remote access is a future step.)
@@ -72,6 +74,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **The detail panel gets out of the way on a narrow window.** Below ~1024px wide it auto-folds to its slim rail so the track table stays usable (it would otherwise be crushed by the fixed-width side panels), and it restores your previous open/closed preference once the window is wide again — without overriding a panel you closed yourself.
 - **A failed publish now actually looks failed.** The "publish failed" banner (and the expired-session / failed-job labels in the Publish Center) referenced a colour that didn't exist in the theme, so they rendered with no red tint at all; they now use the danger colour like every other error state.
 - **Startup is more forgiving.** The desktop app now waits longer for the backend on a cold start (a first launch after an update, where dependency resolution runs before the server boots, no longer trips a spurious "couldn't start"), and it finds `uv` even when launched from the macOS Dock instead of a terminal (the minimal Dock environment used to break the sidecar spawn).
+- **Windows file rows show the file name, not the full path.** An audio/cover file row derived its label by splitting the path on `/` only, so a Windows backslash path (`C:\beats\kick.wav`) rendered in full instead of `kick.wav`; it now splits on both separators.
 
 ### Security
 
@@ -80,6 +83,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **Desktop `/api` agent-control endpoints now require a local token.** In the packaged desktop app the `null` (file://) origin stays allowed (the renderer needs it), which also let any `.html` the user opened defeat the human-in-the-loop gate — flip the agent permission mode or approve/reject pending agent actions. Those endpoints now require a per-process token the desktop renderer holds through the preload bridge (which a web page can't reach). No-op in web mode, where the SPA is same-origin and CORS already blocks cross-origin writes. Env: `BEATOS_API_TOKEN`.
 - **`/api/fs` is disabled in the desktop app.** The whole-disk browse / download / open endpoints exist only for the browser file picker; the desktop uses native dialogs, so they're now switched off there (`BEATOS_DISABLE_FS_API=1`), removing a local file read / launch surface a file:// page could otherwise reach.
 - **Tighter main-process input validation.** Renderer-supplied paths that reach a directory-create or config-write are now validated (absolute, no `..`) like the existing drag-out guard, and asset ids forwarded to the sidecar must be numeric — closing minor injection paths at the Electron trust boundary.
+- **External links open only over `http(s)`.** The window-open handler that hands `target="_blank"` / `window.open` URLs to the OS (e.g. a published track's platform link surfaced by the Pro engine) now opens only `http`/`https` schemes, matching the existing `shell:open-external` guard — a `file://`, `smb://`, or other scheme can no longer be launched through it.
 
 ## [0.0.46] — 2026-06-02 — ASCII backdrop + waveform seek, floating top bar, panel opacity, player persistence
 

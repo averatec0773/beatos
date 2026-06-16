@@ -25,15 +25,7 @@ A local-first library for every beat on your drive — catalog it once, run it a
   <br/>
 </div>
 
-## The problem
-
-A working beat producer ends up with hundreds of WAV/MP3 files on disk, two versions of each (tagged + untagged), cover art that isn't always next to the file, and a different metadata vocabulary for every platform:
-
-- **NetEase / QQ Music / Suno / BeatStars / YouTube** — different genre trees, different mood tags, different description lengths, different price models.
-- A track that's "Trap" on one site is "Hip Hop · 暗黑" on another, "Aggressive Lo-Fi" on a third, "未分类" on a fourth.
-- **Every release means re-typing the same data in a different costume.** Multiply by 50 unfinished beats and 4 platforms — that's 200 metadata blocks to maintain by hand. Which is why most producers just don't publish.
-
-BeatOS fixes this by keeping **one canonical catalog** locally, then letting **either you or an AI agent** translate it into the per-platform metadata block on demand.
+> BeatOS keeps **one canonical catalog** of every beat on your disk — then you *or* an AI agent translate it into each platform's metadata, publish it, and package it for buyers, on demand. Offline, single-user, no account.
 
 ## What it does today
 
@@ -41,23 +33,46 @@ BeatOS fixes this by keeping **one canonical catalog** locally, then letting **e
 <tr>
 <td width="33%" valign="top">
 
-### 1. Local catalog
+### Local catalog
 
-A real SQLite database for every beat: title, BPM, key, genre (multi-value), mood (multi-value), producer credits, tags, license tiers + multi-currency pricing, description, audio assets (WAV/MP3 × tagged/untagged + loop + stems), cover art. Soft-delete trash with restore. Lists for curation. Rename + merge a producer across every track in one click.
-
-</td>
-<td width="33%" valign="top">
-
-### 2. AI co-pilot (MCP)
-
-A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, Codex, and any MCP client — **24 tools** in the free build (**29** with Pro): read your catalog, draft per-platform descriptions, rename producers, propose batch attachments. Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Agent Actions panel. A permission setting lets you tune that: confirm every action (default), auto-approve all, or read-only.
+A real SQLite database for every beat: title, BPM, key, genre + mood (multi-value), producer credits, tags, license tiers + multi-currency pricing, description, audio assets (WAV/MP3/FLAC × tagged/untagged + loop + stems), cover art. Soft-delete trash with restore. Rename + merge a producer across every track in one click.
 
 </td>
 <td width="33%" valign="top">
 
-### 3. Player + analysis
+### AI co-pilot (MCP)
 
-Spotify-style bottom bar (Tone.js + Web Audio) that plays the FLOAT-32 WAVs your DAW actually exports — in the desktop app **and** the browser. Audio roles per track with instant switch; queue follows the visible filter; shuffle + repeat. On-demand BPM/key analysis via a pluggable engine — Essentia when the optional extra is installed, else the permissive librosa fallback — with per-field confidence scores.
+A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, Codex, and any MCP client — **24 tools** in the free build (**29** with Pro). Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Agent Actions panel — with a permission setting: confirm every action (default), auto-approve, or read-only.
+
+</td>
+<td width="33%" valign="top">
+
+### One-click publishing (Pro)
+
+Publish a beat to a platform without leaving BeatOS: the engine drives a real browser and pauses at the platform's human-verification step. A **Publish Center** shows live per-platform session health, and 抖音 promo-video publishing is built in. Pro build only — the free build greys it out.
+
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top">
+
+### Playlists & export
+
+Curate beats into lists, then package a list for sending out — a beat pack for a singer, a loopkit — choosing per-track and per-file what to include (bulk-select by type), exported as a **ZIP** or a plain folder copy, one subfolder per track.
+
+</td>
+<td width="33%" valign="top">
+
+### Player + analysis
+
+Spotify-style bottom bar (Tone.js + Web Audio) that plays the FLOAT-32 WAVs your DAW actually exports — desktop **and** browser. Audio roles per track with instant switch; queue follows the visible filter; shuffle + repeat. On-demand BPM/key analysis via a pluggable engine (Essentia extra, else the permissive librosa fallback) with per-field confidence scores.
+
+</td>
+<td width="33%" valign="top">
+
+### A distinctive interface
+
+A deliberately non-generic UI: Spotify-style cards, Coverflow, an animated WebGL backdrop (**Aurora** or **ASCII** glyph-rain), a glowing search orb, a floating player, and a tunable glass panel-opacity layer — all bundled to run fully offline.
 
 </td>
 </tr>
@@ -254,7 +269,7 @@ screenshots/               README assets
 
 ## Roadmap
 
-Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases. The catalog, the AI/MCP surface, on-demand metadata export, and the **desktop + browser** front ends are shipped; platform publishing is a Pro module. Next up: the first packaged installer + publish adapter (NetEase Cloudmusic), and — for the web front end — remote/LAN access and a mobile layout.
+Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases. The catalog, the AI/MCP surface, on-demand metadata export, playlists + export, and the **desktop + browser** front ends are shipped; platform publishing is a Pro module. Next up: the first packaged installer (`v0.1.0`) + the next publish adapter, and — for the web front end — remote/LAN access and a mobile layout.
 
 Full plan: [`ROADMAP.md`](ROADMAP.md) · Shipped history: [`CHANGELOG.md`](CHANGELOG.md).
 
