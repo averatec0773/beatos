@@ -25,3 +25,10 @@ class PublishRequestBody(BaseModel):
 class PublishLoginBody(BaseModel):
     platform: str
     account: str | None = None
+
+
+class PublishValidateBody(BaseModel):
+    # Optional subset of platforms to (re)validate. None / empty → all platforms.
+    # The renderer sends only the platforms whose expensive check is stale, so a
+    # single stale platform doesn't re-launch a browser for the still-fresh ones.
+    platforms: Optional[list[str]] = None

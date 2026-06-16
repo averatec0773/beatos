@@ -503,6 +503,8 @@
     "loggedIn": "已登录",
     "expired": "已过期——请重新登录",
     "checking": "检查中",
+    "statusUnknown": "状态未知",
+    "couldntCheckStatus": "无法检测账号状态",
     "notLoggedIn": "未登录",
     "waitingForReview": "等待你操作——在已打开的浏览器中完成（下一步 → 签名 → 提交）",
     "waitingForSms": "等待你操作——在已打开的浏览器中完成（输入短信验证码 → 提交）",

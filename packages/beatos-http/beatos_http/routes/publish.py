@@ -8,7 +8,11 @@ import asyncio
 from fastapi import APIRouter, HTTPException
 
 from beatos_http.pro import pro_available
-from beatos_http.publish_schemas import PublishLoginBody, PublishRequestBody
+from beatos_http.publish_schemas import (
+    PublishLoginBody,
+    PublishRequestBody,
+    PublishValidateBody,
+)
 
 router = APIRouter(tags=["publish"])
 
@@ -16,6 +20,12 @@ _PRO_REQUIRED = "Publishing is a BeatOS Pro feature. Install the pro module to e
 
 # Hold strong refs to in-flight publish tasks so asyncio doesn't GC them mid-run.
 _running: set = set()
+
+# Each platform validity check launches its own headless browser. Bound how many
+# run at once (B1) and serialize whole validate batches (B2) so a double-mount /
+# button-spam / second window can't fan out 2N concurrent browsers in one spike.
+_VALIDATE_CONCURRENCY = 3
+_validate_lock = asyncio.Lock()
 
 
 def _require_pro() -> None:
@@ -50,11 +60,26 @@ async def publish_sessions() -> dict:
 
 
 @router.post("/api/publish/sessions/validate")
-async def publish_sessions_validate() -> dict:
+async def publish_sessions_validate(body: PublishValidateBody | None = None) -> dict:
     _require_pro()
     from beatos_publish.platforms import available
     from beatos_publish.service import validate_session
-    return {"sessions": {p: await validate_session(p) for p in available()}}
+    known = available()
+    requested = body.platforms if (body and body.platforms) else None
+    platforms = [p for p in (requested or known) if p in known]
+
+    sem = asyncio.Semaphore(_VALIDATE_CONCURRENCY)
+
+    async def _check(platform: str) -> str:
+        async with sem:
+            return await validate_session(platform)
+
+    # Each platform launches its own isolated headless browser (no shared state),
+    # so validate them concurrently — wall-clock is the slowest single check, not
+    # the sum across platforms — bounded by the semaphore and serialized as a batch.
+    async with _validate_lock:
+        results = await asyncio.gather(*(_check(p) for p in platforms))
+    return {"sessions": dict(zip(platforms, results))}
 
 
 @router.post("/api/publish/login")

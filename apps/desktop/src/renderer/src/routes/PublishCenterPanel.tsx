@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw, Rocket } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 
 import { publishApi } from "@/api/publish";
 import { usePublishCenterStore } from "@/stores/publish-center";
@@ -15,16 +14,11 @@ import { PublishDialog } from "@/components/PublishDialog";
 
 const SECTION = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-tertiary";
 
-// Module scope so Date.now() is not called during component render
-// (react-hooks/purity). Recomputed cheaply each render.
-function formatCheckedAgo(t: TFunction, validatedAt: Record<string, number>): string {
-  const ts = Math.max(0, ...Object.values(validatedAt));
-  if (!ts) return t("publishCenter.neverChecked");
-  const mins = Math.floor((Date.now() - ts) / 60000);
-  if (mins < 1) return t("publishCenter.checkedJustNow");
-  if (mins < 60) return t("publishCenter.checkedMinsAgo", { mins });
-  return t("publishCenter.checkedHoursAgo", { hours: Math.floor(mins / 60) });
-}
+// A job still moving (anything but a terminal done/failed) wants the fast 2s poll;
+// once everything is settled we back off so an idle, mounted panel isn't hitting the
+// sidecar 30×/min forever — we still poll slowly to pick up a newly-started publish.
+const POLL_ACTIVE_MS = 2000;
+const POLL_IDLE_MS = 8000;
 
 export function PublishCenterPanel(): React.JSX.Element {
   const { t } = useTranslation();
@@ -57,10 +51,23 @@ export function PublishCenterPanel(): React.JSX.Element {
       await loadSessions();
       await validateSessions();
     })();
-    void refreshJobs();
-    jobsTimer.current = window.setInterval(() => void refreshJobs(), 2000);
+    let cancelled = false;
+    const tick = async (): Promise<void> => {
+      if (cancelled) return;
+      await refreshJobs();
+      if (cancelled) return;
+      const active = usePublishCenterStore
+        .getState()
+        .jobs.some((j) => j.stage !== "done" && j.stage !== "failed");
+      jobsTimer.current = window.setTimeout(
+        () => void tick(),
+        active ? POLL_ACTIVE_MS : POLL_IDLE_MS,
+      );
+    };
+    void tick();
     return () => {
-      if (jobsTimer.current) window.clearInterval(jobsTimer.current);
+      cancelled = true;
+      if (jobsTimer.current) window.clearTimeout(jobsTimer.current);
       if (loginTimer.current) window.clearInterval(loginTimer.current);
     };
   }, [loadSessions, validateSessions, refreshJobs]);
@@ -117,14 +124,11 @@ export function PublishCenterPanel(): React.JSX.Element {
 
   const platforms = useMemo(() => Object.keys(sessions), [sessions]);
 
-  const checkedAgoLabel = formatCheckedAgo(t, validatedAt);
-
   return (
     <div className="beatos-card beatos-scroll h-full overflow-y-auto rounded-xl p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-lg font-semibold text-text-primary">{t("publishCenter.title")}</h1>
-          <p className="mt-0.5 text-[11px] text-text-tertiary">{checkedAgoLabel}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -156,6 +160,7 @@ export function PublishCenterPanel(): React.JSX.Element {
               key={p}
               platform={p}
               state={sessions[p]}
+              checkedAt={validatedAt[p]}
               loggingIn={loginPlatform === p}
               onLogin={() => void handleLogin(p)}
             />

@@ -503,6 +503,8 @@
     "loggedIn": "Logged in",
     "expired": "Expired — log in again",
     "checking": "Checking",
+    "statusUnknown": "Status unknown",
+    "couldntCheckStatus": "Couldn't check account status",
     "notLoggedIn": "Not logged in",
     "waitingForReview": "Waiting for you — finish in the open browser (next → sign → submit)",
     "waitingForSms": "Waiting for you — finish in the open browser (enter SMS → submit)",

@@ -1,11 +1,13 @@
 import { create } from "zustand";
 
+import i18n from "@/i18n";
 import {
   publishApi,
   type PublishJobFull,
   type SessionState,
   type ValidatedSessionState,
 } from "@/api/publish";
+import { useToastStore } from "@/stores/toast";
 
 // Real validity uses a headless browser hit to the platform's upload page, so
 // it is both slow (~10-15s) and best kept infrequent (repeated automated loads
@@ -49,6 +51,11 @@ interface PublishCenterState {
   refreshJobs(): Promise<void>;
 }
 
+// Dedupe overlapping validate calls (e.g. React StrictMode's dev double-mount, or
+// the mount effect racing a manual refresh) so we never fan out two batches of
+// headless checks for the same request.
+let _validateInflight: Promise<void> | null = null;
+
 const _cache = loadCache();
 const _initialSessions: Record<string, SessionState> = {};
 const _initialValidatedAt: Record<string, number> = {};
@@ -84,27 +91,62 @@ export const usePublishCenterStore = create<PublishCenterState>((set, get) => ({
     }
   },
   async validateSessions(force = false) {
-    const now = Date.now();
-    const validatedAt = get().validatedAt;
-    const known = Object.keys(get().sessions);
-    const stale = known.some((p) => !validatedAt[p] || now - validatedAt[p] > TTL_MS);
-    if (!force && !stale) return; // all fresh → skip the headless check entirely
-    set({ validating: true });
-    try {
-      const { sessions } = await publishApi.validateSessions();
-      const at = { ...get().validatedAt };
-      const cache = loadCache();
-      for (const [p, st] of Object.entries(sessions)) {
-        at[p] = now;
-        cache[p] = { state: st, at: now };
+    if (_validateInflight) return _validateInflight; // collapse concurrent calls
+    const current = get().sessions;
+    // loadSessions marks a platform 'checking' iff it is present AND its expensive
+    // result is stale/never. So 'checking' is exactly the set that needs a headless
+    // hit — only those go to the browser (a forced refresh re-checks everything).
+    const toCheck = force
+      ? Object.keys(current)
+      : Object.keys(current).filter((p) => current[p] === "checking");
+    if (toCheck.length === 0) return;
+    const run = (async () => {
+      set({ validating: true });
+      const now = Date.now();
+      try {
+        const { sessions } = await publishApi.validateSessions(toCheck);
+        const prev = get().sessions;
+        const at = { ...get().validatedAt };
+        const cache = loadCache();
+        const next: Record<string, SessionState> = { ...prev };
+        for (const [p, st] of Object.entries(sessions)) {
+          if (st === "unknown") {
+            // Indeterminate (transient nav/timeout): keep the last real state and do
+            // NOT refresh the TTL, so the next load re-checks instead of caching a
+            // non-answer for 24h. Never downgrade a logged-in account on a blip.
+            next[p] = prev[p] && prev[p] !== "checking" ? prev[p] : "unknown";
+            continue;
+          }
+          next[p] = st;
+          if (st === "not_logged_in") {
+            // Free (file-existence) result — re-derived each loadSessions, so it
+            // must never consume the expensive-check TTL.
+            delete at[p];
+            delete cache[p];
+            continue;
+          }
+          at[p] = now;
+          cache[p] = { state: st, at: now };
+        }
+        saveCache(cache);
+        set({ sessions: next, validatedAt: at });
+      } catch (e) {
+        console.warn("[publish-center] validateSessions failed", e);
+        // Don't strand rows at 'checking' — drop them to 'unknown' (keeping any
+        // prior real state) and tell the user the check itself failed.
+        const prev = get().sessions;
+        const next: Record<string, SessionState> = { ...prev };
+        for (const p of Object.keys(next)) if (next[p] === "checking") next[p] = "unknown";
+        set({ sessions: next });
+        useToastStore.getState().show("error", i18n.t("publishCenter.couldntCheckStatus"));
+      } finally {
+        set({ validating: false });
       }
-      saveCache(cache);
-      set({ sessions: { ...sessions }, validatedAt: at });
-    } catch (e) {
-      console.warn("[publish-center] validateSessions failed", e);
-    } finally {
-      set({ validating: false });
-    }
+    })();
+    _validateInflight = run.finally(() => {
+      _validateInflight = null;
+    });
+    return _validateInflight;
   },
   async refreshJobs() {
     try {

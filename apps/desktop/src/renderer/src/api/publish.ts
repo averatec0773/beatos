@@ -25,7 +25,7 @@ export interface PublishCreateBody {
 
 export type SessionState = "valid" | "expired" | "not_logged_in" | "checking" | "unknown";
 
-export type ValidatedSessionState = "valid" | "expired" | "not_logged_in";
+export type ValidatedSessionState = "valid" | "expired" | "not_logged_in" | "unknown";
 
 export type LoginStatus = "pending" | "success" | "failed" | "timeout";
 
@@ -48,10 +48,12 @@ export const publishApi = {
   sessions(): Promise<{ sessions: Record<string, boolean> }> {
     return apiGet<{ sessions: Record<string, boolean> }>(`/api/publish/sessions`);
   },
-  validateSessions(): Promise<{ sessions: Record<string, ValidatedSessionState> }> {
+  validateSessions(
+    platforms?: string[],
+  ): Promise<{ sessions: Record<string, ValidatedSessionState> }> {
     return apiPost<{ sessions: Record<string, ValidatedSessionState> }>(
       `/api/publish/sessions/validate`,
-      {},
+      platforms && platforms.length ? { platforms } : {},
     );
   },
   login(platform: string): Promise<{ login_id: string }> {
