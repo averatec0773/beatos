@@ -126,6 +126,8 @@
     "installing": "Installing…",
     "installOk": "✓ {{message}}",
     "installErr": "✗ {{error}}",
+    "installTimeout": "MCP client setup timed out. Restart BeatOS and try again.",
+    "installRestartRequired": "BeatOS is still running an older desktop process. Restart BeatOS and try again.",
     "database": "Database",
     "copyPath": "Copy path",
     "claudeConfig": "Claude Desktop / Claude Code configuration",

@@ -150,9 +150,15 @@ export function buildClaudeCodeArgs(repoRoot: string): string[] {
   ];
 }
 
-export function installClaudeCodeConfig(repoRoot: string): Promise<McpInstallResult> {
-  return new Promise((resolve) => {
-    const child = spawn("claude", buildClaudeCodeArgs(repoRoot), {
+export function buildClaudeCodeRemoveArgs(): string[] {
+  return ["mcp", "remove", "--scope", "user", "beatos"];
+}
+
+function runClaude(
+  args: string[],
+): Promise<{ code: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("claude", args, {
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
@@ -163,29 +169,64 @@ export function installClaudeCodeConfig(repoRoot: string): Promise<McpInstallRes
     child.stderr.on("data", (chunk: Buffer) => {
       stderr += chunk.toString("utf8");
     });
-    child.on("error", (error) => {
-      resolve({
-        ok: false,
-        target: "claude_code",
-        error: `Claude Code CLI not available: ${error.message}`,
-      });
-    });
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve({
-          ok: true,
-          target: "claude_code",
-          message: "Claude Code MCP server added. Restart Claude Code or run /mcp.",
-        });
-        return;
-      }
-      resolve({
-        ok: false,
-        target: "claude_code",
-        error: `claude mcp add exited with code ${code}. ${(stderr || stdout).slice(-500)}`,
-      });
-    });
+    child.on("error", reject);
+    child.on("exit", (code) => resolve({ code, stdout, stderr }));
   });
+}
+
+function claudeCodeUserServerExists(output: string): boolean {
+  return output.includes("MCP server beatos already exists in user config");
+}
+
+export function installClaudeCodeConfig(repoRoot: string): Promise<McpInstallResult> {
+  return runClaude(buildClaudeCodeArgs(repoRoot))
+    .then(async ({ code, stdout, stderr }) => {
+      const output = stderr || stdout;
+      if (code === 0) {
+        return {
+          ok: true as const,
+          target: "claude_code" as const,
+          message: "Claude Code MCP server added. Restart Claude Code or run /mcp.",
+        };
+      }
+      if (claudeCodeUserServerExists(output)) {
+        const removed = await runClaude(buildClaudeCodeRemoveArgs());
+        if (removed.code !== 0) {
+          return {
+            ok: false as const,
+            target: "claude_code" as const,
+            error: `claude mcp remove exited with code ${removed.code}. ${(
+              removed.stderr || removed.stdout
+            ).slice(-500)}`,
+          };
+        }
+        const added = await runClaude(buildClaudeCodeArgs(repoRoot));
+        if (added.code === 0) {
+          return {
+            ok: true as const,
+            target: "claude_code" as const,
+            message: "Claude Code MCP server updated. Restart Claude Code or run /mcp.",
+          };
+        }
+        return {
+          ok: false as const,
+          target: "claude_code" as const,
+          error: `claude mcp add exited with code ${added.code}. ${(
+            added.stderr || added.stdout
+          ).slice(-500)}`,
+        };
+      }
+      return {
+        ok: false as const,
+        target: "claude_code" as const,
+        error: `claude mcp add exited with code ${code}. ${output.slice(-500)}`,
+      };
+    })
+    .catch((error: unknown) => ({
+      ok: false as const,
+      target: "claude_code" as const,
+      error: `Claude Code CLI not available: ${error instanceof Error ? error.message : String(error)}`,
+    }));
 }
 
 export function claudeDesktopConfigPath(

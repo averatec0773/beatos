@@ -17,6 +17,7 @@ describe("IPC_CHANNELS", () => {
         "DRAG_OUT_FILE": "drag-out-file",
         "GET_API_BASE": "get-api-base",
         "GET_API_TOKEN": "get-api-token",
+        "MCP_INSTALL_CLIENT_CONFIG": "mcp:install-client-config",
         "MCP_TEST_CONNECTION": "mcp:test-connection",
         "PATH_ENSURE_DIR": "path:ensure-dir",
         "PATH_HOME": "path:home",

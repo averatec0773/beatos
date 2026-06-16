@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { AIIntegrationSection } from "../components/Settings/AIIntegrationSection";
 
@@ -23,11 +23,16 @@ vi.mock("@/stores/lists", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useRealTimers();
   (window as unknown as { beatos: unknown }).beatos = mockBeatos;
   (global.fetch as any) = vi.fn().mockResolvedValue({
     ok: true,
     json: () => Promise.resolve([]),
   });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("AIIntegrationSection", () => {
@@ -105,6 +110,46 @@ describe("AIIntegrationSection", () => {
     await user.click(screen.getByRole("button", { name: /Install Codex/i }));
     await waitFor(() => expect(mockBeatos.installMcpClientConfig).toHaveBeenCalledWith("codex"));
     expect(screen.getByText(/installed/i)).toBeInTheDocument();
+  });
+
+  it("recovers when client setup rejects", async () => {
+    mockBeatos.installMcpClientConfig.mockRejectedValue(new Error("IPC failed"));
+    const user = userEvent.setup();
+    render(<AIIntegrationSection dbPath="/x/beatos.db" repoRoot="/r" />);
+    await user.click(screen.getByRole("button", { name: /AI Integration/i }));
+    await user.click(screen.getByRole("button", { name: /Install Codex/i }));
+    await waitFor(() => expect(screen.getByText(/IPC failed/i)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /Install Codex/i })).toBeEnabled();
+  });
+
+  it("explains stale desktop process errors from missing IPC handlers", async () => {
+    mockBeatos.installMcpClientConfig.mockRejectedValue(
+      new Error(
+        "Error invoking remote method 'mcp:install-client-config': Error: No handler registered for 'mcp:install-client-config'",
+      ),
+    );
+    const user = userEvent.setup();
+    render(<AIIntegrationSection dbPath="/x/beatos.db" repoRoot="/r" />);
+    await user.click(screen.getByRole("button", { name: /AI Integration/i }));
+    await user.click(screen.getByRole("button", { name: /Install Codex/i }));
+    await waitFor(() => expect(screen.getByText(/Restart BeatOS/i)).toBeInTheDocument());
+    expect(screen.queryByText(/No handler registered/i)).toBeNull();
+  });
+
+  it("times out a hung client setup instead of leaving the button installing forever", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockBeatos.installMcpClientConfig.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<AIIntegrationSection dbPath="/x/beatos.db" repoRoot="/r" />);
+    await user.click(screen.getByRole("button", { name: /AI Integration/i }));
+    await user.click(screen.getByRole("button", { name: /Install Codex/i }));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15000);
+    });
+
+    await waitFor(() => expect(screen.getByText(/timed out/i)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /Install Codex/i })).toBeEnabled();
   });
 
   it("no longer renders any Pending confirmations block (moved to /approvals)", async () => {

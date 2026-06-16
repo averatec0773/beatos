@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildClaudeCodeArgs,
+  buildClaudeCodeRemoveArgs,
   installClaudeDesktopConfig,
   installCodexConfig,
 } from "../mcp/install-config";
@@ -78,5 +79,9 @@ describe("MCP client config installer", () => {
       "/repo",
       "beatos-mcp",
     ]);
+  });
+
+  it("builds a Claude Code user-scope remove command for idempotent reinstall", () => {
+    expect(buildClaudeCodeRemoveArgs()).toEqual(["mcp", "remove", "--scope", "user", "beatos"]);
   });
 });

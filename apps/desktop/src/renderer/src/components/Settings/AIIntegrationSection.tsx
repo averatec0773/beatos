@@ -21,6 +21,12 @@ interface Props {
 }
 
 const TOOL_NAMES = ["ping", "list_tracks", "get_track", "list_lists", "list_distinct_values"];
+const INSTALL_TIMEOUT_MS = 15_000;
+const copyButtonClass =
+  "rounded border border-border-subtle px-2 py-0.5 text-xs text-text-secondary hover:bg-bg-row-hover hover:text-text-primary disabled:opacity-60";
+const sectionLabelClass = "text-xs uppercase tracking-wide text-text-tertiary";
+const codeBlockClass =
+  "mt-1 max-h-64 overflow-auto rounded border border-border-subtle bg-bg-elevated p-3 font-mono text-xs text-text-primary";
 
 function tomlString(value: string): string {
   return JSON.stringify(value);
@@ -51,6 +57,13 @@ function buildCodexConfigToml(repoRoot: string): string {
     "tool_timeout_sec = 120",
     "enabled = true",
   ].join("\n");
+}
+
+function installErrorMessage(error: unknown, restartMessage: string): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("No handler registered for 'mcp:install-client-config'")
+    ? restartMessage
+    : message;
 }
 
 export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Element {
@@ -88,9 +101,38 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
 
   const installClient = async (target: InstallTarget): Promise<void> => {
     setInstallState({ target, status: "installing" });
-    const result = await platform.installMcpClientConfig(target);
-    setInstallState({ status: "result", result });
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result = await Promise.race<InstallResult>([
+        platform.installMcpClientConfig(target),
+        new Promise<InstallResult>((resolve) => {
+          timeoutId = setTimeout(
+            () =>
+              resolve({
+                ok: false,
+                target,
+                error: t("ai.installTimeout"),
+              }),
+            INSTALL_TIMEOUT_MS,
+          );
+        }),
+      ]);
+      setInstallState({ status: "result", result });
+    } catch (error) {
+      setInstallState({
+        status: "result",
+        result: {
+          ok: false,
+          target,
+          error: installErrorMessage(error, t("ai.installRestartRequired")),
+        },
+      });
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
   };
+
+  const isInstalling = typeof installState === "object" && installState.status === "installing";
 
   return (
     <section className="mt-10 pt-6 border-t border-border-subtle">
@@ -133,9 +175,7 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
           )}
 
           <div>
-            <div className="mb-1 text-xs uppercase tracking-wide text-text-tertiary">
-              {t("ai.oneClick")}
-            </div>
+            <div className={sectionLabelClass}>{t("ai.oneClick")}</div>
             <div className="flex flex-wrap gap-2">
               {(
                 [
@@ -147,19 +187,11 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
                 <button
                   key={target}
                   type="button"
-                  className="rounded border border-border-subtle px-2 py-1 text-xs hover:bg-bg-row-hover disabled:opacity-60"
+                  className="rounded border border-border-subtle px-2 py-1 text-xs text-text-primary hover:bg-bg-row-hover disabled:opacity-60"
                   onClick={() => void installClient(target)}
-                  disabled={
-                    typeof installState === "object" &&
-                    installState.status === "installing" &&
-                    installState.target === target
-                  }
+                  disabled={isInstalling}
                 >
-                  {typeof installState === "object" &&
-                  installState.status === "installing" &&
-                  installState.target === target
-                    ? t("ai.installing")
-                    : label}
+                  {isInstalling && installState.target === target ? t("ai.installing") : label}
                 </button>
               ))}
             </div>
@@ -176,54 +208,36 @@ export function AIIntegrationSection({ dbPath, repoRoot }: Props): React.JSX.Ele
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <span>{t("ai.database")}</span>
-            <div className="flex min-w-0 items-center gap-2">
-              <code className="truncate text-xs text-text-secondary">{dbPath}</code>
-              <button
-                type="button"
-                className="shrink-0 rounded border border-border-subtle px-2 py-0.5 text-xs hover:bg-bg-row-hover"
-                onClick={copyPath}
-              >
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <div className={sectionLabelClass}>{t("ai.database")}</div>
+              <button type="button" className={copyButtonClass} onClick={copyPath}>
                 {t("ai.copyPath")}
               </button>
             </div>
+            <code className="block truncate rounded border border-border-subtle bg-bg-elevated p-3 font-mono text-xs text-text-primary">
+              {dbPath}
+            </code>
           </div>
 
           <div>
-            <div className="mb-1 text-xs uppercase tracking-wide text-text-tertiary">
-              {t("ai.claudeConfig")}
-            </div>
-            <pre className="max-h-64 overflow-auto rounded bg-bg-elevated p-3 text-xs">
-              {configJson}
-            </pre>
-            <div className="mt-2 flex justify-end">
-              <button
-                type="button"
-                className="rounded border border-border-subtle px-2 py-0.5 text-xs hover:bg-bg-row-hover"
-                onClick={copyJson}
-              >
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <div className={sectionLabelClass}>{t("ai.claudeConfig")}</div>
+              <button type="button" className={copyButtonClass} onClick={copyJson}>
                 {t("ai.copyJson")}
               </button>
             </div>
+            <pre className={codeBlockClass}>{configJson}</pre>
           </div>
 
           <div>
-            <div className="mb-1 text-xs uppercase tracking-wide text-text-tertiary">
-              {t("ai.codexConfig")}
-            </div>
-            <pre className="max-h-64 overflow-auto rounded bg-bg-elevated p-3 text-xs">
-              {codexConfigToml}
-            </pre>
-            <div className="mt-2 flex justify-end">
-              <button
-                type="button"
-                className="rounded border border-border-subtle px-2 py-0.5 text-xs hover:bg-bg-row-hover"
-                onClick={copyToml}
-              >
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <div className={sectionLabelClass}>{t("ai.codexConfig")}</div>
+              <button type="button" className={copyButtonClass} onClick={copyToml}>
                 {t("ai.copyToml")}
               </button>
             </div>
+            <pre className={codeBlockClass}>{codexConfigToml}</pre>
           </div>
 
           <div className="text-xs text-text-tertiary">

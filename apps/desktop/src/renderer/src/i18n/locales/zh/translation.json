@@ -126,6 +126,8 @@
     "installing": "安装中…",
     "installOk": "✓ {{message}}",
     "installErr": "✗ {{error}}",
+    "installTimeout": "MCP 客户端适配超时。请重启 BeatOS 后再试。",
+    "installRestartRequired": "BeatOS 仍在运行旧的桌面进程。请重启 BeatOS 后再试。",
     "database": "数据库",
     "copyPath": "复制路径",
     "claudeConfig": "Claude Desktop / Claude Code 配置",

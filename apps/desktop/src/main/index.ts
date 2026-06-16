@@ -214,7 +214,12 @@ function createWindow(): void {
     splashWin = null;
   });
   win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url);
+    // Only hand vetted web URLs to the OS — never file:// / smb:// / custom
+    // schemes (mirrors the SHELL_OPEN_EXTERNAL IPC guard). job.result.url from
+    // the Pro publish engine flows into target="_blank" links here.
+    if (/^https?:\/\//i.test(details.url)) {
+      shell.openExternal(details.url);
+    }
     return { action: "deny" };
   });
 
@@ -307,7 +312,7 @@ app.whenReady().then(async () => {
     installMcpClientConfig({
       target,
       repoRoot: repoRoot(),
-      homeDir: app.getPath("home"),
+      homeDir: process.env.BEATOS_MCP_CONFIG_HOME ?? app.getPath("home"),
       platform: process.platform,
       appData: process.env.APPDATA,
     }),
