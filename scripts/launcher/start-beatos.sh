@@ -14,6 +14,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
+# uv hardlinks packages from its cache by default; when the cache and the venv
+# sit on different filesystems the link fails and uv falls back to a partial
+# copy that can leave half-written package metadata (a gutted *.dist-info makes
+# every later `uv pip install` abort). Force copy mode so installs are complete.
+export UV_LINK_MODE=copy
+
 PORT="${BEATOS_HTTP_PORT:-8765}"
 URL="http://127.0.0.1:${PORT}/"
 WEB_DIR="$ROOT/apps/desktop/out/web"
@@ -22,7 +28,7 @@ MARKER="$WEB_DIR/.beatos-build-head"
 step() { printf '\n\033[36m==> %s\033[0m\n' "$1"; }
 ok()   { printf '\033[32m    %s\033[0m\n' "$1"; }
 warn() { printf '\033[33m    %s\033[0m\n' "$1"; }
-fail() { printf '\n\033[31m[错误] %s\033[0m\n' "$1"; read -r -p "按回车键退出 " _; exit 1; }
+fail() { printf '\n\033[31m[ERROR] %s\033[0m\n' "$1"; read -r -p "Press Enter to exit " _; exit 1; }
 
 port_busy() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && { exec 3>&-; return 0; } || return 1; }
 
@@ -43,51 +49,51 @@ open_app_window() {
 }
 
 echo ""
-printf '\033[35m  BeatOS 启动器\033[0m\n'
+printf '\033[35m  BeatOS Launcher\033[0m\n'
 echo "  ------------------------------------"
 
 # ---------------------------------------------------------------- 1/5 uv
-step "[1/5] 检查 Python 环境管理器 (uv)"
+step "[1/5] Checking Python environment manager (uv)"
 export PATH="$HOME/.local/bin:$PATH"
 if ! command -v uv >/dev/null 2>&1; then
-  warn "未找到 uv，正在自动安装…（仅首次需要，约 1 分钟）"
+  warn "uv not found — installing automatically... (first run only, ~1 min)"
   curl -LsSf https://astral.sh/uv/install.sh | sh \
-    || fail "uv 自动安装失败。请检查网络后重试，或手动安装：https://docs.astral.sh/uv/"
-  command -v uv >/dev/null 2>&1 || fail "uv 安装后仍不可用。请关闭本窗口后重新双击启动一次。"
+    || fail "uv auto-install failed. Check your network and retry, or install manually: https://docs.astral.sh/uv/"
+  command -v uv >/dev/null 2>&1 || fail "uv still unavailable after install. Close this window and double-click to start again."
 fi
-ok "uv 就绪：$(uv --version)"
+ok "uv ready: $(uv --version)"
 
 # ---------------------------------------------------------------- 2/5 Node
-step "[2/5] 检查 Node.js (需要 22 或更高版本)"
+step "[2/5] Checking Node.js (requires v22 or newer)"
 node_ok=false
 if command -v node >/dev/null 2>&1; then
   major="$(node --version | sed 's/^v//' | cut -d. -f1)"
-  if [ "$major" -ge 22 ]; then node_ok=true; else warn "当前 Node.js v$major 版本过低"; fi
+  if [ "$major" -ge 22 ]; then node_ok=true; else warn "Current Node.js v$major is too old"; fi
 fi
 if [ "$node_ok" != true ]; then
   if command -v brew >/dev/null 2>&1; then
-    warn "正在通过 Homebrew 安装 Node.js…（仅首次需要，约 2 分钟）"
-    brew install node || fail "Node.js 安装失败。"
+    warn "Installing Node.js via Homebrew... (first run only, ~2 min)"
+    brew install node || fail "Node.js install failed."
   else
-    fail "未找到 Node.js。请到 https://nodejs.org/ 下载安装 LTS 版本后重新启动。"
+    fail "Node.js not found. Download and install the LTS version from https://nodejs.org/ then restart."
   fi
 fi
-ok "Node.js 就绪：$(node --version)"
+ok "Node.js ready: $(node --version)"
 
 # ---------------------------------------------------------------- 3/5 npm install
-step "[3/5] 检查前端依赖"
+step "[3/5] Checking frontend dependencies"
 if [ ! -d "$ROOT/apps/desktop/node_modules" ]; then
-  warn "首次启动：正在下载前端依赖…（约 3-5 分钟，请耐心等待）"
-  ( cd "$ROOT/apps/desktop" && npm install ) || fail "前端依赖安装失败（npm install）。请检查网络后重试。"
+  warn "First launch: downloading frontend dependencies... (~3-5 min, please wait)"
+  ( cd "$ROOT/apps/desktop" && npm install ) || fail "Frontend dependency install failed (npm install). Check your network and retry."
 fi
-ok "前端依赖就绪"
+ok "Frontend dependencies ready"
 
 # ---------------------------------------------------------------- 4/5 uv sync + Pro
-step "[4/5] 同步 Python 依赖"
+step "[4/5] Syncing Python dependencies"
 # A running instance holds the venv (Pro engine imports) and can break uv
 # sync's prune — if BeatOS is already up, just open the window.
 if port_busy "$PORT"; then
-  warn "BeatOS 已经在运行了 — 直接为你打开窗口。"
+  warn "BeatOS is already running — opening the window for you."
   open_app_window "$URL"
   sleep 2
   exit 0
@@ -95,39 +101,39 @@ fi
 if ! uv sync; then
   # Most common cause: an orphan sidecar (python -m beatos_http, parent gone)
   # still holds the venv — close it and retry once (same idea as dev:fresh).
-  warn "同步失败 — 正在关闭残留的 BeatOS 后台进程后重试…"
+  warn "Sync failed — closing leftover BeatOS background processes and retrying..."
   pkill -f "python -m beatos_http" 2>/dev/null || true
   sleep 1
-  uv sync || fail "Python 依赖同步失败（uv sync）。请关闭所有 BeatOS 窗口后重试；若仍失败请检查网络。"
+  uv sync || fail "Python dependency sync failed (uv sync). Close all BeatOS windows and retry; if it still fails, check your network."
 fi
-ok "Python 依赖就绪"
+ok "Python dependencies ready"
 
 # Pro engine: uv sync prunes it every run (not a workspace member) — reinstall
 # after sync, exactly like scripts/web-pro.sh. Absent submodule = free build.
 ENGINE="$ROOT/packages/pro/beatos-publish"
 if [ -f "$ENGINE/pyproject.toml" ]; then
-  warn "检测到 Pro 模块，正在装载发布引擎…"
-  uv pip install -e "$ENGINE" --no-deps || fail "Pro 引擎安装失败。"
-  uv pip install "patchright>=1.40" || fail "patchright 安装失败。"
+  warn "Pro module detected — loading the publish engine..."
+  uv pip install -e "$ENGINE" --no-deps || fail "Pro engine install failed."
+  uv pip install "patchright>=1.40" || fail "patchright install failed."
   uv run patchright install chromium
-  ok "Pro 发布引擎就绪"
+  ok "Pro publish engine ready"
 else
-  ok "免费版（未挂载 Pro 模块）"
+  ok "Free edition (no Pro module mounted)"
 fi
 
 # ---------------------------------------------------------------- 5/5 launch
-step "[5/5] 选择启动方式"
+step "[5/5] Choose how to start"
 echo ""
-echo "    [1] 浏览器版（推荐，回车默认）"
-echo "    [2] 桌面应用版"
-echo "    [3] 浏览器版 — 强制重新构建（界面没更新时选这个）"
+echo "    [1] Browser app (recommended, default on Enter)"
+echo "    [2] Desktop app"
+echo "    [3] Browser app — force rebuild (use this if the UI didn't update)"
 echo ""
-read -r -p "    请输入数字后回车 " choice
+read -r -p "    Enter a number and press Enter " choice
 choice="${choice:-1}"
 
 if [ "$choice" = "2" ]; then
   # Desktop: electron-vite dev — Electron main owns the sidecar (scripts/dev.sh).
-  step "正在启动桌面应用…（窗口稍后弹出，关闭本窗口即退出）"
+  step "Starting the desktop app... (window appears shortly; closing this window exits)"
   cd "$ROOT/apps/desktop"
   exec npm run dev
 fi
@@ -139,14 +145,14 @@ if [ "$choice" != "3" ] && [ -f "$WEB_DIR/index.html" ] && [ -f "$MARKER" ] && [
   need_build=false
 fi
 if [ "$need_build" = true ]; then
-  step "正在构建网页界面…（约 1 分钟）"
-  ( cd "$ROOT/apps/desktop" && npm run build:web ) || fail "网页构建失败（npm run build:web）。"
+  step "Building the web UI... (~1 min)"
+  ( cd "$ROOT/apps/desktop" && npm run build:web ) || fail "Web build failed (npm run build:web)."
   [ -n "$head" ] && printf '%s\n' "$head" > "$MARKER"
 else
-  ok "网页界面已是最新，跳过构建"
+  ok "Web UI is up to date, skipping build"
 fi
 
-step "正在启动 BeatOS…"
+step "Starting BeatOS..."
 (
   for _ in $(seq 1 60); do
     sleep 0.5
@@ -155,6 +161,6 @@ step "正在启动 BeatOS…"
 ) &
 
 echo ""
-ok "BeatOS 即将运行于：$URL"
-warn "保持本窗口开着；关闭本窗口（或按 Ctrl-C）即退出 BeatOS。"
+ok "BeatOS will be running at: $URL"
+warn "Keep this window open; closing it (or pressing Ctrl-C) exits BeatOS."
 exec env BEATOS_HTTP_PORT="$PORT" BEATOS_WEB_DIR="$WEB_DIR" uv run python -m beatos_http

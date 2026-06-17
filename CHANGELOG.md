@@ -11,9 +11,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 - **Smoother, cheaper playback.** The bottom player bar no longer re-renders ~60×/second while a track plays — the playback position is quantized to the 0.1s resolution it actually displays — trimming idle CPU/battery during playback.
 - **Publish Center track picker shows cover thumbnails.** The "Publish a track" picker now renders each track's cover beside its title (placeholder when none), so you recognise the beat visually instead of by name alone.
 - **Manage your recent searches.** The search box's Recent Searches now has a × on each entry to remove it and a **Clear** button (right-aligned on the heading) to wipe them all, and the list is capped at the 6 most recent.
+- **One-click launcher output is now English.** The `start-beatos` launcher scripts print their progress, prompts, and error messages in English.
 
 ### Fixed
 
+- **One-click launcher no longer aborts on a half-installed dependency.** The launchers now force uv's copy link mode (`UV_LINK_MODE=copy`), so when uv's package cache and the project venv live on different drives the install can't fall back to a partial copy that leaves a package's metadata half-written — which previously made the Pro engine / patchright step fail with a "failed to read metadata" error.
 - **The editor cover no longer flashes empty when you open a track.** Opening the editor briefly showed the empty "+ Cover" placeholder before the real cover appeared, because the cover waited on the per-track asset list to load. It now paints immediately from the cover id the track already carries; the async load still runs for the menu / drag / missing-file handling.
 
 ## [0.0.49] — 2026-06-16 — Web frontend, Pro publishing + Publish Center, bilingual UI, playlist export, FLAC
