@@ -4,15 +4,15 @@
 
 # BeatOS
 
-**The operating system for beat producers.**
+### The beat library built for how producers actually work.
 
-A local-first library for every beat on your drive — catalog it once, run it as a **native desktop app or in your browser**, then ship it to every platform with an AI co-pilot doing the metadata grind for you.
+Not a spreadsheet. Not a DAW. Not a marketplace. **BeatOS** is a local-first home for every beat on your drive — catalog it once with the metadata that *sells* beats, let an **AI agent do the tagging grind**, and **publish to every platform** from one window. Runs as a native **desktop app (macOS · Windows)** or right in your **browser**. Single-user, offline, no account, no telemetry.
 
 [![version](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/averatec0773/beatos/main/apps/desktop/package.json&query=$.version&label=version&prefix=v&color=7c5cff&style=flat-square)](CHANGELOG.md)
-[![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Web-1f1f1f?style=flat-square)](#run)
+[![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Web-1f1f1f?style=flat-square)](#install--run)
 [![license](https://img.shields.io/badge/license-Apache--2.0-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
-[![MCP](https://img.shields.io/badge/MCP-Claude%20Code%20%E2%80%A2%20Claude%20Desktop%20%E2%80%A2%20Codex-7c5cff?style=flat-square)](#ai-integration)
+[![MCP](https://img.shields.io/badge/MCP-Claude%20%E2%80%A2%20Codex%20%E2%80%A2%20any%20client-7c5cff?style=flat-square)](#ai-co-pilot-mcp)
 
 </div>
 
@@ -20,91 +20,104 @@ A local-first library for every beat on your drive — catalog it once, run it a
 
 <div align="center">
   <br/>
-  <img src="screenshots/beatos-core-product-demo.gif" alt="BeatOS product demo showing library search, playback, playlist export, Publish Center, and Agent Actions" width="1100" />
-  <br/>
-  <br/>
+  <img src="screenshots/beatos-core-product-demo.gif" alt="BeatOS demo: library search, playback, loopkit export, Publish Center, and AI Agent Actions" width="1100" />
+  <br/><br/>
 </div>
 
-> BeatOS keeps **one canonical catalog** of every beat on your disk — then you *or* an AI agent translate it into each platform's metadata, publish it, and package it for buyers, on demand. Offline, single-user, no account.
+## Why BeatOS
 
-## What it does today
+Most producers track their catalog in a spreadsheet, then re-type the same metadata into every platform by hand. BeatOS replaces that with **one canonical catalog** and three things nothing else combines:
+
+- 🎯 **Purpose-built for selling beats** — license tiers with multi-currency pricing, producer credits, tagged/untagged/loop/stems, BPM & key. Not a generic media manager bent into shape.
+- 🤖 **AI-native** — a first-class **MCP server** lets Claude or Codex catalog, tag, and draft per-platform metadata for you. Every write waits for your approval.
+- 🚀 **Publish everywhere** — one-click multi-platform publishing (Pro) drives a real browser and only hands back at the platform's human-verification step.
+
+## What it does
 
 <table>
 <tr>
 <td width="33%" valign="top">
 
-### Local catalog
+### 🗂️ A catalog built for selling
 
-A real SQLite database for every beat: title, BPM, key, genre + mood (multi-value), producer credits, tags, license tiers + multi-currency pricing, description, audio assets (WAV/MP3/FLAC × tagged/untagged + loop + stems), cover art. Soft-delete trash with restore. Rename + merge a producer across every track in one click.
-
-</td>
-<td width="33%" valign="top">
-
-### AI co-pilot (MCP)
-
-A first-class **MCP (Model Context Protocol)** server exposes the library to Claude Code, Claude Desktop, Codex, and any MCP client — **24 tools** in the free build (**29** with Pro). Every write goes through a `token → await_approval` flow — the AI proposes, you confirm in the Agent Actions panel — with a permission setting: confirm every action (default), auto-approve, or read-only.
+Every beat in a real SQLite database: title, **BPM, key, genre + mood** (multi-value), **producer credits**, tags, **license tiers with multi-currency pricing**, description, and audio in every role — tagged/untagged, **loop, stems** (WAV/MP3/FLAC) — plus cover art. Soft-delete trash with restore. Rename or merge a producer across your whole catalog in one click.
 
 </td>
 <td width="33%" valign="top">
 
-### One-click publishing (Pro)
+### 🔎 Find any beat instantly
 
-Publish a beat to a platform without leaving BeatOS: the engine drives a real browser and pauses at the platform's human-verification step. A **Publish Center** shows live per-platform session health, and 抖音 promo-video publishing is built in. Pro build only — the free build greys it out.
+Search across the catalog and stack filters — **BPM range, key, genre, mood, producer, has-audio** — with recent searches one click away. The library table sorts and filters live; the player queue follows whatever you're looking at.
+
+</td>
+<td width="33%" valign="top">
+
+### 📦 Loopkits, beattapes & beat packs
+
+Curate beats into a list, then **package it to send out** — a loopkit, a beattape, a singer's beat pack. Pick per-track and per-file what goes in (bulk-select all WAVs / all MP3s), then export as a **ZIP** or a plain folder, one subfolder per track.
 
 </td>
 </tr>
 <tr>
 <td width="33%" valign="top">
 
-### Playlists & export
+### 🎚️ BPM/key analysis & export
 
-Curate beats into lists, then package a list for sending out — a beat pack for a singer, a loopkit — choosing per-track and per-file what to include (bulk-select by type), exported as a **ZIP** or a plain folder copy, one subfolder per track.
-
-</td>
-<td width="33%" valign="top">
-
-### Player + analysis
-
-Spotify-style bottom bar (Tone.js + Web Audio) that plays the FLOAT-32 WAVs your DAW actually exports — desktop **and** browser. Audio roles per track with instant switch; queue follows the visible filter; shuffle + repeat. On-demand BPM/key analysis via a pluggable engine (Essentia extra, else the permissive librosa fallback) with per-field confidence scores.
+On-demand **BPM + key detection** with per-field confidence scores (Essentia engine, or the permissive librosa fallback) — analyze one track or **batch-analyze the whole library**, auto-filling empty fields. Export clean, per-platform metadata on demand.
 
 </td>
 <td width="33%" valign="top">
 
-### A distinctive interface
+### 🤖 AI co-pilot (MCP)
 
-A deliberately non-generic UI: Spotify-style cards, Coverflow, an animated WebGL backdrop (**Aurora** or **ASCII** glyph-rain), a glowing search orb, a floating player, and a tunable glass panel-opacity layer — all bundled to run fully offline.
+An MCP server exposes your library to Claude Code, Claude Desktop, Codex, and any MCP client — **24 tools** free (**29** with Pro). Every write goes through `token → await_approval`: the AI proposes, you confirm. Default, auto-approve, or read-only — your call.
+
+</td>
+<td width="33%" valign="top">
+
+### 🚀 One-click publishing (Pro)
+
+Publish a beat without leaving BeatOS: the engine drives a real browser and pauses at the platform's verification step. A **Publish Center** shows live per-platform session health, and **抖音 promo-video** publishing is built in. Pro build only — the free build greys it out.
 
 </td>
 </tr>
 </table>
 
+**And it feels like a product, not a database.** Spotify-style cards and Coverflow, a floating player, an animated WebGL backdrop (**Aurora** or **ASCII** glyph-rain), a glowing search orb, and a tunable glass panel-opacity layer — all bundled to run fully offline. Fully **bilingual (English / 中文)**, with an independent control for how genre/mood tags display.
+
 ## Desktop or browser — one codebase, two front ends
 
-BeatOS ships as a **native desktop app** (Electron) and a **browser app** (a local web SPA served by the same Python sidecar). One React codebase builds both, so the two stay in lockstep: Electron-only capabilities (native file dialogs, Finder/Explorer integration, drag-out) route through a thin `platform` seam with a same-origin web implementation behind it.
+BeatOS ships as a **native desktop app** (Electron) and a **browser app** (a local web SPA served by the same Python sidecar). One React codebase builds both, so they stay in lockstep — Electron-only powers (native file dialogs, reveal-in-Finder, drag-out) route through a thin `platform` seam with a same-origin web implementation behind it.
 
 | | |
 |---|---|
-| **Desktop** | The full native experience. `make dev` from source today; packaged installers at `v0.1.0`. |
-| **Browser** | `make web` builds the SPA and serves it at `http://127.0.0.1:8765` from the local sidecar — **same backend, same library, near-identical UI**, with zero native-packaging cost. Handy for cross-platform use without an Electron build. File picking uses a built-in local file browser; "reveal in Finder/Explorer" and downloads work because the backend is your own machine. |
+| **Desktop** | The full native experience. `make dev` from source today; packaged installers land at `v0.1.0`. |
+| **Browser** | `make web` builds the SPA and serves it at `http://127.0.0.1:8765` — **same backend, same library, near-identical UI**, no Electron build. The easy way to run on Windows or anywhere today. |
 
 Both are **local-first and offline** — the browser app talks only to `127.0.0.1`. (Remote/LAN access and a mobile layout are on the [roadmap](ROADMAP.md).)
 
-## AI integration
+## AI co-pilot (MCP)
 
-> **BeatOS is the first beat library built for the AI-agent era.** The MCP surface is not a side feature — it's how publishing is going to scale to 10 platforms without manual labor.
+> **BeatOS is the first beat library built for the AI-agent era.** The MCP surface isn't a side feature — it's how cataloging, tagging, and (soon) publishing scale without manual labor.
 
-**Verified clients:** Claude Code CLI · Claude Desktop · Codex CLI/App · any MCP client speaking stdio JSON-RPC.
+**Verified clients:** Claude Code · Claude Desktop · Codex CLI/App · any MCP client speaking stdio JSON-RPC.
 
-<div align="center">
-  <br/>
-  <img src="screenshots/mcp-claude-desktop.png" alt="BeatOS surfaced as a Desktop connector in Claude Desktop, with all tools listed under read-only and write/delete permission groups" width="900" />
-  <br/>
-  <em>BeatOS registered as a Desktop MCP connector in Claude Desktop — read-only tools auto-allowed, writes gated behind approval.</em>
-  <br/>
-  <br/>
-</div>
+**Why you stay in control:** every write tool returns a `token` (preview only) — nothing touches the database. It surfaces in the **Agent Actions** panel; you review the diff, then confirm. By default **an AI can never silently mutate your catalog** — unless you deliberately switch to auto-approve (or lock it to read-only). Batched tools (`create_tracks` ≤100, `attach_assets` ≤500) turn a 50-track import into one approval, not a hundred.
 
-**Tools shipping today** (24 in the free build; the Pro build adds `publish_track`, `publish_status`, `list_publish_platforms`, `publish_session_status` + `list_publish_jobs` for **29**):
+```text
+You:    "Tag every beat above 140 BPM with no genre as 'Trap' or 'Drill'
+         from the cover and title. Show me the diff first."
+
+Claude: list_tracks(bpm_min=140) → 12 tracks → drafts a patch
+        update_tracks(items=[...]) → returns token abc123
+
+You:    [Agent Actions panel: 12 proposed edits] → approve the batch
+
+Claude: await_approval → applied, reports back
+```
+
+<details>
+<summary><b>All MCP tools (24 free · +5 Pro)</b></summary>
 
 | Surface | Tools |
 |---|---|
@@ -114,137 +127,88 @@ Both are **local-first and offline** — the browser app talks only to `127.0.0.
 | **Metadata** | `update_tracks`, `merge_metadata`, `set_license_tiers` |
 | **Assets** | `attach_assets`, `detach_assets` |
 | **Flow control** | `await_approval` |
+| **Publishing (Pro)** | `publish_track`, `publish_status`, `list_publish_platforms`, `publish_session_status`, `list_publish_jobs` |
 
-**Why two-phase commit?** Every write tool returns a `token` (preview only) — nothing touches the database. The token surfaces in the **Agent Actions panel** in BeatOS; you review the diff, then confirm. The agent calls `await_approval` to learn the outcome. By default **an AI can never silently mutate your catalog**, batch-edit your producer credits, or trash a track without you signing off — unless you deliberately switch the permission setting to auto-approve (or lock it to read-only).
-
-**Why batches?** A folder-import of 50 tracks × 2 audio assets would otherwise be 100 approval clicks. `create_tracks` (≤100), `attach_assets` (≤500), `detach_assets` (≤500) all batch — one token, one click, atomic rollback if any file vanishes mid-approve.
-
-**Example flow** (driven by Claude Code from your terminal):
-
-```text
-You:    "Tag every beat above 140 BPM that has no genre with 'Trap' or 'Drill'
-         based on the cover art and title. Show me the diff before applying."
-
-Claude: [calls list_tracks(bpm_min=140) → 12 tracks]
-        [reads metadata, drafts a patch]
-        [calls update_tracks(items=[...]) → returns token abc123]
-
-You:    [opens BeatOS Approvals panel, sees 12 proposed edits with rationale]
-        [reviews 3, rejects 1, approves the batch]
-
-Claude: [await_approval → status=approved, applies, reports back]
-```
-
-The same pattern drives on-demand per-platform metadata export today, and will drive publish drafts (Pro) and self-corpus RAG drafts (v0.3+).
+</details>
 
 ## Local-first, by design
 
 | | |
 |---|---|
-| **No server.** | The sidecar binds `127.0.0.1` on a local port — and serves the browser front end from there too, same-origin. Nothing leaves the machine, including conversations with the MCP agent. |
-| **No account.** | Single-user. No login, no sync, no cloud. |
-| **No telemetry.** | Zero outbound calls from the app itself. |
-| **Your files stay put.** | BeatOS references paths; nothing is moved or renamed unless you ask. |
-| **Your data is yours.** | One SQLite file on your disk (`~/Music/BeatOS/global.db` by default). Open it with any tool. |
+| **No server** | The sidecar binds `127.0.0.1` and serves the browser front end same-origin. Nothing leaves the machine — including your conversations with the MCP agent. |
+| **No account** | Single-user. No login, no sync, no cloud. |
+| **No telemetry** | Zero outbound calls from the app itself. |
+| **Your files stay put** | BeatOS references paths; nothing is moved or renamed unless you ask. |
+| **Your data is yours** | One SQLite file (`~/Music/BeatOS/global.db` by default). Open it with any tool. |
 
-## Install
+## Install & run
 
-> Packaged desktop installers will arrive at `v0.1.0` together with the first publish adapter. Until then, run from source — see [Develop](#develop). The browser front end needs no packaging: `make web` and open a tab.
+> Packaged desktop installers arrive at `v0.1.0` (with the first publish adapter). Until then, run from source. The browser front end needs no packaging.
+> **Targets:** macOS 12+ · Windows 10+ · any modern browser. (Linux: dev + web only.)
 
-**Targets:** macOS 12+ · Windows 10+ (desktop) · any modern browser (web). Linux works for development and the web front end, but isn't a supported desktop install target.
-
-## Develop
-
-**Prerequisites**
-
-- Node ≥22 LTS
-- Python 3.11.x
-- [`uv`](https://github.com/astral-sh/uv) — `brew install uv` (macOS) or `pipx install uv`
-
-**Setup**
+**Prerequisites:** Node ≥22 LTS · Python 3.11.x · [`uv`](https://github.com/astral-sh/uv)
 
 ```bash
-make sync                              # resolve Python workspace
-cd apps/desktop && npm install
+make sync && (cd apps/desktop && npm install)   # one-time setup
+
+make dev    # desktop: Electron + sidecar
+make web    # browser: build the SPA + serve it, open a tab
 ```
 
-> **Pro build (publishing).** Publishing is a Pro feature in the private `packages/pro/`
-> submodule. With access to it: `git submodule update --init packages/pro`, then
-> `uv pip install -e packages/pro/beatos-publish --no-deps` + `uv pip install "patchright>=1.40"`, then
-> run with **`make dev-pro`** (desktop) or **`make web-pro`** (browser) — each reinstalls the engine after `uv sync`, which the free `make dev` / `make web` prune.
-> Full steps in [`packages/pro-mount-notes.md`](packages/pro-mount-notes.md). Without it,
-> the free build runs normally and greys out the publish entry.
+> **No terminal?** Double-click **`start-beatos.command`** (macOS) or **`start-beatos.bat`** (Windows) at the repo root — it checks/installs prerequisites, then launches the browser or desktop app.
 
-### Run
+<details>
+<summary><b>Wire up the MCP server (Claude Desktop / Claude Code / Codex)</b></summary>
 
-```bash
-make dev                               # desktop: Electron + sidecar (or: npm run dev:fresh)
-make web                               # browser: build the SPA + serve it from the sidecar, open a tab
-npm run logs:tail                      # follow main.log + sidecar.jsonl  (from apps/desktop)
-```
+The MCP server lives at `packages/beatos-mcp`. It bridges your MCP client (stdio) to the **running app's** sidecar over local HTTP — so **start BeatOS first**.
 
-> **No terminal?** Double-click **`start-beatos.bat`** (Windows) or **`start-beatos.command`** (macOS)
-> at the repo root — it checks/installs the prerequisites, then launches the browser or desktop app.
-
-### Wire up the MCP server (Claude Desktop / Claude Code / Codex)
-
-The MCP server lives at `packages/beatos-mcp`. It does **not** talk to SQLite directly — it bridges your MCP client (stdio) to the **running app's** sidecar over local HTTP. First-time setup, in order:
-
-1. **Install the Python deps** — from the repo root: `uv sync`. This creates `.venv` with every workspace package *and* the `mcp-proxy` stdio bridge the launcher execs. Re-run after pulling.
-
-2. **Start BeatOS first.** The bridge attaches to the sidecar of the *running* app: it reads a handshake file and exits with `BeatOS sidecar not running` if the app is down. Launch the desktop app (or `start-beatos.command` / `start-beatos.bat`) and leave it open.
-
-3. **Recommended: use the in-app one-click setup.** Open **Settings → AI Integration** and click the target client:
-
-   | Client | What BeatOS writes/runs |
-   |---|---|
-   | Claude Desktop | Merges `mcpServers.beatos` into `claude_desktop_config.json` and writes a `.beatos.bak` backup. |
-   | Claude Code | Runs `claude mcp add --transport stdio --scope user beatos -- uv run --directory <repo> beatos-mcp`. |
-   | Codex | Merges `[mcp_servers.beatos]` into `~/.codex/config.toml` and writes a `.beatos.bak` backup. |
-
-4. **Manual fallback:** register the server yourself. `--directory` must be the **absolute** repo path.
-
-   Claude Desktop / Claude Code JSON:
+1. **Install deps:** `uv sync` from the repo root (creates `.venv` + the `mcp-proxy` bridge). Re-run after pulling.
+2. **Start BeatOS** and leave it open.
+3. **One-click setup (recommended):** **Settings → AI Integration** → click your client. BeatOS merges the config (with a `.beatos.bak` backup) or runs `claude mcp add` for you.
+4. **Manual fallback** — register it yourself (`--directory` must be the absolute repo path):
 
    ```json
-   {
-     "mcpServers": {
-       "beatos": {
-         "command": "uv",
-         "args": ["run", "--directory", "/absolute/path/to/beatos", "beatos-mcp"]
-       }
-     }
-   }
+   { "mcpServers": { "beatos": {
+       "command": "uv",
+       "args": ["run", "--directory", "/absolute/path/to/beatos", "beatos-mcp"]
+   } } }
    ```
 
    Codex `config.toml`:
-
    ```toml
    [mcp_servers.beatos]
    command = "uv"
    args = ["run", "--directory", "/absolute/path/to/beatos", "beatos-mcp"]
    startup_timeout_sec = 20
    tool_timeout_sec = 120
-   enabled = true
    ```
+5. **Verify:** restart the client, call `ping`. Writes are proposed, not applied — approve them in **Agent Actions**.
 
-5. **Verify** — restart the client, then call `ping` (or `list_tracks`). Writes are proposed, not applied: each write tool returns a token you approve in the app's **Agent Actions** panel (`token` → `await_approval`). Attaching audio uses `attach_assets` with `role: "audio"` and an absolute `.wav`/`.mp3` path on this machine.
+**Troubleshooting:** `sidecar not running` → the app isn't open (step 2) · `command not found` → run `uv sync` (step 1) · empty tools list → restart the client.
 
-> **Troubleshooting first connect:**
-> - `BeatOS sidecar not running (no handshake…)` → the app isn't open. Do step 2.
-> - `command not found: mcp-proxy` or `beatos-mcp` → deps aren't installed. Do step 1 (`uv sync`).
-> - Tools list is empty after connecting → restart the MCP client so it re-reads the config.
+</details>
 
-### Test
+<details>
+<summary><b>Pro build (publishing) & tests</b></summary>
 
+**Pro build.** Publishing lives in the private `packages/pro/` submodule. With access:
+```bash
+git submodule update --init packages/pro
+uv pip install -e packages/pro/beatos-publish --no-deps && uv pip install "patchright>=1.40"
+make dev-pro    # or: make web-pro
+```
+Without it, the free build runs normally and greys out publishing. Full steps: [`packages/pro-mount-notes.md`](packages/pro-mount-notes.md).
+
+**Tests.**
 ```bash
 cd apps/desktop
-npx vitest run                         # renderer + main (Vitest)
-npm run build && npm run smoke         # desktop end-to-end (Playwright _electron)
-npm run build:web && npm run smoke:web # browser end-to-end (Playwright chromium)
-
-uv run pytest packages/                # Python sidecar (core + http + mcp)
+npx vitest run                          # renderer + main
+npm run build && npm run smoke          # desktop e2e (Playwright _electron)
+npm run build:web && npm run smoke:web  # browser e2e (Playwright chromium)
+uv run pytest packages/                 # Python sidecar (core + http + mcp)
 ```
+
+</details>
 
 ## Stack
 
@@ -252,7 +216,7 @@ uv run pytest packages/                # Python sidecar (core + http + mcp)
 `Python 3.11` · `FastAPI` · `aiosqlite` · `structlog` · `mcp` (FastMCP) · `librosa` / `essentia` (optional) · `Playwright`
 `SQLite` · `Pydantic v2`
 
-The single React renderer builds to two targets — Electron (`electron-vite`) and a browser SPA (`vite.config.web.ts`) the FastAPI sidecar serves at `/`.
+The single React renderer builds two targets — Electron (`electron-vite`) and a browser SPA (`vite.config.web.ts`) the FastAPI sidecar serves at `/`.
 
 ## Repository
 
@@ -260,23 +224,22 @@ The single React renderer builds to two targets — Electron (`electron-vite`) a
 apps/desktop/              Electron shell + React renderer (also builds the browser SPA)
 packages/
   beatos-core/             Pure Python business logic (no web/RPC deps)
-  beatos-http/             FastAPI facade — serves the renderer API, /api/fs, and the web SPA
+  beatos-http/             FastAPI facade — renderer API, /api/fs, and the web SPA
   beatos-mcp/              stdio MCP server for AI agents
   beatos-platforms/        Per-platform vocab maps
-  pro/                     Private submodule — Pro features (platform publishing); absent in the free build
+  pro/                     Private submodule — publishing; absent in the free build
 screenshots/               README assets
 ```
 
 ## Roadmap
 
-Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases. The catalog, the AI/MCP surface, on-demand metadata export, playlists + export, and the **desktop + browser** front ends are shipped; platform publishing is a Pro module. Next up: the first packaged installer (`v0.1.0`) + the next publish adapter, and — for the web front end — remote/LAN access and a mobile layout.
+Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases. Shipped: the catalog, search, the AI/MCP surface, on-demand metadata export, playlists + export, and the **desktop + browser** front ends; platform publishing is a Pro module. Next: the first packaged installer (`v0.1.0`) + the next publish adapter, plus remote/LAN access and a mobile layout for the web app.
 
 Full plan: [`ROADMAP.md`](ROADMAP.md) · Shipped history: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## License
 
 Apache License 2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
-
 Copyright 2026 Scott Huang ([averatec0773](https://github.com/averatec0773)).
 
 ---
