@@ -1,7 +1,7 @@
 """Local token guard for the /mcp endpoint.
 
 /mcp is the MCP transport (Claude Desktop / Claude Code reach it through the
-beatos-mcp launcher → mcp-proxy). It carries no auth by default, so any local
+beatos-mcp launcher's in-process proxy). It carries no auth by default, so any local
 process could reach the agent surface — which matters more once writes can
 auto-apply (agent_permission_mode = auto_approve). We mint a per-process random
 token, advertise it in the handshake file (the launcher reads it and passes it as

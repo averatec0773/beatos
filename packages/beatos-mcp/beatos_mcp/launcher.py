@@ -1,20 +1,34 @@
-"""stdio->HTTP bridge launcher. Reads handshake, validates sidecar liveness,
-then exec's mcp-proxy to relay JSON-RPC between Claude Desktop and the
-sidecar's /mcp endpoint."""
+"""stdio<->/mcp discovery for the in-process resilient proxy.
+
+`discover_sidecar` reads the sidecar handshake and validates liveness, returning
+a `SidecarTarget` when BeatOS is up and reachable, or `None` (logged, never
+raised) when it is not. The proxy (`beatos_mcp.proxy`) calls this lazily so the
+launcher always completes the MCP handshake even while BeatOS is offline.
+
+Rule 8: nothing here writes stdout — reasons are logged to file/stderr only.
+"""
 from __future__ import annotations
 
 import json
 import os
 import socket
-import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+import structlog
+
 from beatos_http.handshake import default_handshake_path
 
+log = structlog.get_logger("beatos_mcp")
 
-class DiscoveryError(RuntimeError):
-    pass
+
+@dataclass(frozen=True)
+class SidecarTarget:
+    """A reachable sidecar /mcp endpoint and its optional local auth token."""
+
+    url: str
+    token: str | None
 
 
 def _pid_alive(pid: int) -> bool:
@@ -36,26 +50,22 @@ def _default_health_probe(port: int) -> bool:
         return False
 
 
-def _default_exec(args: list[str]) -> None:
-    """Replace this process with the given command. Never returns on success."""
-    os.execvp(args[0], args)
-
-
-def run_launcher(
+def discover_sidecar(
     handshake_path: Path | None = None,
     *,
-    _exec: Callable[[list[str]], None] = _default_exec,
     _health_probe: Callable[[int], bool] = _default_health_probe,
-) -> None:
-    """Run the discovery + exec sequence. Raises DiscoveryError on failure;
-    on success, calls _exec (which by default replaces this process)."""
+) -> SidecarTarget | None:
+    """Resolve a live sidecar target, or None if BeatOS is unavailable.
+
+    Never raises: every failure mode (missing/malformed handshake, dead pid,
+    unreachable port) is logged at info level and returns None so the proxy can
+    serve its degraded surface instead of crashing the launcher.
+    """
     path = handshake_path or default_handshake_path()
 
     if not path.exists():
-        raise DiscoveryError(
-            f"BeatOS sidecar not running (no handshake at {path}). "
-            "Open BeatOS desktop app and retry."
-        )
+        log.info("sidecar.offline", reason="no_handshake", path=str(path))
+        return None
 
     try:
         data = json.loads(path.read_text())
@@ -63,33 +73,24 @@ def run_launcher(
         pid = int(data["pid"])
         token = data.get("token")  # optional: absent when /mcp auth is disabled
     except (json.JSONDecodeError, KeyError, ValueError) as e:
-        raise DiscoveryError(f"handshake file malformed: {e}") from e
+        log.info("sidecar.offline", reason="malformed_handshake", error=str(e))
+        return None
 
     if not _pid_alive(pid):
-        raise DiscoveryError(
-            f"BeatOS sidecar process not found (stale pid {pid}). "
-            "Restart BeatOS desktop app."
-        )
+        log.info("sidecar.offline", reason="stale_pid", pid=pid)
+        return None
 
     if not _health_probe(port):
-        raise DiscoveryError(
-            f"BeatOS sidecar not responding on port {port}. Restart BeatOS."
-        )
+        log.info("sidecar.offline", reason="port_unreachable", port=port)
+        return None
 
-    target = f"http://127.0.0.1:{port}/mcp"
-    # mcp-proxy >=0.10: --transport=streamablehttp targets the sidecar's
-    # Streamable HTTP /mcp endpoint; bridges Claude Desktop stdio to it.
-    args = ["mcp-proxy"]
-    if token:
-        # Echo the sidecar's local token so the /mcp guard accepts the connection.
-        args += ["--headers", "Authorization", f"Bearer {token}"]
-    args += ["--transport=streamablehttp", target]
-    _exec(args)
+    return SidecarTarget(url=f"http://127.0.0.1:{port}/mcp", token=token)
 
 
 def main() -> None:
-    try:
-        run_launcher()
-    except DiscoveryError as e:
-        sys.stderr.write(f"{e}\n")
-        sys.exit(1)
+    """Console-script entrypoint: run the resilient in-process proxy forever."""
+    import anyio
+
+    from beatos_mcp.proxy import run_proxy
+
+    anyio.run(run_proxy)

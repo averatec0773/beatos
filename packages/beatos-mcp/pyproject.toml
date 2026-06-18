@@ -1,7 +1,7 @@
 [project]
 name = "beatos-mcp"
 version = "0.0.49"
-description = "BeatOS MCP facade — FastMCP server (mounted by beatos-http) + stdio bridge launcher."
+description = "BeatOS MCP facade — FastMCP server (mounted by beatos-http) + in-process stdio<->/mcp proxy launcher."
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -9,7 +9,6 @@ dependencies = [
     "beatos-core",
     "beatos-http",
     "mcp>=1.27,<1.28",
-    "mcp-proxy>=0.10,<0.13",
     "structlog>=25.5.0",
 ]
 

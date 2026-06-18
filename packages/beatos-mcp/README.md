@@ -3,9 +3,12 @@
 MCP facade exposing the running BeatOS app to AI clients (Claude Desktop, Claude Code, Codex, Cursor, etc.).
 
 The actual FastMCP server runs inside the BeatOS sidecar at `/mcp`. The
-`beatos-mcp` console script is a stdio launcher: it reads the running sidecar's
-handshake file, validates liveness, then execs `mcp-proxy` to bridge stdio
-clients to the Streamable HTTP endpoint.
+`beatos-mcp` console script is a stdio launcher that runs an **in-process
+stdio↔/mcp proxy**: it always completes the MCP handshake (so clients attach even
+when BeatOS is closed), forwarding to the sidecar's Streamable HTTP endpoint when
+it is up and serving a degraded `beatos_status` tool when it is not — switching
+over automatically (via `tools/list_changed`) when the app starts, no client
+restart needed.
 
 ## What this gives you
 
@@ -46,8 +49,9 @@ No write tool mutates the DB directly.
    uv sync
    ```
 
-2. Start BeatOS and leave it running. The launcher exits with
-   `BeatOS sidecar not running` if no sidecar handshake exists.
+2. Start BeatOS to use the library tools. The launcher attaches whether or not
+   BeatOS is running — while it is closed only `beatos_status` is exposed; the
+   full toolset appears automatically once you open the app.
 
 3. Recommended: use the in-app one-click setup. Open BeatOS → Settings →
    AI Integration and click the target client:
@@ -107,13 +111,13 @@ Logs land at:
 uv run beatos-mcp
 ```
 
-The launcher speaks JSON-RPC on stdio after `mcp-proxy` takes over. **Never
-`print()` from launcher code** — stdout is protocol-only; stray writes will
-corrupt the stream and MCP clients may silently disconnect.
+The launcher speaks JSON-RPC on stdio (the in-process proxy in `proxy.py`).
+**Never `print()` from launcher/proxy code** — stdout is protocol-only; stray
+writes will corrupt the stream and MCP clients may silently disconnect.
 
 ## Architecture notes
 
-- `launcher.py` discovers the running sidecar and execs `mcp-proxy`
+- `launcher.py` discovers the running sidecar (`discover_sidecar`, non-raising); `proxy.py` is the in-process stdio↔/mcp proxy (resilient attach + reconnect)
 - `server.py` defines the FastMCP instance mounted by `beatos-http`
 - `db.py` opens connections inside the sidecar process; write approval paths use writable connections
 - `beatos_core.two_phase` provides token-table helpers for v0.0.21+ write tools
