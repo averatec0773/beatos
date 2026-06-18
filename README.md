@@ -160,9 +160,9 @@ make web    # browser: build the SPA + serve it, open a tab
 <details>
 <summary><b>Wire up the MCP server (Claude Desktop / Claude Code / Codex)</b></summary>
 
-The MCP server lives at `packages/beatos-mcp`. It bridges your MCP client (stdio) to the **running app's** sidecar over local HTTP — so **start BeatOS first**.
+The MCP server lives at `packages/beatos-mcp`. It bridges your MCP client (stdio) to the app's sidecar over local HTTP. It attaches even when BeatOS is closed (showing a `beatos_status` tool), and the full library tools appear automatically once you open the app — no client restart needed.
 
-1. **Install deps:** `uv sync` from the repo root (creates `.venv` + the `mcp-proxy` bridge). Re-run after pulling.
+1. **Install deps:** `uv sync` from the repo root (creates `.venv`). Re-run after pulling.
 2. **Start BeatOS** and leave it open.
 3. **One-click setup (recommended):** **Settings → AI Integration** → click your client. BeatOS merges the config (with a `.beatos.bak` backup) or runs `claude mcp add` for you.
 4. **Manual fallback** — register it yourself (`--directory` must be the absolute repo path):

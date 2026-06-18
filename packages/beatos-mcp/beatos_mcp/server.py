@@ -2,7 +2,7 @@
 
 v0.0.23: migrated from low-level mcp.server.Server to FastMCP.
 The ASGI app is mounted at /mcp by beatos-http. Stdio clients (Claude Desktop)
-connect via the beatos-mcp launcher -> mcp-proxy bridge.
+connect via the beatos-mcp launcher's in-process stdio<->/mcp proxy.
 """
 from __future__ import annotations
 

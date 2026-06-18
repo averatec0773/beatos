@@ -17,6 +17,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Fixed
 
+- **MCP no longer fails to attach when BeatOS is closed.** The `beatos-mcp` launcher now always completes the MCP handshake, so Claude Desktop / Claude Code stop showing "Could not attach to MCP server beatos" when the app isn't running — it exposes a `beatos_status` tool while BeatOS is closed and switches to the full library toolset automatically the moment you open the app, no client restart needed. The stdio↔/mcp bridge is now in-process, dropping the external `mcp-proxy` dependency.
 - **One-click launcher no longer aborts on a half-installed dependency.** The launchers now force uv's copy link mode (`UV_LINK_MODE=copy`), so when uv's package cache and the project venv live on different drives the install can't fall back to a partial copy that leaves a package's metadata half-written — which previously made the Pro engine / patchright step fail with a "failed to read metadata" error.
 - **The editor cover no longer flashes empty when you open a track.** Opening the editor briefly showed the empty "+ Cover" placeholder before the real cover appeared, because the cover waited on the per-track asset list to load. It now paints immediately from the cover id the track already carries; the async load still runs for the menu / drag / missing-file handling.
 
