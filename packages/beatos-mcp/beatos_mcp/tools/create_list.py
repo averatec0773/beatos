@@ -1,10 +1,8 @@
-"""create_list MCP write tool — issues 2PC token, does not write list table.
+"""create_list MCP write tool.
 
-Phase 1 of two-phase commit. The actual INSERT into the list table happens
-when the user clicks Approve in BeatOS Settings → AI Integration → Pending
-confirmations (routed through POST /api/tokens/{t}/approve in beatos-http).
-
-AI can call await_approval(token) to read the eventual outcome."""
+Validates the name and routes through `submit_write`, which applies the INSERT
+directly (gated by the MCP client's own consent) and records the action in the
+agent_action_log. The actual write logic lives in handlers/list_curation.py."""
 from __future__ import annotations
 
 from beatos_mcp.policy import submit_write

@@ -1,17 +1,14 @@
-"""Approve handlers for trash_tracks, restore_tracks, purge_tracks."""
+"""Direct-apply handlers for trash_tracks, restore_tracks, purge_tracks."""
 from __future__ import annotations
 
 import datetime as dt
 
 import aiosqlite
 
-from beatos_core.two_phase import (
+from beatos_core.approvals import (
     RowVanishedError,
-    consume_token_with_result,
-    verify_token,
+    register_apply_handler as register_approve_handler,
 )
-
-from beatos_http.routes.tokens import register_approve_handler
 
 
 def _now() -> str:
@@ -19,8 +16,7 @@ def _now() -> str:
 
 
 @register_approve_handler("trash_tracks")
-async def _approve_trash_tracks(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="trash_tracks")
+async def _approve_trash_tracks(conn: aiosqlite.Connection, payload: dict) -> dict:
     ids = payload["ids"]
     now = _now()
     for tid in ids:
@@ -31,14 +27,11 @@ async def _approve_trash_tracks(conn: aiosqlite.Connection, token: str) -> dict:
         )
         if cur.rowcount != 1:
             raise RowVanishedError(f"track id={tid} no longer eligible for trash")
-    result = {"trashed_count": len(ids), "ids": list(ids)}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"trashed_count": len(ids), "ids": list(ids)}
 
 
 @register_approve_handler("restore_tracks")
-async def _approve_restore_tracks(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="restore_tracks")
+async def _approve_restore_tracks(conn: aiosqlite.Connection, payload: dict) -> dict:
     ids = payload["ids"]
     now = _now()
     for tid in ids:
@@ -49,19 +42,14 @@ async def _approve_restore_tracks(conn: aiosqlite.Connection, token: str) -> dic
         )
         if cur.rowcount != 1:
             raise RowVanishedError(f"track id={tid} no longer eligible for restore")
-    result = {"restored_count": len(ids), "ids": list(ids)}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"restored_count": len(ids), "ids": list(ids)}
 
 
 @register_approve_handler("purge_tracks")
-async def _approve_purge_tracks(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="purge_tracks")
+async def _approve_purge_tracks(conn: aiosqlite.Connection, payload: dict) -> dict:
     ids = payload["ids"]
     for tid in ids:
         cur = await conn.execute("DELETE FROM track WHERE id=?", (tid,))
         if cur.rowcount != 1:
             raise RowVanishedError(f"track id={tid} no longer exists")
-    result = {"purged_count": len(ids), "ids": list(ids)}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"purged_count": len(ids), "ids": list(ids)}

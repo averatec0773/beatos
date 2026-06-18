@@ -386,14 +386,7 @@
   "approvals": {
     "title": "Agent 操作",
     "empty": "暂无 AI 活动。连接 MCP 客户端即可开始（见设置 → AI Integration）。",
-    "pending": "⚠ 待处理（{{count}}）",
-    "recent": "近期记录（{{count}}）",
-    "cannotBeUndone": "此操作无法撤销。",
-    "iUnderstand": "我确认此操作不可逆",
-    "approve": "✓ 批准",
-    "reject": "✗ 拒绝",
-    "hide": "隐藏",
-    "showAll": "显示全部 {{count}}"
+    "recent": "近期记录（{{count}}）"
   },
   "detail": {
     "nowFocused": "当前选中",

@@ -1,13 +1,12 @@
-"""Approve handlers for lifecycle tools: trash/restore/purge."""
+"""Direct-apply handlers for lifecycle tools: trash/restore/purge."""
 import datetime as dt
 
 import aiosqlite
 import pytest
-from httpx import ASGITransport, AsyncClient
 
+import beatos_http.handlers  # noqa: F401 — registers the apply handlers
+from beatos_core.approvals import RowVanishedError, apply
 from beatos_core.db import run_migrations
-from beatos_core.two_phase import create_token
-from beatos_http.app import create_app
 
 
 @pytest.fixture
@@ -26,25 +25,13 @@ async def db_path(tmp_path, monkeypatch):
     return p
 
 
-@pytest.fixture
-async def client(db_path):
-    app = create_app()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
-        async with app.router.lifespan_context(app):
-            yield c
-
-
 @pytest.mark.asyncio
-async def test_approve_trash_tracks_sets_deleted_at(client, db_path):
+async def test_apply_trash_tracks_sets_deleted_at(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(conn, "trash_tracks", {"ids": [1, 2]})
-
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
-    body = res.json()
-    assert body["trashed_count"] == 2
-    assert sorted(body["ids"]) == [1, 2]
+        result = await apply(conn, "trash_tracks", {"ids": [1, 2]})
+        await conn.commit()
+    assert result["trashed_count"] == 2
+    assert sorted(result["ids"]) == [1, 2]
 
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
@@ -55,15 +42,14 @@ async def test_approve_trash_tracks_sets_deleted_at(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_approve_restore_tracks_clears_deleted_at(client, db_path):
+async def test_apply_restore_tracks_clears_deleted_at(db_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute("UPDATE track SET deleted_at=? WHERE id IN (1,2)", ("x",))
-        tok = await create_token(conn, "restore_tracks", {"ids": [1, 2]})
         await conn.commit()
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
-    body = res.json()
-    assert body["restored_count"] == 2
+    async with aiosqlite.connect(db_path) as conn:
+        result = await apply(conn, "restore_tracks", {"ids": [1, 2]})
+        await conn.commit()
+    assert result["restored_count"] == 2
 
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
@@ -74,14 +60,11 @@ async def test_approve_restore_tracks_clears_deleted_at(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_approve_purge_tracks_deletes_row(client, db_path):
+async def test_apply_purge_tracks_deletes_row(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(conn, "purge_tracks", {"ids": [1, 2]})
-
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
-    body = res.json()
-    assert body["purged_count"] == 2
+        result = await apply(conn, "purge_tracks", {"ids": [1, 2]})
+        await conn.commit()
+    assert result["purged_count"] == 2
 
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute("SELECT COUNT(*) FROM track") as cur:
@@ -90,12 +73,12 @@ async def test_approve_purge_tracks_deletes_row(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_approve_trash_rolls_back_when_id_vanished(client, db_path):
+async def test_apply_trash_rolls_back_when_id_vanished(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(conn, "trash_tracks", {"ids": [1, 999]})
-
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 409  # RowVanishedError → 409
+        with pytest.raises(RowVanishedError):
+            await apply(conn, "trash_tracks", {"ids": [1, 999]})
+        # Caller rolls back on the raised error.
+        await conn.rollback()
 
     # Nothing was trashed (rollback)
     async with aiosqlite.connect(db_path) as conn:
@@ -107,12 +90,11 @@ async def test_approve_trash_rolls_back_when_id_vanished(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_purge_tracks_cascades_asset_and_track_list(client, db_path):
+async def test_purge_tracks_cascades_asset_and_track_list(db_path):
     """Regression: ON DELETE CASCADE on asset.track_id and track_list.track_id
     requires PRAGMA foreign_keys=ON per connection. Without it, purging a track
     leaves orphan rows in asset and track_list."""
     now = dt.datetime.now(dt.timezone.utc).isoformat()
-    list_id: int
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute("PRAGMA foreign_keys=ON")
         # Create a list and add track 1 to it
@@ -131,12 +113,13 @@ async def test_purge_tracks_cascades_asset_and_track_list(client, db_path):
             "VALUES (1, 'audio', '/tmp/x.wav', ?, ?)",
             (now, now),
         )
-        tok = await create_token(conn, "purge_tracks", {"ids": [1]})
         await conn.commit()
 
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
-    assert res.json()["purged_count"] == 1
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute("PRAGMA foreign_keys=ON")
+        result = await apply(conn, "purge_tracks", {"ids": [1]})
+        await conn.commit()
+    assert result["purged_count"] == 1
 
     async with aiosqlite.connect(db_path) as conn:
         # track row must be gone

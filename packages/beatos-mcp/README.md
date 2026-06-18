@@ -12,9 +12,9 @@ restart needed.
 
 ## What this gives you
 
-24 tools — **9 read** + **15 write** in the free build (29 with Pro, which adds `publish_track`, `publish_status`, `list_publish_platforms`, `publish_session_status` + `list_publish_jobs`). Note `grep -c '@mcp.tool' beatos_mcp/server.py` reports 29: the Pro tools are defined under an `if pro_available()` guard and only register when the engine is present.
+23 tools — **8 read** + **15 write** in the free build (28 with Pro, which adds `publish_track`, `publish_status`, `list_publish_platforms`, `publish_session_status` + `list_publish_jobs`).
 
-MCP write tools obey a global **agent permission policy** (`agent_permission_mode` app setting): `confirm` (default — pending token, human approves in Agent Actions), `auto_approve` (apply immediately, still recorded), or `read_only` (writes refused). See `beatos_mcp/policy.py`.
+MCP write tools apply **directly** under the MCP client's own consent (L1) and are recorded in the `agent_action_log` (surfaced in the Agent Actions dashboard). The one setting, `agent_permission_mode`: `enabled` (default — writes apply) or `read_only` (writes refused). The single chokepoint is `beatos_mcp/policy.py::submit_write` (also the seam for a future elicitation upgrade).
 
 ### Read tools
 
@@ -28,13 +28,12 @@ MCP write tools obey a global **agent permission policy** (`agent_permission_mod
 | `search_tracks(query)` | Full-text + structured-token search (`genre:trap`, `bpm:>=140`, …) |
 | `list_export_platforms()` | Platforms metadata can be exported for (e.g. `netease`) |
 | `export_metadata(track_id, platform)` | One track's metadata shaped for a platform's upload form |
-| `await_approval(token)` | Poll the status/result of any write token |
 
-### Write tools (two-phase commit)
+### Write tools
 
-Every write tool is phase 1 only: it issues a single-use token. The user approves
-in BeatOS → Approvals; the agent then polls `await_approval(token)` for the outcome.
-No write tool mutates the DB directly.
+Each write tool applies immediately through the `submit_write` chokepoint (gated by
+the MCP client's consent; refused under `read_only`) and returns `{status:"applied", result}`.
+Every applied write is recorded in the `agent_action_log` for the Agent Actions dashboard.
 
 `create_list`, `update_list`, `delete_list`, `add_tracks_to_list`,
 `remove_tracks_from_list`, `reorder_list`, `create_tracks`, `update_tracks`,

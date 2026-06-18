@@ -386,14 +386,7 @@
   "approvals": {
     "title": "Agent Actions",
     "empty": "No AI activity yet. Connect an MCP-compatible client to start (see Settings → AI Integration).",
-    "pending": "⚠ Pending ({{count}})",
-    "recent": "Recent ({{count}})",
-    "cannotBeUndone": "This cannot be undone.",
-    "iUnderstand": "I understand this is permanent",
-    "approve": "✓ Approve",
-    "reject": "✗ Reject",
-    "hide": "Hide",
-    "showAll": "Show all {{count}}"
+    "recent": "Recent ({{count}})"
   },
   "detail": {
     "nowFocused": "Now Focused",

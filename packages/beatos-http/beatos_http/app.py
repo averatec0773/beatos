@@ -22,11 +22,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from beatos_core.db import resolve_db_path, run_migrations
-from beatos_core.two_phase import cleanup_terminal_tokens
 from beatos_http import __version__
 from beatos_http.seed.demo import seed_demo_if_needed
 from beatos_http.mcp_auth import get_mcp_token, guard_mcp_app
 from beatos_http.routes import (
+    agent_actions,
     analysis,
     app_settings,
     assets,
@@ -41,7 +41,6 @@ from beatos_http.routes import (
     producers,
     publish,
     sweep,
-    tokens,
     tracks,
 )
 from beatos_mcp.server import app as mcp_asgi_app, mcp
@@ -63,41 +62,13 @@ def _allowed_origins() -> list[str]:
         origins.append("null")
     return origins
 
-# Module-level runtime state (per-process singletons).
-_cleanup_task: Optional[asyncio.Task] = None
-
-
-async def _periodic_token_cleanup(db_path_str: str) -> None:
-    """Hourly cleanup of terminal tokens older than 7 days. Sleeps first to
-    avoid racing with the synchronous startup cleanup. Inner try/except so a
-    single failure doesn't kill the loop."""
-    while True:
-        await asyncio.sleep(3600)
-        try:
-            async with aiosqlite.connect(db_path_str) as conn:
-                deleted = await cleanup_terminal_tokens(conn)
-                if deleted:
-                    log.info("token cleanup removed %d rows", deleted)
-        except Exception:
-            log.exception("token cleanup failed")
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _cleanup_task
-
     await run_migrations(resolve_db_path())
     log.info("sidecar startup: migrations applied")
 
     # Seed a demo track on a brand-new, empty install (best-effort, never raises).
     await seed_demo_if_needed()
-
-    # Cleanup once on startup so a fresh sidecar sees a tidy table.
-    db_path_str = str(resolve_db_path())
-    async with aiosqlite.connect(db_path_str) as conn:
-        await cleanup_terminal_tokens(conn)
-    # Then fire-and-forget the hourly loop.
-    _cleanup_task = asyncio.create_task(_periodic_token_cleanup(db_path_str))
 
     # Initialize FastMCP session manager (v0.0.23: MCP mounted at /mcp).
     # session_manager.run() uses an anyio task group that must be entered and
@@ -125,13 +96,6 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        if _cleanup_task is not None:
-            _cleanup_task.cancel()
-            try:
-                await _cleanup_task
-            except asyncio.CancelledError:
-                pass
-            _cleanup_task = None
         if mcp_task is not None:
             mcp_task.cancel()
             try:
@@ -185,7 +149,7 @@ def create_app() -> FastAPI:
     app.include_router(pro.router)
     app.include_router(publish.router)
     app.include_router(app_settings.router)
-    app.include_router(tokens.router)
+    app.include_router(agent_actions.router)
     app.include_router(batch_analysis.router)
     # /api/fs (whole-disk browse + open) serves the WEB file browser only; the
     # Electron renderer uses native dialogs via the preload bridge. The Electron

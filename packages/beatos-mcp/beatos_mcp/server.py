@@ -16,7 +16,6 @@ from pydantic import Field
 from beatos_mcp.policy import submit_write
 from beatos_mcp.preview import build_preview
 from beatos_mcp.pro import pro_available
-from beatos_mcp.tools.await_approval import await_approval as _await_approval_impl
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
 from beatos_mcp.tools.ingest import (
     attach_assets as _attach_assets_impl,
@@ -166,21 +165,9 @@ async def export_metadata(
 async def create_list(
     name: Annotated[str, Field(min_length=1, max_length=200, description="Display name for the new list.")],
 ) -> dict:
-    """Request creation of a new user list. Returns a 2PC token; the actual list is
-    created only after the human approves in BeatOS -> Approvals. Poll with await_approval."""
+    """Create a new user list. Applies directly (your MCP client gates the call);
+    recorded in BeatOS → Agent Actions. Returns {list_id, name}."""
     return await _create_list_impl(name=name)
-
-
-@mcp.tool(annotations=_READ_ANNOTATIONS)
-async def await_approval(
-    token: Annotated[str, Field(description="Token returned by any write tool.")],
-) -> dict:
-    """Poll the status of a 2PC token returned by any write tool.
-    Returns {token, tool_name, status, ...} where status is one of
-    'awaiting_approval' | 'approved' | 'rejected' | 'expired' | 'not_found'.
-    On 'approved', a `result` field carries the tool-specific outcome
-    (e.g. {list_id, name} for create_list, {created_ids: [...]} for create_tracks)."""
-    return await _await_approval_impl(token=token)
 
 
 @mcp.tool(
@@ -194,7 +181,7 @@ async def trash_tracks(
     ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to move to trash.")],
 ) -> dict:
     """Move tracks to trash (soft delete; reversible via restore_tracks).
-    Returns a 2PC token. Affected tracks' titles appear in the approval card preview."""
+    Applies directly; recorded in BeatOS → Agent Actions (with the affected tracks' titles)."""
     return await _trash_tracks_impl(ids=ids)
 
 
@@ -208,7 +195,7 @@ async def trash_tracks(
 async def restore_tracks(
     ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to restore from trash.")],
 ) -> dict:
-    """Restore previously-trashed tracks. Returns a 2PC token."""
+    """Restore previously-trashed tracks. Applies directly; recorded in BeatOS → Agent Actions."""
     return await _restore_tracks_impl(ids=ids)
 
 
@@ -223,8 +210,8 @@ async def purge_tracks(
     ids: Annotated[list[int], Field(min_length=1, max_length=500, description="Track ids to PERMANENTLY DELETE.")],
 ) -> dict:
     """PERMANENTLY delete tracks (and cascade their asset rows). Source audio
-    files on disk are not touched. The approval card requires a checkbox
-    confirmation. Returns a 2PC token."""
+    files on disk are not touched. Irreversible — applies directly; recorded in
+    BeatOS → Agent Actions."""
     return await _purge_tracks_impl(ids=ids)
 
 
@@ -233,7 +220,7 @@ async def update_list(
     list_id: Annotated[int, Field(description="Target user list id.")],
     name: Annotated[str, Field(min_length=1, max_length=200, description="New name.")],
 ) -> dict:
-    """Rename a user list (system lists are immutable). Returns a 2PC token."""
+    """Rename a user list (system lists are immutable). Applies directly; recorded in BeatOS → Agent Actions."""
     return await _update_list_impl(list_id=list_id, name=name)
 
 
@@ -242,7 +229,7 @@ async def delete_list(
     list_id: Annotated[int, Field(description="User list id to delete.")],
 ) -> dict:
     """PERMANENTLY delete a user list. Member tracks are unaffected. System
-    lists are immutable. Returns a 2PC token; checkbox-gated in the approval card."""
+    lists are immutable. Applies directly; recorded in BeatOS → Agent Actions."""
     return await _delete_list_impl(list_id=list_id)
 
 
@@ -288,7 +275,7 @@ async def update_tracks(
         ),
     ],
 ) -> dict:
-    """Bulk-update tracks. Returns a 2PC token."""
+    """Bulk-update tracks. Applies directly; recorded in BeatOS → Agent Actions."""
     return await _update_tracks_impl(ids=ids, patch=patch)
 
 
@@ -315,7 +302,7 @@ async def set_license_tiers(
         ),
     ],
 ) -> dict:
-    """Replace the full license-tier list on a track. Returns a 2PC token."""
+    """Replace the full license-tier list on a track. Applies directly; recorded in BeatOS → Agent Actions."""
     return await _set_license_tiers_impl(track_id=track_id, tiers=tiers)
 
 
@@ -329,7 +316,7 @@ async def merge_metadata(
     to: Annotated[str, Field(min_length=1, max_length=200, description="Canonical replacement value.")],
 ) -> dict:
     """Library-wide rename. Any track whose `field` array contains any of `from`
-    has those entries replaced with `to` (deduped). Returns a 2PC token."""
+    has those entries replaced with `to` (deduped). Applies directly; recorded in BeatOS → Agent Actions."""
     return await _merge_metadata_impl(field=field, from_=from_, to=to)
 
 
@@ -347,7 +334,7 @@ async def create_tracks(
         ),
     ],
 ) -> dict:
-    """Batch-create empty track rows (no assets attached). Returns a 2PC token."""
+    """Batch-create empty track rows (no assets attached). Applies directly; recorded in BeatOS → Agent Actions."""
     return await _create_tracks_impl(items=items)
 
 
@@ -369,7 +356,7 @@ async def attach_assets(
         ),
     ],
 ) -> dict:
-    """Batch-attach assets to existing tracks. One 2PC token for the whole batch.
+    """Batch-attach assets to existing tracks. Applied as a single batch.
     Files are referenced by absolute path (BeatOS does not copy them). Designed
     for folder-import workflows: pair with create_tracks to onboard a folder
     of beats in two approval clicks."""
@@ -392,7 +379,7 @@ async def detach_assets(
     ],
 ) -> dict:
     """Batch-detach assets from tracks. Removes the asset row(s); the source
-    audio file on disk is not touched. Returns a 2PC token."""
+    audio file on disk is not touched. Applies directly; recorded in BeatOS → Agent Actions."""
     return await _detach_assets_impl(items=items)
 
 
@@ -441,20 +428,20 @@ if pro_available():
         cover_asset_id: Annotated[int | None, Field(description="Cover image asset id, optional.")] = None,
         deliverable_wav_asset_id: Annotated[int | None, Field(description="Buyer-deliverable lossless WAV asset id (netease 授权设置).")] = None,
         deliverable_stems_asset_id: Annotated[int | None, Field(description="Buyer-deliverable stems-zip asset id (netease 授权设置).")] = None,
-        dry_run: Annotated[bool, Field(description="Fill the form but do NOT submit — a safe rehearsal.")] = False,
+        dry_run: Annotated[bool, Field(description="Defaults to TRUE (a safe rehearsal: fill the form but do NOT submit). You must pass dry_run=false to actually publish — this is the deliberate-confirm gate for a real, irreversible platform post.")] = True,
         account: Annotated[str, Field(description="Session account; default 'default'.")] = "default",
     ) -> dict:
-        """START publishing a track to a platform (Pro). Subject to the agent
-        permission policy: under 'confirm' (default) this returns a 2PC token to
-        approve in BeatOS → Agent Actions (the browser opens only after approval);
-        under 'auto_approve' it starts immediately and returns a job_id.
+        """START publishing a track to a platform (Pro). Gated by an explicit
+        tool argument: `dry_run` defaults to TRUE (rehearsal — fills the form but
+        does NOT submit). Pass `dry_run=false` to really publish; the agent must do
+        so deliberately, which prevents an accidental platform post. Returns a
+        job_id either way; poll publish_status(job_id).
 
         This does NOT complete the publish: it opens a (visible) browser, fills the
         form and uploads files (slow), then PAUSES for a human at the platform's gate
-        (netease: SMS code; douyin: review + click 发布). After approval, poll
-        publish_status(job_id). Requires a prior login (check publish_session_status)
-        and a desktop session with a display. Do NOT retry on timeout — check status.
-        Use dry_run=true to rehearse without submitting."""
+        (netease: SMS code; douyin: review + click 发布). Requires a prior login
+        (check publish_session_status) and a desktop session with a display. Do NOT
+        retry on timeout — check status."""
         from beatos_publish.platforms import available
         if platform not in available():
             raise ValueError(
@@ -491,7 +478,7 @@ if pro_available():
 
     @mcp.tool(annotations=_READ_ANNOTATIONS)
     async def publish_status(
-        job_id: Annotated[str, Field(description="The job_id returned by publish_track (in await_approval's result, or list_publish_jobs).")],
+        job_id: Annotated[str, Field(description="The job_id returned by publish_track (in its result, or via list_publish_jobs).")],
     ) -> dict:
         """Poll a publish job started by publish_track (Pro). Returns
         {job_id, stage, message, result?}. Stages: queued/launching/navigating/

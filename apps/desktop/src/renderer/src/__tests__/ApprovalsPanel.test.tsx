@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
@@ -11,53 +10,46 @@ vi.mock("@/hooks/use-api-base", () => ({
   useApiBase: () => FAKE_BASE,
 }));
 
-vi.mock("@/stores/lists", () => ({
-  useListStore: {
-    getState: () => ({ refresh: vi.fn().mockResolvedValue(undefined) }),
-  },
-}));
-
-function mockTokensApi(pending: any[], history: any[]) {
-  (global.fetch as any) = vi.fn((url: string) => {
-    if (url.endsWith("status=pending")) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(pending) });
-    }
-    if (url.endsWith("status=history")) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(history) });
-    }
-    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-  });
+function mockActions(actions: any[]) {
+  (global.fetch as any) = vi.fn(() =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve({ actions }) }),
+  );
 }
 
-const pendingRow = {
-  token: "p1",
-  tool_name: "create_list",
-  payload: { name: "Trap 2026" },
-  created_at: Date.now() / 1000 - 12,
-  expires_at: Date.now() / 1000 + 288,
+const appliedAction = {
+  ts: Date.now() / 1000 - 30,
+  tool_name: "trash_tracks",
+  summary: { headline: "Trashed 3 tracks" },
+  client_name: "Claude Desktop",
+  status: "applied",
+  result: { trashed: 3 },
 };
 
-const consumedRow = {
-  token: "c1",
-  tool_name: "create_list",
-  payload: { name: "Lo-fi" },
-  created_at: Date.now() / 1000 - 200,
-  expires_at: Date.now() / 1000 - 50,
-  status: "consumed",
-  consumed_at: Date.now() / 1000 - 100,
-  result: { list_id: 7 },
+const failedAction = {
+  ts: Date.now() / 1000 - 120,
+  tool_name: "attach_assets",
+  summary: { headline: "Attach failed" },
+  client_name: "Claude Desktop",
+  status: "failed",
+  result: "error",
 };
 
-const rejectedRow = { ...consumedRow, token: "r1", status: "rejected", result: null };
-const expiredRow = { ...consumedRow, token: "e1", status: "expired", result: null };
+const refusedAction = {
+  ts: Date.now() / 1000 - 200,
+  tool_name: "create_tracks",
+  summary: {},
+  client_name: "Cursor",
+  status: "refused_read_only",
+  result: "read-only",
+};
 
 describe("ApprovalsPanel", () => {
   beforeEach(() => {
-    mockTokensApi([], []);
+    mockActions([]);
   });
 
-  it("renders the empty-empty state when both sections are empty", async () => {
-    mockTokensApi([], []);
+  it("renders the empty state when there is no activity", async () => {
+    mockActions([]);
     render(
       <MemoryRouter>
         <ApprovalsPanel />
@@ -68,23 +60,21 @@ describe("ApprovalsPanel", () => {
     });
   });
 
-  it("renders Pending section when pending tokens exist", async () => {
-    mockTokensApi([pendingRow], []);
+  it("renders the Recent section with an action headline", async () => {
+    mockActions([appliedAction]);
     render(
       <MemoryRouter>
         <ApprovalsPanel />
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByText(/Pending \(1\)/i)).toBeInTheDocument();
-      expect(screen.getByText(/Trap 2026/)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /approve/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /reject/i })).toBeInTheDocument();
+      expect(screen.getByText(/Recent \(1\)/i)).toBeInTheDocument();
     });
+    expect(screen.getByText("Trashed 3 tracks")).toBeInTheDocument();
   });
 
-  it("renders Recent section with status glyphs", async () => {
-    mockTokensApi([], [consumedRow, rejectedRow, expiredRow]);
+  it("renders status glyphs and falls back to the tool name", async () => {
+    mockActions([appliedAction, failedAction, refusedAction]);
     render(
       <MemoryRouter>
         <ApprovalsPanel />
@@ -95,66 +85,8 @@ describe("ApprovalsPanel", () => {
     });
     expect(screen.getByText("✓")).toBeInTheDocument();
     expect(screen.getByText("✗")).toBeInTheDocument();
-    expect(screen.getByText("⌛")).toBeInTheDocument();
-  });
-
-  it("Approve button calls approve endpoint", async () => {
-    mockTokensApi([pendingRow], []);
-    render(
-      <MemoryRouter>
-        <ApprovalsPanel />
-      </MemoryRouter>,
-    );
-    const btn = await screen.findByRole("button", { name: /approve/i });
-    (global.fetch as any).mockClear();
-    (global.fetch as any).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
-    await userEvent.click(btn);
-    expect(global.fetch).toHaveBeenCalledWith(
-      `${FAKE_BASE}/api/tokens/p1/approve`,
-      expect.objectContaining({ method: "POST" }),
-    );
-  });
-
-  it("Reject button calls reject endpoint", async () => {
-    mockTokensApi([pendingRow], []);
-    render(
-      <MemoryRouter>
-        <ApprovalsPanel />
-      </MemoryRouter>,
-    );
-    const btn = await screen.findByRole("button", { name: /reject/i });
-    (global.fetch as any).mockClear();
-    (global.fetch as any).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
-    await userEvent.click(btn);
-    expect(global.fetch).toHaveBeenCalledWith(
-      `${FAKE_BASE}/api/tokens/p1/reject`,
-      expect.objectContaining({ method: "POST" }),
-    );
-  });
-
-  it("hides Pending header when pending list is empty (history-only)", async () => {
-    mockTokensApi([], [consumedRow]);
-    render(
-      <MemoryRouter>
-        <ApprovalsPanel />
-      </MemoryRouter>,
-    );
-    await waitFor(() => {
-      expect(screen.getByText(/Recent \(1\)/i)).toBeInTheDocument();
-    });
-    expect(screen.queryByText(/Pending \(/i)).toBeNull();
-  });
-
-  it("hides Recent header when history is empty (pending-only)", async () => {
-    mockTokensApi([pendingRow], []);
-    render(
-      <MemoryRouter>
-        <ApprovalsPanel />
-      </MemoryRouter>,
-    );
-    await waitFor(() => {
-      expect(screen.getByText(/Pending \(1\)/i)).toBeInTheDocument();
-    });
-    expect(screen.queryByText(/Recent \(/i)).toBeNull();
+    expect(screen.getByText("⊘")).toBeInTheDocument();
+    // No headline → tool_name is rendered directly.
+    expect(screen.getByText("create_tracks")).toBeInTheDocument();
   });
 });

@@ -70,7 +70,7 @@ On-demand **BPM + key detection** with per-field confidence scores (Essentia eng
 
 ### 🤖 AI co-pilot (MCP)
 
-An MCP server exposes your library to Claude Code, Claude Desktop, Codex, and any MCP client — **24 tools** free (**29** with Pro). Every write goes through `token → await_approval`: the AI proposes, you confirm. Default, auto-approve, or read-only — your call.
+An MCP server exposes your library to Claude Code, Claude Desktop, Codex, and any MCP client — **23 tools** free (**28** with Pro). Writes apply under your MCP client's own approval and are logged to the **Agent Actions** dashboard; flip to read-only to forbid writes entirely.
 
 </td>
 <td width="33%" valign="top">
@@ -102,22 +102,22 @@ Both are **local-first and offline** — the browser app talks only to `127.0.0.
 
 **Verified clients:** Claude Code · Claude Desktop · Codex CLI/App · any MCP client speaking stdio JSON-RPC.
 
-**Why you stay in control:** every write tool returns a `token` (preview only) — nothing touches the database. It surfaces in the **Agent Actions** panel; you review the diff, then confirm. By default **an AI can never silently mutate your catalog** — unless you deliberately switch to auto-approve (or lock it to read-only). Batched tools (`create_tracks` ≤100, `attach_assets` ≤500) turn a 50-track import into one approval, not a hundred.
+**Why you stay in control:** your MCP client gates every tool call (allow / deny per call), and every write BeatOS applies is recorded in the **Agent Actions** dashboard — what changed, when, and the result. Want a hard stop? Switch the agent to **read-only** and writes are refused outright. Batched tools (`create_tracks` ≤100, `attach_assets` ≤500) turn a 50-track import into one action, not a hundred.
 
 ```text
 You:    "Tag every beat above 140 BPM with no genre as 'Trap' or 'Drill'
-         from the cover and title. Show me the diff first."
+         from the cover and title."
 
 Claude: list_tracks(bpm_min=140) → 12 tracks → drafts a patch
-        update_tracks(items=[...]) → returns token abc123
+        update_tracks(items=[...])    ← your client asks you to allow the call
 
-You:    [Agent Actions panel: 12 proposed edits] → approve the batch
+You:    Allow
 
-Claude: await_approval → applied, reports back
+Claude: applied — the 12 edits land and show up in Agent Actions
 ```
 
 <details>
-<summary><b>All MCP tools (24 free · +5 Pro)</b></summary>
+<summary><b>All MCP tools (23 free · +5 Pro)</b></summary>
 
 | Surface | Tools |
 |---|---|
@@ -126,7 +126,6 @@ Claude: await_approval → applied, reports back
 | **Lists** | `create_list`, `update_list`, `delete_list`, `add_tracks_to_list`, `remove_tracks_from_list`, `reorder_list` |
 | **Metadata** | `update_tracks`, `merge_metadata`, `set_license_tiers` |
 | **Assets** | `attach_assets`, `detach_assets` |
-| **Flow control** | `await_approval` |
 | **Publishing (Pro)** | `publish_track`, `publish_status`, `list_publish_platforms`, `publish_session_status`, `list_publish_jobs` |
 
 </details>

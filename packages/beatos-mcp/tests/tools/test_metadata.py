@@ -1,10 +1,12 @@
-"""update_tracks + merge_metadata MCP tools."""
+"""update_tracks + merge_metadata MCP tools — apply directly (L1), audit the preview."""
 import datetime as dt
 import json
 
 import aiosqlite
 import pytest
 
+import beatos_http.handlers  # noqa: F401 — registers the apply handlers
+from beatos_core.agent_log import list_agent_actions
 from beatos_core.db import run_migrations
 from beatos_mcp.tools.metadata import update_tracks, merge_metadata
 
@@ -35,45 +37,59 @@ async def db_path(tmp_path, monkeypatch):
     return p
 
 
-async def _payload(db_path, token):
+async def _latest_summary(db_path) -> dict:
+    """The preview now lives in the audit log summary (no more token payload)."""
     async with aiosqlite.connect(db_path) as conn:
-        async with conn.execute(
-            "SELECT payload FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            return json.loads((await cur.fetchone())[0])
+        rows = await list_agent_actions(conn, limit=1)
+    return rows[0]["summary"]
 
 
 @pytest.mark.asyncio
 async def test_update_tracks_scalar_patch(db_path):
-    r = await update_tracks(ids=[1, 2], patch={"bpm": 145})
-    p = await _payload(db_path, r["token"])
-    assert p["ids"] == [1, 2]
-    assert p["patch"] == {"bpm": 145}
-    assert "145" in p["preview"]["headline"]
+    res = await update_tracks(ids=[1, 2], patch={"bpm": 145})
+    assert res["status"] == "applied"
+    assert res["result"]["ids"] == [1, 2]
+    summ = await _latest_summary(db_path)
+    assert "145" in summ["headline"]
+    # The patch landed in the DB.
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT bpm FROM track WHERE id IN (1,2) ORDER BY id"
+        ) as cur:
+            rows = await cur.fetchall()
+    assert [r[0] for r in rows] == [145, 145]
 
 
 @pytest.mark.asyncio
-async def test_update_tracks_key_maps_to_key_signature_in_payload(db_path):
-    # The tool API uses `key`; payload keeps it as `key` (handler does the mapping).
-    r = await update_tracks(ids=[1], patch={"key": "D"})
-    p = await _payload(db_path, r["token"])
-    assert p["patch"] == {"key": "D"}
+async def test_update_tracks_key_maps_to_key_signature(db_path):
+    # The tool API uses `key`; the handler maps it to the key_signature column.
+    res = await update_tracks(ids=[1], patch={"key": "D"})
+    assert res["result"]["ids"] == [1]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT key_signature FROM track WHERE id=1") as cur:
+            assert (await cur.fetchone())[0] == "D"
 
 
 @pytest.mark.asyncio
 async def test_update_tracks_array_replace_form(db_path):
-    r = await update_tracks(ids=[1], patch={"producer": ["NewGuy"]})
-    p = await _payload(db_path, r["token"])
-    assert p["patch"]["producer"] == ["NewGuy"]
+    res = await update_tracks(ids=[1], patch={"producer": ["NewGuy"]})
+    assert res["result"]["ids"] == [1]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT producer FROM track WHERE id=1") as cur:
+            assert json.loads((await cur.fetchone())[0]) == ["NewGuy"]
 
 
 @pytest.mark.asyncio
 async def test_update_tracks_array_add_remove_form(db_path):
-    r = await update_tracks(
-        ids=[1, 2], patch={"producer": {"add": ["X"], "remove": ["Y"]}}
+    res = await update_tracks(
+        ids=[1, 2], patch={"producer": {"add": ["X"], "remove": ["Smoke"]}}
     )
-    p = await _payload(db_path, r["token"])
-    assert p["patch"]["producer"] == {"add": ["X"], "remove": ["Y"]}
+    assert res["result"]["ids"] == [1, 2]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT producer FROM track WHERE id=1") as cur:
+            producers = json.loads((await cur.fetchone())[0])
+    # 'Smoke' removed, 'X' added.
+    assert "X" in producers and "Smoke" not in producers
 
 
 @pytest.mark.asyncio
@@ -96,30 +112,38 @@ async def test_update_tracks_caps_ids_at_500(db_path):
 
 @pytest.mark.asyncio
 async def test_update_tracks_warns_about_missing_ids(db_path):
-    r = await update_tracks(ids=[1, 999], patch={"bpm": 100})
-    p = await _payload(db_path, r["token"])
-    assert p["ids"] == [1]
-    assert any("not found" in w.lower() for w in p["preview"]["warnings"])
+    res = await update_tracks(ids=[1, 999], patch={"bpm": 100})
+    assert res["result"]["ids"] == [1]
+    summ = await _latest_summary(db_path)
+    assert any("not found" in w.lower() for w in summ["warnings"])
 
 
 @pytest.mark.asyncio
 async def test_update_tracks_all_ids_missing_raises(db_path):
-    """If every supplied id is missing, don't issue a no-op token."""
+    """If every supplied id is missing, raise before applying (no no-op write)."""
     with pytest.raises(ValueError, match="not found"):
         await update_tracks(ids=[9998, 9999], patch={"bpm": 100})
 
 
 @pytest.mark.asyncio
-async def test_merge_metadata_payload(db_path):
+async def test_merge_metadata_applies_and_previews(db_path):
     # All three rows have a producer matching at least one of these
-    r = await merge_metadata(field="producer", from_=["smoke", "SMOKE"], to="Smoke")
-    p = await _payload(db_path, r["token"])
-    assert p["field"] == "producer"
-    assert p["from"] == ["smoke", "SMOKE"]
-    assert p["to"] == "Smoke"
-    # 2 & 3 are affected; 1 already has 'Smoke' (case-sensitive miss → not affected here)
-    # The exact count depends on how the matching treats case. We require ≥1.
-    assert "Merge" in p["preview"]["headline"]
+    res = await merge_metadata(field="producer", from_=["smoke", "SMOKE"], to="Smoke")
+    assert res["status"] == "applied"
+    # 2 & 3 carry 'smoke'/'SMOKE' and are rewritten; 1 already has 'Smoke'.
+    assert res["result"]["affected_count"] >= 1
+    summ = await _latest_summary(db_path)
+    assert "Merge" in summ["headline"]
+    # The rename landed: no lowercase/uppercase alias remains.
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT producer FROM track WHERE id IN (2,3) ORDER BY id"
+        ) as cur:
+            rows = await cur.fetchall()
+    for (raw,) in rows:
+        producers = json.loads(raw)
+        assert "smoke" not in producers and "SMOKE" not in producers
+        assert "Smoke" in producers
 
 
 @pytest.mark.asyncio

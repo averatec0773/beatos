@@ -1,8 +1,8 @@
-"""Approve handler for set_license_tiers.
+"""Direct-apply handler for set_license_tiers.
 
-The token payload includes the full normalized tier list; we DELETE existing
-tiers for the track and re-INSERT the new ones in one transaction, so the
-track is never observed mid-replace.
+The payload includes the full normalized tier list; we DELETE existing tiers for
+the track and re-INSERT the new ones in one transaction, so the track is never
+observed mid-replace.
 """
 from __future__ import annotations
 
@@ -11,12 +11,10 @@ import json
 
 import aiosqlite
 
-from beatos_core.two_phase import (
+from beatos_core.approvals import (
     RowVanishedError,
-    consume_token_with_result,
-    verify_token,
+    register_apply_handler as register_approve_handler,
 )
-from beatos_http.routes.tokens import register_approve_handler
 
 
 def _now() -> str:
@@ -25,9 +23,8 @@ def _now() -> str:
 
 @register_approve_handler("set_license_tiers")
 async def _approve_set_license_tiers(
-    conn: aiosqlite.Connection, token: str
+    conn: aiosqlite.Connection, payload: dict
 ) -> dict:
-    payload = await verify_token(conn, token, expected_tool="set_license_tiers")
     track_id = payload["track_id"]
     tiers = payload["tiers"]
 
@@ -60,6 +57,4 @@ async def _approve_set_license_tiers(
                 now,
             ),
         )
-    result = {"track_id": track_id, "tier_count": len(tiers)}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"track_id": track_id, "tier_count": len(tiers)}

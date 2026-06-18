@@ -11,12 +11,10 @@ import aiosqlite
 
 from beatos_core.assets import AUDIO_ROLES
 from beatos_core.tracks.service import canonicalize_producers
-from beatos_core.two_phase import (
+from beatos_core.approvals import (
     RowVanishedError,
-    consume_token_with_result,
-    verify_token,
+    register_apply_handler as register_approve_handler,
 )
-from beatos_http.routes.tokens import register_approve_handler
 
 
 def _now() -> str:
@@ -88,8 +86,7 @@ async def _apply_creation_defaults(conn: aiosqlite.Connection, track_id: int, no
 
 
 @register_approve_handler("create_tracks")
-async def _approve_create_tracks(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="create_tracks")
+async def _approve_create_tracks(conn: aiosqlite.Connection, payload: dict) -> dict:
     items = payload["items"]
     now = _now()
     created_ids: list[int] = []
@@ -120,17 +117,15 @@ async def _approve_create_tracks(conn: aiosqlite.Connection, token: str) -> dict
         await _apply_creation_defaults(conn, track_id, now)
         created_ids.append(track_id)
     result = {"created_ids": created_ids}
-    await consume_token_with_result(conn, token, result)
     return result
 
 
 @register_approve_handler("attach_assets")
-async def _approve_attach_assets(conn: aiosqlite.Connection, token: str) -> dict:
+async def _approve_attach_assets(conn: aiosqlite.Connection, payload: dict) -> dict:
     """Atomic batch attach. If ANY item fails (file vanished, track vanished),
     the entire batch is unwound (caller's transaction will be rolled back via
     RowVanishedError → 409).
     """
-    payload = await verify_token(conn, token, expected_tool="attach_assets")
     items = payload["items"]
     now = _now()
 
@@ -186,16 +181,14 @@ async def _approve_attach_assets(conn: aiosqlite.Connection, token: str) -> dict
         raise RowVanishedError(f"track row vanished mid-approve: {e}") from e
 
     result = {"results": results}
-    await consume_token_with_result(conn, token, result)
     return result
 
 
 @register_approve_handler("detach_assets")
-async def _approve_detach_assets(conn: aiosqlite.Connection, token: str) -> dict:
+async def _approve_detach_assets(conn: aiosqlite.Connection, payload: dict) -> dict:
     """Atomic batch detach. Idempotent: items whose asset is already gone are
     recorded with removed=False but do NOT fail the batch.
     """
-    payload = await verify_token(conn, token, expected_tool="detach_assets")
     items = payload["items"]
 
     results: list[dict] = []
@@ -223,5 +216,4 @@ async def _approve_detach_assets(conn: aiosqlite.Connection, token: str) -> dict
         )
 
     result = {"results": results}
-    await consume_token_with_result(conn, token, result)
     return result

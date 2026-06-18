@@ -1,14 +1,13 @@
-"""Approve handler for set_license_tiers (2PC commit path)."""
+"""Direct-apply handler for set_license_tiers."""
 import datetime as dt
 import json
 
 import aiosqlite
 import pytest
-from httpx import ASGITransport, AsyncClient
 
+import beatos_http.handlers  # noqa: F401 — registers the apply handlers
+from beatos_core.approvals import RowVanishedError, apply
 from beatos_core.db import run_migrations
-from beatos_core.two_phase import create_token
-from beatos_http.app import create_app
 
 
 @pytest.fixture
@@ -26,19 +25,10 @@ async def db_path(tmp_path, monkeypatch):
     return p
 
 
-@pytest.fixture
-async def client(db_path):
-    app = create_app()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
-        async with app.router.lifespan_context(app):
-            yield c
-
-
 @pytest.mark.asyncio
-async def test_approve_inserts_tiers(client, db_path):
+async def test_apply_inserts_tiers(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
+        await apply(
             conn,
             "set_license_tiers",
             {
@@ -59,9 +49,7 @@ async def test_approve_inserts_tiers(client, db_path):
                 ],
             },
         )
-
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200, res.text
+        await conn.commit()
 
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
@@ -79,7 +67,7 @@ async def test_approve_inserts_tiers(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_approve_replaces_existing_tiers(client, db_path):
+async def test_apply_replaces_existing_tiers(db_path):
     # Seed an old tier directly so the handler must clear it.
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     async with aiosqlite.connect(db_path) as conn:
@@ -90,7 +78,8 @@ async def test_approve_replaces_existing_tiers(client, db_path):
             (now, now),
         )
         await conn.commit()
-        tok = await create_token(
+    async with aiosqlite.connect(db_path) as conn:
+        await apply(
             conn,
             "set_license_tiers",
             {
@@ -98,9 +87,7 @@ async def test_approve_replaces_existing_tiers(client, db_path):
                 "tiers": [{"name": "NewOnly", "deliverables": [], "prices": {}}],
             },
         )
-
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
+        await conn.commit()
 
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
@@ -111,7 +98,7 @@ async def test_approve_replaces_existing_tiers(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_approve_empty_clears_all(client, db_path):
+async def test_apply_empty_clears_all(db_path):
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
@@ -121,12 +108,9 @@ async def test_approve_empty_clears_all(client, db_path):
             (now, now),
         )
         await conn.commit()
-        tok = await create_token(
-            conn, "set_license_tiers", {"track_id": 1, "tiers": []}
-        )
-
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
+    async with aiosqlite.connect(db_path) as conn:
+        await apply(conn, "set_license_tiers", {"track_id": 1, "tiers": []})
+        await conn.commit()
 
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
@@ -137,11 +121,11 @@ async def test_approve_empty_clears_all(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_approve_persists_share(client, db_path):
-    """Gap 1: the approve INSERT must carry the share value from the token
-    payload into the database row."""
+async def test_apply_persists_share(db_path):
+    """Gap 1: the INSERT must carry the share value from the payload into the
+    database row."""
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
+        await apply(
             conn,
             "set_license_tiers",
             {
@@ -157,9 +141,7 @@ async def test_approve_persists_share(client, db_path):
                 ],
             },
         )
-
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200, res.text
+        await conn.commit()
 
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
@@ -171,19 +153,18 @@ async def test_approve_persists_share(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_approve_404_when_track_vanished(client, db_path):
-    """Token was issued against an existing track; track gets deleted before
-    approval. The handler must surface RowVanishedError, which the route
-    layer maps to a 409."""
+async def test_apply_raises_when_track_vanished(db_path):
+    """Track gets deleted before apply runs. The handler must surface
+    RowVanishedError (the chokepoint rolls back and records a failed action)."""
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
-            conn,
-            "set_license_tiers",
-            {"track_id": 1, "tiers": [{"name": "MP3", "deliverables": [], "prices": {}}]},
-        )
         await conn.execute("DELETE FROM track WHERE id=1")
         await conn.commit()
 
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    # The two_phase framework maps RowVanishedError to 409.
-    assert res.status_code == 409, res.text
+    async with aiosqlite.connect(db_path) as conn:
+        with pytest.raises(RowVanishedError):
+            await apply(
+                conn,
+                "set_license_tiers",
+                {"track_id": 1, "tiers": [{"name": "MP3", "deliverables": [], "prices": {}}]},
+            )
+        await conn.rollback()

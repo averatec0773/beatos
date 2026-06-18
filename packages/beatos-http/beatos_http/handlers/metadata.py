@@ -1,4 +1,4 @@
-"""Approve handlers for update_tracks + merge_metadata."""
+"""Direct-apply handlers for update_tracks + merge_metadata."""
 from __future__ import annotations
 
 import datetime as dt
@@ -7,17 +7,15 @@ from typing import Any
 
 import aiosqlite
 
+from beatos_core.approvals import (
+    RowVanishedError,
+    register_apply_handler as register_approve_handler,
+)
 from beatos_core.tracks.patch import (
     apply_array_patch as _apply_array_patch,
     FIELD_TO_COL as _FIELD_TO_COL,
     SCALAR_FIELDS as _SCALAR,
 )
-from beatos_core.two_phase import (
-    RowVanishedError,
-    consume_token_with_result,
-    verify_token,
-)
-from beatos_http.routes.tokens import register_approve_handler
 
 
 def _now() -> str:
@@ -25,8 +23,7 @@ def _now() -> str:
 
 
 @register_approve_handler("update_tracks")
-async def _approve_update_tracks(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="update_tracks")
+async def _approve_update_tracks(conn: aiosqlite.Connection, payload: dict) -> dict:
     ids = payload["ids"]
     patch = payload["patch"]
     now = _now()
@@ -56,14 +53,11 @@ async def _approve_update_tracks(conn: aiosqlite.Connection, token: str) -> dict
         )
         if cur.rowcount != 1:
             raise RowVanishedError(f"track id={tid} no longer updatable")
-    result = {"updated_count": len(ids), "ids": list(ids)}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"updated_count": len(ids), "ids": list(ids)}
 
 
 @register_approve_handler("merge_metadata")
-async def _approve_merge_metadata(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="merge_metadata")
+async def _approve_merge_metadata(conn: aiosqlite.Connection, payload: dict) -> dict:
     field = payload["field"]
     from_ = set(payload["from"])
     to = payload["to"]
@@ -93,6 +87,4 @@ async def _approve_merge_metadata(conn: aiosqlite.Connection, token: str) -> dic
                 (json.dumps(out), now, tid),
             )
             changed += 1
-    result = {"affected_count": changed, "ids": list(affected_ids)}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"affected_count": changed, "ids": list(affected_ids)}

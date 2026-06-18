@@ -2,17 +2,15 @@
 (B-H2) and the Electron-mode /api/fs disable switch (B-H3).
 
 Threat model: in the packaged Electron app, CORS allows the file:// ("null")
-origin, so a local .html the user opens could flip agent_permission_mode, approve
-pending write tokens, or read the disk via /api/fs. The token (delivered to the
+origin, so a local .html the user opens could flip agent_permission_mode (e.g. to
+disable read-only mode) or read the disk via /api/fs. The token (delivered to the
 renderer through the preload bridge, which a file:// page lacks) and the fs switch
 close that hole. Both are no-ops in web mode (token unset; fs still served).
 """
-import aiosqlite
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from beatos_core.db import run_migrations
-from beatos_core.two_phase import create_token
 from beatos_http.app import create_app
 
 TOKEN = "test-local-token"
@@ -46,20 +44,20 @@ async def test_sensitive_setting_write_requires_token_when_configured(
     monkeypatch.setenv("BEATOS_API_TOKEN", TOKEN)
     # No Authorization header → 401.
     res = await client.put(
-        "/api/app_settings/agent_permission_mode", json={"value": "auto_approve"}
+        "/api/app_settings/agent_permission_mode", json={"value": "read_only"}
     )
     assert res.status_code == 401
     # Correct token → allowed.
     res = await client.put(
         "/api/app_settings/agent_permission_mode",
-        json={"value": "auto_approve"},
+        json={"value": "read_only"},
         headers=AUTH,
     )
     assert res.status_code == 200
     # Wrong token → 401.
     res = await client.put(
         "/api/app_settings/agent_permission_mode",
-        json={"value": "confirm"},
+        json={"value": "enabled"},
         headers={"Authorization": "Bearer nope"},
     )
     assert res.status_code == 401
@@ -76,31 +74,8 @@ async def test_non_sensitive_setting_write_is_not_gated(client, monkeypatch):
 async def test_sensitive_setting_write_open_when_token_unset(client):
     # Web mode: no token configured → same-origin CORS is the guard, endpoint open.
     res = await client.put(
-        "/api/app_settings/agent_permission_mode", json={"value": "auto_approve"}
+        "/api/app_settings/agent_permission_mode", json={"value": "read_only"}
     )
-    assert res.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_token_approve_requires_token_when_configured(client, monkeypatch):
-    monkeypatch.setenv("BEATOS_API_TOKEN", TOKEN)
-    # Guard fires before the token lookup: unauthenticated → 401, not 404.
-    res = await client.post("/api/tokens/whatever/approve")
-    assert res.status_code == 401
-    res = await client.post("/api/tokens/whatever/reject")
-    assert res.status_code == 401
-    # Authenticated request passes the guard and reaches the 404 (no such token).
-    res = await client.post("/api/tokens/whatever/approve", headers=AUTH)
-    assert res.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_token_approve_open_when_token_unset(client, db_path):
-    async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(conn, "create_list", {"name": "New"})
-        await conn.commit()
-    # No token configured → approval works without an Authorization header.
-    res = await client.post(f"/api/tokens/{tok}/approve")
     assert res.status_code == 200
 
 

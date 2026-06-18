@@ -1,10 +1,11 @@
-"""create_tracks + attach_assets + detach_assets MCP tools."""
+"""create_tracks + attach_assets + detach_assets MCP tools — apply directly (L1)."""
 import datetime as dt
-import json
 
 import aiosqlite
 import pytest
 
+import beatos_http.handlers  # noqa: F401 — registers the apply handlers
+from beatos_core.agent_log import list_agent_actions
 from beatos_core.db import run_migrations
 from beatos_mcp.tools.ingest import attach_assets, create_tracks, detach_assets
 
@@ -28,25 +29,34 @@ async def db_path(tmp_path, monkeypatch):
     return p
 
 
-async def _payload(db_path, token):
+async def _latest_summary(db_path) -> dict:
+    """The preview now lives in the audit log summary (no more token payload)."""
     async with aiosqlite.connect(db_path) as conn:
-        async with conn.execute(
-            "SELECT payload FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            return json.loads((await cur.fetchone())[0])
+        rows = await list_agent_actions(conn, limit=1)
+    return rows[0]["summary"]
 
 
-# --- create_tracks (unchanged from v0.0.24) ---
+# --- create_tracks ---
 
 
 @pytest.mark.asyncio
 async def test_create_tracks_happy(db_path):
-    r = await create_tracks(items=[{"title": "Beat A"}, {"title": "Beat B", "bpm": 140}])
-    p = await _payload(db_path, r["token"])
-    assert len(p["items"]) == 2
-    assert p["items"][0]["title"] == "Beat A"
-    assert p["items"][1]["bpm"] == 140
-    assert "Beat A" in " · ".join(p["preview"]["sample"])
+    res = await create_tracks(items=[{"title": "Beat A"}, {"title": "Beat B", "bpm": 140}])
+    assert res["status"] == "applied"
+    created = res["result"]["created_ids"]
+    assert len(created) == 2
+    summ = await _latest_summary(db_path)
+    assert "Beat A" in " · ".join(summ["sample"])
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT title, bpm FROM track WHERE id IN ({}) ORDER BY id".format(
+                ",".join(str(i) for i in created)
+            )
+        ) as cur:
+            rows = await cur.fetchall()
+    titles = {r[0] for r in rows}
+    assert {"Beat A", "Beat B"} <= titles
+    assert 140 in [r[1] for r in rows]
 
 
 @pytest.mark.asyncio
@@ -107,12 +117,15 @@ async def test_attach_assets_happy(db_path, tmp_path):
         {"track_id": 1, "role": "audio", "path": _wav(tmp_path, "a1.wav")},
         {"track_id": 2, "role": "cover", "path": _jpg(tmp_path, "a2.jpg")},
     ]
-    r = await attach_assets(items=items)
-    p = await _payload(db_path, r["token"])
-    assert len(p["items"]) == 2
-    assert "2 asset" in p["preview"]["headline"]
-    assert "2 new" in p["preview"]["headline"]
-    assert p["preview"]["warnings"] == []
+    res = await attach_assets(items=items)
+    assert res["status"] == "applied"
+    results = res["result"]["results"]
+    assert len(results) == 2
+    assert all(r["replaced"] is False for r in results)
+    summ = await _latest_summary(db_path)
+    assert "2 asset" in summ["headline"]
+    assert "2 new" in summ["headline"]
+    assert summ["warnings"] == []
 
 
 @pytest.mark.asyncio
@@ -120,17 +133,23 @@ async def test_attach_assets_resolves_audio_role_by_extension(db_path, tmp_path)
     """The agent-facing role 'audio' must resolve to the semantic untagged role +
     a format derived from the extension — storing the literal 'audio' makes the
     asset invisible to playback/analysis/serving."""
-    r = await attach_assets(
+    res = await attach_assets(
         items=[
             {"track_id": 1, "role": "audio", "path": _wav(tmp_path, "a.wav")},
             {"track_id": 2, "role": "audio", "path": _mp3(tmp_path, "b.mp3")},
         ]
     )
-    p = await _payload(db_path, r["token"])
-    assert [(it["role"], it["format"]) for it in p["items"]] == [
+    results = sorted(res["result"]["results"], key=lambda r: r["track_id"])
+    assert [(r["role"], r["format"]) for r in results] == [
         ("audio_untagged", "wav"),
         ("audio_untagged", "mp3"),
     ]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT track_id, role, format FROM asset ORDER BY track_id"
+        ) as cur:
+            rows = await cur.fetchall()
+    assert rows == [(1, "audio_untagged", "wav"), (2, "audio_untagged", "mp3")]
 
 
 @pytest.mark.asyncio
@@ -138,9 +157,9 @@ async def test_attach_assets_accepts_flac(db_path, tmp_path):
     """flac is a supported format now and resolves to (audio_untagged, flac)."""
     f = tmp_path / "b.flac"
     f.write_bytes(b"fLaC")
-    r = await attach_assets(items=[{"track_id": 1, "role": "audio", "path": str(f)}])
-    p = await _payload(db_path, r["token"])
-    assert (p["items"][0]["role"], p["items"][0]["format"]) == ("audio_untagged", "flac")
+    res = await attach_assets(items=[{"track_id": 1, "role": "audio", "path": str(f)}])
+    r = res["result"]["results"][0]
+    assert (r["role"], r["format"]) == ("audio_untagged", "flac")
 
 
 @pytest.mark.asyncio
@@ -258,10 +277,12 @@ async def test_attach_assets_classifies_replacements(db_path, tmp_path):
         {"track_id": 1, "role": "audio", "path": _wav(tmp_path, "new.wav")},
         {"track_id": 2, "role": "audio", "path": _wav(tmp_path, "fresh.wav")},
     ]
-    r = await attach_assets(items=items)
-    p = await _payload(db_path, r["token"])
-    assert "1 new, 1 replacing" in p["preview"]["headline"]
-    assert any("replac" in w.lower() for w in p["preview"]["warnings"])
+    res = await attach_assets(items=items)
+    by_track = {r["track_id"]: r["replaced"] for r in res["result"]["results"]}
+    assert by_track == {1: True, 2: False}
+    summ = await _latest_summary(db_path)
+    assert "1 new, 1 replacing" in summ["headline"]
+    assert any("replac" in w.lower() for w in summ["warnings"])
 
 
 # --- detach_assets (batch, v0.0.24.2) ---
@@ -286,20 +307,26 @@ async def test_detach_assets_happy(db_path):
         {"track_id": 1, "role": "audio"},
         {"track_id": 1, "role": "cover"},
     ]
-    r = await detach_assets(items=items)
-    p = await _payload(db_path, r["token"])
-    assert "Detach 2" in p["preview"]["headline"]
-    assert "already absent" not in p["preview"]["headline"]
+    res = await detach_assets(items=items)
+    assert res["status"] == "applied"
+    assert all(r["removed"] is True for r in res["result"]["results"])
+    summ = await _latest_summary(db_path)
+    assert "Detach 2" in summ["headline"]
+    assert "already absent" not in summ["headline"]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT COUNT(*) FROM asset") as cur:
+            assert (await cur.fetchone())[0] == 0
 
 
 @pytest.mark.asyncio
 async def test_detach_assets_idempotent_preview(db_path):
     items = [{"track_id": 1, "role": "audio"}]
-    r = await detach_assets(items=items)
-    p = await _payload(db_path, r["token"])
-    # No asset exists; both the headline and the sample reflect that.
-    assert "Detach 0" in p["preview"]["headline"]
-    assert "already absent" in p["preview"]["headline"]
+    res = await detach_assets(items=items)
+    # No asset exists; the apply reports removed=False, no DB change.
+    assert res["result"]["results"][0]["removed"] is False
+    summ = await _latest_summary(db_path)
+    assert "Detach 0" in summ["headline"]
+    assert "already absent" in summ["headline"]
 
 
 @pytest.mark.asyncio
