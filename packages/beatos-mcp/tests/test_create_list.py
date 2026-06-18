@@ -1,7 +1,8 @@
-"""create_list MCP tool — issues 2PC token, does NOT write list table."""
+"""create_list MCP tool — applies directly (L1) and writes the list table."""
 import aiosqlite
 import pytest
 
+import beatos_http.handlers  # noqa: F401 — registers the apply handlers
 from beatos_core.db import run_migrations
 from beatos_mcp.tools.create_list import create_list
 
@@ -15,27 +16,20 @@ async def db_path(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_create_list_issues_token_and_does_not_write_list(db_path):
+async def test_create_list_applies_and_writes_list(db_path):
     result = await create_list(name="Trap 2026")
-    assert "token" in result
-    assert "expires_at" in result
-    assert "message" in result
-    assert "Awaiting" in result["message"]
+    assert result["status"] == "applied"
+    assert result["result"]["name"] == "Trap 2026"
+    assert isinstance(result["result"]["list_id"], int)
 
     async with aiosqlite.connect(db_path) as conn:
-        # tokens row exists
+        # The list row was written directly (no 2PC token gate anymore).
         async with conn.execute(
-            "SELECT tool_name, payload, status FROM tokens WHERE token=?",
-            (result["token"],),
+            "SELECT name, kind FROM list WHERE id=?", (result["result"]["list_id"],)
         ) as cur:
             row = await cur.fetchone()
-        assert row[0] == "create_list"
-        assert '"Trap 2026"' in row[1]
-        assert row[2] == "pending"
-        # list table is untouched
-        async with conn.execute("SELECT COUNT(*) FROM list WHERE name='Trap 2026'") as cur:
-            count = await cur.fetchone()
-        assert count[0] == 0
+    assert row[0] == "Trap 2026"
+    assert row[1] == "user"
 
 
 @pytest.mark.asyncio

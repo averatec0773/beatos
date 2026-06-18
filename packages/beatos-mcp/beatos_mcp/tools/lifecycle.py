@@ -1,8 +1,8 @@
 """Lifecycle tools: trash_tracks, restore_tracks, purge_tracks.
 
-Each issues a single 2PC token whose payload carries `ids` + pre-baked
-`preview`. The actual UPDATE/DELETE happens in beatos-http handler at
-approve time, all in one transaction (RowVanishedError → rollback all)."""
+Each validates ids, builds a `preview`, then routes through `submit_write`, which
+applies the UPDATE/DELETE directly (beatos-http handler, one transaction;
+RowVanishedError → rollback) and records the action in the agent_action_log."""
 from __future__ import annotations
 
 import aiosqlite
@@ -28,9 +28,9 @@ async def _fetch_titles(
     return {r[0]: (r[1], r[2]) for r in rows}
 
 
-async def _emit_token(tool_name: str, payload: dict) -> dict:
-    # Routes through the agent permission policy: pending token (confirm),
-    # immediate apply (auto_approve), or refusal (read_only).
+async def _apply_write(tool_name: str, payload: dict) -> dict:
+    # Routes through the policy chokepoint: applies directly (enabled) or
+    # refuses (read_only); the action is recorded in the agent_action_log.
     return await submit_write(tool_name, payload)
 
 
@@ -57,7 +57,7 @@ async def trash_tracks(ids: list[int]) -> dict:
             warnings=warnings,
         ),
     }
-    return await _emit_token("trash_tracks", payload)
+    return await _apply_write("trash_tracks", payload)
 
 
 async def restore_tracks(ids: list[int]) -> dict:
@@ -83,7 +83,7 @@ async def restore_tracks(ids: list[int]) -> dict:
             warnings=warnings,
         ),
     }
-    return await _emit_token("restore_tracks", payload)
+    return await _apply_write("restore_tracks", payload)
 
 
 async def purge_tracks(ids: list[int]) -> dict:
@@ -107,4 +107,4 @@ async def purge_tracks(ids: list[int]) -> dict:
             risk="destructive",
         ),
     }
-    return await _emit_token("purge_tracks", payload)
+    return await _apply_write("purge_tracks", payload)

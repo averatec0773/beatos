@@ -1,10 +1,11 @@
-"""List-curation MCP tools — issue 2PC tokens only, no direct writes."""
+"""List-curation MCP tools — apply directly (L1), audit the preview."""
 import datetime as dt
-import json
 
 import aiosqlite
 import pytest
 
+import beatos_http.handlers  # noqa: F401 — registers the apply handlers
+from beatos_core.agent_log import list_agent_actions
 from beatos_core.db import run_migrations
 from beatos_mcp.tools.list_curation import (
     add_tracks_to_list,
@@ -43,21 +44,24 @@ async def db_path(tmp_path, monkeypatch):
     return p
 
 
-async def _payload(db_path, token):
+async def _latest_summary(db_path) -> dict:
+    """The preview now lives in the audit log summary (no more token payload)."""
     async with aiosqlite.connect(db_path) as conn:
-        async with conn.execute(
-            "SELECT payload FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            return json.loads((await cur.fetchone())[0])
+        rows = await list_agent_actions(conn, limit=1)
+    return rows[0]["summary"]
 
 
 @pytest.mark.asyncio
 async def test_update_list_rename_happy(db_path):
-    r = await update_list(list_id=10, name="Renamed")
-    p = await _payload(db_path, r["token"])
-    assert p["list_id"] == 10
-    assert p["name"] == "Renamed"
-    assert "Demo" in p["preview"]["headline"] or "Renamed" in p["preview"]["headline"]
+    res = await update_list(list_id=10, name="Renamed")
+    assert res["status"] == "applied"
+    assert res["result"]["list_id"] == 10
+    assert res["result"]["name"] == "Renamed"
+    summ = await _latest_summary(db_path)
+    assert "Demo" in summ["headline"] or "Renamed" in summ["headline"]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT name FROM list WHERE id=10") as cur:
+            assert (await cur.fetchone())[0] == "Renamed"
 
 
 @pytest.mark.asyncio
@@ -83,19 +87,23 @@ async def test_update_list_collision_warning(db_path):
             (now,),
         )
         await conn.commit()
-    r = await update_list(list_id=10, name="Other")
-    p = await _payload(db_path, r["token"])
-    assert p["list_id"] == 10
-    assert p["name"] == "Other"
-    assert any("already exists" in w.lower() for w in p["preview"]["warnings"])
+    res = await update_list(list_id=10, name="Other")
+    assert res["result"]["list_id"] == 10
+    assert res["result"]["name"] == "Other"
+    summ = await _latest_summary(db_path)
+    assert any("already exists" in w.lower() for w in summ["warnings"])
 
 
 @pytest.mark.asyncio
 async def test_delete_list_marks_destructive(db_path):
-    r = await delete_list(list_id=10)
-    p = await _payload(db_path, r["token"])
-    assert p["preview"]["risk"] == "destructive"
-    assert "PERMANENTLY" in p["preview"]["headline"].upper()
+    res = await delete_list(list_id=10)
+    assert res["status"] == "applied"
+    summ = await _latest_summary(db_path)
+    assert summ["risk"] == "destructive"
+    assert "PERMANENTLY" in summ["headline"].upper()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT COUNT(*) FROM list WHERE id=10") as cur:
+            assert (await cur.fetchone())[0] == 0
 
 
 @pytest.mark.asyncio
@@ -107,10 +115,17 @@ async def test_delete_list_refuses_system(db_path):
 @pytest.mark.asyncio
 async def test_add_tracks_to_list_idempotent_warning(db_path):
     # track 1 is already in list 10
-    r = await add_tracks_to_list(list_id=10, track_ids=[1, 4])
-    p = await _payload(db_path, r["token"])
-    assert p["track_ids"] == [4]  # 1 filtered out
-    assert any("already" in w.lower() for w in p["preview"]["warnings"])
+    res = await add_tracks_to_list(list_id=10, track_ids=[1, 4])
+    # 1 filtered out (already a member) → only 4 added
+    assert res["result"]["added_count"] == 1
+    summ = await _latest_summary(db_path)
+    assert any("already" in w.lower() for w in summ["warnings"])
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT track_id FROM track_list WHERE list_id=10 ORDER BY track_id"
+        ) as cur:
+            members = [r[0] for r in await cur.fetchall()]
+    assert members == [1, 2, 3, 4]
 
 
 @pytest.mark.asyncio
@@ -121,11 +136,19 @@ async def test_add_tracks_to_list_missing_list(db_path):
 
 @pytest.mark.asyncio
 async def test_remove_tracks_from_list_idempotent_warning(db_path):
-    r = await remove_tracks_from_list(list_id=10, track_ids=[1, 99])
-    p = await _payload(db_path, r["token"])
-    # id=99 isn't a track at all; id=1 IS a member → keep id=1, warn about 99
-    assert p["track_ids"] == [1]
-    assert any("not in list" in w.lower() or "not found" in w.lower() for w in p["preview"]["warnings"])
+    res = await remove_tracks_from_list(list_id=10, track_ids=[1, 99])
+    # id=99 isn't a track at all; id=1 IS a member → remove only id=1, warn about 99
+    assert res["result"]["removed_count"] == 1
+    summ = await _latest_summary(db_path)
+    assert any(
+        "not in list" in w.lower() or "not found" in w.lower() for w in summ["warnings"]
+    )
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT track_id FROM track_list WHERE list_id=10 ORDER BY track_id"
+        ) as cur:
+            members = [r[0] for r in await cur.fetchall()]
+    assert members == [2, 3]  # id=1 removed
 
 
 @pytest.mark.asyncio
@@ -143,7 +166,14 @@ async def test_reorder_list_extras_rejected(db_path):
 
 @pytest.mark.asyncio
 async def test_reorder_list_happy(db_path):
-    r = await reorder_list(list_id=10, track_ids=[3, 1, 2])
-    p = await _payload(db_path, r["token"])
-    assert p["track_ids"] == [3, 1, 2]
-    assert "Reorder" in p["preview"]["headline"]
+    res = await reorder_list(list_id=10, track_ids=[3, 1, 2])
+    assert res["result"]["list_id"] == 10
+    assert res["result"]["count"] == 3
+    summ = await _latest_summary(db_path)
+    assert "Reorder" in summ["headline"]
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT track_id, position FROM track_list WHERE list_id=10 ORDER BY position"
+        ) as cur:
+            rows = await cur.fetchall()
+    assert rows == [(3, 0), (1, 1), (2, 2)]

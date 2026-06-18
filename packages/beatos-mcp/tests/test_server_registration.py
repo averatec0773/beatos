@@ -3,13 +3,14 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_list_tools_includes_create_list_and_await_approval():
+async def test_list_tools_includes_create_list():
     from beatos_mcp.server import mcp
 
     tools = await mcp.list_tools()
     names = {t.name for t in tools}
     assert "create_list" in names
-    assert "await_approval" in names
+    # L1 model: writes apply directly; the 2PC await_approval tool is gone.
+    assert "await_approval" not in names
     assert "confirm_create_list" not in names
     assert "trash_tracks" in names
     assert "restore_tracks" in names
@@ -26,7 +27,7 @@ async def test_list_tools_includes_create_list_and_await_approval():
     assert "set_license_tiers" in names
     assert "list_export_platforms" in names
     assert "export_metadata" in names
-    # 8 read tools + create_list + await_approval + 3 lifecycle tools + 5 list-curation tools + 2 metadata tools + 3 ingest tools + set_license_tiers
+    # 8 read tools + create_list + 3 lifecycle tools + 5 list-curation tools + 2 metadata tools + 3 ingest tools + set_license_tiers
     # (+ publish_track / publish_status / list_publish_platforms / publish_session_status
     #  / list_publish_jobs when the pro engine is present)
     from beatos_mcp.pro import pro_available
@@ -36,5 +37,5 @@ async def test_list_tools_includes_create_list_and_await_approval():
         assert "list_publish_platforms" in names
         assert "publish_session_status" in names
         assert "list_publish_jobs" in names
-    expected_count = 29 if pro_available() else 24
+    expected_count = 28 if pro_available() else 23
     assert len(tools) == expected_count

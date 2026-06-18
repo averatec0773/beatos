@@ -4,10 +4,10 @@ v0.0.27 — multi-currency. Each tier carries `prices: {CNY: 300, USD: 50}`
 instead of the old `price + currency` pair, so an agent can quote multiple
 currencies on the same tier in a single call.
 
-Pattern follows reorder_list / update_tracks (v0.0.23-v0.0.24): the tool
-validates the payload, looks up track context for the preview, and
-hands a 2PC token back to the user. The HTTP handler applies the actual
-license_tier replace inside a single transaction (see handlers/licenses.py).
+Pattern follows reorder_list / update_tracks: the tool validates the payload,
+looks up track context for the preview, then routes through `submit_write`,
+which applies the license_tier replace directly in a single transaction (see
+handlers/licenses.py) and records the action.
 """
 from __future__ import annotations
 
@@ -112,7 +112,7 @@ def _validate_tier(tier: Any, index: int) -> None:
 
 
 def _normalize_tier(tier: dict[str, Any]) -> dict[str, Any]:
-    """Whitelist + default the fields stored in the token payload."""
+    """Whitelist + default the fields passed to the write handler."""
     share = tier.get("share")
     return {
         "name": tier.get("name", "") or "",
@@ -146,7 +146,7 @@ def _format_tier(tier: dict[str, Any]) -> str:
 
 async def set_license_tiers(track_id: int, tiers: list[dict[str, Any]]) -> dict:
     """Replace the full license tier list for a track. tiers may be empty
-    to clear all existing tiers. Returns a 2PC token.
+    to clear all existing tiers. Applies directly; recorded in Agent Actions.
 
     Idiom (v0.0.27+): the renderer organizes tiers as one row per
     deliverable — MP3, WAV, STEMS are fixed preset slots plus optional

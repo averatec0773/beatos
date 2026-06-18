@@ -1,22 +1,13 @@
-"""Canonical 2PC apply dispatcher.
+"""Canonical apply dispatcher for agent write tools.
 
-The first phase of a write tool stashes a prepared payload under a `pending`
-token (see `beatos_core.two_phase`). The second phase — approving the token —
-runs the registered apply handler for that token's `tool_name`: it verifies the
-token, performs the actual write, and consumes the token, all within the
+Each write tool's logic registers here under its tool name and is invoked
+directly (with the prepared payload) by the single chokepoint
+`beatos_mcp.policy.submit_write`. The handler performs the write within the
 CALLER's transaction (the caller commits).
 
-This registry lives in beatos-core (not the HTTP route layer) so BOTH approval
-paths share one canonical dispatch:
-- the human approve endpoint (`beatos_http.routes.tokens`), and
-- the MCP auto-approve path (`beatos_mcp.policy.submit_write`, agent permission
-  policy = auto_approve).
-
-Handlers may physically live in any layer (catalog handlers in
-`beatos_http/handlers/*`, the Pro-gated publish handler in the HTTP layer) — they
-register into this registry at import time. beatos-core never imports them, so it
-stays free of web/RPC/electron deps (layering rule 2); registration is a runtime
-side effect in the shared sidecar process.
+This registry lives in beatos-core so the chokepoint (beatos-mcp) and the
+handlers (beatos-http) share one canonical dispatch. beatos-core never imports
+the handlers — they register into this registry at import time (layering rule 2).
 """
 from __future__ import annotations
 
@@ -24,42 +15,41 @@ from typing import Awaitable, Callable
 
 import aiosqlite
 
-from beatos_core.two_phase import TokenError
-
-ApplyHandler = Callable[[aiosqlite.Connection, str], Awaitable[dict]]
+# A handler takes the live connection + the prepared payload and returns a result
+# dict. It must perform its write within the caller's transaction.
+ApplyHandler = Callable[[aiosqlite.Connection, dict], Awaitable[dict]]
 
 _APPLY_HANDLERS: dict[str, ApplyHandler] = {}
 
 
 class ApplyHandlerNotFound(RuntimeError):
-    """No apply handler is registered for a token's tool_name."""
+    """No apply handler is registered for a tool name."""
+
+
+class RowVanishedError(RuntimeError):
+    """Raised by a handler when an UPDATE/DELETE/INSERT affects 0 rows because the
+    target was deleted concurrently. The caller (submit_write) rolls back and
+    surfaces it as a failed action."""
 
 
 def register_apply_handler(tool_name: str) -> Callable[[ApplyHandler], ApplyHandler]:
     """Decorator: register `fn` as the apply handler for `tool_name`."""
+
     def decorator(fn: ApplyHandler) -> ApplyHandler:
         _APPLY_HANDLERS[tool_name] = fn
         return fn
+
     return decorator
 
 
-async def apply_token(conn: aiosqlite.Connection, token: str) -> dict:
-    """Dispatch a pending token to its registered apply handler.
+async def apply(conn: aiosqlite.Connection, tool_name: str, payload: dict) -> dict:
+    """Dispatch a prepared write to its registered handler.
 
-    The handler verifies + writes + consumes the token within `conn`'s
-    transaction; the CALLER is responsible for committing. Raises:
-    - `TokenError` if the token row is missing,
-    - `ApplyHandlerNotFound` if no handler is registered for its tool_name,
-    - plus whatever the handler raises (`TokenError`, `RowVanishedError`).
+    The handler writes within `conn`'s transaction; the CALLER commits. Raises
+    `ApplyHandlerNotFound` if no handler is registered, plus whatever the handler
+    raises (e.g. `RowVanishedError`).
     """
-    async with conn.execute(
-        "SELECT tool_name FROM tokens WHERE token=?", (token,)
-    ) as cur:
-        row = await cur.fetchone()
-    if row is None:
-        raise TokenError(f"token not found: {token}")
-    tool_name = row[0]
     handler = _APPLY_HANDLERS.get(tool_name)
     if handler is None:
         raise ApplyHandlerNotFound(f"no apply handler for tool: {tool_name}")
-    return await handler(conn, token)
+    return await handler(conn, payload)

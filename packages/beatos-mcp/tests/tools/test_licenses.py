@@ -1,10 +1,12 @@
-"""set_license_tiers MCP tool tests."""
+"""set_license_tiers MCP tool tests — apply directly (L1), audit the preview."""
 import datetime as dt
 import json
 
 import aiosqlite
 import pytest
 
+import beatos_http.handlers  # noqa: F401 — registers the apply handlers
+from beatos_core.agent_log import list_agent_actions
 from beatos_core.db import run_migrations
 from beatos_mcp.tools.licenses import set_license_tiers
 
@@ -25,17 +27,36 @@ async def db_path(tmp_path, monkeypatch):
     return p
 
 
-async def _payload(db_path, token):
+async def _latest_summary(db_path) -> dict:
+    """The preview now lives in the audit log summary (no more token payload)."""
+    async with aiosqlite.connect(db_path) as conn:
+        rows = await list_agent_actions(conn, limit=1)
+    return rows[0]["summary"]
+
+
+async def _tiers(db_path) -> list[dict]:
+    """Read back the persisted tiers (the normalized payload now lands in the DB)."""
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
-            "SELECT payload FROM tokens WHERE token=?", (token,)
+            "SELECT name, deliverables, prices_json, notes, share "
+            "FROM license_tier WHERE track_id=1 ORDER BY position"
         ) as cur:
-            return json.loads((await cur.fetchone())[0])
+            rows = await cur.fetchall()
+    return [
+        {
+            "name": r[0],
+            "deliverables": json.loads(r[1]) if r[1] else [],
+            "prices": json.loads(r[2]) if r[2] else {},
+            "notes": r[3],
+            "share": r[4],
+        }
+        for r in rows
+    ]
 
 
 @pytest.mark.asyncio
-async def test_emits_token_with_normalized_payload(db_path):
-    r = await set_license_tiers(
+async def test_applies_with_normalized_prices(db_path):
+    res = await set_license_tiers(
         track_id=1,
         tiers=[
             {
@@ -51,32 +72,34 @@ async def test_emits_token_with_normalized_payload(db_path):
             },
         ],
     )
-    assert "token" in r and r["token"]
-    p = await _payload(db_path, r["token"])
-    assert p["track_id"] == 1
-    assert len(p["tiers"]) == 2
+    assert res["status"] == "applied"
+    assert res["result"]["track_id"] == 1
+    assert res["result"]["tier_count"] == 2
+    tiers = await _tiers(db_path)
+    assert len(tiers) == 2
     # prices preserved as dicts; numbers normalized to float
-    assert p["tiers"][0]["prices"] == {"CNY": 50.0}
-    assert p["tiers"][1]["prices"] == {"CNY": 3500.0, "USD": 500.0}
+    assert tiers[0]["prices"] == {"CNY": 50.0}
+    assert tiers[1]["prices"] == {"CNY": 3500.0, "USD": 500.0}
 
 
 @pytest.mark.asyncio
 async def test_prices_keys_uppercased(db_path):
-    r = await set_license_tiers(
+    await set_license_tiers(
         track_id=1,
         tiers=[{"name": "MP3", "deliverables": ["mp3"], "prices": {"cny": 50, "usd": 8}}],
     )
-    p = await _payload(db_path, r["token"])
-    assert p["tiers"][0]["prices"] == {"CNY": 50.0, "USD": 8.0}
+    tiers = await _tiers(db_path)
+    assert tiers[0]["prices"] == {"CNY": 50.0, "USD": 8.0}
 
 
 @pytest.mark.asyncio
 async def test_empty_tiers_allowed(db_path):
-    r = await set_license_tiers(track_id=1, tiers=[])
-    assert "token" in r
-    p = await _payload(db_path, r["token"])
-    assert p["tiers"] == []
-    assert "Clear all license tiers" in p["preview"]["headline"]
+    res = await set_license_tiers(track_id=1, tiers=[])
+    assert res["status"] == "applied"
+    assert res["result"]["tier_count"] == 0
+    assert await _tiers(db_path) == []
+    summ = await _latest_summary(db_path)
+    assert "Clear all license tiers" in summ["headline"]
 
 
 @pytest.mark.asyncio
@@ -89,8 +112,9 @@ async def test_unknown_track_raises(db_path):
 async def test_accepts_empty_tier_name(db_path):
     """Empty name is allowed — renderer derives display label from
     deliverables. See packages/beatos-core/.../licenses/service.py docstring."""
-    r = await set_license_tiers(track_id=1, tiers=[{"name": ""}])
-    assert "token" in r
+    res = await set_license_tiers(track_id=1, tiers=[{"name": ""}])
+    assert res["status"] == "applied"
+    assert (await _tiers(db_path))[0]["name"] == ""
 
 
 @pytest.mark.asyncio
@@ -137,36 +161,32 @@ async def test_too_many_tiers_rejected(db_path):
 # --- Gap 2 tests: share must survive _validate_tier and _normalize_tier ---
 
 @pytest.mark.asyncio
-async def test_share_passes_validate_and_survives_in_payload(db_path):
+async def test_share_passes_validate_and_survives(db_path):
     """share in a tier must not be rejected by _validate_tier (unknown-field
-    guard) and must appear in the staged token payload."""
-    r = await set_license_tiers(
+    guard) and must be persisted."""
+    await set_license_tiers(
         track_id=1,
         tiers=[{"name": "MP3", "deliverables": ["mp3"], "prices": {"CNY": 50}, "share": 30.0}],
     )
-    p = await _payload(db_path, r["token"])
-    assert p["tiers"][0]["share"] == 30.0
+    assert (await _tiers(db_path))[0]["share"] == 30.0
 
 
 @pytest.mark.asyncio
-async def test_share_none_survives_in_payload(db_path):
-    """Explicit null share must appear as None in the staged payload."""
-    r = await set_license_tiers(
+async def test_share_none_survives(db_path):
+    """Explicit null share must be persisted as NULL."""
+    await set_license_tiers(
         track_id=1,
         tiers=[{"name": "MP3", "deliverables": ["mp3"], "share": None}],
     )
-    p = await _payload(db_path, r["token"])
-    assert p["tiers"][0]["share"] is None
+    assert (await _tiers(db_path))[0]["share"] is None
 
 
 @pytest.mark.asyncio
-async def test_share_omitted_defaults_to_none_in_payload(db_path):
-    """When share is omitted entirely from the tier, the payload must still
-    carry share: None (not KeyError)."""
-    r = await set_license_tiers(
+async def test_share_omitted_defaults_to_none(db_path):
+    """When share is omitted entirely from the tier, it persists as NULL
+    (not KeyError)."""
+    await set_license_tiers(
         track_id=1,
         tiers=[{"name": "MP3", "deliverables": ["mp3"]}],
     )
-    p = await _payload(db_path, r["token"])
-    assert "share" in p["tiers"][0]
-    assert p["tiers"][0]["share"] is None
+    assert (await _tiers(db_path))[0]["share"] is None

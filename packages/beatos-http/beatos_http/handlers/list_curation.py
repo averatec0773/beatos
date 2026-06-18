@@ -1,4 +1,4 @@
-"""Approve handlers for list-curation tools."""
+"""Direct-apply handlers for list-curation tools."""
 from __future__ import annotations
 
 import datetime as dt
@@ -6,21 +6,28 @@ import sqlite3
 
 import aiosqlite
 
-from beatos_core.two_phase import (
+from beatos_core.approvals import (
     RowVanishedError,
-    consume_token_with_result,
-    verify_token,
+    register_apply_handler as register_approve_handler,
 )
-from beatos_http.routes.tokens import register_approve_handler
 
 
 def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
+@register_approve_handler("create_list")
+async def _approve_create_list(conn: aiosqlite.Connection, payload: dict) -> dict:
+    name = payload["name"]
+    cur = await conn.execute(
+        "INSERT INTO list (name, kind, position, created_at) VALUES (?, 'user', 0, ?)",
+        (name, _now()),
+    )
+    return {"list_id": cur.lastrowid, "name": name}
+
+
 @register_approve_handler("update_list")
-async def _approve_update_list(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="update_list")
+async def _approve_update_list(conn: aiosqlite.Connection, payload: dict) -> dict:
     list_id, name = payload["list_id"], payload["name"]
     cur = await conn.execute(
         "UPDATE list SET name=? WHERE id=? AND kind<>'system'",
@@ -28,14 +35,11 @@ async def _approve_update_list(conn: aiosqlite.Connection, token: str) -> dict:
     )
     if cur.rowcount != 1:
         raise RowVanishedError(f"list id={list_id} no longer updatable")
-    result = {"list_id": list_id, "name": name}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"list_id": list_id, "name": name}
 
 
 @register_approve_handler("delete_list")
-async def _approve_delete_list(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="delete_list")
+async def _approve_delete_list(conn: aiosqlite.Connection, payload: dict) -> dict:
     list_id = payload["list_id"]
     # Capture pre-delete member count for return shape
     async with conn.execute(
@@ -47,14 +51,11 @@ async def _approve_delete_list(conn: aiosqlite.Connection, token: str) -> dict:
     )
     if cur.rowcount != 1:
         raise RowVanishedError(f"list id={list_id} no longer deletable")
-    result = {"list_id": list_id, "freed_membership_count": freed}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"list_id": list_id, "freed_membership_count": freed}
 
 
 @register_approve_handler("add_tracks_to_list")
-async def _approve_add_tracks_to_list(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="add_tracks_to_list")
+async def _approve_add_tracks_to_list(conn: aiosqlite.Connection, payload: dict) -> dict:
     list_id = payload["list_id"]
     track_ids = payload["track_ids"]
     async with conn.execute(
@@ -75,16 +76,13 @@ async def _approve_add_tracks_to_list(conn: aiosqlite.Connection, token: str) ->
         if cur.rowcount != 1:
             raise RowVanishedError(f"track id={tid} already in list or vanished")
         added += 1
-    result = {"list_id": list_id, "added_count": added}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"list_id": list_id, "added_count": added}
 
 
 @register_approve_handler("remove_tracks_from_list")
 async def _approve_remove_tracks_from_list(
-    conn: aiosqlite.Connection, token: str
+    conn: aiosqlite.Connection, payload: dict
 ) -> dict:
-    payload = await verify_token(conn, token, expected_tool="remove_tracks_from_list")
     list_id = payload["list_id"]
     track_ids = payload["track_ids"]
     removed = 0
@@ -95,14 +93,11 @@ async def _approve_remove_tracks_from_list(
         if cur.rowcount != 1:
             raise RowVanishedError(f"track id={tid} vanished from list {list_id}")
         removed += 1
-    result = {"list_id": list_id, "removed_count": removed}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"list_id": list_id, "removed_count": removed}
 
 
 @register_approve_handler("reorder_list")
-async def _approve_reorder_list(conn: aiosqlite.Connection, token: str) -> dict:
-    payload = await verify_token(conn, token, expected_tool="reorder_list")
+async def _approve_reorder_list(conn: aiosqlite.Connection, payload: dict) -> dict:
     list_id = payload["list_id"]
     track_ids = payload["track_ids"]
     for idx, tid in enumerate(track_ids):
@@ -114,6 +109,4 @@ async def _approve_reorder_list(conn: aiosqlite.Connection, token: str) -> dict:
             raise RowVanishedError(
                 f"track id={tid} no longer in list {list_id}"
             )
-    result = {"list_id": list_id, "count": len(track_ids)}
-    await consume_token_with_result(conn, token, result)
-    return result
+    return {"list_id": list_id, "count": len(track_ids)}

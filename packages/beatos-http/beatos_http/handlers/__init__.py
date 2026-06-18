@@ -1,7 +1,7 @@
-"""Side-effect import: registers all batch approve handlers.
+"""Side-effect import: registers all write apply handlers.
 
-Importing this module triggers the @register_approve_handler decorators
-in each handler file, populating routes/tokens._APPROVE_HANDLERS."""
+Importing this module triggers the @register_apply_handler decorators in each
+handler file, populating the beatos_core.approvals registry."""
 from beatos_http.handlers import ingest  # noqa: F401
 from beatos_http.handlers import licenses  # noqa: F401
 from beatos_http.handlers import lifecycle  # noqa: F401

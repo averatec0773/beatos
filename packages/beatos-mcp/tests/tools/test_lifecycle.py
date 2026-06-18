@@ -1,12 +1,13 @@
-"""Lifecycle tools: trash/restore/purge — issue 2PC tokens, no direct writes."""
+"""Lifecycle tools: trash/restore/purge — apply directly (L1), audit the preview."""
 import datetime as dt
-import json
 
 import aiosqlite
 import pytest
 
+import beatos_http.handlers  # noqa: F401 — registers the apply handlers
+from beatos_core.agent_log import list_agent_actions
 from beatos_core.db import run_migrations
-from beatos_mcp.tools.lifecycle import trash_tracks, restore_tracks, purge_tracks
+from beatos_mcp.tools.lifecycle import purge_tracks, restore_tracks, trash_tracks
 
 
 @pytest.fixture
@@ -27,47 +28,49 @@ async def db_path(tmp_path, monkeypatch):
     return p
 
 
-async def _fetch_payload(db_path, token):
+async def _latest_summary(db_path) -> dict:
+    """The preview now lives in the audit log summary (no more token payload)."""
     async with aiosqlite.connect(db_path) as conn:
-        async with conn.execute(
-            "SELECT payload FROM tokens WHERE token=?", (token,)
-        ) as cur:
-            row = await cur.fetchone()
-    return json.loads(row[0])
+        rows = await list_agent_actions(conn, limit=1)
+    return rows[0]["summary"]
 
 
 @pytest.mark.asyncio
-async def test_trash_tracks_issues_token_with_preview(db_path):
+async def test_trash_tracks_applies_with_preview(db_path):
     res = await trash_tracks(ids=[1, 2, 3])
-    assert "token" in res
-    p = await _fetch_payload(db_path, res["token"])
-    assert p["ids"] == [1, 2, 3]
-    assert p["preview"]["headline"].startswith("Trash 3 tracks")
-    assert len(p["preview"]["sample"]) == 3
-    assert "#1 Beat A" in p["preview"]["sample"]
-    assert p["preview"].get("risk") is None
+    assert res["status"] == "applied"
+    assert res["result"]["ids"] == [1, 2, 3]
+    summ = await _latest_summary(db_path)
+    assert summ["headline"].startswith("Trash 3 tracks")
+    assert len(summ["sample"]) == 3
+    assert "#1 Beat A" in summ["sample"]
+    assert summ.get("risk") is None
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) FROM track WHERE deleted_at IS NOT NULL"
+        ) as cur:
+            assert (await cur.fetchone())[0] == 3
 
 
 @pytest.mark.asyncio
 async def test_trash_tracks_warns_on_already_trashed(db_path):
-    # Pre-trash id=2
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             "UPDATE track SET deleted_at=? WHERE id=2", ("2026-01-01",)
         )
         await conn.commit()
     res = await trash_tracks(ids=[1, 2, 3])
-    p = await _fetch_payload(db_path, res["token"])
-    assert p["ids"] == [1, 3]  # 2 filtered out
-    assert any("already" in w.lower() for w in p["preview"]["warnings"])
+    assert res["result"]["ids"] == [1, 3]  # 2 filtered out
+    summ = await _latest_summary(db_path)
+    assert any("already" in w.lower() for w in summ["warnings"])
 
 
 @pytest.mark.asyncio
 async def test_trash_tracks_rejects_unknown_id(db_path):
     res = await trash_tracks(ids=[1, 999])
-    p = await _fetch_payload(db_path, res["token"])
-    assert p["ids"] == [1]
-    assert any("not found" in w.lower() for w in p["preview"]["warnings"])
+    assert res["result"]["ids"] == [1]
+    summ = await _latest_summary(db_path)
+    assert any("not found" in w.lower() for w in summ["warnings"])
 
 
 @pytest.mark.asyncio
@@ -83,22 +86,29 @@ async def test_trash_tracks_caps_at_500(db_path):
 
 
 @pytest.mark.asyncio
-async def test_restore_tracks_payload_only_includes_trashed(db_path):
+async def test_restore_tracks_only_restores_trashed(db_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute("UPDATE track SET deleted_at=? WHERE id IN (1,2)", ("x",))
         await conn.commit()
     res = await restore_tracks(ids=[1, 2, 3])
-    p = await _fetch_payload(db_path, res["token"])
-    assert p["ids"] == [1, 2]
-    assert any("not in trash" in w.lower() or "not trashed" in w.lower() for w in p["preview"]["warnings"])
+    assert res["result"]["ids"] == [1, 2]
+    summ = await _latest_summary(db_path)
+    assert any(
+        "not in trash" in w.lower() or "not trashed" in w.lower()
+        for w in summ["warnings"]
+    )
 
 
 @pytest.mark.asyncio
 async def test_purge_tracks_marks_destructive(db_path):
     res = await purge_tracks(ids=[1, 2])
-    p = await _fetch_payload(db_path, res["token"])
-    assert p["preview"]["risk"] == "destructive"
-    assert "PERMANENTLY" in p["preview"]["headline"].upper()
+    assert res["status"] == "applied"
+    summ = await _latest_summary(db_path)
+    assert summ["risk"] == "destructive"
+    assert "PERMANENTLY" in summ["headline"].upper()
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT COUNT(*) FROM track") as cur:
+            assert (await cur.fetchone())[0] == 1  # 2 of 3 purged
 
 
 @pytest.mark.asyncio
@@ -112,7 +122,6 @@ async def test_trash_tracks_raises_when_all_already_trashed(db_path):
 
 @pytest.mark.asyncio
 async def test_restore_tracks_raises_when_all_already_live(db_path):
-    # Tracks 1, 2, 3 are not trashed (deleted_at IS NULL) — none eligible for restore
     with pytest.raises(ValueError, match="already restored or not found"):
         await restore_tracks(ids=[1, 2, 3])
 

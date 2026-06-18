@@ -1,14 +1,13 @@
-"""Approve handlers for update_tracks + merge_metadata."""
+"""Direct-apply handlers for update_tracks + merge_metadata."""
 import datetime as dt
 import json
 
 import aiosqlite
 import pytest
-from httpx import ASGITransport, AsyncClient
 
+import beatos_http.handlers  # noqa: F401 — registers the apply handlers
+from beatos_core.approvals import RowVanishedError, apply
 from beatos_core.db import run_migrations
-from beatos_core.two_phase import create_token
-from beatos_http.app import create_app
 
 
 @pytest.fixture
@@ -37,23 +36,11 @@ async def db_path(tmp_path, monkeypatch):
     return p
 
 
-@pytest.fixture
-async def client(db_path):
-    app = create_app()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
-        async with app.router.lifespan_context(app):
-            yield c
-
-
 @pytest.mark.asyncio
-async def test_update_tracks_scalar_bpm(client, db_path):
+async def test_update_tracks_scalar_bpm(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
-            conn, "update_tracks", {"ids": [1, 2], "patch": {"bpm": 200}}
-        )
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200, res.text
+        await apply(conn, "update_tracks", {"ids": [1, 2], "patch": {"bpm": 200}})
+        await conn.commit()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
             "SELECT id, bpm FROM track WHERE id IN (1,2,3) ORDER BY id"
@@ -63,44 +50,34 @@ async def test_update_tracks_scalar_bpm(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_update_tracks_key_maps_to_key_signature(client, db_path):
+async def test_update_tracks_key_maps_to_key_signature(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
-            conn, "update_tracks", {"ids": [1], "patch": {"key": "F#m"}}
-        )
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
+        await apply(conn, "update_tracks", {"ids": [1], "patch": {"key": "F#m"}})
+        await conn.commit()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute("SELECT key_signature FROM track WHERE id=1") as cur:
             assert (await cur.fetchone())[0] == "F#m"
 
 
 @pytest.mark.asyncio
-async def test_update_tracks_producer_list_replace(client, db_path):
+async def test_update_tracks_producer_list_replace(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
-            conn, "update_tracks", {"ids": [1], "patch": {"producer": ["NewGuy"]}}
-        )
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
+        await apply(conn, "update_tracks", {"ids": [1], "patch": {"producer": ["NewGuy"]}})
+        await conn.commit()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute("SELECT producer FROM track WHERE id=1") as cur:
             assert json.loads((await cur.fetchone())[0]) == ["NewGuy"]
 
 
 @pytest.mark.asyncio
-async def test_update_tracks_producer_add_remove(client, db_path):
+async def test_update_tracks_producer_add_remove(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
+        await apply(
             conn,
             "update_tracks",
-            {
-                "ids": [3],
-                "patch": {"producer": {"add": ["X"], "remove": ["other"]}},
-            },
+            {"ids": [3], "patch": {"producer": {"add": ["X"], "remove": ["other"]}}},
         )
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
+        await conn.commit()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute("SELECT producer FROM track WHERE id=3") as cur:
             producers = json.loads((await cur.fetchone())[0])
@@ -108,13 +85,11 @@ async def test_update_tracks_producer_add_remove(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_update_tracks_rolls_back_when_id_vanished(client, db_path):
+async def test_update_tracks_rolls_back_when_id_vanished(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
-            conn, "update_tracks", {"ids": [1, 9999], "patch": {"bpm": 50}}
-        )
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 409
+        with pytest.raises(RowVanishedError):
+            await apply(conn, "update_tracks", {"ids": [1, 9999], "patch": {"bpm": 50}})
+        await conn.rollback()
     # Track 1's bpm is unchanged
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute("SELECT bpm FROM track WHERE id=1") as cur:
@@ -122,21 +97,17 @@ async def test_update_tracks_rolls_back_when_id_vanished(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_update_tracks_add_and_remove_overlap_add_wins(client, db_path):
+async def test_update_tracks_add_and_remove_overlap_add_wins(db_path):
     """When the same value appears in both add and remove, add takes precedence
     (remove runs first, then add re-introduces). Pin this behavior so refactors
     can't silently flip it."""
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
+        await apply(
             conn,
             "update_tracks",
-            {
-                "ids": [1],
-                "patch": {"producer": {"add": ["Smoke"], "remove": ["Smoke"]}},
-            },
+            {"ids": [1], "patch": {"producer": {"add": ["Smoke"], "remove": ["Smoke"]}}},
         )
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
+        await conn.commit()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute("SELECT producer FROM track WHERE id=1") as cur:
             producers = json.loads((await cur.fetchone())[0])
@@ -145,9 +116,9 @@ async def test_update_tracks_add_and_remove_overlap_add_wins(client, db_path):
 
 
 @pytest.mark.asyncio
-async def test_merge_metadata_collapses_aliases(client, db_path):
+async def test_merge_metadata_collapses_aliases(db_path):
     async with aiosqlite.connect(db_path) as conn:
-        tok = await create_token(
+        await apply(
             conn,
             "merge_metadata",
             {
@@ -158,8 +129,7 @@ async def test_merge_metadata_collapses_aliases(client, db_path):
                 "preview": {"headline": "x", "sample": [], "warnings": []},
             },
         )
-    res = await client.post(f"/api/tokens/{tok}/approve")
-    assert res.status_code == 200
+        await conn.commit()
     async with aiosqlite.connect(db_path) as conn:
         async with conn.execute(
             "SELECT id, producer FROM track WHERE id IN (1,2,3) ORDER BY id"

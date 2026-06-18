@@ -1,8 +1,8 @@
 """Ingest tools: create_tracks + attach_assets (batch) + detach_assets (batch).
 
 v0.0.24.2: replaced singular attach_asset with batch tools. The bottleneck for
-folder-import workflows was one 2PC approval per (track, role) attachment;
-batching collapses N approvals into 1.
+folder-import workflows was one call per (track, role) attachment; batching
+collapses N calls into 1.
 """
 from __future__ import annotations
 
