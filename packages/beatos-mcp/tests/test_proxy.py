@@ -50,10 +50,15 @@ async def test_call_status_when_offline_is_helpful():
 
 
 @pytest.mark.asyncio
-async def test_call_status_when_online_reports_running():
-    res = await call_tool_payload(FakeConn(tools={"ping"}), "beatos_status", {})
+async def test_call_status_when_online_reports_running_with_count():
+    two = [
+        types.Tool(name=n, description="", inputSchema={"type": "object"})
+        for n in ("ping", "list_tracks")
+    ]
+    res = await call_tool_payload(FakeConn(tools=two), "beatos_status", {})
     assert res.isError is False
-    assert "running" in res.content[0].text.lower()
+    text = res.content[0].text.lower()
+    assert "running" in text and "2 tools" in text
 
 
 @pytest.mark.asyncio
@@ -96,10 +101,21 @@ class _Stop(Exception):
 
 
 @pytest.mark.asyncio
-async def test_poller_fires_on_transition_only():
+async def test_poller_retries_deferred_then_dedupes():
+    """A change observed before the session exists (notify returns False) is
+    retried on later ticks, not lost; a successfully-notified state isn't resent."""
     from beatos_mcp.proxy import poll_availability
 
-    seq = iter([False, False, True, True, False])  # then StopIteration -> _Stop
+    seq = iter([True, True, True, False, False])  # then StopIteration -> _Stop
+    sent = []
+    defer = {"n": 2}  # the first two notify attempts have no session yet
+
+    async def notify(online):
+        if defer["n"] > 0:
+            defer["n"] -= 1
+            return False  # deferred — session not captured yet
+        sent.append(online)
+        return True
 
     def probe():
         try:
@@ -107,24 +123,20 @@ async def test_poller_fires_on_transition_only():
         except StopIteration:
             raise _Stop()
 
-    calls = []
-
-    async def on_change(online):
-        calls.append(online)
-
     async def noop_sleep(_):
         return None
 
     with pytest.raises(_Stop):
-        await poll_availability(probe, on_change, interval=0, _sleep=noop_sleep)
+        await poll_availability(probe, notify, interval=0, _sleep=noop_sleep)
 
-    # Only the two flips (offline->online, online->offline) fire — not every tick.
-    assert calls == [True, False]
+    # online deferred twice then delivered once; offline delivered once; the second
+    # offline tick is deduped.
+    assert sent == [True, False]
 
 
 @pytest.mark.asyncio
-async def test_on_change_notifies_only_when_session_present():
-    from beatos_mcp.proxy import make_on_change
+async def test_notifier_defers_without_session_and_sends_with():
+    from beatos_mcp.proxy import make_notifier
 
     sent = []
 
@@ -133,11 +145,74 @@ async def test_on_change_notifies_only_when_session_present():
             sent.append(True)
 
     holder = SessionHolder()
-    on_change = make_on_change(holder)
+    notify = make_notifier(holder)
 
-    await on_change(True)  # no session captured yet -> no crash, no notification
+    assert await notify(True) is False  # no session captured yet -> deferred
     assert sent == []
 
     holder.session = FakeSession()
-    await on_change(False)
+    assert await notify(False) is True  # session present -> sent
     assert sent == [True]
+
+
+# --- last-good cache + retry (the anti-flap fix) ---
+
+class _SidecarStub:
+    url = "http://127.0.0.1:1/mcp"
+    token = None
+
+
+class _ScriptedConnector(UpstreamConnector):
+    """Drives `_list_once` from a script of return-values/exceptions."""
+
+    def __init__(self, target, script):
+        super().__init__(lambda: target)
+        self._script = list(script)
+        self.calls = 0
+
+    async def _list_once(self, target):
+        self.calls += 1
+        item = self._script.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+@pytest.fixture(autouse=True)
+def _no_retry_delay(monkeypatch):
+    import beatos_mcp.proxy as p
+
+    monkeypatch.setattr(p, "_RETRY_DELAY", 0)
+
+
+@pytest.mark.asyncio
+async def test_fetch_tools_retries_transient_then_succeeds():
+    real = [types.Tool(name="ping", description="", inputSchema={"type": "object"})]
+    conn = _ScriptedConnector(_SidecarStub(), [RuntimeError("x"), RuntimeError("x"), real])
+    tools = await conn.fetch_tools()
+    assert [t.name for t in tools] == ["ping"]
+    assert conn.calls == 3  # retried twice before succeeding
+
+
+@pytest.mark.asyncio
+async def test_fetch_tools_returns_last_good_on_persistent_failure():
+    real = [types.Tool(name="ping", description="", inputSchema={"type": "object"})]
+    # one success (populates cache), then enough failures to exhaust a 2nd fetch
+    conn = _ScriptedConnector(
+        _SidecarStub(), [real, RuntimeError("down"), RuntimeError("down"), RuntimeError("down")]
+    )
+    assert [t.name for t in await conn.fetch_tools()] == ["ping"]  # cache populated
+    again = await conn.fetch_tools()  # all attempts fail -> last-good, NOT degraded
+    assert [t.name for t in again] == ["ping"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_tools_offline_clears_cache_and_degrades():
+    real = [types.Tool(name="ping", description="", inputSchema={"type": "object"})]
+    target = {"t": _SidecarStub()}
+    conn = _ScriptedConnector(target["t"], [real])
+    conn._discover = lambda: target["t"]
+    assert await conn.fetch_tools() is not None  # caches
+    target["t"] = None  # sidecar genuinely offline
+    assert await conn.fetch_tools() is None  # degrade
+    assert conn._cached_tools is None  # cache dropped (no stale tools while offline)
