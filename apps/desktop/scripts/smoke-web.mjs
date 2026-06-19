@@ -301,30 +301,20 @@ try {
   }
   console.log("smoke-web: route parity (settings/approvals/trash/publish render) PASS");
 
-  // The approvals stream connects same-origin (SSE works in the browser).
+  // The Agent Actions dashboard polls its audit log same-origin (this replaced
+  // the old 2PC tokens SSE stream in the L1 redesign). Verify the endpoint the
+  // dashboard depends on resolves over plain HTTP in the browser.
   try {
-    const sse = await page.evaluate(
-      () =>
-        new Promise((res) => {
-          const es = new EventSource("/api/tokens/stream");
-          es.onopen = () => {
-            es.close();
-            res("open");
-          };
-          es.onerror = () => {
-            es.close();
-            res("error");
-          };
-          setTimeout(() => {
-            es.close();
-            res("timeout");
-          }, 2000);
-        }),
-    );
-    if (sse === "open") console.log("smoke-web: approvals SSE (/api/tokens/stream) open PASS");
-    else failures.push(`approvals SSE did not open (got "${sse}")`);
+    const probe = await page.evaluate(async () => {
+      const res = await fetch("/api/agent-actions");
+      if (!res.ok) return `status ${res.status}`;
+      const data = await res.json();
+      return Array.isArray(data.actions) ? "ok" : "bad-shape";
+    });
+    if (probe === "ok") console.log("smoke-web: agent-actions endpoint (/api/agent-actions) PASS");
+    else failures.push(`agent-actions endpoint check: ${probe}`);
   } catch (e) {
-    failures.push(`approvals SSE check error: ${e.message}`);
+    failures.push(`agent-actions endpoint check error: ${e.message}`);
   }
 
   // Web Settings omits the desktop-only sections (Storage / AI Integration).
