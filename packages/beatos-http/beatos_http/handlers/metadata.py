@@ -59,7 +59,7 @@ async def _approve_update_tracks(conn: aiosqlite.Connection, payload: dict) -> d
 @register_approve_handler("merge_metadata")
 async def _approve_merge_metadata(conn: aiosqlite.Connection, payload: dict) -> dict:
     field = payload["field"]
-    from_ = set(payload["from"])
+    aliases = set(payload["aliases"])
     to = payload["to"]
     affected_ids = payload.get("_affected_ids") or []
     col = _FIELD_TO_COL[field]
@@ -77,7 +77,7 @@ async def _approve_merge_metadata(conn: aiosqlite.Connection, payload: dict) -> 
         out: list[str] = []
         seen: set[str] = set()
         for v in cur:
-            replaced = to if v in from_ else v
+            replaced = to if v in aliases else v
             if replaced not in seen:
                 out.append(replaced)
                 seen.add(replaced)

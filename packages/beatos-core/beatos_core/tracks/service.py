@@ -173,6 +173,10 @@ def _build_where(
     genres: list[str] | None,
     moods: list[str] | None,
     keys: list[str] | None,
+    producers_like: list[str] | None = None,
+    genres_like: list[str] | None = None,
+    moods_like: list[str] | None = None,
+    keys_like: list[str] | None = None,
     bpm_min: int | None,
     bpm_max: int | None,
     has_audio: bool | None,
@@ -182,6 +186,8 @@ def _build_where(
     Delegates to the shared builder so HTTP and MCP search stay identical."""
     clauses, params = build_filter_clauses(
         producers=producers, genres=genres, moods=moods, keys=keys,
+        producers_like=producers_like, genres_like=genres_like,
+        moods_like=moods_like, keys_like=keys_like,
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio, text=text,
     )
     return (" AND ".join(clauses), params)
@@ -195,6 +201,10 @@ async def list_tracks(
     genres: list[str] | None = None,
     moods: list[str] | None = None,
     keys: list[str] | None = None,
+    producers_like: list[str] | None = None,
+    genres_like: list[str] | None = None,
+    moods_like: list[str] | None = None,
+    keys_like: list[str] | None = None,
     bpm_min: int | None = None,
     bpm_max: int | None = None,
     has_audio: bool | None = None,
@@ -208,6 +218,8 @@ async def list_tracks(
 
     where, params = _build_where(
         producers=producers, genres=genres, moods=moods, keys=keys,
+        producers_like=producers_like, genres_like=genres_like,
+        moods_like=moods_like, keys_like=keys_like,
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
         text=text if text is not None else ([t for t in q.split() if t] if q else None),
     )

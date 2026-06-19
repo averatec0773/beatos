@@ -45,6 +45,12 @@ from beatos_http.routes import (
 )
 from beatos_mcp.server import app as mcp_asgi_app, mcp
 
+# Side-effect import: registers every MCP write tool's apply handler into
+# beatos_core.approvals (consumed by beatos_mcp.policy.submit_write). Without this
+# the sidecar's apply registry is empty and every write tool fails with
+# "no apply handler" — the 2PC-removal regression caught by QA 2026-06-19.
+import beatos_http.handlers  # noqa: E402, F401
+
 log = logging.getLogger(__name__)
 
 def _allowed_origins() -> list[str]:

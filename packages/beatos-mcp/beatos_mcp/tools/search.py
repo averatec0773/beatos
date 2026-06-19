@@ -10,11 +10,15 @@ async def search_tracks(*, query: str, limit: int = 50, offset: int = 0) -> dict
     # tag: tokens have no dedicated filter column -> fold into free text,
     # IDENTICAL to the HTTP route (Task 4) so agent search == human search.
     text = (spec.text + spec.tags) or None
+    # Field tokens (genre:/mood:/producer:/key:) substring-match the in-app
+    # search box: `genre:Memphis` finds "Memphis Rap", `key:F` finds "F minor".
+    # They go through the `*_like` (LIKE) builder, NOT the exact `producers=`
+    # list_tracks filter params.
     return await list_tracks(
-        producers=spec.producers or None,
-        genres=spec.genres or None,
-        moods=spec.moods or None,
-        keys=spec.keys or None,
+        producers_like=spec.producers or None,
+        genres_like=spec.genres or None,
+        moods_like=spec.moods or None,
+        keys_like=spec.keys or None,
         bpm_min=spec.bpm_min,
         bpm_max=spec.bpm_max,
         has_audio=spec.has_audio,

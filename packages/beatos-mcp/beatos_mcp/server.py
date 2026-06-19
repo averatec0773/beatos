@@ -16,6 +16,7 @@ from pydantic import Field
 from beatos_mcp.policy import submit_write
 from beatos_mcp.preview import build_preview
 from beatos_mcp.pro import pro_available
+from beatos_mcp.schema_compat import flatten_nullable_schema
 from beatos_mcp.tools.create_list import create_list as _create_list_impl
 from beatos_mcp.tools.ingest import (
     attach_assets as _attach_assets_impl,
@@ -75,7 +76,7 @@ async def list_tracks(
     bpm_min: Annotated[float | None, Field(description="Inclusive lower bound on BPM.")] = None,
     bpm_max: Annotated[float | None, Field(description="Inclusive upper bound on BPM.")] = None,
     has_audio: Annotated[bool | None, Field(description="true = only tracks with audio attached.")] = None,
-    sort_by: Annotated[Literal["created_at", "updated_at", "bpm", "name"] | None, Field(description="Default: created_at.")] = None,
+    sort_by: Annotated[Literal["created_at", "updated_at", "bpm", "title", "name"] | None, Field(description="Default: created_at. 'name' is a backward-compatible alias for 'title'.")] = None,
     sort_dir: Annotated[Literal["asc", "desc"] | None, Field(description="Default: desc.")] = None,
     limit: Annotated[int | None, Field(ge=1, le=500, description="Default 50, max 500.")] = None,
     offset: Annotated[int | None, Field(ge=0, description="Default 0.")] = None,
@@ -110,7 +111,8 @@ async def get_track(
 
 @mcp.tool(annotations=_READ_ANNOTATIONS)
 async def list_lists() -> dict:
-    """List all user + system lists. Returns full list; no pagination."""
+    """List all user + system lists. Returns {items: [{id, name, kind, position,
+    created_at}, ...]}; no pagination."""
     return await _list_lists_impl()
 
 
@@ -119,7 +121,8 @@ async def list_distinct_values(
     field: Annotated[Literal["producer", "genre", "mood", "key"], Field(description="One of: producer, genre, mood, key.")],
 ) -> dict:
     """Enumerate distinct values + counts for one of producer/genre/mood/key.
-    Call this before filtering list_tracks so you use the user's actual spelling."""
+    Returns {items: [{value, count}, ...]} ordered by count desc. Call this before
+    filtering list_tracks so you use the user's actual spelling."""
     return await _list_distinct_impl(field)
 
 
@@ -141,7 +144,8 @@ async def search_tracks(
 
 @mcp.tool(annotations=_READ_ANNOTATIONS)
 async def list_export_platforms() -> dict:
-    """List platforms BeatOS can export metadata for (e.g. "netease")."""
+    """List platforms BeatOS can export metadata for (e.g. "netease").
+    Returns {platforms: [str, ...]}."""
     return await _list_export_platforms_impl()
 
 
@@ -309,15 +313,16 @@ async def set_license_tiers(
 @mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def merge_metadata(
     field: Annotated[Literal["producer", "genre", "mood"], Field(description="Multi-value field to collapse.")],
-    from_: Annotated[
+    aliases: Annotated[
         list[str],
-        Field(min_length=1, max_length=20, alias="from", description="Aliases to collapse into `to`."),
+        Field(min_length=1, max_length=20, description="Aliases to collapse into `to`."),
     ],
     to: Annotated[str, Field(min_length=1, max_length=200, description="Canonical replacement value.")],
 ) -> dict:
-    """Library-wide rename. Any track whose `field` array contains any of `from`
-    has those entries replaced with `to` (deduped). Applies directly; recorded in BeatOS → Agent Actions."""
-    return await _merge_metadata_impl(field=field, from_=from_, to=to)
+    """Library-wide rename. Any track whose `field` array contains any of
+    `aliases` has those entries replaced with `to` (deduped). Applies directly;
+    recorded in BeatOS → Agent Actions."""
+    return await _merge_metadata_impl(field=field, aliases=aliases, to=to)
 
 
 @mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=False))
@@ -346,9 +351,12 @@ async def attach_assets(
             min_length=1,
             max_length=500,
             description=(
-                "Each item: {track_id (int), role ('audio'|'cover'), "
+                "Each item: {track_id (int), role ('audio'|'cover'|'stems'), "
                 "path (absolute filesystem path)}. "
                 "Audio: .wav/.mp3/.flac. Cover: .jpg/.jpeg/.png/.webp. "
+                "Stems: a deliverable bundle — .zip/.rar/.7z (or a single .wav/"
+                ".mp3/.flac multitrack); one stems slot per track, no format "
+                "distinction. "
                 "Files must exist; an existing slot of the same format is replaced "
                 "in place. Duplicate (track_id, role, format) items within the "
                 "batch are rejected."
@@ -371,7 +379,8 @@ async def detach_assets(
             min_length=1,
             max_length=500,
             description=(
-                "Each item: {track_id (int), role ('audio'|'cover')}. "
+                "Each item: {track_id (int), role ('audio'|'cover'|'stems')}. "
+                "'audio' removes whichever audio format(s) the track holds. "
                 "Idempotent: items whose asset is already absent are reported "
                 "with removed=false but do not fail the batch."
             ),
@@ -491,6 +500,15 @@ if pro_available():
         if job is None:
             return {"error": "job not found", "job_id": job_id}
         return job.model_dump()
+
+
+# --- Client-friendly schema flattening ---
+# Collapse every optional param's `anyOf: [T, null]` down to `T` so Anthropic
+# clients (which strip anyOf) keep the type hint and send the right JSON type.
+# Mutates each tool's stored inputSchema in place; FastMCP.list_tools() exposes
+# Tool.parameters directly as the client-visible inputSchema. See schema_compat.
+for _tool in mcp._tool_manager.list_tools():
+    flatten_nullable_schema(_tool.parameters)
 
 
 # --- ASGI app for FastAPI mount ---

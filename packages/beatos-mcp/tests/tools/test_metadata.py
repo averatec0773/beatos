@@ -128,7 +128,7 @@ async def test_update_tracks_all_ids_missing_raises(db_path):
 @pytest.mark.asyncio
 async def test_merge_metadata_applies_and_previews(db_path):
     # All three rows have a producer matching at least one of these
-    res = await merge_metadata(field="producer", from_=["smoke", "SMOKE"], to="Smoke")
+    res = await merge_metadata(field="producer", aliases=["smoke", "SMOKE"], to="Smoke")
     assert res["status"] == "applied"
     # 2 & 3 carry 'smoke'/'SMOKE' and are rewritten; 1 already has 'Smoke'.
     assert res["result"]["affected_count"] >= 1
@@ -149,10 +149,10 @@ async def test_merge_metadata_applies_and_previews(db_path):
 @pytest.mark.asyncio
 async def test_merge_metadata_rejects_invalid_field(db_path):
     with pytest.raises(ValueError, match="field"):
-        await merge_metadata(field="title", from_=["x"], to="y")  # type: ignore[arg-type]
+        await merge_metadata(field="title", aliases=["x"], to="y")  # type: ignore[arg-type]
 
 
 @pytest.mark.asyncio
-async def test_merge_metadata_rejects_empty_from(db_path):
+async def test_merge_metadata_rejects_empty_aliases(db_path):
     with pytest.raises(ValueError):
-        await merge_metadata(field="producer", from_=[], to="Smoke")
+        await merge_metadata(field="producer", aliases=[], to="Smoke")

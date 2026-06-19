@@ -60,6 +60,10 @@ async def tracks_in_list(
     genres: list[str] | None = None,
     moods: list[str] | None = None,
     keys: list[str] | None = None,
+    producers_like: list[str] | None = None,
+    genres_like: list[str] | None = None,
+    moods_like: list[str] | None = None,
+    keys_like: list[str] | None = None,
     bpm_min: int | None = None,
     bpm_max: int | None = None,
     has_audio: bool | None = None,
@@ -85,6 +89,8 @@ async def tracks_in_list(
 
     filter_where, filter_params = _build_where(
         producers=producers, genres=genres, moods=moods, keys=keys,
+        producers_like=producers_like, genres_like=genres_like,
+        moods_like=moods_like, keys_like=keys_like,
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio,
         text=text if text is not None else ([t for t in q.split() if t] if q else None),
     )

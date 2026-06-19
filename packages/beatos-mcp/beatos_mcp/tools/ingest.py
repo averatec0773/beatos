@@ -19,26 +19,40 @@ _MAX_ASSET_ITEMS = 500
 _CREATE_ITEM_FIELDS = {"title", "bpm", "key", "producer", "genre", "mood"}
 _ATTACH_ITEM_FIELDS = {"track_id", "role", "path"}
 _DETACH_ITEM_FIELDS = {"track_id", "role"}
-# The agent-facing role vocabulary is deliberately simple ("audio"/"cover"); the
-# DB stores semantic roles + a separate `format`. On attach, "audio" resolves to
-# the untagged master role and the extension picks the format. Supported formats
-# live in beatos_core EXT_TO_FORMAT — adding one there (e.g. .aiff) is all it takes.
-_VALID_ROLES = ("audio", "cover")
+# The agent-facing role vocabulary is deliberately simple ("audio"/"cover"/
+# "stems"); the DB stores semantic roles + a separate `format`. On attach,
+# "audio" resolves to the untagged master role and the extension picks the
+# format. Supported audio formats live in beatos_core EXT_TO_FORMAT — adding one
+# there (e.g. .aiff) is all it takes.
+#
+# "stems" maps to the canonical `stems` role with format '' (one stems slot per
+# track, replace-in-place). Stems is a deliverable bundle — typically a .zip,
+# but a single multitrack audio file is also accepted. Format is NOT recorded
+# for stems (it stays '' like cover), so a track holds exactly one stems asset
+# regardless of container.
+_VALID_ROLES = ("audio", "cover", "stems")
 _AUDIO_EXT = set(EXT_TO_FORMAT)
 _COVER_EXT = {".jpg", ".jpeg", ".png", ".webp"}
+# Stems are usually shipped as an archive; allow common archive containers plus
+# the supported audio extensions (a producer may ship a single multitrack file).
+_STEMS_EXT = {".zip", ".rar", ".7z"} | _AUDIO_EXT
 
 
 def _resolve_attach_role(role: str, ext: str) -> tuple[str, str]:
-    """Map the agent-facing role to a (canonical_role, format) pair. 'cover' has
-    no format; 'audio' resolves to the untagged master role + the file's format."""
+    """Map the agent-facing role to a (canonical_role, format) pair. 'cover' and
+    'stems' carry no format ('' → one slot per track); 'audio' resolves to the
+    untagged master role + the file's format."""
     if role == "cover":
         return "cover", ""
+    if role == "stems":
+        return "stems", ""
     return "audio_untagged", EXT_TO_FORMAT[ext]
 
 
 def _detach_present(track_id: int, role: str, existing: set[tuple[int, str]]) -> bool:
     """Detach has no file extension to resolve, so the agent-facing 'audio' role
-    matches ANY canonical audio role the track holds; 'cover' matches exactly."""
+    matches ANY canonical audio role the track holds; 'cover'/'stems' match
+    exactly (their canonical role name equals the agent-facing name)."""
     if role == "audio":
         return any((track_id, r) in existing for r in AUDIO_ROLES)
     return (track_id, role) in existing
@@ -131,7 +145,7 @@ def _validate_attach_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not os.path.isfile(path):
             raise ValueError(f"items[{i}]: file not found: {path}")
         ext = os.path.splitext(path)[1].lower()
-        allowed = _AUDIO_EXT if role == "audio" else _COVER_EXT
+        allowed = {"audio": _AUDIO_EXT, "cover": _COVER_EXT, "stems": _STEMS_EXT}[role]
         if ext not in allowed:
             raise ValueError(
                 f"items[{i}]: extension {ext!r} does not match role={role!r} "
