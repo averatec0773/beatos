@@ -1,13 +1,19 @@
 """In-process resilient MCP proxy.
 
 The launcher always completes the MCP handshake by serving a lowlevel stdio
-`Server` whose handlers lazily connect to the BeatOS sidecar `/mcp`. When the
-sidecar is offline the proxy serves a single `beatos_status` tool; when it is
-online it forwards the real tool list and calls. A background poller fires
-`tools/list_changed` so the client refetches when the app appears or disappears.
+`Server` whose handlers connect to the BeatOS sidecar `/mcp`. When the sidecar is
+genuinely offline the proxy serves a single `beatos_status` tool; when it is
+online it forwards the real tool list and calls.
+
+Stability (the whole point of this module): a transient connect hiccup must NOT
+collapse the toolset to `beatos_status`. `fetch_tools` caches the last-known-good
+list, retries on transient errors, and only degrades when the sidecar is truly
+offline (no handshake). A background poller emits `tools/list_changed` — retrying
+until a client session exists — so clients that don't poll still pick up the full
+toolset when the app starts.
 
 Rule 8: nothing here writes stdout — logging goes to file/stderr via
-`beatos_mcp.log`.
+`beatos_mcp.log` / structlog.
 """
 from __future__ import annotations
 
@@ -15,10 +21,18 @@ from contextlib import asynccontextmanager
 
 import anyio
 import mcp.types as types
+import structlog
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.server.lowlevel import NotificationOptions, Server
 from mcp.server.stdio import stdio_server
+
+log = structlog.get_logger("beatos_mcp")
+
+# fetch_tools (idempotent list) retries on transient errors; a tool CALL is never
+# retried (a write could have applied before the connection dropped).
+_FETCH_ATTEMPTS = 3
+_RETRY_DELAY = 0.15  # seconds between fetch attempts; module-level so tests patch it
 
 
 class UpstreamUnavailable(RuntimeError):
@@ -36,22 +50,21 @@ DEGRADED_TOOL = types.Tool(
 
 
 class UpstreamConnector:
-    """Lazily connects to the sidecar /mcp for each request.
+    """Connects to the sidecar /mcp per request, with a last-known-good cache.
 
-    `discover` returns a `SidecarTarget` when BeatOS is up, else None. A fresh
-    Streamable HTTP session is opened per request and closed immediately — simple
-    and robust (no long-lived session to reconnect); the per-call cost is a local
-    loopback handshake.
+    `discover` returns a `SidecarTarget` when BeatOS is up (handshake present and
+    healthy), else None. A fresh Streamable HTTP session is opened per request
+    (simple + concurrency-safe — no shared long-lived session). The tool list is
+    cached so a transient forward failure returns the last-good list instead of
+    collapsing the catalog to the degraded `beatos_status` tool.
     """
 
     def __init__(self, discover):
         self._discover = discover
+        self._cached_tools: list[types.Tool] | None = None
 
     @asynccontextmanager
-    async def _session(self):
-        target = self._discover()
-        if target is None:
-            raise UpstreamUnavailable("sidecar offline")
+    async def _session(self, target):
         headers = (
             {"Authorization": f"Bearer {target.token}"} if target.token else None
         )
@@ -64,20 +77,51 @@ class UpstreamConnector:
                 await session.initialize()
                 yield session
 
+    async def _list_once(self, target) -> list[types.Tool]:
+        """One connect+initialize+list round-trip. Seam for testing retries."""
+        async with self._session(target) as session:
+            return (await session.list_tools()).tools
+
     async def fetch_tools(self) -> list[types.Tool] | None:
-        """Real tool list, or None when the sidecar is offline/unreachable."""
-        try:
-            async with self._session() as session:
-                return (await session.list_tools()).tools
-        except UpstreamUnavailable:
+        """The real tool list, robust to transient failures.
+
+        - sidecar truly offline (no handshake) -> drop the cache, return None
+          (the proxy then serves only `beatos_status`).
+        - sidecar up: try `_list_once` up to `_FETCH_ATTEMPTS`; on success cache +
+          return; if every attempt fails (but the handshake is still present),
+          return the last-good cache rather than degrading — so the catalog does
+          not flap to a single tool on a momentary hiccup.
+        """
+        target = self._discover()
+        if target is None:
+            self._cached_tools = None
             return None
-        except Exception:  # transient connect/initialize failure -> treat as offline
-            return None
+        for attempt in range(1, _FETCH_ATTEMPTS + 1):
+            try:
+                tools = await self._list_once(target)
+                self._cached_tools = tools
+                return tools
+            except Exception as e:  # noqa: BLE001 — log + retry, never crash the proxy
+                log.info("upstream.fetch_failed", attempt=attempt, error=str(e))
+                if attempt < _FETCH_ATTEMPTS:
+                    await anyio.sleep(_RETRY_DELAY)
+        # Handshake says up but every attempt failed — keep the last-good list.
+        log.info("upstream.fetch_exhausted", cached=self._cached_tools is not None)
+        return self._cached_tools
 
     async def call(self, name, arguments) -> types.CallToolResult:
-        """Forward a tool call. Raises UpstreamUnavailable when offline."""
-        async with self._session() as session:
-            return await session.call_tool(name, arguments)
+        """Forward a tool call (single attempt — NOT retried: a write may have
+        applied before a dropped connection). Raises UpstreamUnavailable when the
+        sidecar is offline or the forward fails."""
+        target = self._discover()
+        if target is None:
+            raise UpstreamUnavailable("sidecar offline")
+        try:
+            async with self._session(target) as session:
+                return await session.call_tool(name, arguments)
+        except Exception as e:  # noqa: BLE001
+            log.info("upstream.call_failed", tool=name, error=str(e))
+            raise UpstreamUnavailable(f"call {name} failed: {e}") from e
 
 
 async def list_tools_payload(conn: UpstreamConnector) -> list[types.Tool]:
@@ -88,13 +132,13 @@ async def list_tools_payload(conn: UpstreamConnector) -> list[types.Tool]:
     return tools
 
 
-def _status_text(online: bool) -> str:
-    if online:
-        return "BeatOS is running and reachable."
-    return (
-        "BeatOS desktop app is not running. Open it, then retry — the library "
-        "tools will appear automatically (no client restart needed)."
-    )
+def _status_text(tools: list[types.Tool] | None) -> str:
+    if tools is None:
+        return (
+            "BeatOS desktop app is not running. Open it, then retry — the library "
+            "tools will appear automatically (no client restart needed)."
+        )
+    return f"BeatOS is running and reachable — {len(tools)} tools available."
 
 
 async def call_tool_payload(
@@ -104,7 +148,7 @@ async def call_tool_payload(
     if name == "beatos_status":
         tools = await conn.fetch_tools()
         return types.CallToolResult(
-            content=[types.TextContent(type="text", text=_status_text(tools is not None))],
+            content=[types.TextContent(type="text", text=_status_text(tools))],
             isError=False,
         )
     try:
@@ -124,23 +168,22 @@ async def call_tool_payload(
         )
 
 
-async def poll_availability(probe, on_change, *, interval: float = 2.0, _sleep=None):
-    """Call `on_change(online: bool)` only when sidecar availability flips.
+async def poll_availability(probe, notify, *, interval: float = 2.0, _sleep=None):
+    """Tell the client (via `notify`) when availability changes — reliably.
 
-    `probe()` returns the current online state (e.g. `discover_sidecar(path) is
-    not None`). Runs forever; the first observation of `online=True` fires once so
-    the client refetches the real tool list after a cold start. Injectable
-    `_sleep` keeps the loop testable.
+    `probe()` returns the current online state. `notify(online)` returns True if it
+    actually delivered (a client session existed) or False if it must be retried.
+    We only advance `last_notified` once `notify` succeeds, so a change observed
+    before the client session is captured is re-tried on later ticks rather than
+    lost (the bug that left non-polling clients stuck on the degraded tool).
     """
     sleep = _sleep or anyio.sleep
-    last = None
+    last_notified = None
     while True:
         online = bool(probe())
-        if last is not None and online != last:
-            await on_change(online)
-        elif last is None and online:
-            await on_change(True)
-        last = online
+        if online != last_notified:
+            if await notify(online):
+                last_notified = online
         await sleep(interval)
 
 
@@ -156,19 +199,19 @@ class SessionHolder:
         self.session = None
 
 
-def make_on_change(holder: SessionHolder):
-    """Return an `on_change(online)` that asks the client to refetch the tool list.
+def make_notifier(holder: SessionHolder):
+    """Return `notify(online) -> bool`: sends `tools/list_changed` if a client
+    session has been captured (returns True), else defers (returns False) so the
+    poller retries once the session exists."""
 
-    No-ops until a request has captured the live session (so a flip that happens
-    before the client's first `tools/list` is simply absorbed — the client sees
-    the fresh list on that first call anyway)."""
-
-    async def on_change(online: bool) -> None:
+    async def notify(online: bool) -> bool:
         session = holder.session
-        if session is not None:
-            await session.send_tool_list_changed()
+        if session is None:
+            return False
+        await session.send_tool_list_changed()
+        return True
 
-    return on_change
+    return notify
 
 
 def build_server(conn: UpstreamConnector, holder: SessionHolder) -> Server:
@@ -200,13 +243,13 @@ async def run_proxy(handshake_path=None) -> None:
     init_opts = server.create_initialization_options(
         NotificationOptions(tools_changed=True)
     )
-    on_change = make_on_change(holder)
+    notify = make_notifier(holder)
 
     def probe() -> bool:
         return discover_sidecar(handshake_path) is not None
 
     async with stdio_server() as (read, write):
         async with anyio.create_task_group() as tg:
-            tg.start_soon(poll_availability, probe, on_change)
+            tg.start_soon(poll_availability, probe, notify)
             await server.run(read, write, init_opts)
             tg.cancel_scope.cancel()  # client disconnected -> stop the poller
