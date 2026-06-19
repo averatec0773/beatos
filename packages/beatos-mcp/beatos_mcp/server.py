@@ -128,7 +128,7 @@ async def list_distinct_values(
 
 @mcp.tool(annotations=_READ_ANNOTATIONS)
 async def search_tracks(
-    query: Annotated[str, Field(description="Search string. Supports field tokens (genre:, mood:, producer:, key:, tag:), bpm:>140 / bpm:140-160, has:audio, quoted \"two words\", and bare words matched across title/description/producer/genre/mood/key.")],
+    query: Annotated[str, Field(description="Search string. Field tokens genre:/mood:/producer:/key: match that field by case-insensitive substring (genre:Memphis matches \"Memphis Rap\", key:F matches \"F minor\"). tag:foo and bare words search free text across title/description/tags/producer/genre/mood/key — tag: matches a track's own tags, NOT list names. Also bpm:>140 / bpm:140-160, has:audio, and quoted \"two words\".")],
     limit: Annotated[int | None, Field(ge=1, le=500, description="Default 50, max 500.")] = None,
     offset: Annotated[int | None, Field(ge=0, description="Default 0. Page through results larger than `limit` (mirrors list_tracks).")] = None,
 ) -> dict:
@@ -159,6 +159,9 @@ async def export_metadata(
     Returns {platform, fields:[{key,label,value,options,note}]}. Genre/mood are
     translated to the platform's vocabulary; multi-genre returns `options` (the
     platform is single-select). Identical output to the in-app export panel.
+
+    Price tiers come from the track's own license tiers (set via set_license_tiers)
+    when present; otherwise the platform template's default prices are used.
     """
     return await _export_metadata_impl(track_id, platform)
 

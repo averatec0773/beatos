@@ -116,13 +116,26 @@ async def test_trash_tracks_raises_when_all_already_trashed(db_path):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute("UPDATE track SET deleted_at='2026-01-01' WHERE id IN (1,2)")
         await conn.commit()
-    with pytest.raises(ValueError, match="already trashed or not found"):
+    with pytest.raises(ValueError, match="nothing to trash — 2 already in trash"):
         await trash_tracks(ids=[1, 2])
 
 
 @pytest.mark.asyncio
+async def test_trash_tracks_error_distinguishes_missing_from_trashed(db_path):
+    # QA P2-12a: the all-fail error must name each reason separately rather than
+    # merging "already trashed OR not found" into one ambiguous string.
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute("UPDATE track SET deleted_at='2026-01-01' WHERE id=1")
+        await conn.commit()
+    with pytest.raises(
+        ValueError, match="nothing to trash — 1 not found, 1 already in trash"
+    ):
+        await trash_tracks(ids=[9999, 1])
+
+
+@pytest.mark.asyncio
 async def test_restore_tracks_raises_when_all_already_live(db_path):
-    with pytest.raises(ValueError, match="already restored or not found"):
+    with pytest.raises(ValueError, match="nothing to restore — 3 not in trash"):
         await restore_tracks(ids=[1, 2, 3])
 
 
