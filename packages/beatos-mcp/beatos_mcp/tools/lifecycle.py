@@ -47,7 +47,12 @@ async def trash_tracks(ids: list[int]) -> dict:
         warnings.append(f"{len(already_trashed)} already in trash, will be skipped")
     keep = [i for i in ids if i in info and info[i][1] is None]
     if not keep:
-        raise ValueError("all provided ids were already trashed or not found")
+        reasons = []
+        if missing:
+            reasons.append(f"{len(missing)} not found")
+        if already_trashed:
+            reasons.append(f"{len(already_trashed)} already in trash")
+        raise ValueError("nothing to trash — " + ", ".join(reasons))
     sample_rows = [(i, info[i][0]) for i in keep[:5]]
     payload = {
         "ids": keep,
@@ -73,7 +78,12 @@ async def restore_tracks(ids: list[int]) -> dict:
         warnings.append(f"{len(not_trashed)} not in trash, will be skipped")
     keep = [i for i in ids if i in info and info[i][1] is not None]
     if not keep:
-        raise ValueError("all provided ids were already restored or not found")
+        reasons = []
+        if missing:
+            reasons.append(f"{len(missing)} not found")
+        if not_trashed:
+            reasons.append(f"{len(not_trashed)} not in trash")
+        raise ValueError("nothing to restore — " + ", ".join(reasons))
     sample_rows = [(i, info[i][0]) for i in keep[:5]]
     payload = {
         "ids": keep,
