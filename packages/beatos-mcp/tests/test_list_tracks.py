@@ -122,3 +122,35 @@ async def test_filter_by_list_id(fresh_db):
 async def test_invalid_sort_by_raises(fresh_db):
     with pytest.raises(ValueError, match="sort_by"):
         await list_tracks(sort_by="nope")
+
+
+@pytest.mark.asyncio
+async def test_sort_by_title(fresh_db):
+    """QA P1-6: sort_by='title' sorts by the title column."""
+    async with aiosqlite.connect(fresh_db) as conn:
+        for t in ("Charlie", "Alpha", "Bravo"):
+            await conn.execute(
+                "INSERT INTO track (title, created_at, updated_at) "
+                "VALUES (?, '2026-05-18', '2026-05-18')",
+                (t,),
+            )
+        await conn.commit()
+    res = await list_tracks(sort_by="title", sort_dir="asc")
+    assert [t["title"] for t in res["items"]] == ["Alpha", "Bravo", "Charlie"]
+
+
+@pytest.mark.asyncio
+async def test_sort_by_name_alias_equals_title(fresh_db):
+    """QA P1-6: 'name' stays a backward-compatible alias for 'title'."""
+    async with aiosqlite.connect(fresh_db) as conn:
+        for t in ("Charlie", "Alpha", "Bravo"):
+            await conn.execute(
+                "INSERT INTO track (title, created_at, updated_at) "
+                "VALUES (?, '2026-05-18', '2026-05-18')",
+                (t,),
+            )
+        await conn.commit()
+    by_name = await list_tracks(sort_by="name", sort_dir="asc")
+    by_title = await list_tracks(sort_by="title", sort_dir="asc")
+    assert [t["title"] for t in by_name["items"]] == [t["title"] for t in by_title["items"]]
+    assert [t["title"] for t in by_name["items"]] == ["Alpha", "Bravo", "Charlie"]

@@ -123,7 +123,7 @@ async def test_merge_metadata_collapses_aliases(db_path):
             "merge_metadata",
             {
                 "field": "producer",
-                "from": ["smoke", "SMOKE"],
+                "aliases": ["smoke", "SMOKE"],
                 "to": "Smoke",
                 "_affected_ids": [2, 3],
                 "preview": {"headline": "x", "sample": [], "warnings": []},

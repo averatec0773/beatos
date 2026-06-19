@@ -103,6 +103,56 @@ async def test_percent_is_literal_not_match_all_wildcard():
 
 
 @pytest.mark.asyncio
+async def test_genres_like_substring_matches(seeded_tracks):
+    """QA P1-5: field-token `genre:` substring-matches (genres_like)."""
+    t = await create_track("Memphis Track")
+    await update_track(t.id, {"genre": ["Memphis Rap"]})
+    rows = await list_tracks(genres_like=["Memphis"])
+    assert [r.title for r in rows] == ["Memphis Track"]
+
+
+@pytest.mark.asyncio
+async def test_keys_like_substring_matches(seeded_tracks):
+    """QA P1-5: `key:F` finds 'Fm' / 'F minor' (scalar column substring)."""
+    rows = await list_tracks(keys_like=["F"])
+    # seeded t1 has key 'Fm'
+    assert any(r.title == "Midnight Drive" for r in rows)
+    assert all(r.title != "Sunrise" for r in rows)  # 'Gm' must not match
+
+
+@pytest.mark.asyncio
+async def test_genres_like_case_insensitive():
+    # isolated (no seeded fixture) so only our two rows exist
+    t = await create_track("Mixed Case")
+    await update_track(t.id, {"genre": ["Hyperpop"]})
+    other = await create_track("Other")
+    await update_track(other.id, {"genre": ["lofi"]})
+    rows = await list_tracks(genres_like=["hyperpop"])
+    assert [r.title for r in rows] == ["Mixed Case"]
+
+
+@pytest.mark.asyncio
+async def test_exact_genres_still_exact(seeded_tracks):
+    """QA P1-5 must NOT loosen the exact `genres=` list_tracks param."""
+    t = await create_track("Memphis Track")
+    await update_track(t.id, {"genre": ["Memphis Rap"]})
+    # exact 'Memphis' does not equal 'Memphis Rap'
+    rows = await list_tracks(genres=["Memphis"])
+    assert rows == []
+    rows = await list_tracks(genres=["Memphis Rap"])
+    assert [r.title for r in rows] == ["Memphis Track"]
+
+
+@pytest.mark.asyncio
+async def test_genres_like_ands_with_other_filters(seeded_tracks):
+    """Multiple field tokens narrow (AND), not union."""
+    rows = await list_tracks(genres_like=["trap"], keys_like=["F"])
+    assert [r.title for r in rows] == ["Midnight Drive"]
+    rows = await list_tracks(genres_like=["trap"], keys_like=["G"])
+    assert rows == []
+
+
+@pytest.mark.asyncio
 async def test_top_values_orders_by_count_desc():
     from beatos_core.tracks.service import list_top_values
     t1 = await create_track("A"); await update_track(t1.id, {"genre": ["trap"]})

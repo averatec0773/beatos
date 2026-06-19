@@ -451,15 +451,40 @@ def test_query_quoted_phrase_is_single_term(tmp_path):
     assert [t["title"] for t in rows] == ["A"]
 
 
-def test_query_unions_with_discrete_filter(tmp_path):
+def test_query_field_token_ands_with_discrete_filter(tmp_path):
+    # QA P1-5: discrete chip filters (genres=) are exact-equality and AND with
+    # query field tokens (genre:), which are now case-insensitive substring (the
+    # in-app search-box behaviour). They narrow, not union: a row must satisfy
+    # both. (Previously both were folded into one exact IN-list, which unioned
+    # them — that quirk is gone.)
     client = TestClient(create_app())
     a = client.post("/api/tracks", json={"title": "A"}).json()["id"]
-    client.put(f"/api/tracks/{a}", json={"genre": ["trap"]})
+    client.put(f"/api/tracks/{a}", json={"genre": ["Trap Soul"]})
     b = client.post("/api/tracks", json={"title": "B"}).json()["id"]
     client.put(f"/api/tracks/{b}", json={"genre": ["drill"]})
-    # discrete genres=trap UNION query genre:drill -> both returned
-    rows = client.get("/api/tracks", params=[("genres", "trap"), ("query", "genre:drill")]).json()
-    assert sorted(t["title"] for t in rows) == ["A", "B"]
+    # chip genres=Trap Soul AND query genre:Trap (substring) -> only A
+    rows = client.get(
+        "/api/tracks", params=[("genres", "Trap Soul"), ("query", "genre:trap")]
+    ).json()
+    assert sorted(t["title"] for t in rows) == ["A"]
+    # chip genres=Trap Soul AND query genre:drill -> empty (no row is both)
+    rows = client.get(
+        "/api/tracks", params=[("genres", "Trap Soul"), ("query", "genre:drill")]
+    ).json()
+    assert rows == []
+
+
+def test_query_field_token_substring_matches(tmp_path):
+    # QA P1-5: genre:Memphis finds "Memphis Rap"; key:F finds "F minor".
+    client = TestClient(create_app())
+    a = client.post("/api/tracks", json={"title": "A"}).json()["id"]
+    client.put(f"/api/tracks/{a}", json={"genre": ["Memphis Rap"], "key_signature": "F minor"})
+    b = client.post("/api/tracks", json={"title": "B"}).json()["id"]
+    client.put(f"/api/tracks/{b}", json={"genre": ["drill"], "key_signature": "G major"})
+    rows = client.get("/api/tracks", params=[("query", "genre:Memphis")]).json()
+    assert [t["title"] for t in rows] == ["A"]
+    rows = client.get("/api/tracks", params=[("query", "key:F")]).json()
+    assert [t["title"] for t in rows] == ["A"]
 
 
 def test_update_is_free_via_http(tmp_path):

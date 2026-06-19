@@ -63,12 +63,13 @@ async def test_streamable_http_app_exists() -> None:
     assert callable(app)
 
 
-async def test_merge_metadata_exposes_from_alias() -> None:
-    """merge_metadata's Python param is `from_` (reserved word) but MCP clients
-    must see `from` via pydantic Field(alias='from'). Pin this so a FastMCP
-    upgrade can't silently break it."""
+async def test_merge_metadata_param_is_aliases_not_reserved_word() -> None:
+    """merge_metadata's list-of-aliases param is named `aliases` (NOT `from`).
+    `from` is a Python reserved word: FastMCP dispatches by alias, so a `from`
+    alias made the sidecar raise `unexpected keyword argument 'from'` on every
+    call (QA P0-3). Pin that neither `from` nor `from_` leaks into the schema."""
     tools = await mcp.list_tools()
     tool = next(t for t in tools if t.name == "merge_metadata")
     props = tool.inputSchema.get("properties", {})
-    assert "from" in props, f"expected 'from' in inputSchema properties; got {list(props.keys())}"
-    assert "from_" not in props
+    assert "aliases" in props, f"expected 'aliases'; got {list(props.keys())}"
+    assert "from" not in props and "from_" not in props

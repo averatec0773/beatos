@@ -111,6 +111,12 @@ def _jpg(tmp_path, name="c.jpg"):
     return str(f)
 
 
+def _zip(tmp_path, name="stems.zip"):
+    f = tmp_path / name
+    f.write_bytes(b"PK\x03\x04")
+    return str(f)
+
+
 @pytest.mark.asyncio
 async def test_attach_assets_happy(db_path, tmp_path):
     items = [
@@ -283,6 +289,85 @@ async def test_attach_assets_classifies_replacements(db_path, tmp_path):
     summ = await _latest_summary(db_path)
     assert "1 new, 1 replacing" in summ["headline"]
     assert any("replac" in w.lower() for w in summ["warnings"])
+
+
+# --- stems role (QA P1-4) ---
+
+
+@pytest.mark.asyncio
+async def test_attach_assets_stems_zip(db_path, tmp_path):
+    """QA P1-4: role='stems' stores under canonical role 'stems' with format=''
+    (one stems slot per track) and accepts a .zip bundle."""
+    res = await attach_assets(
+        items=[{"track_id": 1, "role": "stems", "path": _zip(tmp_path)}]
+    )
+    assert res["status"] == "applied"
+    r = res["result"]["results"][0]
+    assert (r["role"], r["format"]) == ("stems", "")
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute(
+            "SELECT track_id, role, format FROM asset WHERE track_id=1"
+        ) as cur:
+            rows = await cur.fetchall()
+    assert rows == [(1, "stems", "")]
+
+
+@pytest.mark.asyncio
+async def test_attach_assets_stems_accepts_wav(db_path, tmp_path):
+    """A single multitrack .wav is also accepted as stems (no format recorded)."""
+    res = await attach_assets(
+        items=[{"track_id": 1, "role": "stems", "path": _wav(tmp_path, "s.wav")}]
+    )
+    r = res["result"]["results"][0]
+    assert (r["role"], r["format"]) == ("stems", "")
+
+
+@pytest.mark.asyncio
+async def test_attach_assets_stems_rejects_bad_ext(db_path, tmp_path):
+    f = tmp_path / "s.txt"
+    f.write_text("nope")
+    with pytest.raises(ValueError, match="extension"):
+        await attach_assets(items=[{"track_id": 1, "role": "stems", "path": str(f)}])
+
+
+@pytest.mark.asyncio
+async def test_attach_assets_stems_one_slot_replaces(db_path, tmp_path):
+    """Only one stems slot per track: a second attach replaces in place."""
+    await attach_assets(items=[{"track_id": 1, "role": "stems", "path": _zip(tmp_path, "v1.zip")}])
+    res = await attach_assets(
+        items=[{"track_id": 1, "role": "stems", "path": _zip(tmp_path, "v2.zip")}]
+    )
+    assert res["result"]["results"][0]["replaced"] is True
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT COUNT(*) FROM asset WHERE track_id=1 AND role='stems'") as cur:
+            assert (await cur.fetchone())[0] == 1
+
+
+@pytest.mark.asyncio
+async def test_detach_assets_stems(db_path, tmp_path):
+    await attach_assets(items=[{"track_id": 1, "role": "stems", "path": _zip(tmp_path)}])
+    res = await detach_assets(items=[{"track_id": 1, "role": "stems"}])
+    assert res["result"]["results"][0]["removed"] is True
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT COUNT(*) FROM asset WHERE track_id=1 AND role='stems'") as cur:
+            assert (await cur.fetchone())[0] == 0
+
+
+@pytest.mark.asyncio
+async def test_detach_audio_does_not_remove_stems(db_path, tmp_path):
+    """The agent-facing 'audio' detach expands to audio roles only — it must not
+    sweep the stems bundle."""
+    await attach_assets(
+        items=[
+            {"track_id": 1, "role": "audio", "path": _wav(tmp_path, "a.wav")},
+            {"track_id": 1, "role": "stems", "path": _zip(tmp_path)},
+        ]
+    )
+    await detach_assets(items=[{"track_id": 1, "role": "audio"}])
+    async with aiosqlite.connect(db_path) as conn:
+        async with conn.execute("SELECT role FROM asset WHERE track_id=1") as cur:
+            roles = {r[0] for r in await cur.fetchall()}
+    assert roles == {"stems"}
 
 
 # --- detach_assets (batch, v0.0.24.2) ---

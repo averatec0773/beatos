@@ -64,6 +64,38 @@ async def test_search_offset_paginates(fresh_db):
 
 
 @pytest.mark.asyncio
+async def test_search_field_token_substring(fresh_db):
+    """QA P1-5: genre:Memphis matches 'Memphis Rap'; key:F matches 'F minor'."""
+    await _seed_track(fresh_db, title="MemphisOne", genre=["Memphis Rap"], key="F minor")
+    await _seed_track(fresh_db, title="Other", genre=["drill"], key="G major")
+    res = await search_tracks(query="genre:Memphis")
+    assert [t["title"] for t in res["items"]] == ["MemphisOne"]
+    res = await search_tracks(query="key:F")
+    assert [t["title"] for t in res["items"]] == ["MemphisOne"]
+
+
+@pytest.mark.asyncio
+async def test_search_field_token_case_insensitive(fresh_db):
+    await _seed_track(fresh_db, title="A", producer=["AVERATEC"])
+    await _seed_track(fresh_db, title="B", producer=["smoke"])
+    res = await search_tracks(query="producer:averatec")
+    assert [t["title"] for t in res["items"]] == ["A"]
+
+
+@pytest.mark.asyncio
+async def test_search_empty_query_returns_all(fresh_db):
+    """QA P1-7: empty/whitespace query returns all tracks (parity w/ list_tracks)."""
+    await _seed_track(fresh_db, title="A", genre=["trap"])
+    await _seed_track(fresh_db, title="B", genre=["drill"])
+    await _seed_track(fresh_db, title="C")
+    empty = await search_tracks(query="")
+    ws = await search_tracks(query="   ")
+    assert empty["total"] == 3
+    assert ws["total"] == 3
+    assert {t["title"] for t in empty["items"]} == {"A", "B", "C"}
+
+
+@pytest.mark.asyncio
 async def test_search_underscore_is_literal(fresh_db):
     """'_' in the query must be a literal underscore, not a single-char wildcard."""
     await _seed_track(fresh_db, title="abc")

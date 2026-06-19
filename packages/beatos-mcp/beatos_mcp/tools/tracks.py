@@ -80,10 +80,13 @@ async def get_track(track_id: int) -> dict:
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 500
-_SORTABLE = {"created_at", "updated_at", "bpm", "name"}
+# `title` is the canonical sort key; `name` is a backward-compat alias (the field
+# is `title`, but the tool enum historically advertised `name`). Both map to the
+# `title` column.
+_SORTABLE = {"created_at", "updated_at", "bpm", "title", "name"}
 _SORT_DIRS = {"asc", "desc"}
 _SORT_COL = {"created_at": "created_at", "updated_at": "updated_at",
-             "bpm": "bpm", "name": "title"}
+             "bpm": "bpm", "title": "title", "name": "title"}
 
 
 def _build_filter_clauses(
@@ -92,6 +95,10 @@ def _build_filter_clauses(
     genres: list[str] | None,
     moods: list[str] | None,
     keys: list[str] | None,
+    producers_like: list[str] | None = None,
+    genres_like: list[str] | None = None,
+    moods_like: list[str] | None = None,
+    keys_like: list[str] | None = None,
     bpm_min: float | None,
     bpm_max: float | None,
     has_audio: bool | None,
@@ -100,6 +107,8 @@ def _build_filter_clauses(
     # Shared core builder (HTTP↔MCP parity); MCP scopes to non-deleted rows.
     clauses, params = build_filter_clauses(
         producers=producers, genres=genres, moods=moods, keys=keys,
+        producers_like=producers_like, genres_like=genres_like,
+        moods_like=moods_like, keys_like=keys_like,
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio, text=text,
     )
     return (["track.deleted_at IS NULL", *clauses], params)
@@ -112,6 +121,10 @@ async def list_tracks(
     genres: list[str] | None = None,
     moods: list[str] | None = None,
     keys: list[str] | None = None,
+    producers_like: list[str] | None = None,
+    genres_like: list[str] | None = None,
+    moods_like: list[str] | None = None,
+    keys_like: list[str] | None = None,
     bpm_min: float | None = None,
     bpm_max: float | None = None,
     has_audio: bool | None = None,
@@ -131,6 +144,8 @@ async def list_tracks(
 
     clauses, params = _build_filter_clauses(
         producers=producers, genres=genres, moods=moods, keys=keys,
+        producers_like=producers_like, genres_like=genres_like,
+        moods_like=moods_like, keys_like=keys_like,
         bpm_min=bpm_min, bpm_max=bpm_max, has_audio=has_audio, text=text,
     )
 

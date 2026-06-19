@@ -53,12 +53,19 @@ async def list_all(
 ) -> list[Track]:
     try:
         q_terms: list[str] | None = None
+        # Field tokens parsed from the search `query` substring-match (LIKE) — the
+        # search box's `genre:Memphis` finds "Memphis Rap". The explicit chip
+        # filters (producers=/genres=/... query params) stay exact equality.
+        producers_like: list[str] | None = None
+        genres_like: list[str] | None = None
+        moods_like: list[str] | None = None
+        keys_like: list[str] | None = None
         if query:
             spec = parse_query(query)
-            producers = list(dict.fromkeys([*producers, *spec.producers]))
-            genres = list(dict.fromkeys([*genres, *spec.genres]))
-            moods = list(dict.fromkeys([*moods, *spec.moods]))
-            keys = list(dict.fromkeys([*keys, *spec.keys]))
+            producers_like = spec.producers or None
+            genres_like = spec.genres or None
+            moods_like = spec.moods or None
+            keys_like = spec.keys or None
             if bpm_min is None:
                 bpm_min = spec.bpm_min
             if bpm_max is None:
@@ -78,6 +85,10 @@ async def list_all(
                 genres=genres or None,
                 moods=moods or None,
                 keys=keys or None,
+                producers_like=producers_like,
+                genres_like=genres_like,
+                moods_like=moods_like,
+                keys_like=keys_like,
                 bpm_min=bpm_min,
                 bpm_max=bpm_max,
                 has_audio=has_audio,
@@ -94,6 +105,10 @@ async def list_all(
             genres=genres or None,
             moods=moods or None,
             keys=keys or None,
+            producers_like=producers_like,
+            genres_like=genres_like,
+            moods_like=moods_like,
+            keys_like=keys_like,
             bpm_min=bpm_min,
             bpm_max=bpm_max,
             has_audio=has_audio,

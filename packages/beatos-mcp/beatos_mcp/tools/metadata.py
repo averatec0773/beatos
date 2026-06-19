@@ -20,7 +20,7 @@ from beatos_mcp.validate import validate_ids
 _SCALAR_FIELDS = {"title", "bpm", "key", "description", "is_free"}
 _MULTI_FIELDS = {"producer", "genre", "mood"}
 _ALLOWED_FIELDS = _SCALAR_FIELDS | _MULTI_FIELDS
-_MAX_FROM = 20
+_MAX_ALIASES = 20
 
 
 def _validate_patch(patch: dict[str, Any]) -> None:
@@ -116,41 +116,41 @@ async def update_tracks(ids: list[int], patch: dict[str, Any]) -> dict:
     return await submit_write("update_tracks", payload)
 
 
-async def merge_metadata(field: str, from_: list[str], to: str) -> dict:
+async def merge_metadata(field: str, aliases: list[str], to: str) -> dict:
     if field not in _MULTI_FIELDS:
         raise ValueError(f"field must be one of {sorted(_MULTI_FIELDS)}")
-    if not isinstance(from_, list) or not from_:
-        raise ValueError("from_ must be a non-empty list of strings")
-    if len(from_) > _MAX_FROM:
-        raise ValueError(f"from_ list too large: max {_MAX_FROM}")
-    if not all(isinstance(x, str) and x for x in from_):
-        raise ValueError("from_ must contain non-empty strings")
+    if not isinstance(aliases, list) or not aliases:
+        raise ValueError("aliases must be a non-empty list of strings")
+    if len(aliases) > _MAX_ALIASES:
+        raise ValueError(f"aliases list too large: max {_MAX_ALIASES}")
+    if not all(isinstance(x, str) and x for x in aliases):
+        raise ValueError("aliases must contain non-empty strings")
     if not isinstance(to, str) or not to.strip():
         raise ValueError("to must be a non-empty string")
     if len(to) > 200:
         raise ValueError("to must be at most 200 characters")
 
     # Scan for affected tracks via JSON1
-    ph = ",".join("?" * len(from_))
+    ph = ",".join("?" * len(aliases))
     query = (
         f"SELECT id, title FROM track WHERE EXISTS "
         f"(SELECT 1 FROM json_each(track.{field}) WHERE value IN ({ph}))"
         " ORDER BY id"
     )
     async with connect_writable() as conn:
-        async with conn.execute(query, from_) as cur:
+        async with conn.execute(query, aliases) as cur:
             rows = await cur.fetchall()
     if not rows:
-        raise ValueError(f"no tracks match the from_ aliases for {field}")
+        raise ValueError(f"no tracks match the aliases for {field}")
     affected_ids = [r[0] for r in rows]
     sample = format_track_sample(list(rows[:5]))
     payload = {
         "field": field,
-        "from": list(from_),
+        "aliases": list(aliases),
         "to": to,
         "preview": build_preview(
             headline=(
-                f"Merge {len(from_)} {field} aliases into '{to}' "
+                f"Merge {len(aliases)} {field} aliases into '{to}' "
                 f"across {len(affected_ids)} tracks"
             ),
             sample=sample,

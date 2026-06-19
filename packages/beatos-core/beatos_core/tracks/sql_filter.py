@@ -40,13 +40,27 @@ def build_filter_clauses(
     genres: list[str] | None = None,
     moods: list[str] | None = None,
     keys: list[str] | None = None,
+    producers_like: list[str] | None = None,
+    genres_like: list[str] | None = None,
+    moods_like: list[str] | None = None,
+    keys_like: list[str] | None = None,
     bpm_min: float | None = None,
     bpm_max: float | None = None,
     has_audio: bool | None = None,
     text: list[str] | None = None,
 ) -> tuple[list[str], list]:
     """Return (clauses, params) for the given filters — WITHOUT the deleted_at
-    predicate. Callers AND these together with their own scoping clauses."""
+    predicate. Callers AND these together with their own scoping clauses.
+
+    Two flavours of the producer/genre/mood/key filters:
+      * exact (`producers`/`genres`/`moods`/`keys`): case-sensitive equality —
+        used by the structured `list_tracks` filter params, where the agent has
+        already discovered the exact value via list_distinct_values.
+      * substring (`*_like`): case-insensitive LIKE — used by the search-box
+        field tokens (`genre:Memphis` matches "Memphis Rap", `key:F` matches
+        "F minor"), mirroring the in-app search box. Values within one field are
+        OR-ed; the field as a whole is AND-ed with the rest of the query.
+    """
     clauses: list[str] = []
     params: list = []
     for field, values in [
@@ -62,6 +76,23 @@ def build_filter_clauses(
             else:
                 clauses.append(f"{field} IN ({placeholders})")
             params.extend(values)
+    for field, values in [
+        ("producer", producers_like), ("genre", genres_like),
+        ("mood", moods_like), ("key_signature", keys_like),
+    ]:
+        if values:
+            ors: list[str] = []
+            for v in values:
+                like = f"%{escape_like(v)}%"
+                if field in MULTI_VALUE_FIELDS:
+                    ors.append(
+                        f"EXISTS (SELECT 1 FROM json_each(track.{field}) je "
+                        f"WHERE je.value LIKE ? ESCAPE '\\')"
+                    )
+                else:
+                    ors.append(f"{field} LIKE ? ESCAPE '\\'")
+                params.append(like)
+            clauses.append("(" + " OR ".join(ors) + ")")
     if bpm_min is not None:
         clauses.append("bpm >= ?")
         params.append(bpm_min)
