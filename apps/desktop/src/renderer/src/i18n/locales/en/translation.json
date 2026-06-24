@@ -449,8 +449,8 @@
     "recentlyAdded": "Recently added"
   },
   "emptyState": {
-    "noTracks": "No tracks yet",
-    "noTracksDesc": "Add your first track to get started.",
+    "noTracks": "Start your beat catalog",
+    "noTracksDesc": "Drag in audio or click below to add your first beat — BeatOS catalogs the BPM, key, and tags that help it sell.",
     "addTrack": "Add Track",
     "emptyList": "List \"{{name}}\" is empty",
     "emptyListDesc": "Drag tracks from All Beats to add them here.",

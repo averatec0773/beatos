@@ -6,7 +6,7 @@ describe("EmptyState variants", () => {
   it("no-tracks shows Add Track CTA", () => {
     const onAddTrack = vi.fn();
     render(<EmptyState variant="no-tracks" onAddTrack={onAddTrack} />);
-    expect(screen.getByText(/no tracks yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/start your beat catalog/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /add track/i })).toBeInTheDocument();
   });
 

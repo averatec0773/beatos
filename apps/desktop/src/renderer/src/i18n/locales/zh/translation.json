@@ -449,8 +449,8 @@
     "recentlyAdded": "最近添加"
   },
   "emptyState": {
-    "noTracks": "暂无曲目",
-    "noTracksDesc": "添加第一首曲目以开始。",
+    "noTracks": "开始建立你的曲库",
+    "noTracksDesc": "拖入音频或点击下方,添加第一首 —— BeatOS 会整理 BPM、Key 和便于售卖的标签。",
     "addTrack": "添加曲目",
     "emptyList": "歌单「{{name}}」是空的",
     "emptyListDesc": "从 All Beats 拖入曲目以添加。",
