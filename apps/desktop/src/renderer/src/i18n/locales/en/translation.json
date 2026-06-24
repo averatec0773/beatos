@@ -144,6 +144,8 @@
     "suggestFailed": "AI tagging failed. Check your key and try again.",
     "exportTitle": "Export metadata to platform",
     "export": "Export metadata",
+    "licenseTitle": "Generate a license PDF for a buyer",
+    "license": "License PDF",
     "fieldTitle": "Title",
     "notes": "Notes",
     "tags": "Tags (comma-separated)",
@@ -197,6 +199,23 @@
       "platformAria": "Platform",
       "proLocked": "Pro feature · purchase to unlock",
       "publish": "Publish to platform"
+    },
+    "license": {
+      "title": "Generate license",
+      "desc": "Create a one-page license contract PDF for a buyer.",
+      "tier": "License tier",
+      "buyer": "Buyer name",
+      "buyerPlaceholder": "e.g. DJ Example",
+      "exclusive": "Exclusive license",
+      "price": "Price (optional)",
+      "pricePlaceholder": "e.g. USD 300",
+      "date": "Date (optional)",
+      "language": "Language",
+      "generate": "Generate PDF",
+      "generating": "Generating…",
+      "noTiers": "Add a license tier to this track first.",
+      "done": "License PDF downloaded.",
+      "failed": "Couldn't generate the license PDF."
     },
     "playlistExport": {
       "manifestFailed": "Could not read the playlist file manifest",

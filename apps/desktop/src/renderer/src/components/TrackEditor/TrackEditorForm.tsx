@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Wand2, Share2, Sparkles } from "lucide-react";
+import { Wand2, Share2, Sparkles, FileText } from "lucide-react";
 
 import type { Track } from "@/api/tracks";
 import { producers as producersApi } from "@/api/producers";
@@ -16,6 +16,7 @@ import { useVocabLocaleStore } from "@/stores/vocab-locale";
 import { SaveIndicator } from "@/components/TrackEditor/SaveIndicator";
 import { LicenseTiersSection } from "@/components/TrackEditor/LicenseTiersSection";
 import { ExportDialog } from "@/components/ExportDialog";
+import { LicenseDialog } from "@/components/LicenseDialog";
 import type { TrackEditorState } from "@/hooks/use-track-editor-state";
 
 export interface TrackEditorFormProps {
@@ -26,6 +27,7 @@ export interface TrackEditorFormProps {
 export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.JSX.Element {
   const { t } = useTranslation();
   const [exportOpen, setExportOpen] = useState(false);
+  const [licenseOpen, setLicenseOpen] = useState(false);
 
   const vocabLocale = useVocabLocaleStore((s) => s.locale);
 
@@ -91,6 +93,16 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
             >
               <Share2 className="h-3.5 w-3.5" />
               {t("editor.export")}
+            </button>
+            <button
+              type="button"
+              data-license-button
+              onClick={() => setLicenseOpen(true)}
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-border-subtle px-3 py-2 text-xs text-text-primary hover:bg-bg-row-hover"
+              title={t("editor.licenseTitle")}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              {t("editor.license")}
             </button>
           </div>
 
@@ -307,6 +319,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
         </div>
       </form>
       <ExportDialog open={exportOpen} trackId={track.id} onClose={() => setExportOpen(false)} />
+      <LicenseDialog open={licenseOpen} trackId={track.id} onClose={() => setLicenseOpen(false)} />
     </main>
   );
 }

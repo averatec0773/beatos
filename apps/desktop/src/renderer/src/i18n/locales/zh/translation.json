@@ -144,6 +144,8 @@
     "suggestFailed": "AI 打标失败,检查 key 后重试。",
     "exportTitle": "导出元数据到平台",
     "export": "导出元数据",
+    "licenseTitle": "为买家生成许可证 PDF",
+    "license": "许可证 PDF",
     "fieldTitle": "标题",
     "notes": "备注",
     "tags": "标签（逗号分隔）",
@@ -197,6 +199,23 @@
       "platformAria": "平台",
       "proLocked": "Pro 功能 · 购买解锁",
       "publish": "发布到平台"
+    },
+    "license": {
+      "title": "生成许可证",
+      "desc": "为买家生成一页式许可证合同 PDF。",
+      "tier": "授权档位",
+      "buyer": "买家姓名",
+      "buyerPlaceholder": "例如 DJ Example",
+      "exclusive": "独占授权",
+      "price": "价格(可选)",
+      "pricePlaceholder": "例如 USD 300",
+      "date": "日期(可选)",
+      "language": "语言",
+      "generate": "生成 PDF",
+      "generating": "生成中…",
+      "noTiers": "请先为该曲目添加一个授权档位。",
+      "done": "许可证 PDF 已下载。",
+      "failed": "无法生成许可证 PDF。"
     },
     "playlistExport": {
       "manifestFailed": "无法读取歌单文件清单",

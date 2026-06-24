@@ -109,6 +109,41 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+/** Extract a download filename from a Content-Disposition header (RFC 5987 first). */
+function parseContentDispositionFilename(header: string | null): string | null {
+  if (!header) return null;
+  const star = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (star) {
+    try {
+      return decodeURIComponent(star[1]);
+    } catch {
+      /* fall through to the plain filename */
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(header);
+  return plain ? plain[1] : null;
+}
+
+/**
+ * POST a JSON body and read a BINARY response (e.g. a generated PDF). Returns the
+ * blob plus a filename parsed from Content-Disposition. Used for downloads where
+ * apiPost's `res.json()` would fail. Works in Electron and web (plain fetch).
+ */
+export async function apiPostBlob(
+  path: string,
+  body: unknown,
+): Promise<{ blob: Blob; filename: string | null }> {
+  const res = await safeFetch(`${await base()}${path}`, {
+    method: "POST",
+    headers: await writeHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok)
+    throw new ApiError(res.status, await parseBody(res), `POST ${path} failed: ${res.status}`);
+  const blob = await res.blob();
+  return { blob, filename: parseContentDispositionFilename(res.headers.get("Content-Disposition")) };
+}
+
 export async function apiDelete(path: string): Promise<void> {
   const res = await safeFetch(`${await base()}${path}`, {
     method: "DELETE",
