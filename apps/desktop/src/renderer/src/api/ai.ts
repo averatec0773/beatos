@@ -21,7 +21,23 @@ export interface TagSuggestion {
   description: string | null;
 }
 
+/** Background batch-tagging job (applies suggestions to empty fields only). */
+export interface BatchTagJob {
+  job_id: string;
+  total: number;
+  done: number;
+  current_title: string | null;
+  applied: number;
+  errors: number;
+  error_details?: string[];
+  status: "running" | "done";
+}
+
 export const ai = {
   status: () => apiGet<AiStatus>("/api/ai/status"),
   suggestTags: (trackId: number) => apiPost<TagSuggestion>(`/api/tracks/${trackId}/suggest-tags`),
+  startBatchTagging: (ids: number[]) =>
+    apiPost<{ job_id: string; total: number }>("/api/ai/suggest-tags/batch", { ids }),
+  batchTaggingStatus: (jobId: string) =>
+    apiGet<BatchTagJob>(`/api/ai/suggest-tags/batch/${jobId}`),
 };

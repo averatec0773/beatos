@@ -10,7 +10,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Added
 
-- **AI tag suggestions (bring your own key).** Turn on AI Assist in Settings (pick a provider, paste your own API key, choose Haiku or Sonnet), then hit **Suggest tags** in a track's editor: BeatOS sends just the cover image and title to the model and proposes genre, mood, tags, and a description for you to review and apply field by field. Off by default; the key is stored only on your device and never sent anywhere until you click. Desktop only.
+- **AI tag suggestions (bring your own key).** Turn on AI Assist in Settings (pick a provider, paste your own API key, choose Haiku or Sonnet), then hit **Suggest tags** in a track's editor: BeatOS sends just the cover image and title to the model and proposes genre, mood, tags, and a description for you to review and apply field by field. Off by default; the key is stored only on your device and never sent anywhere until you click. You can also select several tracks and **Suggest tags** for the whole set at once, which fills only empty fields and never overwrites values you've set. Desktop only.
 
 ### Changed
 
