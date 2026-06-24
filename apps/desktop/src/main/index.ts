@@ -12,7 +12,7 @@ import { handleAssetRequest } from "./asset-protocol";
 import { isSafeAbsolutePath } from "./path-safety";
 import { parseUvicornLevel } from "./log-parse";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
-import { assertSidecarLayout } from "./sidecar-helpers";
+import { assertSidecarLayout, assertSidecarBinary, resolveSidecarSpawn } from "./sidecar-helpers";
 import { createSplashWindow, closeSplashAndShowMain } from "./splash";
 import { testMcpConnection } from "./mcp/test-connection";
 import { installMcpClientConfig, type McpClientTarget } from "./mcp/install-config";
@@ -95,7 +95,14 @@ function startSidecar(): void {
   const hp = handshakePath();
   clearStaleHandshake(hp);
 
-  assertSidecarLayout(repoRoot(), __dirname);
+  // Dev (and the unpackaged smoke build) run the sidecar from source via uv;
+  // a packaged app runs the bundled PyInstaller binary (no Python needed).
+  const spawnTarget = resolveSidecarSpawn({ isDev: is.dev, resourcesPath: process.resourcesPath });
+  if (is.dev) {
+    assertSidecarLayout(repoRoot(), __dirname);
+  } else {
+    assertSidecarBinary(spawnTarget.command);
+  }
 
   const dbPath = resolveDbPath();
   mkdirSync(dirname(dbPath), { recursive: true });
@@ -115,17 +122,17 @@ function startSidecar(): void {
     // a file:// page can't read the disk / launch files through it.
     BEATOS_DISABLE_FS_API: "1",
   };
-  // GUI launches (macOS Dock / a packaged app) inherit a minimal PATH that
-  // often lacks uv's default install dir (~/.local/bin) and Homebrew, so
-  // spawning "uv" fails with ENOENT. Prepend the common locations on POSIX.
-  // Windows installs uv onto the user PATH already, so leave it untouched there.
-  if (process.platform !== "win32") {
+  // Dev GUI launches (macOS Dock) inherit a minimal PATH that often lacks uv's
+  // default install dir (~/.local/bin) and Homebrew, so spawning "uv" fails with
+  // ENOENT. Prepend the common locations on POSIX. The packaged binary is
+  // self-contained, so this only matters in dev. Windows has uv on PATH already.
+  if (is.dev && process.platform !== "win32") {
     const extra = [`${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin"];
     env.PATH = [...extra, process.env.PATH ?? ""].filter(Boolean).join(":");
   }
 
-  sidecar = spawn("uv", ["run", "python", "-m", "beatos_http"], {
-    cwd: repoRoot(),
+  sidecar = spawn(spawnTarget.command, spawnTarget.args, {
+    cwd: is.dev ? repoRoot() : app.getPath("userData"),
     env,
     stdio: ["ignore", "pipe", "pipe"],
   });
