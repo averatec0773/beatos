@@ -37,6 +37,7 @@ from beatos_http.routes import (
     export,
     fs,
     inject,
+    license_pdf,
     licenses,
     lists,
     pro,
@@ -160,6 +161,7 @@ def create_app() -> FastAPI:
     app.include_router(ai.router)
     app.include_router(ai.track_router)
     app.include_router(batch_tagging.router)
+    app.include_router(license_pdf.track_router)
     app.include_router(agent_actions.router)
     app.include_router(batch_analysis.router)
     # /api/fs (whole-disk browse + open) serves the WEB file browser only; the
