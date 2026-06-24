@@ -14,7 +14,11 @@ from beatos_core.app_settings.service import (
     get_setting,
     set_setting,
 )
-from beatos_http.api_auth import SENSITIVE_SETTING_KEYS, require_api_token
+from beatos_http.api_auth import (
+    SECRET_SETTING_KEYS,
+    SENSITIVE_SETTING_KEYS,
+    require_api_token,
+)
 
 
 router = APIRouter(prefix="/api/app_settings", tags=["app-settings"])
@@ -24,8 +28,14 @@ router = APIRouter(prefix="/api/app_settings", tags=["app-settings"])
 async def get(key: str) -> dict:
     """Return `{key, value}` where value is the decoded JSON (or null when
     unset). Always 200 — absence is signaled by value=null, not 404 —
-    so the renderer doesn't need separate error branches for "never set"."""
+    so the renderer doesn't need separate error branches for "never set".
+
+    Secret keys (e.g. a BYO AI key) are never returned: value is forced to null
+    and `is_set` tells the renderer whether one exists, so a masked field can
+    show "configured" without ever reading the secret back."""
     value = await get_setting(key)
+    if key in SECRET_SETTING_KEYS:
+        return {"key": key, "value": None, "secret": True, "is_set": value not in (None, "")}
     return {"key": key, "value": value}
 
 
