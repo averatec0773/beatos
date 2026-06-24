@@ -12,6 +12,7 @@ import {
 import { apiPostBlob } from "@/api/client";
 import { licenseTiers, type LicenseTier } from "@/api/license-tiers";
 import { useToastStore } from "@/stores/toast";
+import { downloadBlob } from "@/lib/download-blob";
 // Language display names live here (in their own script) so component files stay
 // free of raw CJK literals — the no-hardcoded-cjk guard scans components/+routes/.
 import { LANGUAGE_LABELS } from "@/i18n/resources";
@@ -24,17 +25,6 @@ interface Props {
 
 function tierLabel(tier: LicenseTier): string {
   return tier.name || tier.deliverables.join(" / ") || `#${tier.id}`;
-}
-
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 /**

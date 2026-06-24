@@ -146,6 +146,8 @@
     "export": "导出元数据",
     "licenseTitle": "为买家生成许可证 PDF",
     "license": "许可证 PDF",
+    "taggedMp3Title": "导出带 ID3 标签的 MP3(标题、制作人、封面…)",
+    "taggedMp3": "带标签 MP3",
     "fieldTitle": "标题",
     "notes": "备注",
     "tags": "标签（逗号分隔）",
@@ -216,6 +218,16 @@
       "noTiers": "请先为该曲目添加一个授权档位。",
       "done": "许可证 PDF 已下载。",
       "failed": "无法生成许可证 PDF。"
+    },
+    "taggedMp3": {
+      "title": "导出带标签 MP3",
+      "desc": "把目录里的标题、制作人、流派、BPM、Key 和封面写进 MP3 副本 —— 绝不改动原文件。",
+      "variant": "音频版本",
+      "download": "下载 MP3",
+      "downloading": "准备中…",
+      "noMp3": "该曲目还没有可打标的 MP3,请先添加一个 MP3。",
+      "done": "带标签 MP3 已下载。",
+      "failed": "无法导出带标签 MP3。"
     },
     "playlistExport": {
       "manifestFailed": "无法读取歌单文件清单",

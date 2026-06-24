@@ -146,6 +146,8 @@
     "export": "Export metadata",
     "licenseTitle": "Generate a license PDF for a buyer",
     "license": "License PDF",
+    "taggedMp3Title": "Export an ID3-tagged MP3 (title, producer, cover…)",
+    "taggedMp3": "Tagged MP3",
     "fieldTitle": "Title",
     "notes": "Notes",
     "tags": "Tags (comma-separated)",
@@ -216,6 +218,16 @@
       "noTiers": "Add a license tier to this track first.",
       "done": "License PDF downloaded.",
       "failed": "Couldn't generate the license PDF."
+    },
+    "taggedMp3": {
+      "title": "Export tagged MP3",
+      "desc": "Embed the catalog's title, producer, genre, BPM, key, and cover into a copy of the MP3 — never touching the original.",
+      "variant": "Audio version",
+      "download": "Download MP3",
+      "downloading": "Preparing…",
+      "noMp3": "This track has no MP3 to tag. Attach an MP3 first.",
+      "done": "Tagged MP3 downloaded.",
+      "failed": "Couldn't export the tagged MP3."
     },
     "playlistExport": {
       "manifestFailed": "Could not read the playlist file manifest",

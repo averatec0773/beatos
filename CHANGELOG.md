@@ -10,6 +10,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Added
 
+- **Export a tagged MP3.** A track's editor now has a **Tagged MP3** button: pick which MP3 version to use (defaults to the tagged one) and download a copy with the catalog's title, producer, genre, BPM, key, and cover art embedded as ID3 tags — so buyers and platforms see your beat properly instead of a blank filename. Your original file is never modified. Free, desktop and browser builds.
 - **Generate a license PDF for any beat.** A track's editor now has a **License PDF** button: pick one of its license tiers, enter the buyer, optionally set a price/date and exclusive flag, choose English or 中文, and download a one-page license contract. Free, works in the desktop and browser builds, and the contract text is a template (not legal advice).
 
 - **AI tag suggestions (bring your own key).** Turn on AI Assist in Settings (pick a provider, paste your own API key, choose Haiku or Sonnet), then hit **Suggest tags** in a track's editor: BeatOS sends just the cover image and title to the model and proposes genre, mood, tags, and a description for you to review and apply field by field. Off by default; the key is stored only on your device and never sent anywhere until you click. You can also select several tracks and **Suggest tags** for the whole set at once, which fills only empty fields and never overwrites values you've set. Desktop only.

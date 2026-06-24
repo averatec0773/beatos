@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Wand2, Share2, Sparkles, FileText } from "lucide-react";
+import { Wand2, Share2, Sparkles, FileText, Tags } from "lucide-react";
 
 import type { Track } from "@/api/tracks";
 import { producers as producersApi } from "@/api/producers";
@@ -17,6 +17,7 @@ import { SaveIndicator } from "@/components/TrackEditor/SaveIndicator";
 import { LicenseTiersSection } from "@/components/TrackEditor/LicenseTiersSection";
 import { ExportDialog } from "@/components/ExportDialog";
 import { LicenseDialog } from "@/components/LicenseDialog";
+import { TaggedMp3Dialog } from "@/components/TaggedMp3Dialog";
 import type { TrackEditorState } from "@/hooks/use-track-editor-state";
 
 export interface TrackEditorFormProps {
@@ -28,6 +29,7 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
   const { t } = useTranslation();
   const [exportOpen, setExportOpen] = useState(false);
   const [licenseOpen, setLicenseOpen] = useState(false);
+  const [taggedMp3Open, setTaggedMp3Open] = useState(false);
 
   const vocabLocale = useVocabLocaleStore((s) => s.locale);
 
@@ -103,6 +105,16 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
             >
               <FileText className="h-3.5 w-3.5" />
               {t("editor.license")}
+            </button>
+            <button
+              type="button"
+              data-tagged-mp3-button
+              onClick={() => setTaggedMp3Open(true)}
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-border-subtle px-3 py-2 text-xs text-text-primary hover:bg-bg-row-hover"
+              title={t("editor.taggedMp3Title")}
+            >
+              <Tags className="h-3.5 w-3.5" />
+              {t("editor.taggedMp3")}
             </button>
           </div>
 
@@ -320,6 +332,11 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
       </form>
       <ExportDialog open={exportOpen} trackId={track.id} onClose={() => setExportOpen(false)} />
       <LicenseDialog open={licenseOpen} trackId={track.id} onClose={() => setLicenseOpen(false)} />
+      <TaggedMp3Dialog
+        open={taggedMp3Open}
+        trackId={track.id}
+        onClose={() => setTaggedMp3Open(false)}
+      />
     </main>
   );
 }
