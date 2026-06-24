@@ -156,6 +156,16 @@
     "saved": "已保存 · {{time}}"
   },
   "dialogs": {
+    "suggestTags": {
+      "title": "AI 标签建议",
+      "desc": "勾选要应用的项;所选字段会覆盖当前值。",
+      "genre": "曲风",
+      "mood": "情绪",
+      "tags": "标签",
+      "description": "描述",
+      "apply": "应用所选",
+      "empty": "没有返回建议。"
+    },
     "bulkEdit": {
       "modeAdd": "追加",
       "modeReplace": "覆盖",

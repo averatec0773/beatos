@@ -156,6 +156,16 @@
     "saved": "Saved · {{time}}"
   },
   "dialogs": {
+    "suggestTags": {
+      "title": "AI tag suggestions",
+      "desc": "Choose what to apply. Selected fields replace the current values.",
+      "genre": "Genre",
+      "mood": "Mood",
+      "tags": "Tags",
+      "description": "Description",
+      "apply": "Apply selected",
+      "empty": "No suggestions returned."
+    },
     "bulkEdit": {
       "modeAdd": "Add",
       "modeReplace": "Replace",
