@@ -31,6 +31,23 @@ Smoke-check the built binary boots like `python -m beatos_http`: run it with
 `/api/tracks` returns 200 (DB opened + migrations ran inside the bundle), and a
 `POST /api/tracks/{id}/analyze` succeeds (librosa imported + ran in the bundle).
 
-Next steps (tracked in the loop backlog): wire Electron's main process to spawn
-this binary in production with a dev fallback to `uv run`, and package it into the
-installer via electron-builder `extraResources`.
+## Packaging the desktop app
+
+`electron-builder.yml` copies `dist/beatos-sidecar/` into the app under
+`<Resources>/beatos-sidecar/` via `extraResources`. In a packaged build the
+Electron main process spawns that binary (`resolveSidecarSpawn` keys off
+`is.dev`); dev and the unpacked smoke still run the sidecar from source via `uv`.
+
+Build the sidecar binary FIRST (above), then package — electron-builder reads
+`dist/beatos-sidecar/`, so packaging fails if it is missing:
+
+```bash
+cd apps/desktop
+npm run build:unpack   # electron-builder --dir → release/<platform>/BeatOS.app
+npm run build:mac      # → release/ dmg
+```
+
+macOS builds are currently **unsigned** (`mac.identity: null`), so first launch
+needs right-click → Open to get past Gatekeeper. Signing + notarization (Apple
+Developer account) and Windows code signing are deferred. PyInstaller can't
+cross-compile, so the Windows binary must be built on Windows.
