@@ -240,7 +240,8 @@
   },
   "analysis": {
     "progress": "分析中 {{done}}/{{total}}",
-    "done": "完成 {{done}}/{{total}}，填入 BPM {{bpm}}、Key {{key}}"
+    "done": "完成 {{done}}/{{total}}，填入 BPM {{bpm}}、Key {{key}}",
+    "failed": "{{count}} 首分析失败"
   },
   "player": {
     "decodeFailedToast": "播放失败（解码）。点击播放重试。",

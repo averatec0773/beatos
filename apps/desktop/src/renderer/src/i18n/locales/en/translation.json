@@ -240,7 +240,8 @@
   },
   "analysis": {
     "progress": "Analyzing {{done}}/{{total}}",
-    "done": "Done {{done}}/{{total}} — filled BPM {{bpm}}, Key {{key}}"
+    "done": "Done {{done}}/{{total}} — filled BPM {{bpm}}, Key {{key}}",
+    "failed": "{{count}} failed to analyze"
   },
   "player": {
     "decodeFailedToast": "Playback failed (decode). Click play to retry.",

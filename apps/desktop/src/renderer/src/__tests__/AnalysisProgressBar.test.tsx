@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { AnalysisProgressBar } from "@/components/AnalysisProgressBar";
 import { useAnalysisJobStore } from "@/stores/analysis-job";
+import { useToastStore } from "@/stores/toast";
 import { analysis } from "@/api/analysis";
 
 describe("AnalysisProgressBar", () => {
@@ -48,5 +49,29 @@ describe("AnalysisProgressBar", () => {
       await vi.advanceTimersByTimeAsync(1100);
     });
     await waitFor(() => expect(useAnalysisJobStore.getState().jobId).toBeNull());
+  });
+
+  it("shows an error toast with reasons when some tracks failed", async () => {
+    vi.spyOn(analysis, "batchStatus").mockResolvedValue({
+      job_id: "j2",
+      total: 2,
+      done: 2,
+      current_title: null,
+      filled_bpm: 1,
+      filled_key: 0,
+      errors: 1,
+      error_details: ["Beat X: decode exploded"],
+      status: "done" as const,
+    });
+    const toast = vi.spyOn(useToastStore.getState(), "show");
+
+    render(<AnalysisProgressBar />);
+    act(() => useAnalysisJobStore.getState().start("j2", 2));
+
+    await waitFor(() => {
+      const errorCall = toast.mock.calls.find((c) => c[0] === "error");
+      expect(errorCall).toBeTruthy();
+      expect(String(errorCall?.[1])).toContain("decode exploded");
+    });
   });
 });
