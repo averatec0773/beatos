@@ -169,6 +169,10 @@ metadata export, and the AI/MCP surface; the publishing engine, browser automati
 and platform recipes are closed-source (a Pro feature). The free build degrades
 gracefully — see `packages/pro-mount-notes.md`.
 
+**Live adapters (Pro):** 抖音 (Douyin) promo-video + NetEase 激灵 (BeatSoul) track
+publishing. **Mid-term: a BeatStars adapter** — the priority Western-marketplace
+target, ahead of the longer adapter backlog below.
+
 ---
 
 ## Web frontend (desktop + browser) — Phases 0–2 SHIPPED; Phase 3 TBD
@@ -213,7 +217,7 @@ frontend") and [conventions/architecture.md](conventions/architecture.md) §"Web
 
 ### v0.6+ — More adapters
 
-- Airbit, Tracklib, SoundCloud, Bandcamp, BeatStars.
+- Airbit, Tracklib, SoundCloud, Bandcamp. (BeatStars is promoted to the mid-term target — see v0.2.0.)
 - Adapter contribution guide.
 
 ### v1.0 — Decisions still open

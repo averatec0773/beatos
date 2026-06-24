@@ -6,7 +6,7 @@
 
 ### The beat library built for how producers actually work.
 
-Not a spreadsheet. Not a DAW. Not a marketplace. **BeatOS** is a local-first home for every beat on your drive — catalog it once with the metadata that *sells* beats, let an **AI agent do the tagging grind**, and **publish to every platform** from one window. Runs as a native **desktop app (macOS · Windows)** or right in your **browser**. Single-user, offline, no account, no telemetry.
+Not a spreadsheet. Not a DAW. Not a marketplace. **BeatOS** is a local-first home for every beat on your drive — catalog it once with the metadata that *sells* beats, let AI do the tagging grind, and **export or publish to the platforms where you actually sell**. Runs as a native **desktop app (macOS · Windows)** or right in your **browser**. Single-user, offline, no account, no telemetry.
 
 [![version](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/averatec0773/beatos/main/apps/desktop/package.json&query=$.version&label=version&prefix=v&color=7c5cff&style=flat-square)](CHANGELOG.md)
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Web-1f1f1f?style=flat-square)](#install--run)
@@ -29,8 +29,8 @@ Not a spreadsheet. Not a DAW. Not a marketplace. **BeatOS** is a local-first hom
 Most producers track their catalog in a spreadsheet, then re-type the same metadata into every platform by hand. BeatOS replaces that with **one canonical catalog** and three things nothing else combines:
 
 - 🎯 **Purpose-built for selling beats** — license tiers with multi-currency pricing, producer credits, tagged/untagged/loop/stems, BPM & key. Not a generic media manager bent into shape.
-- 🤖 **AI-native** — a first-class **MCP server** lets Claude or Codex catalog, tag, and draft per-platform metadata for you. Every write waits for your approval.
-- 🚀 **Publish everywhere** — one-click multi-platform publishing (Pro) drives a real browser and only hands back at the platform's human-verification step.
+- 🤖 **AI-native** — built for the AI-agent era. Draft genre, mood, and tags right in the editor with **AI tag suggestions** (bring your own key), or connect a first-class **MCP server** so Claude or Codex can catalog, tag, and prep per-platform metadata. Every write waits for your approval.
+- 🚀 **Built to ship, not just store** — export clean per-platform metadata and packaged loopkits / beat packs for free; **Pro adds assisted publishing** that drives a real browser and hands back at the platform's human-verification step.
 
 ## What it does
 
@@ -61,9 +61,9 @@ Curate beats into a list, then **package it to send out** — a loopkit, a beatt
 <tr>
 <td width="33%" valign="top">
 
-### 🎚️ BPM/key analysis & export
+### 🎚️ Analysis & AI tagging
 
-On-demand **BPM + key detection** with per-field confidence scores (Essentia engine, or the permissive librosa fallback) — analyze one track or **batch-analyze the whole library**, auto-filling empty fields. Export clean, per-platform metadata on demand.
+On-demand **BPM + key detection** with per-field confidence scores (Essentia engine, or the permissive librosa fallback) — analyze one track or **batch the whole library**, auto-filling empty fields. Optional **AI tag suggestions** (bring your own key) draft genre/mood/tags from the cover + title for you to review; off by default, desktop only.
 
 </td>
 <td width="33%" valign="top">
@@ -75,9 +75,9 @@ An MCP server exposes your library to Claude Code, Claude Desktop, Codex, and an
 </td>
 <td width="33%" valign="top">
 
-### 🚀 One-click publishing (Pro)
+### 🚀 Assisted publishing (Pro)
 
-Publish a beat without leaving BeatOS: the engine drives a real browser and pauses at the platform's verification step. A **Publish Center** shows live per-platform session health, and **抖音 promo-video** publishing is built in. Pro build only — the free build greys it out.
+Publish a beat without leaving BeatOS: the engine drives a real browser and pauses at the platform's verification step. A **Publish Center** shows live per-platform session health. Live targets today: **抖音 (Douyin) promo-video and NetEase 激灵 (BeatSoul)**, with **BeatStars** on the [roadmap](ROADMAP.md). Pro build only — the free build greys it out.
 
 </td>
 </tr>
@@ -98,7 +98,7 @@ Both are **local-first and offline** — the browser app talks only to `127.0.0.
 
 ## AI co-pilot (MCP)
 
-> **BeatOS is the first beat library built for the AI-agent era.** The MCP surface isn't a side feature — it's how cataloging, tagging, and (soon) publishing scale without manual labor.
+> **BeatOS is built for the AI-agent era.** The MCP surface isn't a side feature — it's how cataloging, tagging, and (soon) publishing scale without manual labor.
 
 **Verified clients:** Claude Code · Claude Desktop · Codex CLI/App · any MCP client speaking stdio JSON-RPC.
 
@@ -138,11 +138,11 @@ Claude: applied — the 12 edits land and show up in Agent Actions
 | **No account** | Single-user. No login, no sync, no cloud. |
 | **No telemetry** | Zero outbound calls from the app itself. |
 | **Your files stay put** | BeatOS references paths; nothing is moved or renamed unless you ask. |
-| **Your data is yours** | One SQLite file (`~/Music/BeatOS/global.db` by default). Open it with any tool. |
+| **Your data is yours** | One SQLite file in your per-user app-data folder, kept off cloud-synced directories where SQLite can corrupt (configurable in Settings). Open it with any tool. |
 
 ## Install & run
 
-> Packaged desktop installers arrive at `v0.1.0` (with the first publish adapter). Until then, run from source. The browser front end needs no packaging.
+> Packaged desktop installers arrive at `v0.1.0`. Until then, run from source. The browser front end needs no packaging.
 > **Targets:** macOS 12+ · Windows 10+ · any modern browser. (Linux: dev + web only.)
 
 **Prerequisites:** Node ≥22 LTS · Python 3.11.x · [`uv`](https://github.com/astral-sh/uv)
@@ -232,7 +232,7 @@ screenshots/               README assets
 
 ## Roadmap
 
-Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases. Shipped: the catalog, search, the AI/MCP surface, on-demand metadata export, playlists + export, and the **desktop + browser** front ends; platform publishing is a Pro module. Next: the first packaged installer (`v0.1.0`) + the next publish adapter, plus remote/LAN access and a mobile layout for the web app.
+Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases. Shipped: the catalog, search, the AI/MCP surface, in-app AI tagging, on-demand metadata export, playlists + export, the **desktop + browser** front ends, and the first Pro publish adapters (抖音 promo-video + NetEase 激灵). Next: the first packaged installer (`v0.1.0`), a **BeatStars** adapter (mid-term), plus remote/LAN access and a mobile layout for the web app.
 
 Full plan: [`ROADMAP.md`](ROADMAP.md) · Shipped history: [`CHANGELOG.md`](CHANGELOG.md).
 
