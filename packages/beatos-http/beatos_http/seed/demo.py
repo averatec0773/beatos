@@ -16,6 +16,7 @@ Assets are bundled with the package and copied into a stable user-data dir
 from __future__ import annotations
 
 import logging
+import os
 import pathlib
 import shutil
 
@@ -64,6 +65,11 @@ async def seed_demo_if_needed(*, source_dir: pathlib.Path | None = None) -> bool
     """Seed the demo track on a brand-new install. Returns True iff a track was
     actually seeded. Safe to call on every startup."""
     try:
+        # Kill-switch for tests/CI so a brand-new DB stays empty and row counts
+        # are deterministic (mirrors BEATOS_DISABLE_FS_API / BEATOS_MCP_DISABLE_AUTH).
+        # Skips without setting the flag, so it never affects a real run.
+        if os.environ.get("BEATOS_DISABLE_DEMO_SEED") == "1":
+            return False
         if await get_setting(_SEEDED_KEY):
             return False  # already seeded or deliberately skipped
 

@@ -8,8 +8,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+### Added
+
+- **AI tag suggestions (bring your own key).** Turn on AI Assist in Settings (pick a provider, paste your own API key, choose Haiku or Sonnet), then hit **Suggest tags** in a track's editor: BeatOS sends just the cover image and title to the model and proposes genre, mood, tags, and a description for you to review and apply field by field. Off by default; the key is stored only on your device and never sent anywhere until you click. You can also select several tracks and **Suggest tags** for the whole set at once, which fills only empty fields and never overwrites values you've set. Desktop only.
+
 ### Changed
 
+- **Batch analysis tells you what failed.** When you analyze several tracks at once, any that couldn't be analyzed are now reported with the reason (and logged), instead of disappearing into a silent count.
+- **Agent permissions are now two honest options.** The "Confirm every action" and "Auto-approve all" choices did the same thing under the hood (writes applied either way), so Settings now offers just **Enabled** (agent writes apply, gated by your AI client's own per-action approval and logged in Agent Actions) and **Read-only** (writes refused). An existing setting carries over automatically. The misleading auto-approve warning banner is gone.
+- **Your catalog now lives in the app's data folder.** BeatOS stores `global.db` in the per-user application-data directory instead of `~/Music/BeatOS`, keeping it off cloud-synced folders (iCloud/Dropbox/OneDrive) where SQLite can corrupt. An existing `~/Music/BeatOS` library is copied over automatically on first launch; the old copy is left in place as a backup. A custom path set in Settings is respected unchanged.
+- **Bulk edit now sets BPM and Key.** The multi-select Bulk edit dialog can set BPM and musical key across every selected track, alongside the existing genre, mood, producer, and license-tier actions. Empty fields are still left unchanged.
 - **AI writes are simpler and the Approvals panel is now an Agent Actions dashboard.** MCP write tools now apply directly under your AI client's own per-call approval (instead of the old two-phase "approve in BeatOS" step) and every write is logged to a read-only **Agent Actions** dashboard (what changed, when, result). Set the agent to **read-only** to refuse writes entirely. The retired `await_approval` tool drops the free MCP surface to 23 tools (28 with Pro).
 - **Smoother, cheaper playback.** The bottom player bar no longer re-renders ~60×/second while a track plays — the playback position is quantized to the 0.1s resolution it actually displays — trimming idle CPU/battery during playback.
 - **Publish Center track picker shows cover thumbnails.** The "Publish a track" picker now renders each track's cover beside its title (placeholder when none), so you recognise the beat visually instead of by name alone.

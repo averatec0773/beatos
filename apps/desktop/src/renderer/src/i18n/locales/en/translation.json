@@ -104,12 +104,6 @@
     "freePrefixAria": "Free prefix",
     "resetDefaults": "Reset to defaults"
   },
-  "banner": {
-    "autoApprove": {
-      "message": "Agent auto-approve is ON — MCP write tools apply without asking.",
-      "dismiss": "Turn off"
-    }
-  },
   "ai": {
     "title": "AI Integration",
     "desc": "Lets Claude Desktop, Claude Code, Codex, and other MCP clients read your BeatOS library and propose gated writes.",
@@ -143,6 +137,11 @@
     "analyzeTitle": "Analyze BPM and Key",
     "analyzing": "Analyzing…",
     "analyze": "Analyze audio",
+    "suggestTags": "Suggest tags",
+    "suggesting": "Suggesting…",
+    "suggestTitle": "Suggest genre, mood and tags from the cover and title",
+    "suggestNotEnabled": "Enable AI tagging in Settings → AI Assist first.",
+    "suggestFailed": "AI tagging failed. Check your key and try again.",
     "exportTitle": "Export metadata to platform",
     "export": "Export metadata",
     "fieldTitle": "Title",
@@ -162,6 +161,16 @@
     "saved": "Saved · {{time}}"
   },
   "dialogs": {
+    "suggestTags": {
+      "title": "AI tag suggestions",
+      "desc": "Choose what to apply. Selected fields replace the current values.",
+      "genre": "Genre",
+      "mood": "Mood",
+      "tags": "Tags",
+      "description": "Description",
+      "apply": "Apply selected",
+      "empty": "No suggestions returned."
+    },
     "bulkEdit": {
       "modeAdd": "Add",
       "modeReplace": "Replace",
@@ -169,6 +178,7 @@
       "title": "Bulk edit {{count}} track",
       "title_other": "Bulk edit {{count}} tracks",
       "desc": "Empty fields are left unchanged.",
+      "bpmPlaceholder": "e.g. 140",
       "applyDefaultTiers": "Apply default license tiers",
       "apply": "Apply to {{count}} track",
       "apply_other": "Apply to {{count}} tracks",
@@ -245,7 +255,8 @@
   },
   "analysis": {
     "progress": "Analyzing {{done}}/{{total}}",
-    "done": "Done {{done}}/{{total}} — filled BPM {{bpm}}, Key {{key}}"
+    "done": "Done {{done}}/{{total}} — filled BPM {{bpm}}, Key {{key}}",
+    "failed": "{{count}} failed to analyze"
   },
   "player": {
     "decodeFailedToast": "Playback failed (decode). Click play to retry.",
@@ -339,16 +350,28 @@
     },
     "agentPermissions": {
       "title": "Agent permissions",
-      "desc": "Controls how MCP write tools are gated when an AI agent connects.",
-      "confirm": "Confirm every action",
-      "confirmDesc": "Each agent write requires your approval in Agent Actions.",
-      "autoApprove": "Auto-approve all",
-      "autoApproveDesc": "Agent writes apply immediately without asking.",
+      "desc": "Controls whether a connected AI agent can write to your library.",
+      "enabled": "Enabled",
+      "enabledDesc": "Agent writes apply, gated by your AI client's own per-action approval. Every change is recorded in Agent Actions.",
       "readOnly": "Read-only",
-      "readOnlyDesc": "Agent writes are refused; reads still work.",
-      "autoApproveDialogTitle": "Enable auto-approve?",
-      "autoApproveDialogDesc": "The agent will be able to write to your library without asking for approval each time. You can turn this off at any time.",
-      "autoApproveDialogContinue": "Continue"
+      "readOnlyDesc": "Agent writes are refused; reads still work."
+    },
+    "aiAssist": {
+      "title": "AI Assist",
+      "desc": "Let a cloud AI model suggest genre, mood, and tags from a track's cover and title. Off by default — you bring your own API key, stored only on this device.",
+      "provider": "Provider",
+      "off": "Off",
+      "apiKey": "API key",
+      "apiKeyPlaceholder": "Paste your API key",
+      "keyConfigured": "A key is saved on this device",
+      "model": "Model",
+      "saveKey": "Save key",
+      "remove": "Remove",
+      "disclosure": "When you run AI tagging, the track's cover image and title are sent to the selected provider. Nothing is sent until you start it.",
+      "ready": "AI tagging is ready.",
+      "needsKey": "Add an API key to enable AI tagging.",
+      "keySaved": "API key saved",
+      "saveFailed": "Could not save AI settings"
     },
     "storage": {
       "title": "Storage",
@@ -374,6 +397,12 @@
     "exportPlaylistTitle": "Export playlist files",
     "editMetadata": "Edit metadata",
     "analyzeSelected": "Analyze selected",
+    "suggestTags": "Suggest tags",
+    "suggestStarted": "Suggesting tags for {{count}} track(s)…",
+    "suggestDone": "Filled tags on {{applied}} of {{total}} track(s)",
+    "suggestDoneErrors": "Filled {{applied}}; {{errors}} couldn't be tagged",
+    "suggestNotEnabled": "Enable AI tagging in Settings → AI Assist first.",
+    "suggestFailed": "AI tagging failed. Check your key and try again.",
     "moveToTrash": "Move to trash",
     "moveToTrashConfirm": "Move 1 track to trash?",
     "moveToTrashConfirmMany": "Move {{count}} tracks to trash?",

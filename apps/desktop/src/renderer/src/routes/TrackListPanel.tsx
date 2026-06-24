@@ -28,6 +28,7 @@ import { BulkEditDialog } from "@/components/BulkEditDialog";
 import { ExportDialog } from "@/components/ExportDialog";
 import { PlaylistExportDialog } from "@/components/PlaylistExportDialog";
 import { analysis } from "@/api/analysis";
+import { ai } from "@/api/ai";
 import { useAnalysisJobStore } from "@/stores/analysis-job";
 
 export function TrackListPanel(): React.JSX.Element {
@@ -124,8 +125,21 @@ export function TrackListPanel(): React.JSX.Element {
   const [exportTrackId, setExportTrackId] = useState<number | null>(null);
   const [unanalyzed, setUnanalyzed] = useState(0);
   const [dropping, setDropping] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(false);
   const [importFiles, setImportFiles] = useState<File[]>([]);
   const importDialogOpen = importFiles.length > 0;
+
+  // Whether AI tagging is usable, so the bulk "Suggest tags" action only shows
+  // when a provider + key are configured (stays false on the web build).
+  useEffect(() => {
+    let cancelled = false;
+    ai.status()
+      .then((s) => !cancelled && setAiEnabled(s.enabled))
+      .catch(() => !cancelled && setAiEnabled(false));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const analysisJobId = useAnalysisJobStore((s) => s.jobId);
   useEffect(() => {
@@ -246,6 +260,48 @@ export function TrackListPanel(): React.JSX.Element {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false);
   }
 
+  // Batch AI tagging over the selected tracks: fills only empty fields, never
+  // overwrites. Runs in the background; toasts on start and on completion.
+  const runBatchTagging = useCallback(
+    async (ids: number[]): Promise<void> => {
+      if (ids.length === 0) return;
+      try {
+        const { job_id, total } = await ai.startBatchTagging(ids);
+        useToastStore.getState().show("info", t("trackList.suggestStarted", { count: total }));
+        clearSelection();
+        const poll = async (): Promise<void> => {
+          let job;
+          try {
+            job = await ai.batchTaggingStatus(job_id);
+          } catch {
+            return;
+          }
+          if (job.status !== "done") {
+            window.setTimeout(() => void poll(), 1000);
+            return;
+          }
+          await refresh();
+          if (job.errors > 0) {
+            useToastStore
+              .getState()
+              .show("error", t("trackList.suggestDoneErrors", { applied: job.applied, errors: job.errors }));
+          } else {
+            useToastStore
+              .getState()
+              .show("success", t("trackList.suggestDone", { applied: job.applied, total: job.total }));
+          }
+        };
+        void poll();
+      } catch (e) {
+        const status = (e as { status?: number }).status;
+        useToastStore
+          .getState()
+          .show("error", status === 409 ? t("trackList.suggestNotEnabled") : t("trackList.suggestFailed"));
+      }
+    },
+    [t, clearSelection, refresh],
+  );
+
   const bulkActions = useMemo<BulkAction[]>(
     () => [
       {
@@ -275,6 +331,15 @@ export function TrackListPanel(): React.JSX.Element {
           clearSelection();
         },
       },
+      ...(aiEnabled
+        ? [
+            {
+              key: "suggest-tags",
+              label: t("trackList.suggestTags"),
+              onClick: () => void runBatchTagging(Array.from(selectedIds)),
+            },
+          ]
+        : []),
       {
         key: "trash",
         label: t("trackList.moveToTrash"),
@@ -298,7 +363,7 @@ export function TrackListPanel(): React.JSX.Element {
         },
       },
     ],
-    [selectedIds, listId, clearSelection, t],
+    [selectedIds, listId, clearSelection, t, aiEnabled, runBatchTagging],
   );
 
   async function onAddTrack(): Promise<void> {

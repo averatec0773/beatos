@@ -19,6 +19,8 @@ export interface BatchJob {
   filled_bpm: number;
   filled_key: number;
   errors: number;
+  // Per-track failure reasons (capped server-side); present since v0.0.49.
+  error_details?: string[];
   status: "running" | "done";
 }
 

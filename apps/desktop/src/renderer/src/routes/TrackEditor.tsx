@@ -2,13 +2,24 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { AnalyzeResultDialog } from "@/components/AnalyzeResultDialog";
+import { SuggestTagsDialog } from "@/components/SuggestTagsDialog";
 import { TrackEditorForm } from "@/components/TrackEditor/TrackEditorForm";
 import { useTrackEditorState } from "@/hooks/use-track-editor-state";
 
 export function TrackEditor(): React.JSX.Element {
   const { t } = useTranslation();
   const state = useTrackEditorState();
-  const { track, loadError, analyzeDialogOpen, analyzeResult, setAnalyzeDialogOpen, patch } = state;
+  const {
+    track,
+    loadError,
+    analyzeDialogOpen,
+    analyzeResult,
+    setAnalyzeDialogOpen,
+    suggestDialogOpen,
+    suggestResult,
+    setSuggestDialogOpen,
+    patch,
+  } = state;
 
   if (loadError && !track) {
     return <main className="flex-1 p-8 rounded-xl beatos-card text-danger">{loadError}</main>;
@@ -34,6 +45,17 @@ export function TrackEditor(): React.JSX.Element {
           setAnalyzeDialogOpen(false);
         }}
         onClose={() => setAnalyzeDialogOpen(false)}
+      />
+      <SuggestTagsDialog
+        open={suggestDialogOpen}
+        suggestion={suggestResult}
+        onApply={(p) => {
+          if (p.genre) patch("genre", p.genre);
+          if (p.mood) patch("mood", p.mood);
+          if (p.tags) patch("tags", p.tags);
+          if (p.description !== undefined) patch("description", p.description);
+        }}
+        onClose={() => setSuggestDialogOpen(false)}
       />
       <TrackEditorForm track={track} state={state} />
     </>

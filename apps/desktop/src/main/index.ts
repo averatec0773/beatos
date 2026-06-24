@@ -12,7 +12,8 @@ import { handleAssetRequest } from "./asset-protocol";
 import { isSafeAbsolutePath } from "./path-safety";
 import { parseUvicornLevel } from "./log-parse";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
-import { assertSidecarLayout } from "./sidecar-helpers";
+import { assertSidecarLayout, assertSidecarBinary, resolveSidecarSpawn } from "./sidecar-helpers";
+import { planLegacyMigration, copyDbWithSidecars, isCloudSyncedPath } from "./db-migrate";
 import { createSplashWindow, closeSplashAndShowMain } from "./splash";
 import { testMcpConnection } from "./mcp/test-connection";
 import { installMcpClientConfig, type McpClientTarget } from "./mcp/install-config";
@@ -75,12 +76,18 @@ function repoRoot(): string {
   return join(__dirname, "..", "..", "..", "..");
 }
 
+// Default catalog location: app userData (non-synced). Moved off ~/Music/BeatOS
+// in v0.0.49+ — see legacyDbPath + the one-time migration in startSidecar.
+function defaultDbPath(): string {
+  return join(app.getPath("userData"), "global.db");
+}
+
+function legacyDbPath(): string {
+  return join(app.getPath("music"), "BeatOS", "global.db");
+}
+
 function resolveDbPath(): string {
-  return (
-    process.env.BEATOS_DB_PATH ??
-    readConfig().dbPath ??
-    join(app.getPath("music"), "BeatOS", "global.db")
-  );
+  return process.env.BEATOS_DB_PATH ?? readConfig().dbPath ?? defaultDbPath();
 }
 
 function resolveLogsDir(): string {
@@ -95,10 +102,36 @@ function startSidecar(): void {
   const hp = handshakePath();
   clearStaleHandshake(hp);
 
-  assertSidecarLayout(repoRoot(), __dirname);
+  // Dev (and the unpackaged smoke build) run the sidecar from source via uv;
+  // a packaged app runs the bundled PyInstaller binary (no Python needed).
+  const spawnTarget = resolveSidecarSpawn({ isDev: is.dev, resourcesPath: process.resourcesPath });
+  if (is.dev) {
+    assertSidecarLayout(repoRoot(), __dirname);
+  } else {
+    assertSidecarBinary(spawnTarget.command);
+  }
 
   const dbPath = resolveDbPath();
   mkdirSync(dirname(dbPath), { recursive: true });
+
+  // One-time relocation of a legacy ~/Music/BeatOS library into userData. Only
+  // fires on the default path with no DB yet; copies (legacy kept as backup).
+  const migration = planLegacyMigration({
+    dbPath,
+    defaultPath: defaultDbPath(),
+    legacyPath: legacyDbPath(),
+  });
+  if (migration) {
+    copyDbWithSidecars(migration.from, migration.to);
+    logger.info(
+      `[db] migrated catalog ${migration.from} -> ${migration.to} (legacy kept as backup)`,
+    );
+  }
+  if (isCloudSyncedPath(dbPath)) {
+    logger.warn(
+      `[db] catalog DB is in a cloud-synced folder (${dbPath}); SQLite + cloud sync can corrupt it`,
+    );
+  }
 
   const logsDir = resolveLogsDir();
   mkdirSync(logsDir, { recursive: true });
@@ -115,17 +148,17 @@ function startSidecar(): void {
     // a file:// page can't read the disk / launch files through it.
     BEATOS_DISABLE_FS_API: "1",
   };
-  // GUI launches (macOS Dock / a packaged app) inherit a minimal PATH that
-  // often lacks uv's default install dir (~/.local/bin) and Homebrew, so
-  // spawning "uv" fails with ENOENT. Prepend the common locations on POSIX.
-  // Windows installs uv onto the user PATH already, so leave it untouched there.
-  if (process.platform !== "win32") {
+  // Dev GUI launches (macOS Dock) inherit a minimal PATH that often lacks uv's
+  // default install dir (~/.local/bin) and Homebrew, so spawning "uv" fails with
+  // ENOENT. Prepend the common locations on POSIX. The packaged binary is
+  // self-contained, so this only matters in dev. Windows has uv on PATH already.
+  if (is.dev && process.platform !== "win32") {
     const extra = [`${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin"];
     env.PATH = [...extra, process.env.PATH ?? ""].filter(Boolean).join(":");
   }
 
-  sidecar = spawn("uv", ["run", "python", "-m", "beatos_http"], {
-    cwd: repoRoot(),
+  sidecar = spawn(spawnTarget.command, spawnTarget.args, {
+    cwd: is.dev ? repoRoot() : app.getPath("userData"),
     env,
     stdio: ["ignore", "pipe", "pipe"],
   });

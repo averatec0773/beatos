@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Wand2, Share2 } from "lucide-react";
+import { Wand2, Share2, Sparkles } from "lucide-react";
 
 import type { Track } from "@/api/tracks";
 import { producers as producersApi } from "@/api/producers";
@@ -42,6 +42,9 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
     refreshProducerOptions,
     analyzing,
     runAnalyze,
+    aiEnabled,
+    suggesting,
+    runSuggestTags,
   } = state;
 
   return (
@@ -66,6 +69,19 @@ export function TrackEditorForm({ track, state }: TrackEditorFormProps): React.J
               <Wand2 className="h-3.5 w-3.5" />
               {analyzing ? t("editor.analyzing") : t("editor.analyze")}
             </button>
+            {aiEnabled && (
+              <button
+                type="button"
+                data-suggest-tags-button
+                disabled={suggesting}
+                onClick={runSuggestTags}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-border-subtle px-3 py-2 text-xs text-text-primary hover:bg-bg-row-hover disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                title={t("editor.suggestTitle")}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {suggesting ? t("editor.suggesting") : t("editor.suggestTags")}
+              </button>
+            )}
             <button
               type="button"
               data-export-button

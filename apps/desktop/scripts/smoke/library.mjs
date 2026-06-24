@@ -155,19 +155,39 @@ export async function assertEmptyListCopy(ctx) {
 
 // === v0.0.11: filter chip add/remove + sort title round-trip ===
 export async function assertFilterChips(ctx) {
-  const { window, putJson, fixtures, failures } = ctx;
+  const { window, putJson, baseUrl, fixtures, failures } = ctx;
   const { t1 } = fixtures;
 
-  // Setup: attach producer to t1 (Smoke1) so we can filter by it.
-  // producer is now a multi-value JSON array field (v0.0.12).
-  await putJson(`/api/tracks/${t1.id}`, { producer: ["smoke-producer"] });
-
-  // Navigate to "/" to ensure the main library view is showing.
+  // Navigate to the library FIRST. The prior section (key-picker round-trip) can
+  // leave t1's editor open and dirty; its auto-save fires on nav-away. We must
+  // let that settle before setting producer via API — otherwise the stale form
+  // (empty producer) clobbers our change when it saves (CLAUDE.md rule 7), and
+  // the Producer filter picker then never shows "smoke-producer".
   await window.evaluate(() => {
     location.hash = "/";
   });
   await window.waitForLoadState("domcontentloaded", { timeout: 10_000 });
   await window.waitForSelector("[data-track-id]", { timeout: 5000 });
+  await window
+    .waitForSelector("[data-track-editor]", { state: "detached", timeout: 5000 })
+    .catch(() => {});
+
+  // Now set producer on t1 (multi-value JSON array field, v0.0.12) and confirm it
+  // persisted — retry in case a late editor auto-save lands after the PUT.
+  let producerSet = false;
+  for (let i = 0; i < 8; i++) {
+    await putJson(`/api/tracks/${t1.id}`, { producer: ["smoke-producer"] });
+    const got = await (await fetch(`${baseUrl}/api/tracks/${t1.id}`)).json().catch(() => ({}));
+    if (Array.isArray(got.producer) && got.producer.includes("smoke-producer")) {
+      producerSet = true;
+      break;
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  if (!producerSet) {
+    failures.push("filter chip setup: producer did not persist on t1 (editor auto-save clobber?)");
+    return;
+  }
 
   try {
     const addFilterBtn = window.locator("[data-add-filter]").first();

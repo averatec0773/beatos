@@ -69,6 +69,9 @@ export async function launchApp({ mainEntry, dbPath, logPath }) {
       ...process.env,
       BEATOS_DB_PATH: dbPath,
       BEATOS_LOG_PATH: logPath,
+      // Keep the fresh smoke DB empty so row-count assertions are deterministic
+      // (the first-launch demo track would otherwise add a 3rd row).
+      BEATOS_DISABLE_DEMO_SEED: "1",
       ...(showWindow ? {} : { BEATOS_HEADLESS: "1" }),
       ...(unmuted ? {} : { BEATOS_AUDIO_MUTED: "1" }),
     },

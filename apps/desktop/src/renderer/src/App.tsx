@@ -45,7 +45,7 @@ export default function App(): React.JSX.Element {
     // Probe the Pro engine once: the publish UI greys out unless the buyout
     // build answers /api/pro/status with {publish: true}.
     void useProStore.getState().loadProStatus();
-    // Load the persisted agent permission mode (defaults to "confirm").
+    // Load the persisted agent permission mode (defaults to "enabled").
     void useAgentPermissionStore.getState().hydrate();
   }, []);
 

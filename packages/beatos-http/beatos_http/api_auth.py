@@ -20,7 +20,12 @@ import os
 from fastapi import HTTPException, Request
 
 # app_setting keys whose write must carry the token when one is configured.
-SENSITIVE_SETTING_KEYS = frozenset({"agent_permission_mode"})
+SENSITIVE_SETTING_KEYS = frozenset({"agent_permission_mode", "ai_provider", "ai_api_key"})
+
+# Secret keys are write-gated AND never returned by the generic GET
+# /api/app_settings/{key}; clients see only whether one is set (e.g. via
+# /api/ai/status). A BYO AI key is stored locally but must not be readable back.
+SECRET_SETTING_KEYS = frozenset({"ai_api_key"})
 
 
 def get_api_token() -> str | None:

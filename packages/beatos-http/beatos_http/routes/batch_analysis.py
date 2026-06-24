@@ -4,6 +4,7 @@ import asyncio
 import uuid
 
 import aiosqlite
+import structlog
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -19,8 +20,14 @@ from beatos_core.tracks.service import count_unanalyzed, get_track
 
 router = APIRouter(tags=["batch-analysis"])
 
+log = structlog.get_logger(__name__)
+
 _JOBS: dict[str, dict] = {}
 _TASKS: set[asyncio.Task] = set()
+
+# Cap retained per-job error messages so a long failing batch can't grow the
+# in-memory job dict unbounded; the `errors` counter still reflects the true total.
+_MAX_ERROR_DETAILS = 10
 
 
 def _new_job(track_ids: list[int]) -> str:
@@ -28,7 +35,7 @@ def _new_job(track_ids: list[int]) -> str:
     _JOBS[job_id] = {
         "job_id": job_id, "total": len(track_ids), "done": 0,
         "current_title": None, "filled_bpm": 0, "filled_key": 0,
-        "errors": 0, "status": "running",
+        "errors": 0, "error_details": [], "status": "running",
     }
     return job_id
 
@@ -60,8 +67,13 @@ async def _run_job(job_id: str, track_ids: list[int]) -> None:
                     result = await analyze_asset(asset.id)
                     if result is not None:
                         await _autofill(track, result, job)
-        except Exception:
+        except Exception as e:
             job["errors"] += 1
+            title = track.title if track is not None else f"track {tid}"
+            details = job["error_details"]
+            details.append(f"{title}: {e}")
+            del details[:-_MAX_ERROR_DETAILS]
+            log.warning("batch_analysis.track_failed", track_id=tid, error=str(e))
         job["done"] += 1
     job["status"] = "done"
     job["current_title"] = None

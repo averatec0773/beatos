@@ -104,12 +104,6 @@
     "freePrefixAria": "免费前缀",
     "resetDefaults": "重置默认"
   },
-  "banner": {
-    "autoApprove": {
-      "message": "Agent 自动批准已开启 —— MCP 写入工具将直接执行，无需确认。",
-      "dismiss": "关闭"
-    }
-  },
   "ai": {
     "title": "AI Integration",
     "desc": "让 Claude Desktop、Claude Code、Codex 和其他 MCP 客户端读取你的 BeatOS 曲库，并提出需审批的写入。",
@@ -143,6 +137,11 @@
     "analyzeTitle": "分析 BPM 和 Key",
     "analyzing": "分析中…",
     "analyze": "分析音频",
+    "suggestTags": "建议标签",
+    "suggesting": "生成中…",
+    "suggestTitle": "根据封面和标题建议曲风、情绪和标签",
+    "suggestNotEnabled": "请先在 设置 → AI Assist 启用 AI 打标。",
+    "suggestFailed": "AI 打标失败,检查 key 后重试。",
     "exportTitle": "导出元数据到平台",
     "export": "导出元数据",
     "fieldTitle": "标题",
@@ -162,6 +161,16 @@
     "saved": "已保存 · {{time}}"
   },
   "dialogs": {
+    "suggestTags": {
+      "title": "AI 标签建议",
+      "desc": "勾选要应用的项;所选字段会覆盖当前值。",
+      "genre": "曲风",
+      "mood": "情绪",
+      "tags": "标签",
+      "description": "描述",
+      "apply": "应用所选",
+      "empty": "没有返回建议。"
+    },
     "bulkEdit": {
       "modeAdd": "追加",
       "modeReplace": "覆盖",
@@ -169,6 +178,7 @@
       "title": "批量编辑 {{count}} 首",
       "title_other": "批量编辑 {{count}} 首",
       "desc": "留空的字段不会改动。",
+      "bpmPlaceholder": "如 140",
       "applyDefaultTiers": "套用默认 license tiers",
       "apply": "应用到 {{count}} 首",
       "apply_other": "应用到 {{count}} 首",
@@ -245,7 +255,8 @@
   },
   "analysis": {
     "progress": "分析中 {{done}}/{{total}}",
-    "done": "完成 {{done}}/{{total}}，填入 BPM {{bpm}}、Key {{key}}"
+    "done": "完成 {{done}}/{{total}}，填入 BPM {{bpm}}、Key {{key}}",
+    "failed": "{{count}} 首分析失败"
   },
   "player": {
     "decodeFailedToast": "播放失败（解码）。点击播放重试。",
@@ -339,16 +350,28 @@
     },
     "agentPermissions": {
       "title": "Agent 权限",
-      "desc": "控制 AI agent 连接时 MCP 写入工具的审批方式。",
-      "confirm": "逐条确认",
-      "confirmDesc": "每次 agent 写入都需要在 Agent Actions 中批准。",
-      "autoApprove": "全部自动批准",
-      "autoApproveDesc": "agent 写入将立即执行，无需确认。",
+      "desc": "控制已连接的 AI agent 能否写入你的曲库。",
+      "enabled": "启用",
+      "enabledDesc": "agent 写入会生效，由你的 AI 客户端逐条确认；每次改动都记录在 Agent Actions。",
       "readOnly": "只读",
-      "readOnlyDesc": "拒绝 agent 写入；读取仍正常。",
-      "autoApproveDialogTitle": "启用自动批准？",
-      "autoApproveDialogDesc": "agent 将能够直接写入你的曲库，无需每次请求批准。你随时可以关闭此选项。",
-      "autoApproveDialogContinue": "继续"
+      "readOnlyDesc": "拒绝 agent 写入；读取仍正常。"
+    },
+    "aiAssist": {
+      "title": "AI 辅助",
+      "desc": "让云端 AI 模型根据封面和标题推断曲风、情绪和标签。默认关闭 —— 自带 API key,仅保存在本机。",
+      "provider": "服务商",
+      "off": "关闭",
+      "apiKey": "API key",
+      "apiKeyPlaceholder": "粘贴你的 API key",
+      "keyConfigured": "本机已保存一个 key",
+      "model": "模型",
+      "saveKey": "保存 key",
+      "remove": "移除",
+      "disclosure": "运行 AI 打标时,该轨道的封面图和标题会发送给所选服务商。不主动触发就不会发送任何内容。",
+      "ready": "AI 打标已就绪。",
+      "needsKey": "添加 API key 以启用 AI 打标。",
+      "keySaved": "API key 已保存",
+      "saveFailed": "无法保存 AI 设置"
     },
     "storage": {
       "title": "存储",
@@ -374,6 +397,12 @@
     "exportPlaylistTitle": "导出歌单文件",
     "editMetadata": "编辑元数据",
     "analyzeSelected": "分析选中",
+    "suggestTags": "建议标签",
+    "suggestStarted": "正在为 {{count}} 首生成标签…",
+    "suggestDone": "已为 {{total}} 首中的 {{applied}} 首填入标签",
+    "suggestDoneErrors": "已填 {{applied}} 首;{{errors}} 首失败",
+    "suggestNotEnabled": "请先在 设置 → AI Assist 启用 AI 打标。",
+    "suggestFailed": "AI 打标失败,检查 key 后重试。",
     "moveToTrash": "移至回收站",
     "moveToTrashConfirm": "将 1 首曲目移至回收站？",
     "moveToTrashConfirmMany": "将 {{count}} 首曲目移至回收站？",

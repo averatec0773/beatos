@@ -17,3 +17,46 @@ export function assertSidecarLayout(repoRoot: string, dirname: string): void {
     );
   }
 }
+
+export interface SidecarSpawn {
+  command: string;
+  args: string[];
+}
+
+/**
+ * Resolve how to launch the sidecar.
+ * - dev (and the built-but-unpackaged smoke, where `is.dev === !app.isPackaged`
+ *   is true): run from source via `uv run python -m beatos_http`.
+ * - packaged: the bundled PyInstaller binary shipped under `resources/` by
+ *   electron-builder extraResources (process.resourcesPath), no Python / uv
+ *   needed. Windows gets the `.exe` suffix.
+ */
+export function resolveSidecarSpawn(opts: {
+  isDev: boolean;
+  resourcesPath: string;
+  platform?: NodeJS.Platform;
+}): SidecarSpawn {
+  if (opts.isDev) {
+    return { command: "uv", args: ["run", "python", "-m", "beatos_http"] };
+  }
+  const platform = opts.platform ?? process.platform;
+  const exe = platform === "win32" ? ".exe" : "";
+  return {
+    command: join(opts.resourcesPath, "beatos-sidecar", `beatos-sidecar${exe}`),
+    args: [],
+  };
+}
+
+/**
+ * Packaged-mode guard, mirroring assertSidecarLayout for dev: the bundled
+ * binary must exist, else the spawn would fail with a cryptic ENOENT after the
+ * handshake timeout.
+ */
+export function assertSidecarBinary(binPath: string): void {
+  if (!existsSync(binPath)) {
+    throw new Error(
+      `Sidecar bootstrap failed: bundled binary not found at ${binPath}. ` +
+        `electron-builder extraResources may not have shipped dist/beatos-sidecar/.`,
+    );
+  }
+}

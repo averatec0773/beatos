@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { platform } from "@/platform";
 import { useToastStore } from "@/stores/toast";
 import { AgentPermissionSection } from "@/components/Settings/AgentPermissionSection";
+import { AIAssistSection } from "@/components/Settings/AIAssistSection";
 import { AIIntegrationSection } from "@/components/Settings/AIIntegrationSection";
 import { AppearanceSection } from "@/components/Settings/AppearanceSection";
 import { DefaultLicenseTiersSection } from "@/components/Settings/DefaultLicenseTiersSection";
@@ -155,6 +156,7 @@ export function SettingsPanel(): React.JSX.Element {
             <>
               <StorageSection dbPath={dbPath} onDbPathChange={setDbPath} />
               <AgentPermissionSection />
+              <AIAssistSection />
               <AIIntegrationSection dbPath={dbPath} repoRoot={repoRoot} />
             </>
           )}

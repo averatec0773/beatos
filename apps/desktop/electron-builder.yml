@@ -6,9 +6,13 @@ directories:
   output: release
   buildResources: build
 
+# The PyInstaller sidecar onedir (built by packaging/beatos-sidecar.spec into
+# repo-root dist/) ships to <Resources>/beatos-sidecar/, where the Electron main
+# spawns it in packaged builds (resolveSidecarSpawn → process.resourcesPath).
+# Build the binary BEFORE packaging: `uv run pyinstaller packaging/beatos-sidecar.spec`.
 extraResources:
-  - from: resources/sidecar
-    to: sidecar
+  - from: ../../dist/beatos-sidecar
+    to: beatos-sidecar
     filter:
       - "**/*"
   - from: resources/icon.png

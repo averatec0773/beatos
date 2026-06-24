@@ -27,10 +27,12 @@ from beatos_http.seed.demo import seed_demo_if_needed
 from beatos_http.mcp_auth import get_mcp_token, guard_mcp_app
 from beatos_http.routes import (
     agent_actions,
+    ai,
     analysis,
     app_settings,
     assets,
     batch_analysis,
+    batch_tagging,
     bulk,
     export,
     fs,
@@ -155,6 +157,9 @@ def create_app() -> FastAPI:
     app.include_router(pro.router)
     app.include_router(publish.router)
     app.include_router(app_settings.router)
+    app.include_router(ai.router)
+    app.include_router(ai.track_router)
+    app.include_router(batch_tagging.router)
     app.include_router(agent_actions.router)
     app.include_router(batch_analysis.router)
     # /api/fs (whole-disk browse + open) serves the WEB file browser only; the

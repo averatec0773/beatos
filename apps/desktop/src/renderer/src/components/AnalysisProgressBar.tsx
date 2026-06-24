@@ -32,6 +32,13 @@ export function AnalysisProgressBar() {
               key: j.filled_key,
             }),
           );
+          // Surface why any tracks failed (reasons captured server-side in E10),
+          // so a non-zero error count isn't a silent mystery.
+          if (j.errors > 0) {
+            const detail = (j.error_details ?? []).slice(0, 3).join("; ");
+            const msg = t("analysis.failed", { count: j.errors });
+            useToastStore.getState().show("error", detail ? `${msg}: ${detail}` : msg);
+          }
           clear();
           return;
         }
