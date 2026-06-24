@@ -8,7 +8,9 @@ export interface AiStatus {
   provider: string | null;
   has_key: boolean;
   enabled: boolean;
+  model: string;
   supported: string[];
+  supported_models: string[];
 }
 
 export const ai = {

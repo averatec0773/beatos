@@ -7,6 +7,14 @@ import { useToastStore } from "@/stores/toast";
 
 const PROVIDER_KEY = "ai_provider";
 const API_KEY = "ai_api_key";
+const MODEL_KEY = "ai_model";
+
+// Model display names are product proper nouns (exempt from i18n).
+function modelLabel(id: string): string {
+  if (id.includes("haiku")) return "Haiku";
+  if (id.includes("sonnet")) return "Sonnet";
+  return id;
+}
 
 export function AIAssistSection(): React.JSX.Element {
   const { t } = useTranslation();
@@ -30,6 +38,18 @@ export function AIAssistSection(): React.JSX.Element {
     setBusy(true);
     try {
       await appSettings.set(PROVIDER_KEY, provider);
+      await refresh();
+    } catch {
+      useToastStore.getState().show("error", t("settings.aiAssist.saveFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function selectModel(model: string): Promise<void> {
+    setBusy(true);
+    try {
+      await appSettings.set(MODEL_KEY, model);
       await refresh();
     } catch {
       useToastStore.getState().show("error", t("settings.aiAssist.saveFailed"));
@@ -135,6 +155,30 @@ export function AIAssistSection(): React.JSX.Element {
               </button>
             )}
           </div>
+
+          {status && status.supported_models.length > 1 && (
+            <div className="mb-2">
+              <div className="text-xs text-text-secondary mb-1">{t("settings.aiAssist.model")}</div>
+              <div className="flex gap-2">
+                {status.supported_models.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    aria-pressed={status.model === m}
+                    disabled={busy}
+                    onClick={() => void selectModel(m)}
+                    className={`rounded-md px-3 py-1.5 text-sm border transition-colors disabled:opacity-50 ${
+                      status.model === m
+                        ? "border-accent/50 bg-accent/10 text-text-primary"
+                        : "border-border-subtle text-text-tertiary hover:text-text-secondary"
+                    }`}
+                  >
+                    {modelLabel(m)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <p className="text-xs text-text-tertiary mb-1">{t("settings.aiAssist.disclosure")}</p>
           <p className="text-xs">

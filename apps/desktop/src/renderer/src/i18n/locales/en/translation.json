@@ -349,6 +349,7 @@
       "apiKey": "API key",
       "apiKeyPlaceholder": "Paste your API key",
       "keyConfigured": "A key is saved on this device",
+      "model": "Model",
       "saveKey": "Save key",
       "remove": "Remove",
       "disclosure": "When you run AI tagging, the track's cover image and title are sent to the selected provider. Nothing is sent until you start it.",

@@ -349,6 +349,7 @@
       "apiKey": "API key",
       "apiKeyPlaceholder": "粘贴你的 API key",
       "keyConfigured": "本机已保存一个 key",
+      "model": "模型",
       "saveKey": "保存 key",
       "remove": "移除",
       "disclosure": "运行 AI 打标时,该轨道的封面图和标题会发送给所选服务商。不主动触发就不会发送任何内容。",
