@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 vi.mock("@/api/app-settings", () => ({
   appSettings: {
     get: vi.fn().mockResolvedValue({ key: "agent_permission_mode", value: null }),
-    set: vi.fn().mockResolvedValue({ key: "agent_permission_mode", value: "confirm" }),
+    set: vi.fn().mockResolvedValue({ key: "agent_permission_mode", value: "enabled" }),
   },
 }));
 
@@ -14,68 +14,60 @@ import { useAgentPermissionStore } from "@/stores/agent-permission";
 import { AgentPermissionSection } from "@/components/Settings/AgentPermissionSection";
 
 const setMock = appSettings.set as unknown as ReturnType<typeof vi.fn>;
+const getMock = appSettings.get as unknown as ReturnType<typeof vi.fn>;
 
 describe("AgentPermissionSection", () => {
   beforeEach(() => {
-    useAgentPermissionStore.setState({ mode: "confirm" });
+    useAgentPermissionStore.setState({ mode: "enabled" });
     setMock.mockClear();
   });
 
-  it("shows the confirm option as selected by default", () => {
+  it("shows Enabled selected by default and offers exactly two options (no dialog)", () => {
     render(<AgentPermissionSection />);
-    expect(
-      screen.getByRole("button", { name: /confirm every action/i }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("button", { name: /auto-approve all/i }),
-    ).toHaveAttribute("aria-pressed", "false");
-    expect(
-      screen.getByRole("button", { name: /read-only/i }),
-    ).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /enabled/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /read-only/i })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("selecting read_only persists without a dialog", async () => {
+  it("selecting read-only persists immediately without a dialog", async () => {
     const user = userEvent.setup();
     render(<AgentPermissionSection />);
     await user.click(screen.getByRole("button", { name: /read-only/i }));
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(setMock).toHaveBeenCalledWith("agent_permission_mode", "read_only");
     expect(useAgentPermissionStore.getState().mode).toBe("read_only");
   });
 
-  it("selecting auto_approve opens a confirm dialog", async () => {
-    const user = userEvent.setup();
-    render(<AgentPermissionSection />);
-    await user.click(screen.getByRole("button", { name: /auto-approve all/i }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(setMock).not.toHaveBeenCalled();
-  });
-
-  it("cancelling the auto_approve dialog leaves mode unchanged", async () => {
-    const user = userEvent.setup();
-    render(<AgentPermissionSection />);
-    await user.click(screen.getByRole("button", { name: /auto-approve all/i }));
-    await user.click(screen.getByRole("button", { name: /cancel/i }));
-    expect(setMock).not.toHaveBeenCalled();
-    expect(useAgentPermissionStore.getState().mode).toBe("confirm");
-  });
-
-  it("confirming the auto_approve dialog persists the mode", async () => {
-    const user = userEvent.setup();
-    render(<AgentPermissionSection />);
-    await user.click(screen.getByRole("button", { name: /auto-approve all/i }));
-    await user.click(screen.getByRole("button", { name: /continue/i }));
-    expect(setMock).toHaveBeenCalledWith("agent_permission_mode", "auto_approve");
-    expect(useAgentPermissionStore.getState().mode).toBe("auto_approve");
-  });
-
-  it("highlights the stored mode when pre-set to read_only", () => {
+  it("selecting Enabled from read-only persists immediately", async () => {
     act(() => useAgentPermissionStore.setState({ mode: "read_only" }));
+    const user = userEvent.setup();
     render(<AgentPermissionSection />);
-    expect(
-      screen.getByRole("button", { name: /read-only/i }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("button", { name: /confirm every action/i }),
-    ).toHaveAttribute("aria-pressed", "false");
+    await user.click(screen.getByRole("button", { name: /enabled/i }));
+    expect(setMock).toHaveBeenCalledWith("agent_permission_mode", "enabled");
+    expect(useAgentPermissionStore.getState().mode).toBe("enabled");
+  });
+});
+
+describe("agent-permission store legacy normalization", () => {
+  beforeEach(() => {
+    useAgentPermissionStore.setState({ mode: "enabled" });
+  });
+
+  it.each(["confirm", "auto_approve", "enabled"])(
+    "hydrates legacy/current value %s to enabled",
+    async (stored) => {
+      getMock.mockResolvedValueOnce({ key: "agent_permission_mode", value: stored });
+      await useAgentPermissionStore.getState().hydrate();
+      expect(useAgentPermissionStore.getState().mode).toBe("enabled");
+    },
+  );
+
+  it("hydrates read_only as read_only", async () => {
+    getMock.mockResolvedValueOnce({ key: "agent_permission_mode", value: "read_only" });
+    await useAgentPermissionStore.getState().hydrate();
+    expect(useAgentPermissionStore.getState().mode).toBe("read_only");
   });
 });

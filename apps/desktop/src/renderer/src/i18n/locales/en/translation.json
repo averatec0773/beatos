@@ -104,12 +104,6 @@
     "freePrefixAria": "Free prefix",
     "resetDefaults": "Reset to defaults"
   },
-  "banner": {
-    "autoApprove": {
-      "message": "Agent auto-approve is ON — MCP write tools apply without asking.",
-      "dismiss": "Turn off"
-    }
-  },
   "ai": {
     "title": "AI Integration",
     "desc": "Lets Claude Desktop, Claude Code, Codex, and other MCP clients read your BeatOS library and propose gated writes.",
@@ -340,16 +334,11 @@
     },
     "agentPermissions": {
       "title": "Agent permissions",
-      "desc": "Controls how MCP write tools are gated when an AI agent connects.",
-      "confirm": "Confirm every action",
-      "confirmDesc": "Each agent write requires your approval in Agent Actions.",
-      "autoApprove": "Auto-approve all",
-      "autoApproveDesc": "Agent writes apply immediately without asking.",
+      "desc": "Controls whether a connected AI agent can write to your library.",
+      "enabled": "Enabled",
+      "enabledDesc": "Agent writes apply, gated by your AI client's own per-action approval. Every change is recorded in Agent Actions.",
       "readOnly": "Read-only",
-      "readOnlyDesc": "Agent writes are refused; reads still work.",
-      "autoApproveDialogTitle": "Enable auto-approve?",
-      "autoApproveDialogDesc": "The agent will be able to write to your library without asking for approval each time. You can turn this off at any time.",
-      "autoApproveDialogContinue": "Continue"
+      "readOnlyDesc": "Agent writes are refused; reads still work."
     },
     "aiAssist": {
       "title": "AI Assist",

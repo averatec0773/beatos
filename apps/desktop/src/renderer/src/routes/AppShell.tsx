@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { TopBar } from "@/components/TopBar";
@@ -13,16 +13,12 @@ import { UnicornBackdrop } from "@/components/UnicornBackdrop";
 import { GutterResizer } from "@/components/GutterResizer";
 import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH, useSidebarPanelStore } from "@/stores/sidebar-panel";
 import { useAppearanceStore } from "@/stores/appearance";
-import { useAgentPermissionStore } from "@/stores/agent-permission";
 import { PREVIEW_AUTO_COLLAPSE_WIDTH, usePreviewPanelStore } from "@/stores/preview-panel";
 
 export function AppShell(): React.JSX.Element {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const setSidebarWidth = useSidebarPanelStore((s) => s.setWidth);
   const sidebarCollapsed = useSidebarPanelStore((s) => s.collapsed);
-  const agentMode = useAgentPermissionStore((s) => s.mode);
-  const setAgentMode = useAgentPermissionStore((s) => s.setMode);
 
   // Panel translucency is a live appearance pref → drive the `--card-alpha`
   // CSS var (consumed by `.beatos-card`) from the store. Blur scales with
@@ -67,21 +63,6 @@ export function AppShell(): React.JSX.Element {
       {backdropStyle === "aurora" && <UnicornBackdrop />}
       {backdropStyle === "ascii" && <AsciiBackdrop />}
       <TopBar />
-      {agentMode === "auto_approve" && (
-        <div className="relative z-10 flex items-center justify-between gap-3 px-4 py-1.5 bg-warning/15 border-b border-warning/30 text-warning text-xs">
-          <span>{t("banner.autoApprove.message")}</span>
-          <button
-            type="button"
-            onClick={() => {
-              void setAgentMode("confirm");
-              void navigate("/settings");
-            }}
-            className="shrink-0 rounded border border-warning/40 px-2 py-0.5 hover:bg-warning/20"
-          >
-            {t("banner.autoApprove.dismiss")}
-          </button>
-        </div>
-      )}
       <AnalysisProgressBar />
       {/* Spotify-style canvas: the three regions float as rounded cards over the
           backdrop, the resize handles (or a spacer when collapsed) living in the
