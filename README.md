@@ -40,7 +40,7 @@ Most producers track their catalog in a spreadsheet, then re-type the same metad
 
 ### 🗂️ A catalog built for selling
 
-Every beat in a real SQLite database: title, **BPM, key, genre + mood** (multi-value), **producer credits**, tags, **license tiers with multi-currency pricing**, description, and audio in every role — tagged/untagged, **loop, stems** (WAV/MP3/FLAC) — plus cover art. Soft-delete trash with restore. Rename or merge a producer across your whole catalog in one click. Generate a **per-buyer license PDF** from any tier (English or 中文) when you make a sale.
+Every beat in a real SQLite database: title, **BPM, key, genre + mood** (multi-value), **producer credits**, tags, **license tiers with multi-currency pricing**, description, and audio in every role — tagged/untagged, **loop, stems** (WAV/MP3/FLAC) — plus cover art. Soft-delete trash with restore. Rename or merge a producer across your whole catalog in one click. Generate a **per-buyer license PDF** from any tier (English or 中文) when you make a sale, and **export a tagged MP3** with your title, producer, BPM, key, and cover baked into the file's ID3 tags.
 
 </td>
 <td width="33%" valign="top">
