@@ -169,6 +169,7 @@
       "title": "Bulk edit {{count}} track",
       "title_other": "Bulk edit {{count}} tracks",
       "desc": "Empty fields are left unchanged.",
+      "bpmPlaceholder": "e.g. 140",
       "applyDefaultTiers": "Apply default license tiers",
       "apply": "Apply to {{count}} track",
       "apply_other": "Apply to {{count}} tracks",

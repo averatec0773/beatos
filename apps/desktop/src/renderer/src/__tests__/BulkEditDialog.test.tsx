@@ -34,4 +34,17 @@ describe("BulkEditDialog", () => {
       expect(update).toHaveBeenCalledWith([1, 2], { genre: { add: ["Trap Rap"] } }),
     );
   });
+
+  it("sends a scalar bpm patch when BPM is filled", async () => {
+    const update = vi.spyOn(bulk, "update").mockResolvedValue({ updated_count: 2, ids: [1, 2] });
+    useTrackStore.setState({ refresh: vi.fn().mockResolvedValue(undefined) } as any);
+
+    const user = userEvent.setup();
+    render(<BulkEditDialog open ids={[1, 2]} onClose={() => {}} onDone={() => {}} />);
+
+    await user.type(screen.getByPlaceholderText(/140/), "150");
+    await user.click(screen.getByRole("button", { name: /apply to 2/i }));
+
+    await waitFor(() => expect(update).toHaveBeenCalledWith([1, 2], { bpm: 150 }));
+  });
 });

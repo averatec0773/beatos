@@ -10,6 +10,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Changed
 
+- **Bulk edit now sets BPM and Key.** The multi-select Bulk edit dialog can set BPM and musical key across every selected track, alongside the existing genre, mood, producer, and license-tier actions. Empty fields are still left unchanged.
 - **AI writes are simpler and the Approvals panel is now an Agent Actions dashboard.** MCP write tools now apply directly under your AI client's own per-call approval (instead of the old two-phase "approve in BeatOS" step) and every write is logged to a read-only **Agent Actions** dashboard (what changed, when, result). Set the agent to **read-only** to refuse writes entirely. The retired `await_approval` tool drops the free MCP surface to 23 tools (28 with Pro).
 - **Smoother, cheaper playback.** The bottom player bar no longer re-renders ~60×/second while a track plays — the playback position is quantized to the 0.1s resolution it actually displays — trimming idle CPU/battery during playback.
 - **Publish Center track picker shows cover thumbnails.** The "Publish a track" picker now renders each track's cover beside its title (placeholder when none), so you recognise the beat visually instead of by name alone.

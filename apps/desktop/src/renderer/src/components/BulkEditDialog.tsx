@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ChipMultiSelect } from "@/components/ChipMultiSelect";
+import { KeyPicker } from "@/components/KeyPicker";
 import { BEATOS_GENRES } from "@/data/genres";
 import { BEATOS_MOODS } from "@/data/moods";
 import { formatVocabLabel } from "@/data/vocab-label";
@@ -68,6 +69,8 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
   const [genre, setGenre] = useState<FieldState>(EMPTY);
   const [mood, setMood] = useState<FieldState>(EMPTY);
   const [producer, setProducer] = useState<FieldState>(EMPTY);
+  const [bpm, setBpm] = useState("");
+  const [keySig, setKeySig] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const vocabLocale = useVocabLocaleStore((s) => s.locale);
 
@@ -79,6 +82,15 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
     if (g) patch.genre = g;
     if (m) patch.mood = m;
     if (p) patch.producer = p;
+    // Scalar fields: only included when set; an empty input leaves the value
+    // unchanged on every selected track (mirrors the "Empty fields are left
+    // unchanged" contract). Invalid BPM text is ignored rather than sent.
+    const bpmTrim = bpm.trim();
+    if (bpmTrim !== "") {
+      const n = Number(bpmTrim);
+      if (Number.isInteger(n) && n > 0) patch.bpm = n;
+    }
+    if (keySig) patch.key = keySig;
     if (Object.keys(patch).length === 0) {
       onClose();
       return;
@@ -174,6 +186,22 @@ export function BulkEditDialog({ open, ids, onClose, onDone }: Props) {
               placeholder={t("editor.addProducer")}
               popoverTitle={t("editor.producers")}
             />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-text-secondary">{t("tableHeader.bpm")}</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={bpm}
+              onChange={(e) => setBpm(e.target.value)}
+              placeholder={t("dialogs.bulkEdit.bpmPlaceholder")}
+              className="w-full bg-bg-elevated border border-border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-text-secondary">{t("tableHeader.key")}</span>
+            <KeyPicker value={keySig} onChange={setKeySig} />
           </div>
           <button
             type="button"

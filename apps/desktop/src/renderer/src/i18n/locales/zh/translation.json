@@ -169,6 +169,7 @@
       "title": "批量编辑 {{count}} 首",
       "title_other": "批量编辑 {{count}} 首",
       "desc": "留空的字段不会改动。",
+      "bpmPlaceholder": "如 140",
       "applyDefaultTiers": "套用默认 license tiers",
       "apply": "应用到 {{count}} 首",
       "apply_other": "应用到 {{count}} 首",
