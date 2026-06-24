@@ -21,7 +21,14 @@ def db(tmp_path, monkeypatch):
 async def test_status_default_off(db):
     await run_migrations(db)
     s = await get_ai_status()
-    assert s == {"provider": None, "has_key": False, "enabled": False, "supported": ["anthropic"]}
+    assert s == {
+        "provider": None,
+        "has_key": False,
+        "enabled": False,
+        "model": "claude-haiku-4-5",
+        "supported": ["anthropic"],
+        "supported_models": ["claude-haiku-4-5", "claude-sonnet-4-6"],
+    }
 
 
 async def test_status_enabled_with_provider_and_key(db):
