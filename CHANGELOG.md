@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+### Added
+
+- **AI tag suggestions (bring your own key).** Turn on AI Assist in Settings (pick a provider, paste your own API key, choose Haiku or Sonnet), then hit **Suggest tags** in a track's editor: BeatOS sends just the cover image and title to the model and proposes genre, mood, tags, and a description for you to review and apply field by field. Off by default; the key is stored only on your device and never sent anywhere until you click. Desktop only.
+
 ### Changed
 
 - **Batch analysis tells you what failed.** When you analyze several tracks at once, any that couldn't be analyzed are now reported with the reason (and logged), instead of disappearing into a silent count.

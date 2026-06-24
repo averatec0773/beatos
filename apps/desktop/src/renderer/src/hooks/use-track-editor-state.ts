@@ -6,6 +6,7 @@ import { tracks } from "@/api/tracks";
 import type { Track } from "@/api/tracks";
 import { assets as assetsApi } from "@/api/assets";
 import { analysis } from "@/api/analysis";
+import { ai, type TagSuggestion } from "@/api/ai";
 import { loadAllProducerNames } from "@/lib/known-producers";
 import type { AudioAnalysisResult } from "@/api/analysis";
 import { useTrackStore } from "@/stores/tracks";
@@ -42,6 +43,12 @@ export interface TrackEditorState {
   analyzeDialogOpen: boolean;
   runAnalyze: () => Promise<void>;
   setAnalyzeDialogOpen: (open: boolean) => void;
+  aiEnabled: boolean;
+  suggesting: boolean;
+  suggestResult: TagSuggestion | null;
+  suggestDialogOpen: boolean;
+  runSuggestTags: () => Promise<void>;
+  setSuggestDialogOpen: (open: boolean) => void;
 }
 
 export function useTrackEditorState(): TrackEditorState {
@@ -63,6 +70,10 @@ export function useTrackEditorState(): TrackEditorState {
   const externallyAnalyzing = useAnalyzingStore((s) => (track ? !!s.inflight[track.id] : false));
   const [analyzeResult, setAnalyzeResult] = useState<AudioAnalysisResult | null>(null);
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestResult, setSuggestResult] = useState<TagSuggestion | null>(null);
+  const [suggestDialogOpen, setSuggestDialogOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
@@ -85,6 +96,19 @@ export function useTrackEditorState(): TrackEditorState {
   useEffect(() => {
     void refreshProducerOptions();
   }, [params.id, refreshProducerOptions]);
+
+  // Whether AI tagging is usable (a provider is selected AND a key is set).
+  // Re-checked per track id since the editor instance persists across SPA route
+  // changes (rule 6). Stays false on the web build / when AI is off.
+  useEffect(() => {
+    let cancelled = false;
+    ai.status()
+      .then((s) => !cancelled && setAiEnabled(s.enabled))
+      .catch(() => !cancelled && setAiEnabled(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
 
   useEffect(() => {
     if (!params.id) return;
@@ -314,6 +338,23 @@ export function useTrackEditorState(): TrackEditorState {
     }
   }, [t, track]);
 
+  const runSuggestTags = useCallback(async () => {
+    if (!track || suggesting) return;
+    setSuggesting(true);
+    try {
+      const result = await ai.suggestTags(track.id);
+      setSuggestResult(result);
+      setSuggestDialogOpen(true);
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      useToastStore
+        .getState()
+        .show("error", status === 409 ? t("editor.suggestNotEnabled") : t("editor.suggestFailed"));
+    } finally {
+      setSuggesting(false);
+    }
+  }, [t, track, suggesting]);
+
   return {
     track,
     loadError,
@@ -333,5 +374,11 @@ export function useTrackEditorState(): TrackEditorState {
     analyzeDialogOpen,
     runAnalyze,
     setAnalyzeDialogOpen,
+    aiEnabled,
+    suggesting,
+    suggestResult,
+    suggestDialogOpen,
+    runSuggestTags,
+    setSuggestDialogOpen,
   };
 }
