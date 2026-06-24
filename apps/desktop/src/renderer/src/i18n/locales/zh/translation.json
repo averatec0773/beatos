@@ -415,6 +415,7 @@
   "approvals": {
     "title": "Agent 操作",
     "empty": "暂无 AI 活动。连接 MCP 客户端即可开始（见设置 → AI Integration）。",
+    "emptyWeb": "暂无 AI 活动。请在 BeatOS 桌面端连接 MCP 客户端 —— agent 的操作会显示在这里。",
     "recent": "近期记录（{{count}}）"
   },
   "detail": {

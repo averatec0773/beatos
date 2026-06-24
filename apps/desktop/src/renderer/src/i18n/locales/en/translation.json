@@ -415,6 +415,7 @@
   "approvals": {
     "title": "Agent Actions",
     "empty": "No AI activity yet. Connect an MCP-compatible client to start (see Settings → AI Integration).",
+    "emptyWeb": "No AI activity yet. Connect an MCP client in the BeatOS desktop app — actions agents take will show up here.",
     "recent": "Recent ({{count}})"
   },
   "detail": {

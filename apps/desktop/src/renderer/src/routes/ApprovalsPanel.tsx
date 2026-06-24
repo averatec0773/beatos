@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAgentActions } from "@/hooks/use-agent-actions";
 import { ActivityList } from "@/components/Approvals/ActivityList";
+import { platform } from "@/platform";
 
 export function ApprovalsPanel(): React.JSX.Element {
   const { t } = useTranslation();
@@ -15,7 +16,9 @@ export function ApprovalsPanel(): React.JSX.Element {
 
         {actions.length === 0 ? (
           <div className="rounded border border-border-subtle bg-bg-elevated p-6 text-sm text-text-secondary">
-            {t("approvals.empty")}
+            {/* MCP client setup (Settings → AI Integration) is desktop-only, so the
+                web build points at the desktop app instead of a missing section. */}
+            {t(platform.kind === "web" ? "approvals.emptyWeb" : "approvals.empty")}
           </div>
         ) : (
           <ActivityList actions={actions} />
