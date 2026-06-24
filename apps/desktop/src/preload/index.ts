@@ -56,6 +56,11 @@ const beatos = {
     ipcRenderer.on(IPC_CHANNELS.SIDECAR_CRASHED, handler);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.SIDECAR_CRASHED, handler);
   },
+  onLegacyDbMigrated: (cb: (info: { to: string }) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, info: { to: string }): void => cb(info);
+    ipcRenderer.on(IPC_CHANNELS.LEGACY_DB_MIGRATED, handler);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.LEGACY_DB_MIGRATED, handler);
+  },
   startDragFile: (absPath: string): void => {
     ipcRenderer.send(IPC_CHANNELS.DRAG_OUT_FILE, { absPath });
   },

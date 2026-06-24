@@ -14,6 +14,7 @@ export const IPC_CHANNELS = {
   STORAGE_PICK_FOLDER: "storage:pick-folder",
   STORAGE_GET_REPO_ROOT: "storage:get-repo-root",
   SIDECAR_CRASHED: "sidecar-crashed",
+  LEGACY_DB_MIGRATED: "legacy-db-migrated",
   DRAG_OUT_FILE: "drag-out-file",
   MCP_TEST_CONNECTION: "mcp:test-connection",
   MCP_INSTALL_CLIENT_CONFIG: "mcp:install-client-config",

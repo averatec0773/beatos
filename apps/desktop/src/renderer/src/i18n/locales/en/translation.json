@@ -144,6 +144,10 @@
     "suggestFailed": "AI tagging failed. Check your key and try again.",
     "exportTitle": "Export metadata to platform",
     "export": "Export metadata",
+    "licenseTitle": "Generate a license PDF for a buyer",
+    "license": "License PDF",
+    "taggedMp3Title": "Export an ID3-tagged MP3 (title, producer, cover…)",
+    "taggedMp3": "Tagged MP3",
     "fieldTitle": "Title",
     "notes": "Notes",
     "tags": "Tags (comma-separated)",
@@ -197,6 +201,33 @@
       "platformAria": "Platform",
       "proLocked": "Pro feature · purchase to unlock",
       "publish": "Publish to platform"
+    },
+    "license": {
+      "title": "Generate license",
+      "desc": "Create a one-page license contract PDF for a buyer.",
+      "tier": "License tier",
+      "buyer": "Buyer name",
+      "buyerPlaceholder": "e.g. DJ Example",
+      "exclusive": "Exclusive license",
+      "price": "Price (optional)",
+      "pricePlaceholder": "e.g. USD 300",
+      "date": "Date (optional)",
+      "language": "Language",
+      "generate": "Generate PDF",
+      "generating": "Generating…",
+      "noTiers": "Add a license tier to this track first.",
+      "done": "License PDF downloaded.",
+      "failed": "Couldn't generate the license PDF."
+    },
+    "taggedMp3": {
+      "title": "Export tagged MP3",
+      "desc": "Embed the catalog's title, producer, genre, BPM, key, and cover into a copy of the MP3 — never touching the original.",
+      "variant": "Audio version",
+      "download": "Download MP3",
+      "downloading": "Preparing…",
+      "noMp3": "This track has no MP3 to tag. Attach an MP3 first.",
+      "done": "Tagged MP3 downloaded.",
+      "failed": "Couldn't export the tagged MP3."
     },
     "playlistExport": {
       "manifestFailed": "Could not read the playlist file manifest",
@@ -415,7 +446,12 @@
   "approvals": {
     "title": "Agent Actions",
     "empty": "No AI activity yet. Connect an MCP-compatible client to start (see Settings → AI Integration).",
+    "emptyWeb": "No AI activity yet. Connect an MCP client in the BeatOS desktop app — actions agents take will show up here.",
     "recent": "Recent ({{count}})"
+  },
+  "migration": {
+    "title": "Your library was moved",
+    "body": "BeatOS copied your beat library into the app's data folder, off cloud-synced folders where SQLite can corrupt. Your old copy is kept as a backup."
   },
   "detail": {
     "nowFocused": "Now Focused",
@@ -444,8 +480,8 @@
     "recentlyAdded": "Recently added"
   },
   "emptyState": {
-    "noTracks": "No tracks yet",
-    "noTracksDesc": "Add your first track to get started.",
+    "noTracks": "Start your beat catalog",
+    "noTracksDesc": "Drag in audio or click below to add your first beat — BeatOS catalogs the BPM, key, and tags that help it sell.",
     "addTrack": "Add Track",
     "emptyList": "List \"{{name}}\" is empty",
     "emptyListDesc": "Drag tracks from All Beats to add them here.",

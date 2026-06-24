@@ -23,9 +23,19 @@ vi.mock("@/stores/tracks", () => ({
   },
 }));
 
+vi.mock("@/lib/default-license-tiers", () => ({
+  applyDefaultLicenseTiers: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/default-free", () => ({
+  applyDefaultIsFree: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { tracks } from "@/api/tracks";
 import { useAssetStore } from "@/stores/assets";
 import { useTrackStore } from "@/stores/tracks";
+import { applyDefaultLicenseTiers } from "@/lib/default-license-tiers";
+import { applyDefaultIsFree } from "@/lib/default-free";
 
 function makeFile(name: string): File {
   return new File([""], name, { type: "audio/wav" });
@@ -72,6 +82,23 @@ describe("importAsNewTracks", () => {
     expect(tracks.create).toHaveBeenCalledTimes(2);
     expect(tracks.create).toHaveBeenCalledWith("beat1");
     expect(tracks.create).toHaveBeenCalledWith("beat2");
+  });
+
+  it("applies the user's default license tiers + free flag to each created track", async () => {
+    vi.mocked(tracks.create)
+      .mockResolvedValueOnce({ id: 11, title: "a" } as any)
+      .mockResolvedValueOnce({ id: 22, title: "b" } as any);
+
+    const result = await importAsNewTracks([makeFile("a.wav"), makeFile("b.mp3")], "untagged");
+
+    expect(result.created).toBe(2);
+    // Primary UI path: fresh imports must inherit the user's default monetization.
+    expect(applyDefaultLicenseTiers).toHaveBeenCalledTimes(2);
+    expect(applyDefaultLicenseTiers).toHaveBeenCalledWith(11);
+    expect(applyDefaultLicenseTiers).toHaveBeenCalledWith(22);
+    expect(applyDefaultIsFree).toHaveBeenCalledTimes(2);
+    expect(applyDefaultIsFree).toHaveBeenCalledWith(11);
+    expect(applyDefaultIsFree).toHaveBeenCalledWith(22);
   });
 
   it("hard-purges the just-created track via tracks.purge when attach fails", async () => {

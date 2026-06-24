@@ -144,6 +144,10 @@
     "suggestFailed": "AI 打标失败,检查 key 后重试。",
     "exportTitle": "导出元数据到平台",
     "export": "导出元数据",
+    "licenseTitle": "为买家生成许可证 PDF",
+    "license": "许可证 PDF",
+    "taggedMp3Title": "导出带 ID3 标签的 MP3(标题、制作人、封面…)",
+    "taggedMp3": "带标签 MP3",
     "fieldTitle": "标题",
     "notes": "备注",
     "tags": "标签（逗号分隔）",
@@ -197,6 +201,33 @@
       "platformAria": "平台",
       "proLocked": "Pro 功能 · 购买解锁",
       "publish": "发布到平台"
+    },
+    "license": {
+      "title": "生成许可证",
+      "desc": "为买家生成一页式许可证合同 PDF。",
+      "tier": "授权档位",
+      "buyer": "买家姓名",
+      "buyerPlaceholder": "例如 DJ Example",
+      "exclusive": "独占授权",
+      "price": "价格(可选)",
+      "pricePlaceholder": "例如 USD 300",
+      "date": "日期(可选)",
+      "language": "语言",
+      "generate": "生成 PDF",
+      "generating": "生成中…",
+      "noTiers": "请先为该曲目添加一个授权档位。",
+      "done": "许可证 PDF 已下载。",
+      "failed": "无法生成许可证 PDF。"
+    },
+    "taggedMp3": {
+      "title": "导出带标签 MP3",
+      "desc": "把目录里的标题、制作人、流派、BPM、Key 和封面写进 MP3 副本 —— 绝不改动原文件。",
+      "variant": "音频版本",
+      "download": "下载 MP3",
+      "downloading": "准备中…",
+      "noMp3": "该曲目还没有可打标的 MP3,请先添加一个 MP3。",
+      "done": "带标签 MP3 已下载。",
+      "failed": "无法导出带标签 MP3。"
     },
     "playlistExport": {
       "manifestFailed": "无法读取歌单文件清单",
@@ -415,7 +446,12 @@
   "approvals": {
     "title": "Agent 操作",
     "empty": "暂无 AI 活动。连接 MCP 客户端即可开始（见设置 → AI Integration）。",
+    "emptyWeb": "暂无 AI 活动。请在 BeatOS 桌面端连接 MCP 客户端 —— agent 的操作会显示在这里。",
     "recent": "近期记录（{{count}}）"
+  },
+  "migration": {
+    "title": "曲库已迁移",
+    "body": "BeatOS 已把你的曲库复制到 app 数据目录,避开 SQLite 易损坏的云同步文件夹。旧副本已保留作为备份。"
   },
   "detail": {
     "nowFocused": "当前选中",
@@ -444,8 +480,8 @@
     "recentlyAdded": "最近添加"
   },
   "emptyState": {
-    "noTracks": "暂无曲目",
-    "noTracksDesc": "添加第一首曲目以开始。",
+    "noTracks": "开始建立你的曲库",
+    "noTracksDesc": "拖入音频或点击下方,添加第一首 —— BeatOS 会整理 BPM、Key 和便于售卖的标签。",
     "addTrack": "添加曲目",
     "emptyList": "歌单「{{name}}」是空的",
     "emptyListDesc": "从 All Beats 拖入曲目以添加。",
