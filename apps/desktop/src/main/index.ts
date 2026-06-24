@@ -13,6 +13,7 @@ import { isSafeAbsolutePath } from "./path-safety";
 import { parseUvicornLevel } from "./log-parse";
 import { IPC_CHANNELS } from "../shared/ipc-channels";
 import { assertSidecarLayout, assertSidecarBinary, resolveSidecarSpawn } from "./sidecar-helpers";
+import { planLegacyMigration, copyDbWithSidecars, isCloudSyncedPath } from "./db-migrate";
 import { createSplashWindow, closeSplashAndShowMain } from "./splash";
 import { testMcpConnection } from "./mcp/test-connection";
 import { installMcpClientConfig, type McpClientTarget } from "./mcp/install-config";
@@ -75,12 +76,18 @@ function repoRoot(): string {
   return join(__dirname, "..", "..", "..", "..");
 }
 
+// Default catalog location: app userData (non-synced). Moved off ~/Music/BeatOS
+// in v0.0.49+ — see legacyDbPath + the one-time migration in startSidecar.
+function defaultDbPath(): string {
+  return join(app.getPath("userData"), "global.db");
+}
+
+function legacyDbPath(): string {
+  return join(app.getPath("music"), "BeatOS", "global.db");
+}
+
 function resolveDbPath(): string {
-  return (
-    process.env.BEATOS_DB_PATH ??
-    readConfig().dbPath ??
-    join(app.getPath("music"), "BeatOS", "global.db")
-  );
+  return process.env.BEATOS_DB_PATH ?? readConfig().dbPath ?? defaultDbPath();
 }
 
 function resolveLogsDir(): string {
@@ -106,6 +113,25 @@ function startSidecar(): void {
 
   const dbPath = resolveDbPath();
   mkdirSync(dirname(dbPath), { recursive: true });
+
+  // One-time relocation of a legacy ~/Music/BeatOS library into userData. Only
+  // fires on the default path with no DB yet; copies (legacy kept as backup).
+  const migration = planLegacyMigration({
+    dbPath,
+    defaultPath: defaultDbPath(),
+    legacyPath: legacyDbPath(),
+  });
+  if (migration) {
+    copyDbWithSidecars(migration.from, migration.to);
+    logger.info(
+      `[db] migrated catalog ${migration.from} -> ${migration.to} (legacy kept as backup)`,
+    );
+  }
+  if (isCloudSyncedPath(dbPath)) {
+    logger.warn(
+      `[db] catalog DB is in a cloud-synced folder (${dbPath}); SQLite + cloud sync can corrupt it`,
+    );
+  }
 
   const logsDir = resolveLogsDir();
   mkdirSync(logsDir, { recursive: true });
