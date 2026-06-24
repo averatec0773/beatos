@@ -418,6 +418,10 @@
     "emptyWeb": "No AI activity yet. Connect an MCP client in the BeatOS desktop app — actions agents take will show up here.",
     "recent": "Recent ({{count}})"
   },
+  "migration": {
+    "title": "Your library was moved",
+    "body": "BeatOS copied your beat library into the app's data folder, off cloud-synced folders where SQLite can corrupt. Your old copy is kept as a backup."
+  },
   "detail": {
     "nowFocused": "Now Focused",
     "nowPlaying": "Now Playing",

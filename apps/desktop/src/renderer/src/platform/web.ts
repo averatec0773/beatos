@@ -61,6 +61,8 @@ export const webPlatform: Platform = {
       error: "MCP client setup is only available in the desktop app",
     }),
   onSidecarCrashed: () => () => {},
+  // DB lives server-side on web; no client-side legacy migration to announce.
+  onLegacyDbMigrated: () => () => {},
   startDragFile: (absPath) => {
     // Browsers can't drag a file to the OS; download it instead.
     const a = document.createElement("a");

@@ -22,6 +22,7 @@ export const electronPlatform: Platform = {
   testMcpConnection: () => window.beatos.testMcpConnection(),
   installMcpClientConfig: (target) => window.beatos.installMcpClientConfig(target),
   onSidecarCrashed: (cb) => window.beatos.onSidecarCrashed(cb),
+  onLegacyDbMigrated: (cb) => window.beatos.onLegacyDbMigrated(cb),
   startDragFile: (absPath) => window.beatos.startDragFile(absPath),
   getPathForFile: (file) => window.beatos.getPathForFile(file),
   isAudioForceMuted: () => window.beatos.isAudioForceMuted(),

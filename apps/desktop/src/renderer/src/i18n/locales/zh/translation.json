@@ -418,6 +418,10 @@
     "emptyWeb": "暂无 AI 活动。请在 BeatOS 桌面端连接 MCP 客户端 —— agent 的操作会显示在这里。",
     "recent": "近期记录（{{count}}）"
   },
+  "migration": {
+    "title": "曲库已迁移",
+    "body": "BeatOS 已把你的曲库复制到 app 数据目录,避开 SQLite 易损坏的云同步文件夹。旧副本已保留作为备份。"
+  },
   "detail": {
     "nowFocused": "当前选中",
     "nowPlaying": "正在播放",

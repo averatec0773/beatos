@@ -76,6 +76,10 @@ function repoRoot(): string {
   return join(__dirname, "..", "..", "..", "..");
 }
 
+// Set when the one-time legacy-library copy runs (see startSidecar), drained to
+// the renderer once the window's first load finishes so we can toast the user.
+let pendingMigration: { to: string } | null = null;
+
 // Default catalog location: app userData (non-synced). Moved off ~/Music/BeatOS
 // in v0.0.49+ — see legacyDbPath + the one-time migration in startSidecar.
 function defaultDbPath(): string {
@@ -123,6 +127,7 @@ function startSidecar(): void {
   });
   if (migration) {
     copyDbWithSidecars(migration.from, migration.to);
+    pendingMigration = { to: migration.to };
     logger.info(
       `[db] migrated catalog ${migration.from} -> ${migration.to} (legacy kept as backup)`,
     );
@@ -254,6 +259,14 @@ function createWindow(): void {
       shell.openExternal(details.url);
     }
     return { action: "deny" };
+  });
+
+  // Announce a one-time legacy-library copy once the renderer is up to receive it.
+  win.webContents.once("did-finish-load", () => {
+    if (pendingMigration) {
+      win.webContents.send(IPC_CHANNELS.LEGACY_DB_MIGRATED, pendingMigration);
+      pendingMigration = null;
+    }
   });
 
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
