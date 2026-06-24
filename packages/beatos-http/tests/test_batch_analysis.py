@@ -54,6 +54,25 @@ async def test_run_job_autofills_high_confidence(db_path, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_run_job_surfaces_per_track_error(db_path, monkeypatch):
+    async def boom(asset_id):
+        raise RuntimeError("decode exploded")
+
+    monkeypatch.setattr(batch, "analyze_asset", boom)
+    job_id = batch._new_job([1])
+    await batch._run_job(job_id, [1])
+
+    job = batch._JOBS[job_id]
+    assert job["status"] == "done"
+    assert job["done"] == 1
+    assert job["errors"] == 1
+    # The actual cause is captured (not just a count) so the UI can show why.
+    assert len(job["error_details"]) == 1
+    assert "decode exploded" in job["error_details"][0]
+    assert "A" in job["error_details"][0]  # track title is included
+
+
+@pytest.mark.asyncio
 async def test_run_job_skips_low_confidence(db_path, monkeypatch):
     async def fake_analyze(asset_id):
         return AudioAnalysisResult(
