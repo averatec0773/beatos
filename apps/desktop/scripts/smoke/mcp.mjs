@@ -35,32 +35,50 @@ export async function assertMcpInitialize(ctx) {
   const { app, baseUrl, failures } = ctx;
   const port = parseInt(new URL(baseUrl).port, 10);
   try {
-    const result = await app.evaluate(async ({ net }, port) => {
-      const resp = await net.fetch(`http://127.0.0.1:${port}/mcp`, {
-        method: "POST",
-        headers: {
+    // The /mcp endpoint requires `Authorization: Bearer <token>` (mcp_auth.py).
+    // The token is advertised in the handshake file; read it and send it, the
+    // same way the beatos-mcp launcher's proxy authenticates. (Absent only when
+    // BEATOS_MCP_DISABLE_AUTH=1, in which case the guard is off.)
+    let token = null;
+    try {
+      const userDataPath = await app.evaluate(({ app }) => app.getPath("userData"));
+      const hs = JSON.parse(readFileSync(join(userDataPath, "runtime", "handshake.json"), "utf-8"));
+      token = typeof hs.token === "string" ? hs.token : null;
+    } catch {
+      // Leave token null; a missing token surfaces as the 401 assertion below.
+    }
+
+    const result = await app.evaluate(
+      async ({ net }, { port, token }) => {
+        const headers = {
           "Content-Type": "application/json",
           Accept: "application/json, text/event-stream",
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "initialize",
-          params: {
-            protocolVersion: "2024-11-05",
-            capabilities: {},
-            clientInfo: { name: "smoke", version: "0" },
-          },
-        }),
-      });
-      const headers = Object.fromEntries(resp.headers.entries());
-      const text = await resp.text();
-      return {
-        status: resp.status,
-        hasSessionId: "mcp-session-id" in headers,
-        hasResult: text.includes('"result":'),
-      };
-    }, port);
+        };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const resp = await net.fetch(`http://127.0.0.1:${port}/mcp`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "initialize",
+            params: {
+              protocolVersion: "2024-11-05",
+              capabilities: {},
+              clientInfo: { name: "smoke", version: "0" },
+            },
+          }),
+        });
+        const responseHeaders = Object.fromEntries(resp.headers.entries());
+        const text = await resp.text();
+        return {
+          status: resp.status,
+          hasSessionId: "mcp-session-id" in responseHeaders,
+          hasResult: text.includes('"result":'),
+        };
+      },
+      { port, token },
+    );
 
     if (result.status !== 200) {
       failures.push(`/mcp initialize: expected 200, got ${result.status}`);
