@@ -88,6 +88,16 @@ async def test_deleting_demo_does_not_resurrect_it(db, fake_source):
     assert len(await list_tracks()) == 0
 
 
+async def test_disable_env_skips_seeding(db, fake_source, monkeypatch):
+    """BEATOS_DISABLE_DEMO_SEED=1 keeps a brand-new DB empty (smoke/CI use this),
+    without setting the flag so a real later run could still seed."""
+    monkeypatch.setenv("BEATOS_DISABLE_DEMO_SEED", "1")
+    await run_migrations(db)
+    assert await seed_demo_if_needed(source_dir=fake_source) is False
+    assert len(await list_tracks()) == 0
+    assert await get_setting("demo_seeded") is None
+
+
 async def test_missing_bundled_assets_is_noop(db, tmp_path):
     await run_migrations(db)
     empty = tmp_path / "empty"
