@@ -351,6 +351,22 @@
       "autoApproveDialogDesc": "The agent will be able to write to your library without asking for approval each time. You can turn this off at any time.",
       "autoApproveDialogContinue": "Continue"
     },
+    "aiAssist": {
+      "title": "AI Assist",
+      "desc": "Let a cloud AI model suggest genre, mood, and tags from a track's cover and title. Off by default — you bring your own API key, stored only on this device.",
+      "provider": "Provider",
+      "off": "Off",
+      "apiKey": "API key",
+      "apiKeyPlaceholder": "Paste your API key",
+      "keyConfigured": "A key is saved on this device",
+      "saveKey": "Save key",
+      "remove": "Remove",
+      "disclosure": "When you run AI tagging, the track's cover image and title are sent to the selected provider. Nothing is sent until you start it.",
+      "ready": "AI tagging is ready.",
+      "needsKey": "Add an API key to enable AI tagging.",
+      "keySaved": "API key saved",
+      "saveFailed": "Could not save AI settings"
+    },
     "storage": {
       "title": "Storage",
       "dbPath": "Catalog database path",

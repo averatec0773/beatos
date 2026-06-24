@@ -351,6 +351,22 @@
       "autoApproveDialogDesc": "agent 将能够直接写入你的曲库，无需每次请求批准。你随时可以关闭此选项。",
       "autoApproveDialogContinue": "继续"
     },
+    "aiAssist": {
+      "title": "AI 辅助",
+      "desc": "让云端 AI 模型根据封面和标题推断曲风、情绪和标签。默认关闭 —— 自带 API key,仅保存在本机。",
+      "provider": "服务商",
+      "off": "关闭",
+      "apiKey": "API key",
+      "apiKeyPlaceholder": "粘贴你的 API key",
+      "keyConfigured": "本机已保存一个 key",
+      "saveKey": "保存 key",
+      "remove": "移除",
+      "disclosure": "运行 AI 打标时,该轨道的封面图和标题会发送给所选服务商。不主动触发就不会发送任何内容。",
+      "ready": "AI 打标已就绪。",
+      "needsKey": "添加 API key 以启用 AI 打标。",
+      "keySaved": "API key 已保存",
+      "saveFailed": "无法保存 AI 设置"
+    },
     "storage": {
       "title": "存储",
       "dbPath": "曲库数据库路径",
