@@ -44,6 +44,7 @@ from beatos_http.routes import (
     producers,
     publish,
     sweep,
+    tagged_mp3,
     tracks,
 )
 from beatos_mcp.server import app as mcp_asgi_app, mcp
@@ -162,6 +163,7 @@ def create_app() -> FastAPI:
     app.include_router(ai.track_router)
     app.include_router(batch_tagging.router)
     app.include_router(license_pdf.track_router)
+    app.include_router(tagged_mp3.track_router)
     app.include_router(agent_actions.router)
     app.include_router(batch_analysis.router)
     # /api/fs (whole-disk browse + open) serves the WEB file browser only; the
