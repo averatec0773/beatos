@@ -9,17 +9,23 @@ from beatos_core.db import run_migrations
 from beatos_core.licenses.service import list_tiers_for_track
 from beatos_core.tracks.service import create_track, list_tracks, purge_track
 
-from beatos_http.seed.demo import _BUNDLED_DIR, seed_demo_if_needed
+from beatos_http.seed.demo import _BUNDLED_DIR, _DEMO_TRACKS, seed_demo_if_needed
+
+_EXPECTED_TITLES = {"template1", "template2", "template3"}
+_EXPECTED_PRICES = [{"CNY": 128.0}, {"CNY": 188.0}, {"CNY": 288.0}]
+_EXPECTED_DELIVERABLES = [["mp3"], ["wav"], ["stem"]]
 
 
 @pytest.fixture
 def fake_source(tmp_path):
-    """Tiny stand-in assets so the test never copies the real ~5 MB files.
-    read_audio_metadata is exception-safe, so non-audio bytes are fine."""
+    """Tiny stand-in assets so the test never copies the real ~20 MB of audio.
+    read_audio_metadata is exception-safe, so non-audio bytes are fine; asset
+    format is derived from the extension, not the content."""
     src = tmp_path / "seed_assets"
     src.mkdir()
-    (src / "regalia.mp3").write_bytes(b"ID3 fake audio bytes")
-    (src / "regalia-cover.jpg").write_bytes(b"\xff\xd8\xff\xe0 fake jpeg")
+    for spec in _DEMO_TRACKS:
+        (src / spec["audio"]).write_bytes(b"ID3 fake audio bytes")
+        (src / spec["cover"]).write_bytes(b"\xff\xd8\xff\xe0 fake jpeg")
     return src
 
 
@@ -35,28 +41,50 @@ async def test_seeds_empty_library(db, fake_source):
     assert await seed_demo_if_needed(source_dir=fake_source) is True
 
     tracks = await list_tracks()
-    assert len(tracks) == 1
-    t = tracks[0]
-    assert t.title == "REGALIA"
-    assert t.bpm == 127
-    assert t.key_signature == "D minor"
-    assert t.genre == ["Regalia"]
-    assert t.mood == ["Epic", "Grand", "Dark"]
-    assert t.producer == ["Averatec"]
-    assert t.is_free is True
+    assert len(tracks) == 3
+    by_title = {t.title: t for t in tracks}
+    assert set(by_title) == _EXPECTED_TITLES
 
-    roles = {a.role for a in await list_assets(t.id)}
-    assert roles == {"audio_tagged", "cover"}
+    # Every template is free (non-commercial download) AND carries paid tiers.
+    for t in tracks:
+        assert t.is_free is True
+        roles = {a.role for a in await list_assets(t.id)}
+        assert roles == {"audio_tagged", "cover"}
+        tiers = await list_tiers_for_track(t.id)
+        assert [tier.deliverables for tier in tiers] == _EXPECTED_DELIVERABLES
+        assert [tier.prices for tier in tiers] == _EXPECTED_PRICES
+
+    # Spot-check per-track metadata. Titles are the generic template labels; the
+    # real beat metadata (and its NetEase reference link in `description`) rides
+    # underneath, mapped by song identity.
+    t1 = by_title["template1"]  # REGALIA beat
+    assert t1.bpm == 127
+    assert t1.key_signature == "D minor"
+    assert t1.genre == ["Regalia"]
+    assert t1.mood == ["Epic", "Grand", "Dark"]
+    assert t1.producer == ["Averatec"]
+    assert t1.description == "https://music.163.com/#/song?id=2155196363"
+
+    t2 = by_title["template2"]  # 寒江雪 beat
+    assert t2.bpm == 137
+    assert t2.genre == ["Chinese Hip Hop"]
+    assert t2.mood == ["Sacred", "Psychedelic"]
+    # "averatec" canonicalizes to the first-seen casing "Averatec".
+    assert t2.producer == ["yusician", "Averatec"]
+    assert t2.description == "https://music.163.com/#/song?id=3374182565"
+
+    t3 = by_title["template3"]  # 契约 beat
+    assert t3.bpm == 152
+    assert t3.genre == ["Melodic Rap"]
+    assert t3.mood == ["Elegant", "Sacred", "Epic"]
+    assert t3.producer == ["4Harry", "Averatec"]
+    assert t3.description == "https://music.163.com/#/song?id=3391062994"
 
     # Files copied into the stable user-data demo dir (next to the db).
     demo_dir = db.parent / "demo"
-    assert (demo_dir / "regalia.mp3").exists()
-    assert (demo_dir / "regalia-cover.jpg").exists()
-
-    tiers = await list_tiers_for_track(t.id)
-    assert len(tiers) == 1
-    assert tiers[0].deliverables == ["mp3"]
-    assert tiers[0].prices == {"CNY": 128.0}
+    for spec in _DEMO_TRACKS:
+        assert (demo_dir / spec["audio"]).exists()
+        assert (demo_dir / spec["cover"]).exists()
 
     assert await get_setting("demo_seeded") is True
 
@@ -65,7 +93,7 @@ async def test_idempotent_no_duplicate(db, fake_source):
     await run_migrations(db)
     assert await seed_demo_if_needed(source_dir=fake_source) is True
     assert await seed_demo_if_needed(source_dir=fake_source) is False
-    assert len(await list_tracks()) == 1
+    assert len(await list_tracks()) == 3
 
 
 async def test_skips_when_library_not_empty(db, fake_source):
@@ -80,8 +108,8 @@ async def test_skips_when_library_not_empty(db, fake_source):
 async def test_deleting_demo_does_not_resurrect_it(db, fake_source):
     await run_migrations(db)
     assert await seed_demo_if_needed(source_dir=fake_source) is True
-    t = (await list_tracks())[0]
-    await purge_track(t.id)
+    for t in await list_tracks():
+        await purge_track(t.id)
     assert len(await list_tracks()) == 0
     # Next startup must not bring it back (flag already set).
     assert await seed_demo_if_needed(source_dir=fake_source) is False
@@ -110,5 +138,6 @@ async def test_missing_bundled_assets_is_noop(db, tmp_path):
 
 def test_bundled_assets_are_present():
     """Guards against the feature silently breaking if the files are removed."""
-    assert (_BUNDLED_DIR / "regalia.mp3").exists()
-    assert (_BUNDLED_DIR / "regalia-cover.jpg").exists()
+    for spec in _DEMO_TRACKS:
+        assert (_BUNDLED_DIR / spec["audio"]).exists()
+        assert (_BUNDLED_DIR / spec["cover"]).exists()
