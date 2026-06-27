@@ -14,6 +14,10 @@ Not a spreadsheet. Not a DAW. Not a marketplace. **BeatOS** is a local-first hom
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
 [![MCP](https://img.shields.io/badge/MCP-Claude%20%E2%80%A2%20Codex%20%E2%80%A2%20any%20client-7c5cff?style=flat-square)](#ai-co-pilot-mcp)
 
+<br/>
+
+**English** · [简体中文](README.zh-CN.md)
+
 </div>
 
 ---
