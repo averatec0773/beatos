@@ -14,6 +14,15 @@ from beatos_core.tracks.service import (
     list_tracks,
 )
 
+# Local-only fields never sent to the cloud model. `project_path` is an absolute
+# path on the user's machine (Track marks it "Local-only"); keep the chat surface
+# as privacy-scoped as the suggest-tags path, which sends only cover + title.
+_TRACK_EXCLUDE = {"project_path"}
+
+
+def _serialize_track(t: Any) -> dict:
+    return t.model_dump(mode="json", exclude=_TRACK_EXCLUDE)
+
 
 async def _search_tracks(inp: dict) -> Any:
     tracks = await list_tracks(
@@ -25,12 +34,12 @@ async def _search_tracks(inp: dict) -> Any:
         bpm_max=inp.get("bpm_max"),
         has_audio=inp.get("has_audio"),
     )
-    return [t.model_dump(mode="json") for t in tracks]
+    return [_serialize_track(t) for t in tracks]
 
 
 async def _get_track(inp: dict) -> Any:
     t = await get_track(int(inp["track_id"]))
-    return t.model_dump(mode="json") if t else None
+    return _serialize_track(t) if t else None
 
 
 async def _list_distinct_values(inp: dict) -> Any:

@@ -2,7 +2,7 @@
 import pytest
 
 from beatos_core.db import run_migrations
-from beatos_core.tracks.service import create_track
+from beatos_core.tracks.service import create_track, update_track
 
 from beatos_http.ai.chat_tools import (
     UnknownToolError,
@@ -39,6 +39,18 @@ async def test_search_tracks_returns_serializable_list(db):
 async def test_get_track_returns_none_for_missing(db):
     await run_migrations(db)
     assert await execute_tool("get_track", {"track_id": 999999}) is None
+
+
+@pytest.mark.asyncio
+async def test_local_only_project_path_is_not_serialized(db):
+    # project_path is an absolute local path — it must never be sent to the model.
+    await run_migrations(db)
+    t = await create_track("Has Project")
+    await update_track(t.id, {"project_path": "/Users/me/secret/Project.als"})
+    one = await execute_tool("get_track", {"track_id": t.id})
+    assert "project_path" not in one
+    many = await execute_tool("search_tracks", {"q": "Project"})
+    assert all("project_path" not in row for row in many)
 
 
 @pytest.mark.asyncio
