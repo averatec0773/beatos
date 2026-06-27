@@ -16,7 +16,7 @@ import logging
 
 import httpx
 
-from beatos_http.ai.provider import TagSuggestion
+from beatos_http.ai.provider import ChatTurn, TagSuggestion, ToolUse
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +24,12 @@ _API_URL = "https://api.anthropic.com/v1/messages"
 _API_VERSION = "2023-06-01"
 _MAX_TOKENS = 600
 _TIMEOUT = 30.0
+_CHAT_MAX_TOKENS = 1024
+_CHAT_SYSTEM = (
+    "You are BeatOS's in-app assistant for a music producer's beat catalog. "
+    "Use the provided tools to find and report catalog data. Be concise and "
+    "concrete; cite track titles and ids. Do not invent tracks or fields."
+)
 
 _PROMPT = (
     "You are tagging a music beat for a producer's catalog. From the cover image "
@@ -140,3 +146,39 @@ class AnthropicProvider:
             if block.get("type") == "text"
         )
         return _parse_suggestion(text)
+
+    async def run_chat(
+        self, *, messages: list[dict], tools: list[dict]
+    ) -> ChatTurn:
+        payload = {
+            "model": self._model,
+            "max_tokens": _CHAT_MAX_TOKENS,
+            "system": _CHAT_SYSTEM,
+            "messages": messages,
+            "tools": tools,
+        }
+        headers = {
+            "x-api-key": self._api_key,
+            "anthropic-version": _API_VERSION,
+            "content-type": "application/json",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+                resp = await client.post(_API_URL, headers=headers, json=payload)
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise RuntimeError(
+                f"AI provider request failed: HTTP {e.response.status_code}"
+            ) from None
+        except httpx.HTTPError as e:
+            raise RuntimeError(f"AI provider request failed: {type(e).__name__}") from None
+
+        data = resp.json()
+        blocks = data.get("content", [])
+        text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+        tool_uses = [
+            ToolUse(id=b["id"], name=b["name"], input=b.get("input") or {})
+            for b in blocks
+            if b.get("type") == "tool_use"
+        ]
+        return ChatTurn(stop_reason=data.get("stop_reason", ""), text=text, tool_uses=tool_uses)
