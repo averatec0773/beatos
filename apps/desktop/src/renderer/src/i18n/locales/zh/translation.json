@@ -664,5 +664,23 @@
   },
   "dragOverlay": {
     "tracks": "{{count}} 首"
+  },
+  "chat": {
+    "title": "AI 聊天",
+    "emptyHint": "问我关于目录的事，或直接让我改 —— 例如「把 lo-fi 的曲子标成 chill」或「找出我 2024 年还没打标的曲子」。",
+    "placeholder": "给你的目录助手发消息…",
+    "send": "发送",
+    "thinking": "思考中…",
+    "you": "你",
+    "assistant": "助手",
+    "ranTool": "已执行 {{tool}}",
+    "toolFailed": "{{tool}} 执行失败",
+    "confirmTitle": "确认此操作",
+    "apply": "执行",
+    "decline": "取消",
+    "notConfiguredTitle": "AI 尚未配置",
+    "notConfiguredBody": "在 设置 里开启 AI Assist（选择提供方并粘贴你的 API key），即可与目录对话。",
+    "errorPrefix": "出错了",
+    "newChat": "新对话"
   }
 }

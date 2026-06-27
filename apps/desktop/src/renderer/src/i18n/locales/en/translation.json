@@ -664,5 +664,23 @@
   },
   "dragOverlay": {
     "tracks": "{{count}} tracks"
+  },
+  "chat": {
+    "title": "AI Chat",
+    "emptyHint": "Ask about your catalog or tell me what to change — e.g. \"tag the lo-fi beats as chill\" or \"find my untagged 2024 tracks\".",
+    "placeholder": "Message your catalog assistant…",
+    "send": "Send",
+    "thinking": "Thinking…",
+    "you": "You",
+    "assistant": "Assistant",
+    "ranTool": "Ran {{tool}}",
+    "toolFailed": "{{tool}} failed",
+    "confirmTitle": "Confirm this change",
+    "apply": "Apply",
+    "decline": "Decline",
+    "notConfiguredTitle": "AI is not set up",
+    "notConfiguredBody": "Turn on AI Assist in Settings (pick a provider and paste your API key) to chat with your catalog.",
+    "errorPrefix": "Something went wrong",
+    "newChat": "New chat"
   }
 }
