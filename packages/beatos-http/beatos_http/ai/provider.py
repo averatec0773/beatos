@@ -25,6 +25,22 @@ class TagSuggestion(BaseModel):
     description: str | None = None
 
 
+class ToolUse(BaseModel):
+    """One tool call the model wants to make."""
+
+    id: str
+    name: str
+    input: dict = Field(default_factory=dict)
+
+
+class ChatTurn(BaseModel):
+    """One assistant turn: its text, any tool calls, and why it stopped."""
+
+    stop_reason: str
+    text: str = ""
+    tool_uses: list[ToolUse] = Field(default_factory=list)
+
+
 @runtime_checkable
 class AIProvider(Protocol):
     """A tagging provider. `name` matches the `ai_provider` setting value."""
@@ -41,4 +57,10 @@ class AIProvider(Protocol):
         """Propose genre / mood / tags / description from a track's title,
         optional cover image, and existing fields. Implementations must never
         log the API key or the raw response verbatim."""
+        ...
+
+    async def run_chat(self, *, messages: list[dict], tools: list[dict]) -> "ChatTurn":
+        """Run one non-streaming chat turn with tool-use. `messages` is the
+        Anthropic message history; `tools` is the tool-definition array. Returns
+        the assistant text + any tool calls + stop reason. Never logs the key."""
         ...

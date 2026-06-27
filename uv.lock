@@ -128,7 +128,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "reportlab" },
-    { name = "sse-starlette" },
     { name = "structlog" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -140,7 +139,6 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "reportlab", specifier = ">=4.0" },
-    { name = "sse-starlette", specifier = ">=2.1" },
     { name = "structlog", specifier = ">=25.5.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]

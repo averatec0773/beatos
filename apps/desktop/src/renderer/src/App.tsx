@@ -10,6 +10,7 @@ import { SettingsPanel } from "@/routes/SettingsPanel";
 import { TrashPanel } from "@/routes/TrashPanel";
 import { ApprovalsPanel } from "@/routes/ApprovalsPanel";
 import { PublishCenterPanel } from "@/routes/PublishCenterPanel";
+import { ChatPanel } from "@/routes/ChatPanel";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SidecarCrashToast } from "@/components/SidecarCrashToast";
 import { LegacyMigrationToast } from "@/components/LegacyMigrationToast";
@@ -141,6 +142,7 @@ export default function App(): React.JSX.Element {
               <Route path="/settings" element={<SettingsPanel />} />
               <Route path="/trash" element={<TrashPanel />} />
               <Route path="/publish" element={<PublishCenterPanel />} />
+              <Route path="/chat" element={<ChatPanel />} />
             </Route>
           </Routes>
         </HashRouter>

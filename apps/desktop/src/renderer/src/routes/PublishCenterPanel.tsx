@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw, Rocket } from "lucide-react";
+import { RefreshCw, Rocket, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { publishApi } from "@/api/publish";
+import { useProStore } from "@/stores/pro";
 import { usePublishCenterStore } from "@/stores/publish-center";
 import { useTrackStore } from "@/stores/tracks";
 import { useToastStore } from "@/stores/toast";
@@ -19,10 +20,18 @@ const SECTION = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-te
 // sidecar 30×/min forever — we still poll slowly to pick up a newly-started publish.
 const POLL_ACTIVE_MS = 2000;
 const POLL_IDLE_MS = 8000;
+// Stop a login poll after this many CONSECUTIVE failed reads (sidecar gone /
+// login_id no longer known) instead of 404ing forever. Resets on any good read.
+const MAX_LOGIN_POLL_ERRORS = 10;
 
 export function PublishCenterPanel(): React.JSX.Element {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // Publishing is a Pro feature. The sidebar link is hidden in the free build, but
+  // the /publish hash route is still directly reachable — guard it here so a free
+  // build shows a clean upsell instead of firing publish APIs that all 402.
+  const proLoaded = useProStore((s) => s.loaded);
+  const publishAvailable = useProStore((s) => s.publishAvailable);
   const sessions = usePublishCenterStore((s) => s.sessions);
   const jobs = usePublishCenterStore((s) => s.jobs);
   const validating = usePublishCenterStore((s) => s.validating);
@@ -47,6 +56,7 @@ export function PublishCenterPanel(): React.JSX.Element {
   const mountedRef = useRef(true);
 
   useEffect(() => {
+    if (!publishAvailable) return; // free build: don't hit publish APIs
     void (async () => {
       await loadSessions();
       await validateSessions();
@@ -70,7 +80,7 @@ export function PublishCenterPanel(): React.JSX.Element {
       if (jobsTimer.current) window.clearTimeout(jobsTimer.current);
       if (loginTimer.current) window.clearInterval(loginTimer.current);
     };
-  }, [loadSessions, validateSessions, refreshJobs]);
+  }, [publishAvailable, loadSessions, validateSessions, refreshJobs]);
 
   useEffect(
     () => () => {
@@ -94,9 +104,11 @@ export function PublishCenterPanel(): React.JSX.Element {
     try {
       const { login_id } = await publishApi.login(platform);
       if (!mountedRef.current) return;
+      let loginErrors = 0;
       loginTimer.current = window.setInterval(async () => {
         try {
           const { status, message } = await publishApi.loginStatus(login_id);
+          loginErrors = 0;
           if (status === "success") {
             stopLogin();
             await validateSessions(true);
@@ -113,7 +125,13 @@ export function PublishCenterPanel(): React.JSX.Element {
               );
           }
         } catch {
-          /* transient; keep polling */
+          // Transient blips are tolerated; sustained unreachability (sidecar
+          // restarted, login_id gone) stops the poll instead of 404ing forever.
+          loginErrors += 1;
+          if (loginErrors >= MAX_LOGIN_POLL_ERRORS) {
+            stopLogin();
+            useToastStore.getState().show("error", t("publishCenter.connectionLost"));
+          }
         }
       }, 2000);
     } catch {
@@ -123,6 +141,24 @@ export function PublishCenterPanel(): React.JSX.Element {
   }
 
   const platforms = useMemo(() => Object.keys(sessions), [sessions]);
+
+  // Free build (Pro status settled, publish not available): clean upsell wall
+  // instead of a panel firing 402s. While status is still loading, render nothing.
+  if (proLoaded && !publishAvailable) {
+    return (
+      <div className="beatos-card flex h-full flex-col items-center justify-center rounded-xl p-8 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-bg-elevated">
+          <Lock size={24} className="text-text-tertiary" />
+        </div>
+        <h1 className="mb-1.5 flex items-center gap-2 text-lg font-semibold text-text-primary">
+          <Rocket size={18} /> {t("publishCenter.title")}
+        </h1>
+        <p className="max-w-sm text-sm text-text-secondary">
+          {t("sidebar.publishCenterLocked")}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="beatos-card beatos-scroll h-full overflow-y-auto rounded-xl p-5">

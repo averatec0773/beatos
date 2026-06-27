@@ -28,6 +28,7 @@ from beatos_http.mcp_auth import get_mcp_token, guard_mcp_app
 from beatos_http.routes import (
     agent_actions,
     ai,
+    ai_chat,
     analysis,
     app_settings,
     assets,
@@ -50,7 +51,8 @@ from beatos_http.routes import (
 from beatos_mcp.server import app as mcp_asgi_app, mcp
 
 # Side-effect import: registers every MCP write tool's apply handler into
-# beatos_core.approvals (consumed by beatos_mcp.policy.submit_write). Without this
+# beatos_core.approvals (consumed by beatos_core.agent_permission.submit_write).
+# Without this
 # the sidecar's apply registry is empty and every write tool fails with
 # "no apply handler" — the 2PC-removal regression caught by QA 2026-06-19.
 import beatos_http.handlers  # noqa: E402, F401
@@ -161,6 +163,7 @@ def create_app() -> FastAPI:
     app.include_router(app_settings.router)
     app.include_router(ai.router)
     app.include_router(ai.track_router)
+    app.include_router(ai_chat.router)
     app.include_router(batch_tagging.router)
     app.include_router(license_pdf.track_router)
     app.include_router(tagged_mp3.track_router)

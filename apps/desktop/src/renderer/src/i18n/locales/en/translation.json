@@ -333,7 +333,8 @@
     "publishCenter": "Publish Center",
     "settings": "Settings",
     "agentActions": "Agent Actions",
-    "resizeSidebar": "Resize sidebar"
+    "resizeSidebar": "Resize sidebar",
+    "aiChat": "AI Chat"
   },
   "projectFolder": {
     "label": "Project folder",
@@ -534,8 +535,13 @@
     "selectPromoVideoFirst": "Select a promo video first",
     "selectPreviewAudioFirst": "Select a preview audio first",
     "publishFailed": "Publish failed",
+    "connectionLost": "Lost connection to BeatOS — stopped tracking this publish.",
     "publishToPlatform": "Publish to platform",
     "logInFirst": "Log in first",
+    "sessionExpired": "Session expired — log in again",
+    "reLogin": "Re-login",
+    "checkingSession": "Checking login…",
+    "sessionUnknown": "Couldn't verify login — you can still try to publish.",
     "browserOpen": "Browser open…",
     "logIn": "Log in",
     "awaitingMsg": "Auto-uploaded — finish the last step in the browser (read the agreement, then SMS-verify).",
@@ -577,6 +583,7 @@
     "checking": "Checking",
     "statusUnknown": "Status unknown",
     "couldntCheckStatus": "Couldn't check account status",
+    "connectionLost": "Lost connection to BeatOS — stopped the login check.",
     "notLoggedIn": "Not logged in",
     "waitingForReview": "Waiting for you — finish in the open browser (next → sign → submit)",
     "waitingForSms": "Waiting for you — finish in the open browser (enter SMS → submit)",
@@ -658,5 +665,23 @@
   },
   "dragOverlay": {
     "tracks": "{{count}} tracks"
+  },
+  "chat": {
+    "title": "AI Chat",
+    "emptyHint": "Ask about your catalog or tell me what to change — e.g. \"tag the lo-fi beats as chill\" or \"find my untagged 2024 tracks\".",
+    "placeholder": "Message your catalog assistant…",
+    "send": "Send",
+    "thinking": "Thinking…",
+    "you": "You",
+    "assistant": "Assistant",
+    "ranTool": "Ran {{tool}}",
+    "toolFailed": "{{tool}} failed",
+    "confirmTitle": "Confirm this change",
+    "apply": "Apply",
+    "decline": "Decline",
+    "notConfiguredTitle": "AI is not set up",
+    "notConfiguredBody": "Turn on AI Assist in Settings (pick a provider and paste your API key) to chat with your catalog.",
+    "errorPrefix": "Something went wrong",
+    "newChat": "New chat"
   }
 }

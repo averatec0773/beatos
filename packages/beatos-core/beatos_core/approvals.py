@@ -2,12 +2,13 @@
 
 Each write tool's logic registers here under its tool name and is invoked
 directly (with the prepared payload) by the single chokepoint
-`beatos_mcp.policy.submit_write`. The handler performs the write within the
-CALLER's transaction (the caller commits).
+`beatos_core.agent_permission.submit_write` (re-exported as `beatos_mcp.policy`
+for the MCP server). The handler performs the write within the CALLER's
+transaction (the caller commits).
 
-This registry lives in beatos-core so the chokepoint (beatos-mcp) and the
-handlers (beatos-http) share one canonical dispatch. beatos-core never imports
-the handlers — they register into this registry at import time (layering rule 2).
+This registry lives in beatos-core so the chokepoint and the handlers
+(beatos-http) share one canonical dispatch. beatos-core never imports the
+handlers — they register into this registry at import time (layering rule 2).
 """
 from __future__ import annotations
 

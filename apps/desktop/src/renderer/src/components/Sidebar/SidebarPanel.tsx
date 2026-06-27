@@ -15,6 +15,7 @@ import { TrashSection } from "@/components/Sidebar/TrashSection";
 import { SettingsSection } from "@/components/Sidebar/SettingsSection";
 import { SidebarFooter } from "@/components/Sidebar/SidebarFooter";
 import { PublishCenterSection } from "@/components/Sidebar/PublishCenterSection";
+import { ChatSection } from "@/components/Sidebar/ChatSection";
 
 export function SidebarPanel(): React.JSX.Element {
   const { t } = useTranslation();
@@ -62,6 +63,7 @@ export function SidebarPanel(): React.JSX.Element {
       <div className="flex flex-col gap-0.5">
         <AllBeatsSection />
         <PublishCenterSection />
+        <ChatSection />
         <ApprovalsSection />
         <TrashSection />
       </div>

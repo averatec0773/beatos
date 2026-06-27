@@ -333,7 +333,8 @@
     "publishCenter": "Publish Center",
     "settings": "设置",
     "agentActions": "Agent 操作",
-    "resizeSidebar": "调整侧栏宽度"
+    "resizeSidebar": "调整侧栏宽度",
+    "aiChat": "AI 聊天"
   },
   "projectFolder": {
     "label": "工程文件夹",
@@ -534,8 +535,13 @@
     "selectPromoVideoFirst": "请先选择推广视频",
     "selectPreviewAudioFirst": "请先选择预览音频",
     "publishFailed": "发布失败",
+    "connectionLost": "与 BeatOS 的连接中断 —— 已停止跟踪此次发布。",
     "publishToPlatform": "发布到平台",
     "logInFirst": "请先登录",
+    "sessionExpired": "登录已过期 —— 请重新登录",
+    "reLogin": "重新登录",
+    "checkingSession": "正在检查登录状态…",
+    "sessionUnknown": "无法确认登录状态 —— 你仍可尝试发布。",
     "browserOpen": "浏览器已打开…",
     "logIn": "登录",
     "awaitingMsg": "已自动上传 —— 请在打开的浏览器中完成最后一步（阅读协议，然后短信验证）。",
@@ -577,6 +583,7 @@
     "checking": "检查中",
     "statusUnknown": "状态未知",
     "couldntCheckStatus": "无法检测账号状态",
+    "connectionLost": "与 BeatOS 的连接中断 —— 已停止登录检查。",
     "notLoggedIn": "未登录",
     "waitingForReview": "等待你操作——在已打开的浏览器中完成（下一步 → 签名 → 提交）",
     "waitingForSms": "等待你操作——在已打开的浏览器中完成（输入短信验证码 → 提交）",
@@ -658,5 +665,23 @@
   },
   "dragOverlay": {
     "tracks": "{{count}} 首"
+  },
+  "chat": {
+    "title": "AI 聊天",
+    "emptyHint": "问我关于目录的事，或直接让我改 —— 例如「把 lo-fi 的曲子标成 chill」或「找出我 2024 年还没打标的曲子」。",
+    "placeholder": "给你的目录助手发消息…",
+    "send": "发送",
+    "thinking": "思考中…",
+    "you": "你",
+    "assistant": "助手",
+    "ranTool": "已执行 {{tool}}",
+    "toolFailed": "{{tool}} 执行失败",
+    "confirmTitle": "确认此操作",
+    "apply": "执行",
+    "decline": "取消",
+    "notConfiguredTitle": "AI 尚未配置",
+    "notConfiguredBody": "在 设置 里开启 AI Assist（选择提供方并粘贴你的 API key），即可与目录对话。",
+    "errorPrefix": "出错了",
+    "newChat": "新对话"
   }
 }
