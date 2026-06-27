@@ -20,7 +20,8 @@ def db(tmp_path, monkeypatch):
 
 def test_anthropic_tool_defs_shape():
     defs = anthropic_tool_defs()
-    assert {d["name"] for d in defs} == {"search_tracks", "get_track", "list_distinct_values"}
+    names = {d["name"] for d in defs}
+    assert {"search_tracks", "get_track", "list_distinct_values"} <= names
     for d in defs:
         assert set(d) == {"name", "description", "input_schema"}
         assert d["input_schema"]["type"] == "object"
@@ -58,3 +59,25 @@ async def test_unknown_tool_raises(db):
     await run_migrations(db)
     with pytest.raises(UnknownToolError):
         await execute_tool("nope", {})
+
+
+from beatos_http.ai.chat_tools import build_write_payload, is_destructive
+
+
+def test_write_tools_in_defs_and_destructive_flags():
+    names = {d["name"] for d in anthropic_tool_defs()}
+    assert {"update_tracks", "trash_tracks"} <= names
+    assert is_destructive("trash_tracks") is True
+    assert is_destructive("update_tracks") is False
+    assert is_destructive("search_tracks") is False  # reads are never destructive
+
+
+def test_build_write_payload_shapes():
+    up = build_write_payload("update_tracks", {"ids": [1, 2], "patch": {"genre": ["Trap"]}})
+    assert up["ids"] == [1, 2]
+    assert up["patch"] == {"genre": ["Trap"]}
+    assert isinstance(up["preview"], dict) and up["preview"]["headline"]
+
+    tr = build_write_payload("trash_tracks", {"ids": [5]})
+    assert tr["ids"] == [5]
+    assert isinstance(tr["preview"], dict) and tr["preview"]["headline"]

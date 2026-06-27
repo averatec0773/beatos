@@ -95,21 +95,112 @@ READ_TOOLS: list[dict] = [
 ]
 
 
+def _preview_update_tracks(inp: dict) -> str:
+    fields = ", ".join((inp.get("patch") or {}).keys()) or "fields"
+    return f"Update {len(inp.get('ids') or [])} track(s): {fields}"
+
+
+def _build_update_tracks(inp: dict) -> dict:
+    return {
+        "ids": inp["ids"],
+        "patch": inp["patch"],
+        "preview": {"headline": _preview_update_tracks(inp)},
+    }
+
+
+def _preview_trash_tracks(inp: dict) -> str:
+    return f"Move {len(inp.get('ids') or [])} track(s) to Trash"
+
+
+def _build_trash_tracks(inp: dict) -> dict:
+    return {"ids": inp["ids"], "preview": {"headline": _preview_trash_tracks(inp)}}
+
+
+# Write tools. `tool_name` is the apply-handler name (beatos_core.approvals). They
+# run through submit_write (mode-gated + audited). `destructive=True` makes the
+# loop pause for an explicit in-chat confirm before applying.
+WRITE_TOOLS: list[dict] = [
+    {
+        "name": "update_tracks",
+        "tool_name": "update_tracks",
+        "destructive": False,
+        "description": (
+            "Update metadata on one or more tracks. 'ids' is a list of track ids. "
+            "'patch' maps fields to new values: scalar fields title, bpm, key, "
+            "description, is_free take a plain value; multi-value fields producer, "
+            "genre, mood take either a list (replace) or {\"add\": [...], "
+            "\"remove\": [...]}. Only include fields you intend to change."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ids": {"type": "array", "items": {"type": "integer"}},
+                "patch": {"type": "object"},
+            },
+            "required": ["ids", "patch"],
+        },
+        "build": _build_update_tracks,
+    },
+    {
+        "name": "trash_tracks",
+        "tool_name": "trash_tracks",
+        "destructive": True,
+        "description": (
+            "Move one or more tracks to Trash (reversible). 'ids' is a list of "
+            "track ids. This is a destructive action and will ask the user to "
+            "confirm before applying."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"ids": {"type": "array", "items": {"type": "integer"}}},
+            "required": ["ids"],
+        },
+        "build": _build_trash_tracks,
+    },
+]
+
+
 class UnknownToolError(KeyError):
     """No chat tool is registered under that name."""
+
+
+def _read_spec(name: str) -> dict | None:
+    return next((t for t in READ_TOOLS if t["name"] == name), None)
+
+
+def _write_spec(name: str) -> dict | None:
+    return next((t for t in WRITE_TOOLS if t["name"] == name), None)
+
+
+def find_tool(name: str) -> dict | None:
+    return _read_spec(name) or _write_spec(name)
+
+
+def is_destructive(name: str) -> bool:
+    spec = _write_spec(name)
+    return bool(spec and spec["destructive"])
 
 
 def anthropic_tool_defs() -> list[dict]:
     """The Anthropic `tools` array (name/description/input_schema only)."""
     return [
         {"name": t["name"], "description": t["description"], "input_schema": t["input_schema"]}
-        for t in READ_TOOLS
+        for t in (*READ_TOOLS, *WRITE_TOOLS)
     ]
 
 
+def build_write_payload(name: str, tool_input: dict | None) -> dict:
+    """Build the submit_write payload (incl. preview) for a write tool."""
+    spec = _write_spec(name)
+    if spec is None:
+        raise UnknownToolError(name)
+    return spec["build"](tool_input or {})
+
+
 async def execute_tool(name: str, tool_input: dict | None) -> Any:
-    """Run a tool by name; return a JSON-serialisable result."""
-    for t in READ_TOOLS:
-        if t["name"] == name:
-            return await t["handler"](tool_input or {})
-    raise UnknownToolError(name)
+    """Run a READ tool by name; return a JSON-serialisable result. Writes do NOT
+    go through here — they route through submit_write in the chat loop."""
+    spec = _read_spec(name)
+    if spec is None:
+        raise UnknownToolError(name)
+    return await spec["handler"](tool_input or {})
