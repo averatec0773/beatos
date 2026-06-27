@@ -15,16 +15,35 @@ if TYPE_CHECKING:
     from beatos_http.ai.provider import AIProvider
 
 # Setting keys (the renderer / HTTP layer own the schema; see app_settings).
-AI_PROVIDER_KEY = "ai_provider"  # "" / None = off; e.g. "anthropic"
+AI_PROVIDER_KEY = "ai_provider"  # "" / None = off; e.g. "anthropic" / "openai" / "deepseek"
 AI_API_KEY = "ai_api_key"  # secret — write-gated, never read back
 AI_MODEL_KEY = "ai_model"  # which model to use; not secret
 
-# Providers we know how to drive.
-SUPPORTED_PROVIDERS: tuple[str, ...] = ("anthropic",)
+# Providers we know how to drive. anthropic = Claude; openai = ChatGPT; deepseek
+# is OpenAI-compatible (same wire format, different base URL — see openai_provider).
+SUPPORTED_PROVIDERS: tuple[str, ...] = ("anthropic", "openai", "deepseek")
 
-# Vision-capable models the user can pick (Settings). Default is the cheaper Haiku.
-SUPPORTED_MODELS: tuple[str, ...] = ("claude-haiku-4-5", "claude-sonnet-4-6")
-DEFAULT_MODEL = "claude-haiku-4-5"
+# Models the user can pick per provider (Settings). The first entry is the default.
+PROVIDER_MODELS: dict[str, tuple[str, ...]] = {
+    "anthropic": ("claude-haiku-4-5", "claude-sonnet-4-6"),
+    "openai": ("gpt-4o-mini", "gpt-4o"),
+    "deepseek": ("deepseek-chat",),
+}
+# Model resolution falls back to this provider's list when none is selected yet, so
+# get_ai_model()/get_ai_status() stay stable (and back-compatible) before setup.
+_FALLBACK_PROVIDER = "anthropic"
+
+# Back-compat aliases (older callers referenced these flat names).
+SUPPORTED_MODELS: tuple[str, ...] = PROVIDER_MODELS[_FALLBACK_PROVIDER]
+DEFAULT_MODEL = PROVIDER_MODELS[_FALLBACK_PROVIDER][0]
+
+
+def _models_for(provider: str | None) -> tuple[str, ...]:
+    return PROVIDER_MODELS.get(provider or "", PROVIDER_MODELS[_FALLBACK_PROVIDER])
+
+
+def _default_model_for(provider: str | None) -> str:
+    return _models_for(provider)[0]
 
 
 async def _stored_provider() -> str | None:
@@ -39,14 +58,19 @@ async def has_api_key() -> bool:
 
 
 async def get_ai_model() -> str:
-    """The selected model, or the default when unset/unknown."""
+    """The selected model, or the provider's default when unset/unknown. Models are
+    provider-scoped, so a stored model from a different provider falls back too."""
+    provider = await _stored_provider()
+    models = _models_for(provider)
     val = await get_setting(AI_MODEL_KEY)
-    return val if isinstance(val, str) and val in SUPPORTED_MODELS else DEFAULT_MODEL
+    return val if isinstance(val, str) and val in models else _default_model_for(provider)
 
 
 async def get_ai_status() -> dict:
     """Client-safe AI status. Contains no secret: only the selected provider,
-    whether a key is set, the model, and whether AI tagging is currently usable."""
+    whether a key is set, the model, and whether AI tagging is currently usable.
+    `supported_models` is scoped to the selected provider (falls back to the
+    default provider's list before one is chosen)."""
     provider = await _stored_provider()
     has_key = await has_api_key()
     enabled = provider in SUPPORTED_PROVIDERS and has_key
@@ -56,7 +80,7 @@ async def get_ai_status() -> dict:
         "enabled": enabled,
         "model": await get_ai_model(),
         "supported": list(SUPPORTED_PROVIDERS),
-        "supported_models": list(SUPPORTED_MODELS),
+        "supported_models": list(_models_for(provider)),
     }
 
 
@@ -64,12 +88,35 @@ async def get_active_provider() -> "AIProvider | None":
     """The configured provider when AI is enabled (a supported provider is
     selected AND a key is set), else None. Reads the key here but never logs it."""
     provider = await _stored_provider()
-    if provider != "anthropic":
+    if provider not in SUPPORTED_PROVIDERS:
         return None
     key = await get_setting(AI_API_KEY)
     if not (isinstance(key, str) and key.strip()):
         return None
+    api_key = key.strip()
+    model = await get_ai_model()
     # Imported lazily so beatos_http.ai.service has no httpx import cost when AI is off.
-    from beatos_http.ai.anthropic_provider import AnthropicProvider
+    if provider == "anthropic":
+        from beatos_http.ai.anthropic_provider import AnthropicProvider
 
-    return AnthropicProvider(api_key=key.strip(), model=await get_ai_model())
+        return AnthropicProvider(api_key=api_key, model=model)
+
+    from beatos_http.ai.openai_provider import OpenAICompatibleProvider
+
+    if provider == "openai":
+        return OpenAICompatibleProvider(
+            name="openai",
+            api_key=api_key,
+            model=model,
+            base_url="https://api.openai.com/v1",
+            supports_vision=True,
+        )
+    if provider == "deepseek":
+        return OpenAICompatibleProvider(
+            name="deepseek",
+            api_key=api_key,
+            model=model,
+            base_url="https://api.deepseek.com/v1",
+            supports_vision=False,
+        )
+    return None

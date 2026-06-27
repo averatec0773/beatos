@@ -26,7 +26,7 @@ async def test_status_default_off(db):
         "has_key": False,
         "enabled": False,
         "model": "claude-haiku-4-5",
-        "supported": ["anthropic"],
+        "supported": ["anthropic", "openai", "deepseek"],
         "supported_models": ["claude-haiku-4-5", "claude-sonnet-4-6"],
     }
 

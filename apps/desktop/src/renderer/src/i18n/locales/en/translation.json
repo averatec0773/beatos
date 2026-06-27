@@ -334,7 +334,7 @@
     "settings": "Settings",
     "agentActions": "Agent Actions",
     "resizeSidebar": "Resize sidebar",
-    "aiChat": "AI Chat"
+    "aiChat": "AI Agent"
   },
   "projectFolder": {
     "label": "Project folder",
@@ -667,7 +667,7 @@
     "tracks": "{{count}} tracks"
   },
   "chat": {
-    "title": "AI Chat",
+    "title": "AI Agent",
     "emptyHint": "Ask about your catalog or tell me what to change — e.g. \"tag the lo-fi beats as chill\" or \"find my untagged 2024 tracks\".",
     "placeholder": "Message your catalog assistant…",
     "send": "Send",

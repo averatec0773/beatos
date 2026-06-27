@@ -334,7 +334,7 @@
     "settings": "设置",
     "agentActions": "Agent 操作",
     "resizeSidebar": "调整侧栏宽度",
-    "aiChat": "AI 聊天"
+    "aiChat": "AI Agent"
   },
   "projectFolder": {
     "label": "工程文件夹",
@@ -667,7 +667,7 @@
     "tracks": "{{count}} 首"
   },
   "chat": {
-    "title": "AI 聊天",
+    "title": "AI Agent",
     "emptyHint": "问我关于目录的事，或直接让我改 —— 例如「把 lo-fi 的曲子标成 chill」或「找出我 2024 年还没打标的曲子」。",
     "placeholder": "给你的目录助手发消息…",
     "send": "发送",

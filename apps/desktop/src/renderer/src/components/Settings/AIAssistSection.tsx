@@ -9,10 +9,20 @@ const PROVIDER_KEY = "ai_provider";
 const API_KEY = "ai_api_key";
 const MODEL_KEY = "ai_model";
 
-// Model display names are product proper nouns (exempt from i18n).
+// Model / provider display names are product proper nouns (exempt from i18n).
 function modelLabel(id: string): string {
   if (id.includes("haiku")) return "Haiku";
   if (id.includes("sonnet")) return "Sonnet";
+  if (id === "gpt-4o-mini") return "GPT-4o mini";
+  if (id === "gpt-4o") return "GPT-4o";
+  if (id.startsWith("deepseek")) return "DeepSeek Chat";
+  return id;
+}
+
+function providerLabel(id: string): string {
+  if (id === "anthropic") return "Anthropic";
+  if (id === "openai") return "OpenAI";
+  if (id === "deepseek") return "DeepSeek";
   return id;
 }
 
@@ -90,7 +100,7 @@ export function AIAssistSection(): React.JSX.Element {
   const provider = status?.provider ?? null;
   const options: { value: string; label: string }[] = [
     { value: "", label: t("settings.aiAssist.off") },
-    ...supported.map((p) => ({ value: p, label: p === "anthropic" ? "Anthropic" : p })),
+    ...supported.map((p) => ({ value: p, label: providerLabel(p) })),
   ];
 
   return (
