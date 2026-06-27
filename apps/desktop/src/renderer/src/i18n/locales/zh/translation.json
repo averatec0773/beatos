@@ -546,6 +546,7 @@
     "stageQueued": "已排队",
     "stageLaunching": "启动浏览器",
     "stageNavigating": "打开上传页面",
+    "stageCreatingAlbum": "创建专辑",
     "stageUploadingAudio": "上传预览音频",
     "stageUploadingCover": "上传封面",
     "stageFillingMetadata": "填写元数据",

@@ -324,6 +324,7 @@ export function PublishDialog({
     queued: "publishDialog.stageQueued",
     launching: "publishDialog.stageLaunching",
     navigating: "publishDialog.stageNavigating",
+    creating_album: "publishDialog.stageCreatingAlbum",
     uploading_audio: "publishDialog.stageUploadingAudio",
     uploading_cover: "publishDialog.stageUploadingCover",
     filling_metadata: "publishDialog.stageFillingMetadata",

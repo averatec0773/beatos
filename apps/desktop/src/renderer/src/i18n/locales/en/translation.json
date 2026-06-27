@@ -546,6 +546,7 @@
     "stageQueued": "Queued",
     "stageLaunching": "Launching browser",
     "stageNavigating": "Opening upload page",
+    "stageCreatingAlbum": "Creating album",
     "stageUploadingAudio": "Uploading preview audio",
     "stageUploadingCover": "Uploading cover",
     "stageFillingMetadata": "Filling metadata",
