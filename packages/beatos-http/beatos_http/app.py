@@ -28,6 +28,7 @@ from beatos_http.mcp_auth import get_mcp_token, guard_mcp_app
 from beatos_http.routes import (
     agent_actions,
     ai,
+    ai_chat,
     analysis,
     app_settings,
     assets,
@@ -162,6 +163,7 @@ def create_app() -> FastAPI:
     app.include_router(app_settings.router)
     app.include_router(ai.router)
     app.include_router(ai.track_router)
+    app.include_router(ai_chat.router)
     app.include_router(batch_tagging.router)
     app.include_router(license_pdf.track_router)
     app.include_router(tagged_mp3.track_router)
