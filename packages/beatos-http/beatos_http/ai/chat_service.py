@@ -28,6 +28,42 @@ _MAX_TOOL_ITERS = 8
 _CLIENT = "chat"
 
 
+def sanitize_history(messages: list[dict]) -> list[dict]:
+    """Make a stored history safe to replay as model context: drop a trailing
+    assistant turn that has unmatched tool_use blocks (a prior paused/capped turn)
+    or an empty content list — both make the next provider call 400."""
+    out = list(messages)
+    while out:
+        last = out[-1]
+        if last.get("role") != "assistant":
+            break
+        content = last.get("content")
+        has_tool_use = isinstance(content, list) and any(
+            isinstance(b, dict) and b.get("type") == "tool_use" for b in content
+        )
+        is_empty = isinstance(content, list) and len(content) == 0
+        if has_tool_use or is_empty:
+            out.pop()
+            continue
+        break
+    return out
+
+
+def pending_tool_uses_from(messages: list[dict]) -> list[dict]:
+    """The tool_use blocks of the trailing assistant turn (a paused destructive
+    confirm), as [{id,name,input}]. Empty if the last turn has none."""
+    if not messages or messages[-1].get("role") != "assistant":
+        return []
+    content = messages[-1].get("content")
+    if not isinstance(content, list):
+        return []
+    return [
+        {"id": b["id"], "name": b["name"], "input": b.get("input") or {}}
+        for b in content
+        if isinstance(b, dict) and b.get("type") == "tool_use"
+    ]
+
+
 class ChatResult(BaseModel):
     reply_text: str = ""
     tool_calls: list[dict] = Field(default_factory=list)
@@ -134,7 +170,7 @@ async def _run_loop(provider, messages: list[dict], tool_calls: list[dict]) -> C
 
 async def run_chat_turn(provider, *, history: list[dict], user_message: str) -> ChatResult:
     """Drive one user turn. Pauses (pending_confirm) if a destructive write arises."""
-    messages: list[dict] = list(history) + [{"role": "user", "content": user_message}]
+    messages: list[dict] = sanitize_history(history) + [{"role": "user", "content": user_message}]
     return await _run_loop(provider, messages, tool_calls=[])
 
 
