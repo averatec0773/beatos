@@ -20,6 +20,8 @@ vi.mock("@/components/PublishCenter/PublishTrackPicker", () => ({
 
 import { PublishCenterPanel } from "@/routes/PublishCenterPanel";
 import { usePublishCenterStore } from "@/stores/publish-center";
+import { useProStore } from "@/stores/pro";
+import { publishApi } from "@/api/publish";
 
 // In-memory localStorage (jsdom's here lacks a usable clear()).
 const _ls: Record<string, string> = {};
@@ -41,6 +43,9 @@ describe("PublishCenterPanel", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     localStorage.clear();
     usePublishCenterStore.setState({ sessions: {}, validatedAt: {}, jobs: [], validating: false });
+    // Default to the Pro build (publish available) for the existing test.
+    useProStore.setState({ publishAvailable: true, loaded: true });
+    vi.mocked(publishApi.sessions).mockClear();
   });
 
   it("renders session + activity headers and the empty job state", async () => {
@@ -54,5 +59,20 @@ describe("PublishCenterPanel", () => {
     expect(screen.getByRole("button", { name: /Publish a track/ })).toBeInTheDocument();
     await vi.advanceTimersByTimeAsync(50);
     expect(screen.getByText(/No publishes in progress/)).toBeInTheDocument();
+  });
+
+  it("shows a Pro upsell (and fires no publish APIs) in the free build", async () => {
+    useProStore.setState({ publishAvailable: false, loaded: true });
+    render(
+      <MemoryRouter>
+        <PublishCenterPanel />
+      </MemoryRouter>,
+    );
+    // Upsell copy, not the live panel.
+    expect(screen.getByText(/BeatOS Pro feature/)).toBeInTheDocument();
+    expect(screen.queryByText(/Account sessions/)).not.toBeInTheDocument();
+    // The guarded effect must not have probed the publish backend.
+    await vi.advanceTimersByTimeAsync(50);
+    expect(publishApi.sessions).not.toHaveBeenCalled();
   });
 });

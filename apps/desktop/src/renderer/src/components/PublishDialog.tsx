@@ -15,6 +15,7 @@ import { exportApi, type ExportResult } from "@/api/export";
 import { assets as assetsApi, type Asset } from "@/api/assets";
 import { publishApi, type PublishJob } from "@/api/publish";
 import { useToastStore } from "@/stores/toast";
+import { usePublishCenterStore } from "@/stores/publish-center";
 
 interface Props {
   open: boolean;
@@ -29,6 +30,10 @@ interface Props {
 // human gates: the engine filled+uploaded everything a machine can, and a person
 // finishes in the browser (read the agreement + SMS verify).
 const TERMINAL = new Set(["done", "failed", "awaiting_review", "awaiting_sms"]);
+// A status/login poll gives up after this many CONSECUTIVE failed reads (~the
+// sidecar going away mid-flight) so the dialog can't spin forever. A successful
+// read resets the counter, so a long legit publish (human-in-loop) is unaffected.
+const MAX_POLL_ERRORS = 10;
 // Moved to publishDialog.awaitingMsg i18n key — rendered via t() inside the component.
 
 // Audio selection ranks. Format is decoupled from role now, so we rank on
@@ -117,8 +122,19 @@ export function PublishDialog({
   const [wavAssetId, setWavAssetId] = useState<number | null>(null);
   const [stemsAssetId, setStemsAssetId] = useState<number | null>(null);
   const [videoAssetId, setVideoAssetId] = useState<number | null>(null);
-  const [sessionOk, setSessionOk] = useState<boolean | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
+
+  // Real session validity, reused from the Publish Center store (headless check +
+  // 24h cache). NOT the cheap file-existence check — an expired session file still
+  // "exists", and gating on existence used to launch a browser into a dead session.
+  const sessionState = usePublishCenterStore((s) => s.sessions[platform]);
+  const loadSessions = usePublishCenterStore((s) => s.loadSessions);
+  const validateSessions = usePublishCenterStore((s) => s.validateSessions);
+  // undefined / "checking" = still verifying; "valid"/"unknown" may publish;
+  // "expired"/"not_logged_in" must not.
+  const sessionChecking = sessionState === undefined || sessionState === "checking";
+  const sessionBlocked = sessionState === "expired" || sessionState === "not_logged_in";
+  const canPublishSession = sessionState === "valid" || sessionState === "unknown";
   const [job, setJob] = useState<PublishJob | null>(null);
   const [publishing, setPublishing] = useState(false);
   const pollRef = useRef<number | null>(null);
@@ -165,9 +181,11 @@ export function PublishDialog({
     try {
       const { login_id } = await publishApi.login(platform);
       if (!mountedRef.current) return;
+      let loginErrors = 0;
       loginPollRef.current = window.setInterval(async () => {
         try {
           const { status } = await publishApi.loginStatus(login_id);
+          loginErrors = 0;
           if (status === "success") {
             if (loginPollRef.current) {
               window.clearInterval(loginPollRef.current);
@@ -175,9 +193,11 @@ export function PublishDialog({
             }
             if (!mountedRef.current) return;
             setLoggingIn(false);
-            const s = await publishApi.sessions();
+            // Re-check for real: loadSessions sees the now-present session file and
+            // marks it stale, then validateSessions confirms it's actually live.
+            await loadSessions();
             if (!mountedRef.current) return;
-            setSessionOk(Boolean(s.sessions?.[platform]));
+            await validateSessions();
           } else if (status === "failed" || status === "timeout") {
             if (loginPollRef.current) {
               window.clearInterval(loginPollRef.current);
@@ -188,7 +208,18 @@ export function PublishDialog({
             useToastStore.getState().show("error", t("publishDialog.loginNotCompleted"));
           }
         } catch {
-          /* keep polling */
+          // Transient blips are tolerated; sustained unreachability (sidecar gone)
+          // stops the poll instead of spinning forever.
+          loginErrors += 1;
+          if (loginErrors >= MAX_POLL_ERRORS) {
+            if (loginPollRef.current) {
+              window.clearInterval(loginPollRef.current);
+              loginPollRef.current = null;
+            }
+            if (!mountedRef.current) return;
+            setLoggingIn(false);
+            useToastStore.getState().show("error", t("publishDialog.connectionLost"));
+          }
         }
       }, 2000);
     } catch {
@@ -220,7 +251,6 @@ export function PublishDialog({
     setWavAssetId(null);
     setStemsAssetId(null);
     setVideoAssetId(null);
-    setSessionOk(null);
 
     exportApi
       .forTrack(trackId, platform)
@@ -254,10 +284,14 @@ export function PublishDialog({
           useToastStore.getState().show("error", t("publishDialog.failedToLoadAssets"));
       });
 
-    publishApi
-      .sessions()
-      .then((s) => !cancelled && setSessionOk(Boolean(s.sessions?.[platform])))
-      .catch(() => !cancelled && setSessionOk(false));
+    // Real validity check (headless), cached 24h by the store so repeat opens are
+    // instant. Gating Publish on this instead of file-existence is the fix for
+    // launching into an expired session.
+    void (async () => {
+      await loadSessions();
+      if (cancelled) return;
+      await validateSessions();
+    })();
 
     return () => {
       cancelled = true;
@@ -299,16 +333,25 @@ export function PublishDialog({
           };
       const { job_id } = await publishApi.create(body);
       stopPolling();
+      let pollErrors = 0;
       pollRef.current = window.setInterval(async () => {
         try {
           const status = await publishApi.status(job_id);
+          pollErrors = 0;
           setJob(status);
           if (TERMINAL.has(status.stage)) {
             stopPolling();
             setPublishing(false);
           }
         } catch {
-          // transient; keep polling
+          // Transient blips are tolerated; sustained unreachability (sidecar gone)
+          // stops the spinner instead of polling forever.
+          pollErrors += 1;
+          if (pollErrors >= MAX_POLL_ERRORS) {
+            stopPolling();
+            setPublishing(false);
+            useToastStore.getState().show("error", t("publishDialog.connectionLost"));
+          }
         }
       }, 1500);
     } catch {
@@ -356,11 +399,20 @@ export function PublishDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {sessionOk === false && (
+        {sessionChecking && (
+          <div className="mb-3 flex items-center gap-2 rounded-md border border-border-subtle bg-bg-elevated px-3 py-2 text-xs text-text-secondary">
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+            {t("publishDialog.checkingSession")}
+          </div>
+        )}
+
+        {sessionBlocked && (
           <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             <span className="flex items-center gap-2">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              {t("publishDialog.logInFirst")}
+              {sessionState === "expired"
+                ? t("publishDialog.sessionExpired")
+                : t("publishDialog.logInFirst")}
             </span>
             <button
               type="button"
@@ -368,8 +420,19 @@ export function PublishDialog({
               onClick={() => void startLogin()}
               className="rounded border border-warning/50 px-2 py-0.5 text-warning hover:bg-warning/20 disabled:opacity-50"
             >
-              {loggingIn ? t("publishDialog.browserOpen") : t("publishDialog.logIn")}
+              {loggingIn
+                ? t("publishDialog.browserOpen")
+                : sessionState === "expired"
+                  ? t("publishDialog.reLogin")
+                  : t("publishDialog.logIn")}
             </button>
+          </div>
+        )}
+
+        {sessionState === "unknown" && (
+          <div className="mb-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-text-secondary">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0 text-warning" />
+            {t("publishDialog.sessionUnknown")}
           </div>
         )}
 
@@ -527,7 +590,7 @@ export function PublishDialog({
             onClick={handlePublish}
             disabled={
               publishing ||
-              sessionOk === false ||
+              !canPublishSession ||
               (isDouyin ? videoAssetId == null : audioAssetId == null)
             }
           >
