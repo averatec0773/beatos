@@ -6,6 +6,7 @@ applied file; create the next-numbered one instead.
 """
 from __future__ import annotations
 
+import contextlib
 import datetime as _dt
 import os
 import pathlib
@@ -86,6 +87,19 @@ def resolve_db_path() -> Path:
     if override:
         return Path(override)
     return Path.home() / "Music" / "BeatOS" / "global.db"
+
+
+@contextlib.asynccontextmanager
+async def connect_writable():
+    """Yield a writable aiosqlite connection with FK enforcement ON.
+
+    SQLite ships FK enforcement off per-connection, which silently neutralises
+    every ON DELETE CASCADE (rule 9). Set it here so all write paths through this
+    helper respect cascades. Path resolves at call time via resolve_db_path()."""
+    db_path = resolve_db_path()
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute("PRAGMA foreign_keys=ON")
+        yield conn
 
 
 def _strip_schema_version_ddl(sql: str) -> str:
