@@ -333,7 +333,8 @@
     "publishCenter": "Publish Center",
     "settings": "设置",
     "agentActions": "Agent 操作",
-    "resizeSidebar": "调整侧栏宽度"
+    "resizeSidebar": "调整侧栏宽度",
+    "aiChat": "AI 聊天"
   },
   "projectFolder": {
     "label": "工程文件夹",

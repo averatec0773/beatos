@@ -333,7 +333,8 @@
     "publishCenter": "Publish Center",
     "settings": "Settings",
     "agentActions": "Agent Actions",
-    "resizeSidebar": "Resize sidebar"
+    "resizeSidebar": "Resize sidebar",
+    "aiChat": "AI Chat"
   },
   "projectFolder": {
     "label": "Project folder",
