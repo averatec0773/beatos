@@ -27,6 +27,57 @@ _MAX_TOOL_ITERS = 8
 # Origin label recorded in the Agent Actions log for chat-initiated writes.
 _CLIENT = "chat"
 
+# Context-window budget. The full conversation is replayed to the model each turn,
+# and tool_result blocks (catalog JSON) are the dominant token sink, so left
+# unbounded a long thread balloons cost and eventually overflows the model's
+# context (hard 400). We (1) shrink stale tool_result payloads — the model rarely
+# needs the full prior listing verbatim and can re-query — and (2) cap the number
+# of replayed messages, dropping from the front without orphaning a tool_result
+# (every tool_result must follow its tool_use, or the provider 400s).
+_MAX_TOOL_RESULT_CHARS = 2000
+_MAX_HISTORY_MESSAGES = 40
+
+
+def _has_tool_result(content: object) -> bool:
+    return isinstance(content, list) and any(
+        isinstance(b, dict) and b.get("type") == "tool_result" for b in content
+    )
+
+
+def budget_history(messages: list[dict]) -> list[dict]:
+    """Bound the replayed history so cross-turn token growth stays in check."""
+    out: list[dict] = []
+    for m in messages:
+        content = m.get("content")
+        if isinstance(content, list):
+            blocks = []
+            for b in content:
+                if (
+                    isinstance(b, dict)
+                    and b.get("type") == "tool_result"
+                    and isinstance(b.get("content"), str)
+                    and len(b["content"]) > _MAX_TOOL_RESULT_CHARS
+                ):
+                    raw = b["content"]
+                    b = {
+                        **b,
+                        "content": raw[:_MAX_TOOL_RESULT_CHARS]
+                        + f"\n…[truncated {len(raw) - _MAX_TOOL_RESULT_CHARS} chars]",
+                    }
+                blocks.append(b)
+            out.append({**m, "content": blocks})
+        else:
+            out.append(m)
+
+    if len(out) > _MAX_HISTORY_MESSAGES:
+        start = len(out) - _MAX_HISTORY_MESSAGES
+        # Don't start the kept window on a turn carrying tool_result blocks whose
+        # matching tool_use we just dropped — advance past them.
+        while start < len(out) and _has_tool_result(out[start].get("content")):
+            start += 1
+        out = out[start:]
+    return out
+
 
 def sanitize_history(messages: list[dict]) -> list[dict]:
     """Make a stored history safe to replay as model context: drop a trailing
@@ -170,7 +221,9 @@ async def _run_loop(provider, messages: list[dict], tool_calls: list[dict]) -> C
 
 async def run_chat_turn(provider, *, history: list[dict], user_message: str) -> ChatResult:
     """Drive one user turn. Pauses (pending_confirm) if a destructive write arises."""
-    messages: list[dict] = sanitize_history(history) + [{"role": "user", "content": user_message}]
+    messages: list[dict] = budget_history(sanitize_history(history)) + [
+        {"role": "user", "content": user_message}
+    ]
     return await _run_loop(provider, messages, tool_calls=[])
 
 

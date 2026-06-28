@@ -34,6 +34,16 @@ export interface ConversationSummary {
   updated_at: number;
 }
 
+/** One stored message in Anthropic shape: content is a string or a block list. */
+export interface StoredMessage {
+  role: string;
+  content: unknown;
+}
+
+export interface ConversationDetail extends ConversationSummary {
+  messages: StoredMessage[];
+}
+
 export const chatApi = {
   send: (body: { message: string; conversation_id?: number | null }) =>
     apiPost<ChatTurnResponse>("/api/ai/chat", {
@@ -44,5 +54,7 @@ export const chatApi = {
     apiPost<ChatTurnResponse>("/api/ai/chat/confirm", body),
   listConversations: () =>
     apiGet<{ conversations: ConversationSummary[] }>("/api/ai/chat/conversations"),
+  getConversation: (id: number) =>
+    apiGet<ConversationDetail>(`/api/ai/chat/conversations/${id}`),
   deleteConversation: (id: number) => apiDelete(`/api/ai/chat/conversations/${id}`),
 };

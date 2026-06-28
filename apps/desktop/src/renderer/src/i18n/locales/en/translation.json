@@ -682,6 +682,11 @@
     "notConfiguredTitle": "AI is not set up",
     "notConfiguredBody": "Turn on AI Assist in Settings (pick a provider and paste your API key) to chat with your catalog.",
     "errorPrefix": "Something went wrong",
-    "newChat": "New chat"
+    "newChat": "New chat",
+    "subtitle": "Ask about your catalog or make changes in plain language",
+    "emptyTitle": "Your catalog assistant",
+    "suggest1": "What beats are in my catalog?",
+    "suggest2": "Find my untagged tracks",
+    "suggest3": "List my genres"
   }
 }

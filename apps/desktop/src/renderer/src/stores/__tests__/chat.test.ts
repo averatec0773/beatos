@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/api/chat", () => ({
-  chatApi: { send: vi.fn(), confirm: vi.fn() },
+  chatApi: {
+    send: vi.fn(),
+    confirm: vi.fn(),
+    listConversations: vi.fn(),
+    getConversation: vi.fn(),
+  },
 }));
 
 import { useChatStore } from "../chat";
@@ -10,7 +15,7 @@ import { chatApi } from "@/api/chat";
 function reset() {
   useChatStore.setState({
     conversationId: null, messages: [], input: "", sending: false,
-    pendingConfirm: null, error: null,
+    pendingConfirm: null, error: null, hydrated: false,
   });
 }
 
@@ -19,6 +24,8 @@ describe("useChatStore", () => {
     reset();
     vi.mocked(chatApi.send).mockReset();
     vi.mocked(chatApi.confirm).mockReset();
+    vi.mocked(chatApi.listConversations).mockReset();
+    vi.mocked(chatApi.getConversation).mockReset();
   });
 
   it("send pushes the user message, the assistant reply, and the conversation id", async () => {
@@ -68,5 +75,47 @@ describe("useChatStore", () => {
     const s = useChatStore.getState();
     expect(s.error).toContain("boom");
     expect(s.sending).toBe(false);
+  });
+
+  it("hydrate resumes the most-recent conversation and maps stored messages", async () => {
+    vi.mocked(chatApi.listConversations).mockResolvedValue({
+      conversations: [
+        { id: 1, title: "old", created_at: 1, updated_at: 1 },
+        { id: 2, title: "new", created_at: 2, updated_at: 5 },
+      ],
+    });
+    vi.mocked(chatApi.getConversation).mockResolvedValue({
+      id: 2,
+      title: "new",
+      created_at: 2,
+      updated_at: 5,
+      messages: [
+        { role: "user", content: "find trap" },
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "Found 2." },
+            { type: "tool_use", id: "t1", name: "search_tracks", input: { q: "trap" } },
+          ],
+        },
+        // internal tool_result turn — must be skipped in the UI thread
+        { role: "user", content: [{ type: "tool_result", tool_use_id: "t1", content: "[]" }] },
+      ],
+    });
+    await useChatStore.getState().hydrate();
+    const s = useChatStore.getState();
+    expect(chatApi.getConversation).toHaveBeenCalledWith(2); // newest by updated_at
+    expect(s.conversationId).toBe(2);
+    expect(s.messages).toEqual([
+      { role: "user", text: "find trap" },
+      { role: "assistant", text: "Found 2.", toolCalls: [{ name: "search_tracks", input: { q: "trap" } }] },
+    ]);
+    expect(s.hydrated).toBe(true);
+  });
+
+  it("hydrate is a no-op when a thread already has messages", async () => {
+    useChatStore.setState({ messages: [{ role: "user", text: "hi" }] });
+    await useChatStore.getState().hydrate();
+    expect(chatApi.listConversations).not.toHaveBeenCalled();
   });
 });

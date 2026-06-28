@@ -290,6 +290,43 @@ input[type="number"] {
   scrollbar-width: none;
 }
 
+/* AI Agent chat — message entrance + typing-dot pulse. CSS-only (no motion lib),
+   tuned to the app's --ease so it reads as one motion system. */
+@keyframes chatIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.chat-in {
+  animation: chatIn 0.28s var(--ease) both;
+}
+@keyframes chatDot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 0.9;
+    transform: translateY(-2px);
+  }
+}
+.chat-dot {
+  animation: chatDot 1.1s var(--ease) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-in,
+  .chat-dot {
+    animation: none;
+  }
+}
+
 /* Section divider — etched 1px line, fades at both ends (token color). */
 .beatos-etch-divider {
   background: linear-gradient(
