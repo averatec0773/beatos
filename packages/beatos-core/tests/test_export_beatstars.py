@@ -51,3 +51,8 @@ def test_render_no_tiers_is_free_false():
     assert f["is_free"].value == ""
     assert f["genre"].value == ""
     assert json.loads(f["price_tiers"].value) == []
+
+
+def test_beatstars_in_available_platforms():
+    from beatos_core.export.service import available_platforms
+    assert "beatstars" in available_platforms()
