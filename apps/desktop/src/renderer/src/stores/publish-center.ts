@@ -49,6 +49,10 @@ interface PublishCenterState {
    *  force=true (manual refresh / post-login). */
   validateSessions(force?: boolean): Promise<void>;
   refreshJobs(): Promise<void>;
+  /** Delete one publish-job record, then refresh the list. */
+  deleteJob(jobId: string): Promise<void>;
+  /** Clear all publish-job records, then refresh the list. */
+  clearJobs(): Promise<void>;
 }
 
 // Dedupe overlapping validate calls (e.g. React StrictMode's dev double-mount, or
@@ -154,6 +158,29 @@ export const usePublishCenterStore = create<PublishCenterState>((set, get) => ({
       set({ jobs });
     } catch (e) {
       console.warn("[publish-center] refreshJobs failed", e);
+    }
+  },
+  async deleteJob(jobId) {
+    // Optimistic removal so the row vanishes immediately; refresh reconciles.
+    set({ jobs: get().jobs.filter((j) => j.job_id !== jobId) });
+    try {
+      await publishApi.deleteJob(jobId);
+    } catch (e) {
+      console.warn("[publish-center] deleteJob failed", e);
+      useToastStore.getState().show("error", i18n.t("publishCenter.deleteFailed"));
+    } finally {
+      await get().refreshJobs();
+    }
+  },
+  async clearJobs() {
+    set({ jobs: [] });
+    try {
+      await publishApi.clearJobs();
+    } catch (e) {
+      console.warn("[publish-center] clearJobs failed", e);
+      useToastStore.getState().show("error", i18n.t("publishCenter.deleteFailed"));
+    } finally {
+      await get().refreshJobs();
     }
   },
 }));

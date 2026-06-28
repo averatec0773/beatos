@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from beatos_http.pro import pro_available
 from beatos_http.publish_schemas import (
@@ -110,6 +110,24 @@ async def publish_jobs() -> dict:
     _require_pro()
     from beatos_publish.jobs import REGISTRY
     return {"jobs": [j.model_dump(mode="json") for j in REGISTRY.all()]}
+
+
+# Clear-all must precede the /{job_id} catch-all so DELETE /api/publish/jobs
+# isn't captured as job_id="jobs".
+@router.delete("/api/publish/jobs")
+async def publish_clear_jobs() -> dict:
+    _require_pro()
+    from beatos_publish.jobs import REGISTRY
+    return {"deleted": REGISTRY.clear()}
+
+
+@router.delete("/api/publish/{job_id}", status_code=204)
+async def publish_delete_job(job_id: str) -> Response:
+    _require_pro()
+    from beatos_publish.jobs import REGISTRY
+    if not REGISTRY.delete(job_id):
+        raise HTTPException(404, "job not found")
+    return Response(status_code=204)
 
 
 # NOTE: keep this catch-all LAST — it matches any /api/publish/<x>, so every

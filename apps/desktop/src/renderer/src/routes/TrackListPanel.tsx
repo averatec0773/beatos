@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Package, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { AlertCircle, Package, Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -331,15 +331,20 @@ export function TrackListPanel(): React.JSX.Element {
           clearSelection();
         },
       },
-      ...(aiEnabled
-        ? [
-            {
-              key: "suggest-tags",
-              label: t("trackList.suggestTags"),
-              onClick: () => void runBatchTagging(Array.from(selectedIds)),
-            },
-          ]
-        : []),
+      {
+        // Always shown so the AI capability is discoverable — flagged with a
+        // sparkle. When AI isn't configured it's dimmed with a tooltip and a
+        // click routes to Settings → AI to set it up (rather than silently
+        // hiding the feature).
+        key: "suggest-tags",
+        label: t("trackList.suggestTags"),
+        icon: <Sparkles size={14} />,
+        muted: !aiEnabled,
+        title: aiEnabled ? undefined : t("trackList.suggestTagsNeedsAi"),
+        onClick: aiEnabled
+          ? () => void runBatchTagging(Array.from(selectedIds))
+          : () => navigate("/settings?cat=ai"),
+      },
       {
         key: "trash",
         label: t("trackList.moveToTrash"),
@@ -363,7 +368,7 @@ export function TrackListPanel(): React.JSX.Element {
         },
       },
     ],
-    [selectedIds, listId, clearSelection, t, aiEnabled, runBatchTagging],
+    [selectedIds, listId, clearSelection, t, aiEnabled, runBatchTagging, navigate],
   );
 
   async function onAddTrack(): Promise<void> {

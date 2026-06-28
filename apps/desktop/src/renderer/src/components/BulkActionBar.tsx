@@ -8,6 +8,10 @@ export interface BulkAction {
   icon?: React.ReactNode;
   onClick: () => void;
   variant?: "default" | "danger";
+  /** Dim the action (e.g. an AI action that needs setup before it works). */
+  muted?: boolean;
+  /** Native tooltip — used to explain a muted/gated action. */
+  title?: string;
   // Optional render override for actions that need a popover/menu trigger
   // (e.g. "Add to list" needs to host a Popover anchored to the button itself).
   render?: () => React.ReactNode;
@@ -34,36 +38,44 @@ export function BulkActionBar({ count, actions, onClear }: Props): React.JSX.Ele
   return (
     <div
       data-bulk-action-bar
-      className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-2 rounded-full bg-bg-elevated/95 border border-border-subtle shadow-lg backdrop-blur-sm select-none whitespace-nowrap"
+      className="absolute bottom-4 left-1/2 z-30 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1.5 rounded-full border border-border-subtle bg-bg-elevated/95 px-2.5 py-2 shadow-lg backdrop-blur-sm select-none"
     >
-      <span className="text-xs text-text-secondary font-medium tabular-nums px-2 whitespace-nowrap">
+      <span className="shrink-0 whitespace-nowrap px-1.5 text-xs font-medium tabular-nums text-text-secondary">
         {t("bulkBar.selected", { count })}
       </span>
-      <div className="h-4 w-px bg-border-subtle" />
-      {actions.map((a) =>
-        a.render ? (
-          <React.Fragment key={a.key}>{a.render()}</React.Fragment>
-        ) : (
-          <button
-            key={a.key}
-            type="button"
-            onClick={a.onClick}
-            className={
-              a.variant === "danger"
-                ? "inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-danger hover:bg-danger/10 whitespace-nowrap"
-                : "inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-text-primary hover:bg-bg-row-hover whitespace-nowrap"
-            }
-          >
-            {a.icon}
-            {a.label}
-          </button>
-        ),
-      )}
-      <div className="h-4 w-px bg-border-subtle" />
+      <div className="h-4 w-px shrink-0 bg-border-subtle" />
+      {/* Actions scroll horizontally when the panel is too narrow to fit them all,
+          so the bar never gets clipped by the card's rounded edges. */}
+      <div className="beatos-scroll flex min-w-0 items-center gap-1 overflow-x-auto">
+        {actions.map((a) =>
+          a.render ? (
+            <React.Fragment key={a.key}>{a.render()}</React.Fragment>
+          ) : (
+            <button
+              key={a.key}
+              type="button"
+              onClick={a.onClick}
+              title={a.title}
+              className={[
+                "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded px-2 py-1 text-xs",
+                a.variant === "danger"
+                  ? "text-danger hover:bg-danger/10"
+                  : a.muted
+                    ? "text-text-tertiary hover:bg-bg-row-hover hover:text-text-secondary"
+                    : "text-text-primary hover:bg-bg-row-hover",
+              ].join(" ")}
+            >
+              {a.icon}
+              {a.label}
+            </button>
+          ),
+        )}
+      </div>
+      <div className="h-4 w-px shrink-0 bg-border-subtle" />
       <button
         type="button"
         onClick={onClear}
-        className="text-text-tertiary hover:text-text-primary p-1 rounded"
+        className="shrink-0 rounded p-1 text-text-tertiary hover:text-text-primary"
         aria-label={t("bulkBar.clearSelection")}
         title={t("bulkBar.clearEsc")}
       >

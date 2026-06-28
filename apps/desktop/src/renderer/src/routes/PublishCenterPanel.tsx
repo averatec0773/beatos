@@ -8,6 +8,7 @@ import { useProStore } from "@/stores/pro";
 import { usePublishCenterStore } from "@/stores/publish-center";
 import { useTrackStore } from "@/stores/tracks";
 import { useToastStore } from "@/stores/toast";
+import { confirmDialog } from "@/stores/confirm-dialog";
 import { SessionHealthRow } from "@/components/PublishCenter/SessionHealthRow";
 import { LiveJobRow } from "@/components/PublishCenter/LiveJobRow";
 import { PublishTrackPicker } from "@/components/PublishCenter/PublishTrackPicker";
@@ -39,6 +40,19 @@ export function PublishCenterPanel(): React.JSX.Element {
   const loadSessions = usePublishCenterStore((s) => s.loadSessions);
   const validateSessions = usePublishCenterStore((s) => s.validateSessions);
   const refreshJobs = usePublishCenterStore((s) => s.refreshJobs);
+  const deleteJob = usePublishCenterStore((s) => s.deleteJob);
+  const clearJobs = usePublishCenterStore((s) => s.clearJobs);
+
+  async function handleClearActivity(): Promise<void> {
+    const ok = await confirmDialog({
+      title: t("common.clearAll"),
+      message: t("publishCenter.clearConfirm"),
+      variant: "danger",
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
+    });
+    if (ok) await clearJobs();
+  }
 
   // VERIFY A: track store uses `list`, not `tracks`
   const trackList = useTrackStore((s) => s.list);
@@ -204,7 +218,18 @@ export function PublishCenterPanel(): React.JSX.Element {
         )}
       </div>
 
-      <div className={`${SECTION} mb-2`}>{t("publishCenter.activity")}</div>
+      <div className="mb-2 flex items-center justify-between">
+        <div className={SECTION}>{t("publishCenter.activity")}</div>
+        {jobs.length > 0 && (
+          <button
+            type="button"
+            onClick={() => void handleClearActivity()}
+            className="rounded-md px-2 py-0.5 text-xs text-text-tertiary hover:bg-bg-row-hover hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent"
+          >
+            {t("common.clearAll")}
+          </button>
+        )}
+      </div>
       <div className="flex flex-col gap-1.5">
         {jobs.length === 0 ? (
           <div className="text-xs text-text-tertiary">{t("publishCenter.noPublishes")}</div>
@@ -215,6 +240,7 @@ export function PublishCenterPanel(): React.JSX.Element {
               job={j}
               title={titleFor(j.request.track_id)}
               onRepublish={(id) => navigate(`/tracks/${id}/edit`)}
+              onDelete={(id) => void deleteJob(id)}
             />
           ))
         )}

@@ -10,6 +10,7 @@
     "loading": "Loading…",
     "saving": "Saving…",
     "clear": "Clear",
+    "clearAll": "Clear all",
     "selectAll": "Select all",
     "revealInFinder": "Reveal in Finder",
     "dash": "—",
@@ -442,6 +443,7 @@
     "editMetadata": "Edit metadata",
     "analyzeSelected": "Analyze selected",
     "suggestTags": "Suggest tags",
+    "suggestTagsNeedsAi": "AI feature — set up an AI provider & API key in Settings → AI to use. Click to configure.",
     "suggestStarted": "Suggesting tags for {{count}} track(s)…",
     "suggestDone": "Filled tags on {{applied}} of {{total}} track(s)",
     "suggestDoneErrors": "Filled {{applied}}; {{errors}} couldn't be tagged",
@@ -460,7 +462,8 @@
     "title": "Agent Actions",
     "empty": "No AI activity yet. Connect an MCP-compatible client to start (see Settings → AI Integration).",
     "emptyWeb": "No AI activity yet. Connect an MCP client in the BeatOS desktop app — actions agents take will show up here.",
-    "recent": "Recent ({{count}})"
+    "recent": "Recent ({{count}})",
+    "clearConfirm": "Clear all activity records? This can't be undone."
   },
   "migration": {
     "title": "Your library was moved",
@@ -583,6 +586,8 @@
     "noPlatforms": "No platforms",
     "activity": "Activity",
     "noPublishes": "No publishes in progress",
+    "clearConfirm": "Clear all publish records? This can't be undone.",
+    "deleteFailed": "Couldn't delete the record",
     "neverChecked": "Never checked",
     "checkedJustNow": "Checked just now",
     "checkedMinsAgo": "Checked {{mins}}m ago",

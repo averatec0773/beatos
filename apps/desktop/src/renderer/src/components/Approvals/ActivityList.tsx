@@ -1,4 +1,5 @@
 import React from "react";
+import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { AgentAction, AgentActionStatus } from "@/hooks/use-agent-actions";
@@ -8,6 +9,7 @@ import { formatRelativeTime } from "@/i18n/format";
 
 interface Props {
   actions: AgentAction[];
+  onDelete?: (id: number) => void;
 }
 
 function formatActedAt(lang: AppLanguage, tsSec: number): string {
@@ -26,7 +28,7 @@ function statusClass(status: AgentActionStatus): string {
   return "text-text-tertiary";
 }
 
-export function ActivityList({ actions }: Props): React.JSX.Element {
+export function ActivityList({ actions, onDelete }: Props): React.JSX.Element {
   const { t } = useTranslation();
   const lang = useAppLanguageStore((s) => s.language);
 
@@ -36,10 +38,10 @@ export function ActivityList({ actions }: Props): React.JSX.Element {
         {t("approvals.recent", { count: actions.length })}
       </h2>
       <ul className="space-y-1">
-        {actions.map((action, i) => (
+        {actions.map((action) => (
           <li
-            key={`${action.ts}-${i}`}
-            className="flex items-center gap-3 px-3 py-1.5 text-xs text-text-secondary"
+            key={action.id}
+            className="group flex items-center gap-3 rounded-md px-3 py-1.5 text-xs text-text-secondary hover:bg-bg-row-hover"
           >
             <span className={`text-base ${statusClass(action.status)}`}>
               {statusGlyph(action.status)}
@@ -48,6 +50,17 @@ export function ActivityList({ actions }: Props): React.JSX.Element {
             <span className="ml-auto shrink-0 text-text-tertiary">
               {formatActedAt(lang, action.ts)}
             </span>
+            {onDelete && (
+              <button
+                type="button"
+                aria-label={t("common.delete")}
+                title={t("common.delete")}
+                onClick={() => onDelete(action.id)}
+                className="shrink-0 rounded-md p-1 text-text-tertiary opacity-0 transition-opacity hover:bg-bg-row-active hover:text-danger focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent group-hover:opacity-100"
+              >
+                <X size={13} />
+              </button>
+            )}
           </li>
         ))}
       </ul>

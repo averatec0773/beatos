@@ -12,6 +12,7 @@ export interface AgentActionSummary {
 }
 
 export interface AgentAction {
+  id: number;
   ts: number;
   tool_name: string;
   summary: AgentActionSummary;
@@ -22,7 +23,13 @@ export interface AgentAction {
 
 const POLL_INTERVAL_MS = 4000;
 
-export function useAgentActions(): { actions: AgentAction[] } {
+export interface UseAgentActions {
+  actions: AgentAction[];
+  deleteAction(id: number): Promise<void>;
+  clearAll(): Promise<void>;
+}
+
+export function useAgentActions(): UseAgentActions {
   const apiBase = useApiBase();
   const [actions, setActions] = useState<AgentAction[]>([]);
 
@@ -46,5 +53,15 @@ export function useAgentActions(): { actions: AgentAction[] } {
     };
   }, [apiBase]);
 
-  return { actions };
+  // Optimistically drop the row(s); the 4s poll reconciles with the server.
+  const deleteAction = async (id: number): Promise<void> => {
+    setActions((prev) => prev.filter((a) => a.id !== id));
+    await fetch(`${apiBase}/api/agent-actions/${id}`, { method: "DELETE" }).catch(() => null);
+  };
+  const clearAll = async (): Promise<void> => {
+    setActions([]);
+    await fetch(`${apiBase}/api/agent-actions`, { method: "DELETE" }).catch(() => null);
+  };
+
+  return { actions, deleteAction, clearAll };
 }

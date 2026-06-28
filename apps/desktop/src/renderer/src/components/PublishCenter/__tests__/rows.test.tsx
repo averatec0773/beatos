@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { SessionHealthRow } from "@/components/PublishCenter/SessionHealthRow";
@@ -47,5 +48,15 @@ describe("LiveJobRow", () => {
       />,
     );
     expect(screen.getByRole("link", { name: /View listing/ })).toHaveAttribute("href", "https://x");
+  });
+  it("calls onDelete with the job id when the × is clicked", async () => {
+    const onDelete = vi.fn();
+    render(<LiveJobRow job={base} title="My Beat" onRepublish={vi.fn()} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole("button", { name: /Delete/ }));
+    expect(onDelete).toHaveBeenCalledWith("j1");
+  });
+  it("renders no delete button without onDelete", () => {
+    render(<LiveJobRow job={base} title="My Beat" onRepublish={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /Delete/ })).not.toBeInTheDocument();
   });
 });

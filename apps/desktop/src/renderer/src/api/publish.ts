@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./client";
+import { apiDelete, apiGet, apiPost } from "./client";
 
 export interface PublishJob {
   job_id: string;
@@ -66,5 +66,11 @@ export const publishApi = {
   },
   jobs(): Promise<{ jobs: PublishJobFull[] }> {
     return apiGet<{ jobs: PublishJobFull[] }>(`/api/publish/jobs`);
+  },
+  deleteJob(jobId: string): Promise<void> {
+    return apiDelete(`/api/publish/${encodeURIComponent(jobId)}`);
+  },
+  clearJobs(): Promise<void> {
+    return apiDelete(`/api/publish/jobs`);
   },
 };
