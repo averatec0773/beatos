@@ -19,6 +19,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Changed
 
+- **Publish Center session status updates instantly on login.** After you finish logging into a platform, its row now flips to "Logged in" right away instead of staying stale until you navigate away and back — the app trusts the login it just watched succeed rather than re-probing the page (which could race a login→sign-in redirect, most visibly on BeatStars). BeatStars also shows its proper name in the session list.
 - **Delete publish & agent-activity records.** Publish Center jobs and the Agent Actions log can now be removed — a per-row × on hover, or "Clear all" to wipe the whole list.
 - **Cleaner multi-select bar.** The bulk-action bar no longer gets clipped at the edges on narrow windows (actions scroll if they don't fit), and "Suggest tags" is now always shown with a ✨ marker — when AI isn't set up it's dimmed and clicking it jumps to Settings → AI to configure it.
 - **Settings is now organized into tabs.** Instead of one long scroll, Settings opens into focused categories — Appearance, Language & Tags, Catalog, AI, Data, About — each shown on its own tab; AI settings (provider/key/model, agent permissions, MCP) finally live together. A search box filters settings across every category (works in English or 中文), and each tab is deep-linkable so back/forward and refresh remember where you were.

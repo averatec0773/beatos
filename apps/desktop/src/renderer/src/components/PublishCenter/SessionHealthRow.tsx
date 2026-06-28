@@ -5,7 +5,11 @@ import type { TFunction } from "i18next";
 
 import type { SessionState } from "@/api/publish";
 
-const PLATFORM_LABEL: Record<string, string> = { netease: "NetEase", douyin: "Douyin" };
+const PLATFORM_LABEL: Record<string, string> = {
+  netease: "NetEase",
+  douyin: "Douyin",
+  beatstars: "BeatStars",
+};
 
 interface Props {
   platform: string;

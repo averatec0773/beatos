@@ -60,4 +60,20 @@ describe("publish-center store", () => {
     await usePublishCenterStore.getState().refreshJobs();
     expect(usePublishCenterStore.getState().jobs).toEqual([]);
   });
+
+  it("markLoggedIn optimistically marks a platform valid + caches it, with no headless probe", () => {
+    (publishApi.validateSessions as ReturnType<typeof vi.fn>).mockClear();
+    const before = Date.now();
+
+    usePublishCenterStore.getState().markLoggedIn("beatstars");
+
+    const st = usePublishCenterStore.getState();
+    expect(st.sessions.beatstars).toBe("valid");
+    expect(st.validatedAt.beatstars).toBeGreaterThanOrEqual(before);
+    // Login success is itself the validity proof — no re-probe is fired.
+    expect(publishApi.validateSessions).not.toHaveBeenCalled();
+    // Persisted so a remount keeps it "valid" within the TTL (no re-check needed).
+    const cached = JSON.parse(localStorage.getItem("beatos.publish-center.sessions.v1") ?? "{}");
+    expect(cached.beatstars).toEqual({ state: "valid", at: st.validatedAt.beatstars });
+  });
 });

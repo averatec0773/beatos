@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -74,5 +75,31 @@ describe("PublishCenterPanel", () => {
     // The guarded effect must not have probed the publish backend.
     await vi.advanceTimersByTimeAsync(50);
     expect(publishApi.sessions).not.toHaveBeenCalled();
+  });
+
+  it("flips the session row to Logged in on login success, independent of the re-probe", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
+    vi.mocked(publishApi.login).mockResolvedValue({ login_id: "L1" });
+    vi.mocked(publishApi.loginStatus).mockResolvedValue({ status: "success", message: "" });
+    // The cold post-login re-probe can racily report not_logged_in (e.g. BeatStars'
+    // login→OAuth redirect). The row must flip on login success itself, NOT depend
+    // on this probe — so even with a not_logged_in re-probe it shows Logged in.
+    vi.mocked(publishApi.validateSessions).mockResolvedValue({
+      sessions: { netease: "not_logged_in" },
+    });
+
+    render(
+      <MemoryRouter>
+        <PublishCenterPanel />
+      </MemoryRouter>,
+    );
+    await vi.advanceTimersByTimeAsync(50);
+
+    await user.click(screen.getByRole("button", { name: /^Log in$/i }));
+    // The login-status poll runs on a 2s interval.
+    await vi.advanceTimersByTimeAsync(2100);
+
+    // Valid state: the row's action button becomes "Re-login".
+    expect(screen.getByRole("button", { name: /Re-login/i })).toBeInTheDocument();
   });
 });
