@@ -73,6 +73,7 @@ def render(
     def _tmpl(key: str) -> str:
         return render_template(
             templates.get(key, ""), track, prod=prod, year=year,
+            # genre_zh kwarg holds the first mapped genre (English here, Chinese in netease)
             publish_date=publish_date, genre_zh=genre_en, free=free,
         )
 

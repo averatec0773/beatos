@@ -56,3 +56,23 @@ def test_render_no_tiers_is_free_false():
 def test_beatstars_in_available_platforms():
     from beatos_core.export.service import available_platforms
     assert "beatstars" in available_platforms()
+
+
+def test_render_genre_cap_note_when_over_three():
+    er = beatstars.render(
+        _track(genre=["Trap Rap", "Drill", "Plugg", "Rage"]), [], {},
+        prod="", year=2026, publish_date="2026-01-01")
+    g = {x.key: x for x in er.fields}["genre"]
+    assert g.note == "BeatStars genre cap 3"
+    assert len(g.options) == 4  # all exposed; Pro driver enforces the cap
+
+
+def test_price_tiers_skips_non_usd_priced_tier():
+    cny_only = LicenseTier(
+        id=9, track_id=1, name="CNY", deliverables=["mp3"],
+        prices={"CNY": 100.0}, share=None, created_at=_NOW, updated_at=_NOW)
+    er = beatstars.render(_track(), [cny_only], {},
+                          prod="", year=2026, publish_date="2026-01-01")
+    import json as _json
+    pt = _json.loads({x.key: x for x in er.fields}["price_tiers"].value)
+    assert pt == []  # CNY-only tier has no USD → skipped
