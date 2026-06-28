@@ -46,8 +46,10 @@ interface PublishCenterState {
   /** Cheap existence check; shows a fresh cached result, else 'checking'/'not_logged_in'. */
   loadSessions(): Promise<void>;
   /** Headless validity check. Skips platforms validated within the TTL unless
-   *  force=true (manual refresh / post-login). */
+   *  force=true (manual refresh). */
   validateSessions(force?: boolean): Promise<void>;
+  /** Optimistically record a just-completed login as valid. */
+  markLoggedIn(platform: string): void;
   refreshJobs(): Promise<void>;
   /** Delete one publish-job record, then refresh the list. */
   deleteJob(jobId: string): Promise<void>;
@@ -151,6 +153,24 @@ export const usePublishCenterStore = create<PublishCenterState>((set, get) => ({
       _validateInflight = null;
     });
     return _validateInflight;
+  },
+  markLoggedIn(platform) {
+    // The login flow resolves only AFTER the engine observed the platform's
+    // authed-only ready_marker in the real login browser — a first-party proof
+    // the session is valid. Trust it directly instead of firing a second, cold
+    // headless re-probe: that probe can race a login→OAuth redirect (BeatStars
+    // bounces studio.* through oauth.* until the session warms) and come back
+    // 'unknown'/'expired', leaving the row stranded at its pre-login state until
+    // the user navigates away and back. Persist to the cache so a remount keeps
+    // it 'valid' within the TTL.
+    const now = Date.now();
+    const cache = loadCache();
+    cache[platform] = { state: "valid", at: now };
+    saveCache(cache);
+    set({
+      sessions: { ...get().sessions, [platform]: "valid" },
+      validatedAt: { ...get().validatedAt, [platform]: now },
+    });
   },
   async refreshJobs() {
     try {

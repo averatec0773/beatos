@@ -39,6 +39,7 @@ export function PublishCenterPanel(): React.JSX.Element {
   const validatedAt = usePublishCenterStore((s) => s.validatedAt);
   const loadSessions = usePublishCenterStore((s) => s.loadSessions);
   const validateSessions = usePublishCenterStore((s) => s.validateSessions);
+  const markLoggedIn = usePublishCenterStore((s) => s.markLoggedIn);
   const refreshJobs = usePublishCenterStore((s) => s.refreshJobs);
   const deleteJob = usePublishCenterStore((s) => s.deleteJob);
   const clearJobs = usePublishCenterStore((s) => s.clearJobs);
@@ -125,7 +126,12 @@ export function PublishCenterPanel(): React.JSX.Element {
           loginErrors = 0;
           if (status === "success") {
             stopLogin();
-            await validateSessions(true);
+            // Login success IS the validity proof (the engine saw the authed-only
+            // ready_marker) — mark it valid directly. Don't re-probe: a cold probe
+            // right after login can race a login→OAuth redirect and bounce the row
+            // back to its pre-login state (the "didn't refresh until I navigated
+            // away" bug). A manual Refresh still forces a real re-check on demand.
+            markLoggedIn(platform);
             useToastStore.getState().show("success", t("publishCenter.loggedInToast"));
           } else if (status === "failed" || status === "timeout") {
             stopLogin();
