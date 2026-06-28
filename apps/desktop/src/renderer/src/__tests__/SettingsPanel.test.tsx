@@ -45,6 +45,36 @@ describe("SettingsPanel", () => {
     expect(screen.getByRole("heading", { name: /^storage$/i })).toBeInTheDocument();
   });
 
+  it("search filters sections across categories", async () => {
+    render(
+      <MemoryRouter>
+        <SettingsPanel />
+      </MemoryRouter>,
+    );
+    // Default tab is Appearance, but searching surfaces Storage (Data category).
+    await userEvent.type(screen.getByPlaceholderText(/search settings/i), "storage");
+    expect(await screen.findByRole("heading", { name: /^storage$/i })).toBeInTheDocument();
+  });
+
+  it("search shows a no-results message", async () => {
+    render(
+      <MemoryRouter>
+        <SettingsPanel />
+      </MemoryRouter>,
+    );
+    await userEvent.type(screen.getByPlaceholderText(/search settings/i), "zzznotathing");
+    expect(await screen.findByText(/No settings match/i)).toBeInTheDocument();
+  });
+
+  it("deep-links the active tab via ?cat=", () => {
+    render(
+      <MemoryRouter initialEntries={["/?cat=data"]}>
+        <SettingsPanel />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("heading", { name: /^storage$/i })).toBeInTheDocument();
+  });
+
   it("no longer renders a Sources section", () => {
     render(
       <MemoryRouter>

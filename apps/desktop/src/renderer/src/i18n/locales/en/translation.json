@@ -379,6 +379,10 @@
       "data": "Data",
       "about": "About"
     },
+    "search": {
+      "placeholder": "Search settings",
+      "noResults": "No settings match “{{query}}”."
+    },
     "language": {
       "title": "Language",
       "desc": "Application interface language. Genre/mood tag values are unaffected — set those under Tag display."
