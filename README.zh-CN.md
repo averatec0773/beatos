@@ -38,7 +38,7 @@
 
 > 听听它为之而生的 beat → [BeatStars](https://www.beatstars.com/averatec0773) · [网易云音乐](https://music.163.com/#/artist?id=50982361)
 
-## 它能做什么
+## BeatOS 能做什么
 
 - **为卖货而生的目录。** 每条 beat 都存进真正的 SQLite 数据库：标题、BPM、Key、genre + mood（多值）、producer 署名、tag、带多币种定价的 license tier、描述，以及每个角色的音频——tagged/untagged、loop、stems（WAV/MP3/FLAC）——外加封面。软删除回收站可恢复；在整个目录里一键重命名或合并某个 producer。成交时可从任一 tier 生成**逐买家的 license PDF**（英文或中文），并**导出 tagged MP3**，把标题、producer、BPM、Key 和封面都烤进文件的 ID3 标签里。
 
@@ -187,7 +187,7 @@ Copyright 2026 Scott Huang（[averatec0773](https://github.com/averatec0773)）�
 
 <div align="center">
 
-由一名一线 producer 制作 · [averatec.studio](https://averatec.studio)
-[BeatStars](https://www.beatstars.com/averatec0773) · [网易云音乐](https://music.163.com/#/artist?id=50982361)
+BeatOS 由一名一线 producer 打造，并在日常创作中亲自使用 —— [averatec.studio](https://averatec.studio)。
+也欢迎听听我的音乐作品：[BeatStars](https://www.beatstars.com/averatec0773) · [网易云音乐](https://music.163.com/#/artist?id=50982361)。
 
 </div>

@@ -38,7 +38,7 @@ I'm a beatmaker. Like most of us, my catalog lived in a spreadsheet, and every b
 
 > Hear the beats it was built around → [BeatStars](https://www.beatstars.com/averatec0773) · [网易云音乐 / NetEase](https://music.163.com/#/artist?id=50982361)
 
-## What it does
+## What BeatOS can do
 
 - **A catalog made to sell.** Every beat in a real SQLite database: title, BPM, key, genre + mood (multi-value), producer credits, tags, license tiers with multi-currency pricing, description, and per-role audio — tagged/untagged, loop, stems (WAV/MP3/FLAC) — plus cover art. Soft-delete trash with restore; rename or merge a producer across your whole catalog in one click. On a sale, generate a **per-buyer license PDF** (English or 中文) from any tier, and **export a tagged MP3** with the title, producer, BPM, key, and cover baked into the file's ID3 tags.
 
@@ -187,7 +187,7 @@ Copyright 2026 Scott Huang ([averatec0773](https://github.com/averatec0773)).
 
 <div align="center">
 
-Made by a working producer · [averatec.studio](https://averatec.studio)
-[BeatStars](https://www.beatstars.com/averatec0773) · [网易云音乐](https://music.163.com/#/artist?id=50982361)
+BeatOS is built and used daily by a working producer — [averatec.studio](https://averatec.studio).
+Hear my music on [BeatStars](https://www.beatstars.com/averatec0773) and [网易云音乐 / NetEase](https://music.163.com/#/artist?id=50982361).
 
 </div>
