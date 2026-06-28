@@ -371,6 +371,14 @@
       "beatsUpload": "Beats & Upload",
       "general": "General"
     },
+    "categories": {
+      "appearance": "Appearance",
+      "language": "Language & Tags",
+      "catalog": "Catalog",
+      "ai": "AI",
+      "data": "Data",
+      "about": "About"
+    },
     "language": {
       "title": "Language",
       "desc": "Application interface language. Genre/mood tag values are unaffected — set those under Tag display."

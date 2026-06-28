@@ -41,6 +41,7 @@ describe("SettingsPanel", () => {
         <SettingsPanel />
       </MemoryRouter>,
     );
+    await userEvent.click(screen.getByRole("tab", { name: /data/i }));
     expect(screen.getByRole("heading", { name: /^storage$/i })).toBeInTheDocument();
   });
 
@@ -62,6 +63,7 @@ describe("SettingsPanel", () => {
           <SettingsPanel />
         </MemoryRouter>,
       );
+      await userEvent.click(screen.getByRole("tab", { name: /catalog/i }));
       await waitFor(() => expect(screen.getAllByTestId("producer-chip")).toHaveLength(3));
       expect(screen.getByText("Alice")).toBeInTheDocument();
       expect(screen.getByText("alice")).toBeInTheDocument();
@@ -75,6 +77,7 @@ describe("SettingsPanel", () => {
           <SettingsPanel />
         </MemoryRouter>,
       );
+      await userEvent.click(screen.getByRole("tab", { name: /catalog/i }));
       await waitFor(() => expect(screen.getByText(/No producers yet/i)).toBeInTheDocument());
     });
 
@@ -93,6 +96,7 @@ describe("SettingsPanel", () => {
           <SettingsPanel />
         </MemoryRouter>,
       );
+      await userEvent.click(screen.getByRole("tab", { name: /catalog/i }));
       const aliceChip = await screen.findByText("Alice");
       const removeBtn = aliceChip.parentElement!.querySelector(
         '[aria-label="Remove Alice"]',

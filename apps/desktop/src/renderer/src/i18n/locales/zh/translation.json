@@ -371,6 +371,14 @@
       "beatsUpload": "Beats 与上传",
       "general": "通用"
     },
+    "categories": {
+      "appearance": "外观",
+      "language": "语言与标签",
+      "catalog": "曲库",
+      "ai": "AI",
+      "data": "数据",
+      "about": "关于"
+    },
     "language": {
       "title": "语言",
       "desc": "应用界面语言。genre/mood 标签的值不受影响 —— 在「Tag display」中设置。"
