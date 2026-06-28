@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 from beatos_core.app_settings.service import get_setting
 from beatos_core.export.models import ExportResult
-from beatos_core.export.platforms import douyin, netease
+from beatos_core.export.platforms import beatstars, douyin, netease
 from beatos_core.export.templates import DEFAULT_TEMPLATES
 from beatos_core.licenses.service import list_tiers_for_track
 from beatos_core.models.license_tier import LicenseTier
@@ -17,6 +17,7 @@ _TEMPLATES_KEY = "upload_templates"
 # Renderer signature: (track, tiers, templates, *, prod, year, publish_date) -> ExportResult
 _Renderer = Callable[..., ExportResult]
 _RENDERERS: dict[str, _Renderer] = {
+    "beatstars": beatstars.render,
     "netease": netease.render,
     "douyin": douyin.render,
 }
