@@ -12,7 +12,7 @@ Not a spreadsheet. Not a DAW. Not a marketplace. **BeatOS** is a local-first hom
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Web-1f1f1f?style=flat-square)](#install--run)
 [![license](https://img.shields.io/badge/license-Apache--2.0-1f1f1f?style=flat-square)](LICENSE)
 [![status](https://img.shields.io/badge/status-pre--release-orange?style=flat-square)](ROADMAP.md)
-[![MCP](https://img.shields.io/badge/MCP-Claude%20%E2%80%A2%20Codex%20%E2%80%A2%20any%20client-7c5cff?style=flat-square)](#ai-co-pilot-mcp)
+[![MCP](https://img.shields.io/badge/MCP-Claude%20%E2%80%A2%20Codex%20%E2%80%A2%20any%20client-7c5cff?style=flat-square)](#two-ways-to-put-ai-to-work)
 
 <br/>
 
@@ -24,68 +24,35 @@ Not a spreadsheet. Not a DAW. Not a marketplace. **BeatOS** is a local-first hom
 
 <div align="center">
   <br/>
-  <img src="screenshots/beatos-core-product-demo.gif" alt="BeatOS demo: library search, playback, loopkit export, Publish Center, and AI Agent Actions" width="1100" />
+  <img src="screenshots/beatos-core-product-demo.gif" alt="BeatOS demo: library search, playback, loopkit export, Publish Center, and the AI Agent" width="1100" />
   <br/><br/>
 </div>
 
 ## Why BeatOS
 
-Most producers track their catalog in a spreadsheet, then re-type the same metadata into every platform by hand. BeatOS replaces that with **one canonical catalog** and three things nothing else combines:
+I'm a beatmaker. Like most of us, my catalog lived in a spreadsheet, and every beat got its metadata typed out by hand into each platform I sell on. BeatOS is what I built instead — **one canonical catalog**, with three things nothing else puts together:
 
 - 🎯 **Purpose-built for selling beats** — license tiers with multi-currency pricing, producer credits, tagged/untagged/loop/stems, BPM & key. Not a generic media manager bent into shape.
-- 🤖 **AI-native** — built for the AI-agent era. Draft genre, mood, and tags right in the editor with **AI tag suggestions** (bring your own key), or connect a first-class **MCP server** so Claude or Codex can catalog, tag, and prep per-platform metadata. Every write waits for your approval.
+- 🤖 **AI-native** — talk to your catalog in plain language, draft genre/mood/tags from the cover, or wire it to Claude / Codex over MCP. Every edit waits for your approval.
 - 🚀 **Built to ship, not just store** — export clean per-platform metadata and packaged loopkits / beat packs for free; **Pro adds assisted publishing** that drives a real browser and hands back at the platform's human-verification step.
+
+> Hear the beats it was built around → [BeatStars](https://www.beatstars.com/averatec0773) · [网易云音乐 / NetEase](https://music.163.com/#/artist?id=50982361)
 
 ## What it does
 
-<table>
-<tr>
-<td width="33%" valign="top">
+- **A catalog made to sell.** Every beat in a real SQLite database: title, BPM, key, genre + mood (multi-value), producer credits, tags, license tiers with multi-currency pricing, description, and per-role audio — tagged/untagged, loop, stems (WAV/MP3/FLAC) — plus cover art. Soft-delete trash with restore; rename or merge a producer across your whole catalog in one click. On a sale, generate a **per-buyer license PDF** (English or 中文) from any tier, and **export a tagged MP3** with the title, producer, BPM, key, and cover baked into the file's ID3 tags.
 
-### 🗂️ A catalog built for selling
+- **Find any beat instantly.** Search the whole catalog with stackable filters — BPM range, key, genre, mood, producer, has-audio — and recent searches one click away. The player queue follows whatever you're looking at.
 
-Every beat in a real SQLite database: title, **BPM, key, genre + mood** (multi-value), **producer credits**, tags, **license tiers with multi-currency pricing**, description, and audio in every role — tagged/untagged, **loop, stems** (WAV/MP3/FLAC) — plus cover art. Soft-delete trash with restore. Rename or merge a producer across your whole catalog in one click. Generate a **per-buyer license PDF** from any tier (English or 中文) when you make a sale, and **export a tagged MP3** with your title, producer, BPM, key, and cover baked into the file's ID3 tags.
+- **Loopkits, beattapes & beat packs.** Curate beats into a list, then package it to send out — a loopkit, a beattape, a singer's beat pack. Pick per-track and per-file what goes in (bulk-select all WAVs, all MP3s), and export as a **ZIP** or a plain folder, one subfolder per track.
 
-</td>
-<td width="33%" valign="top">
+- **Analysis & AI tagging.** On-demand **BPM + key detection** with per-field confidence scores (Essentia, or the permissive librosa fallback) — one track or the whole library at once, auto-filling empty fields. Optional **AI tag suggestions** (bring your own key) draft genre/mood/tags from the cover + title for you to review field by field.
 
-### 🔎 Find any beat instantly
+- **Chat with your catalog.** A built-in **AI Agent** in the sidebar — ask in plain language (*"find my untagged 2024 beats"*, *"tag these as chill"*, *"add a WAV tier"*) and the model actually reads and edits your catalog. Works with **Claude, ChatGPT, or DeepSeek** using your own key, stored on your device. Edits apply under your permission setting and are logged; destructive actions ask for a confirm first; read-only mode refuses writes. Conversations save locally and resume next launch.
 
-Search across the catalog and stack filters — **BPM range, key, genre, mood, producer, has-audio** — with recent searches one click away. The library table sorts and filters live; the player queue follows whatever you're looking at.
+- **Drive it from your own AI.** A first-class **MCP server** exposes the library to Claude Code, Claude Desktop, Codex, and any MCP client — **23 tools free, 28 with Pro** — so an agent in your terminal can organize, tag, and prep per-platform metadata for you.
 
-</td>
-<td width="33%" valign="top">
-
-### 📦 Loopkits, beattapes & beat packs
-
-Curate beats into a list, then **package it to send out** — a loopkit, a beattape, a singer's beat pack. Pick per-track and per-file what goes in (bulk-select all WAVs / all MP3s), then export as a **ZIP** or a plain folder, one subfolder per track.
-
-</td>
-</tr>
-<tr>
-<td width="33%" valign="top">
-
-### 🎚️ Analysis & AI tagging
-
-On-demand **BPM + key detection** with per-field confidence scores (Essentia engine, or the permissive librosa fallback) — analyze one track or **batch the whole library**, auto-filling empty fields. Optional **AI tag suggestions** (bring your own key) draft genre/mood/tags from the cover + title for you to review; off by default, desktop only.
-
-</td>
-<td width="33%" valign="top">
-
-### 🤖 AI co-pilot (MCP)
-
-An MCP server exposes your library to Claude Code, Claude Desktop, Codex, and any MCP client — **23 tools** free (**28** with Pro). Writes apply under your MCP client's own approval and are logged to the **Agent Actions** dashboard; flip to read-only to forbid writes entirely.
-
-</td>
-<td width="33%" valign="top">
-
-### 🚀 Assisted publishing (Pro)
-
-Publish a beat without leaving BeatOS: the engine drives a real browser and pauses at the platform's verification step. A **Publish Center** shows live per-platform session health. Live targets today: **抖音 (Douyin) promo-video and NetEase 激灵 (BeatSoul)**, with **BeatStars** on the [roadmap](ROADMAP.md). Pro build only — the free build greys it out.
-
-</td>
-</tr>
-</table>
+- **Assisted publishing (Pro).** Publish a beat without leaving BeatOS: the engine drives a real browser and pauses at the platform's verification step, with a **Publish Center** showing live per-platform session health. Live targets today: **抖音 (Douyin) promo-video and NetEase 激灵 (BeatSoul)**, with **BeatStars** on the [roadmap](ROADMAP.md). Pro build only — the free build greys it out.
 
 **And it feels like a product, not a database.** Spotify-style cards and Coverflow, a floating player, an animated WebGL backdrop (**Aurora** or **ASCII** glyph-rain), a glowing search orb, and a tunable glass panel-opacity layer — all bundled to run fully offline. Fully **bilingual (English / 中文)**, with an independent control for how genre/mood tags display.
 
@@ -93,23 +60,23 @@ Publish a beat without leaving BeatOS: the engine drives a real browser and paus
 
 BeatOS ships as a **native desktop app** (Electron) and a **browser app** (a local web SPA served by the same Python sidecar). One React codebase builds both, so they stay in lockstep — Electron-only powers (native file dialogs, reveal-in-Finder, drag-out) route through a thin `platform` seam with a same-origin web implementation behind it.
 
-| | |
-|---|---|
-| **Desktop** | The full native experience. `make dev` from source today; packaged installers land at `v0.1.0`. |
-| **Browser** | `make web` builds the SPA and serves it at `http://127.0.0.1:8765` — **same backend, same library, near-identical UI**, no Electron build. The easy way to run on Windows or anywhere today. |
+- **Desktop** — the full native experience. `make dev` from source today; packaged installers land at `v0.1.0`.
+- **Browser** — `make web` builds the SPA and serves it at `http://127.0.0.1:8765`: same backend, same library, near-identical UI, no Electron build. The easy way to run on Windows or anywhere today.
 
-Both are **local-first and offline** — the browser app talks only to `127.0.0.1`. (Remote/LAN access and a mobile layout are on the [roadmap](ROADMAP.md).)
+Both are **local-first and offline** — the browser app talks only to `127.0.0.1`. (Remote/LAN access and a mobile layout are planned.)
 
-## AI co-pilot (MCP)
+## Two ways to put AI to work
 
-> **BeatOS is built for the AI-agent era.** The MCP surface isn't a side feature — it's how cataloging, tagging, and (soon) publishing scale without manual labor.
+> **BeatOS is built for the AI-agent era.** Cataloging, tagging, and (soon) publishing are meant to scale without manual labor.
 
-**Verified clients:** Claude Code · Claude Desktop · Codex CLI/App · any MCP client speaking stdio JSON-RPC.
+**In-app** — the **AI Agent** chat needs nothing but your own API key (Claude / ChatGPT / DeepSeek). Turn on AI Assist in Settings, paste a key, and start asking. Reads run directly; edits respect your permission mode and are logged.
 
-**Why you stay in control:** your MCP client gates every tool call (allow / deny per call), and every write BeatOS applies is recorded in the **Agent Actions** dashboard — what changed, when, and the result. Want a hard stop? Switch the agent to **read-only** and writes are refused outright. Batched tools (`create_tracks` ≤100, `attach_assets` ≤500) turn a 50-track import into one action, not a hundred.
+**Your own AI client** — connect over **MCP**. Verified clients: Claude Code · Claude Desktop · Codex CLI/App · any client speaking stdio JSON-RPC.
+
+**You stay in control either way.** Your MCP client gates each tool call (allow / deny per action), and every write the app makes is recorded in an **Agent Actions** dashboard — what changed, when, the result. Want a hard stop? Switch the agent to **read-only** and writes are refused. Batch tools (`create_tracks` ≤100, `attach_assets` ≤500) turn a 50-track import into one action instead of a hundred.
 
 ```text
-You:    "Tag every beat above 140 BPM with no genre as 'Trap' or 'Drill'
+You:    "Tag every beat above 140 BPM with no genre as 'Trap' or 'Drill',
          from the cover and title."
 
 Claude: list_tracks(bpm_min=140) → 12 tracks → drafts a patch
@@ -136,13 +103,11 @@ Claude: applied — the 12 edits land and show up in Agent Actions
 
 ## Local-first, by design
 
-| | |
-|---|---|
-| **No server** | The sidecar binds `127.0.0.1` and serves the browser front end same-origin. Nothing leaves the machine — including your conversations with the MCP agent. |
-| **No account** | Single-user. No login, no sync, no cloud. |
-| **No telemetry** | Zero outbound calls from the app itself. |
-| **Your files stay put** | BeatOS references paths; nothing is moved or renamed unless you ask. |
-| **Your data is yours** | One SQLite file in your per-user app-data folder, kept off cloud-synced directories where SQLite can corrupt (configurable in Settings). Open it with any tool. |
+- **No server.** The sidecar binds `127.0.0.1` and serves the browser front end same-origin. Nothing leaves the machine — including your conversations with the AI.
+- **No account.** Single-user. No login, no sync, no cloud.
+- **No telemetry.** Zero outbound calls from the app itself; your API key stays on your device.
+- **Your files stay put.** BeatOS references paths; nothing is moved or renamed unless you ask.
+- **Your data is yours.** One SQLite file in your per-user app-data folder (kept off cloud-synced directories where SQLite can corrupt; configurable in Settings). Open it with any tool.
 
 ## Install & run
 
@@ -213,33 +178,6 @@ uv run pytest packages/                 # Python sidecar (core + http + mcp)
 
 </details>
 
-## Stack
-
-`Electron 39` · `React 19` · `Vite` · `Tailwind` · `Radix UI` · `Zustand` · `TanStack Virtual` · `dnd-kit` · `Tone.js`
-`Python 3.11` · `FastAPI` · `aiosqlite` · `structlog` · `mcp` (FastMCP) · `librosa` / `essentia` (optional) · `Playwright`
-`SQLite` · `Pydantic v2`
-
-The single React renderer builds two targets — Electron (`electron-vite`) and a browser SPA (`vite.config.web.ts`) the FastAPI sidecar serves at `/`.
-
-## Repository
-
-```
-apps/desktop/              Electron shell + React renderer (also builds the browser SPA)
-packages/
-  beatos-core/             Pure Python business logic (no web/RPC deps)
-  beatos-http/             FastAPI facade — renderer API, /api/fs, and the web SPA
-  beatos-mcp/              stdio MCP server for AI agents
-  beatos-platforms/        Per-platform vocab maps
-  pro/                     Private submodule — publishing; absent in the free build
-screenshots/               README assets
-```
-
-## Roadmap
-
-Currently in the **dogfood phase** — UI/UX patches land as `0.0.X.Y` releases. Shipped: the catalog, search, the AI/MCP surface, in-app AI tagging, on-demand metadata export, playlists + export, the **desktop + browser** front ends, and the first Pro publish adapters (抖音 promo-video + NetEase 激灵). Next: the first packaged installer (`v0.1.0`), a **BeatStars** adapter (mid-term), plus remote/LAN access and a mobile layout for the web app.
-
-Full plan: [`ROADMAP.md`](ROADMAP.md) · Shipped history: [`CHANGELOG.md`](CHANGELOG.md).
-
 ## License
 
 Apache License 2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
@@ -249,6 +187,7 @@ Copyright 2026 Scott Huang ([averatec0773](https://github.com/averatec0773)).
 
 <div align="center">
 
-Made by [averatec0773](https://github.com/averatec0773) · [averatec.studio](https://averatec.studio)
+Made by a working producer · [averatec.studio](https://averatec.studio)
+[BeatStars](https://www.beatstars.com/averatec0773) · [网易云音乐](https://music.163.com/#/artist?id=50982361)
 
 </div>
