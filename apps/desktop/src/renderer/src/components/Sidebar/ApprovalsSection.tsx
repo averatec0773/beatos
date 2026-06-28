@@ -12,7 +12,7 @@ export function ApprovalsSection(): React.JSX.Element {
 
   return (
     <SidebarNavButton
-      icon={<Inbox size={20} />}
+      icon={<Inbox size={18} />}
       label={t("sidebar.agentActions")}
       active={location.pathname === "/approvals"}
       onClick={() => navigate("/approvals")}

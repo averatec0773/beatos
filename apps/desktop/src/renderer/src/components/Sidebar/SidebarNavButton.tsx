@@ -41,7 +41,8 @@ export function SidebarNavButton({
       {...(dataAttr ? { [dataAttr]: "" } : {})}
       className={[
         "w-full rounded-md flex items-center transition-colors",
-        collapsed ? "justify-center py-2.5" : "px-3 py-2 gap-3 text-left text-[16px]",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent",
+        collapsed ? "justify-center py-2.5" : "px-3 py-1.5 gap-3 text-left text-[15px]",
         active ? "bg-bg-row-active text-accent" : "text-text-primary hover:bg-bg-row-hover",
       ].join(" ")}
     >

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -118,6 +118,7 @@ function SidebarListRow({
               ? "w-full py-1 rounded-md flex items-center justify-center"
               : "w-full px-2 py-1.5 text-left rounded-md flex items-center gap-3",
             "data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-accent",
+            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent",
             isOver
               ? "bg-accent-soft border-l-2 border-accent text-text-primary"
               : active
@@ -125,11 +126,11 @@ function SidebarListRow({
                 : "text-text-primary hover:bg-bg-row-hover",
           ].join(" ")}
         >
-          <ListCoverMosaic covers={covers} size={52} />
+          <ListCoverMosaic covers={covers} size={47} />
           {!collapsed && (
             <span className="flex-1 min-w-0 flex flex-col">
-              <span className="truncate text-[15px] font-medium leading-tight">{list.name}</span>
-              <span className="truncate text-[13px] text-text-tertiary leading-tight mt-0.5">
+              <span className="truncate text-[14px] font-medium leading-tight">{list.name}</span>
+              <span className="truncate text-[12px] text-text-tertiary leading-tight mt-0.5">
                 {t("sidebar.listSubtitle", { count })}
               </span>
             </span>
@@ -186,6 +187,40 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
   const collapsed = useSidebarPanelStore((s) => s.collapsed);
   const userLists = useMemo(() => allLists.filter((l) => l.kind !== "system"), [allLists]);
 
+  // Apple-style scroll-edge fade: dim the top/bottom of the rows viewport ONLY
+  // when there's clipped content in that direction (never when the list fits, so
+  // short lists keep crisp edges). Recomputed on scroll, on viewport resize, and
+  // when the row count changes.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [fade, setFade] = useState({ top: false, bottom: false });
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = (): void => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const overflow = scrollHeight - clientHeight > 1;
+      setFade({
+        top: overflow && scrollTop > 1,
+        bottom: overflow && scrollTop < scrollHeight - clientHeight - 1,
+      });
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    let ro: ResizeObserver | undefined;
+    if (typeof ResizeObserver === "function") {
+      ro = new ResizeObserver(update);
+      ro.observe(el);
+    }
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro?.disconnect();
+    };
+  }, [userLists.length, collapsed]);
+
+  const fadeTop = fade.top ? "transparent 0, #000 14px" : "#000 0";
+  const fadeBottom = fade.bottom ? "#000 calc(100% - 14px), transparent 100%" : "#000 100%";
+  const fadeMask = `linear-gradient(to bottom, ${fadeTop}, ${fadeBottom})`;
+
   function onAddListClick(): void {
     setNewListName("");
     setAddingList(true);
@@ -214,19 +249,19 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
   }
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       <header
         className={
           collapsed
-            ? "mb-1 flex items-center justify-center"
-            : "px-3 mb-1 flex items-center justify-between"
+            ? "mb-1 flex shrink-0 items-center justify-center"
+            : "px-3 mb-1 flex shrink-0 items-center justify-between"
         }
       >
         {!collapsed && <span className="beatos-eyebrow">{t("sidebar.lists")}</span>}
         <button
           type="button"
           onClick={onAddListClick}
-          className="text-text-tertiary hover:text-text-primary p-1.5 -mr-1 rounded-md hover:bg-bg-row-hover"
+          className="text-text-tertiary hover:text-text-primary p-1.5 -mr-1 rounded-md hover:bg-bg-row-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent"
           aria-label={t("sidebar.addList")}
           title={t("sidebar.newPlaylist")}
         >
@@ -234,7 +269,7 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
         </button>
       </header>
       {addingList && (
-        <div className="px-3 py-1">
+        <div className="px-3 py-1 shrink-0">
           <input
             autoFocus
             type="text"
@@ -250,24 +285,32 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
           />
         </div>
       )}
-      <SortableContext
-        items={userLists.map((l) => `list:${l.id}`)}
-        strategy={verticalListSortingStrategy}
+      {/* Only the playlist rows scroll; the LISTS header above stays pinned. The
+          mask fades clipped content at the scroll edges (Apple-style). */}
+      <div
+        ref={scrollRef}
+        style={{ maskImage: fadeMask, WebkitMaskImage: fadeMask }}
+        className="beatos-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain"
       >
-        {userLists.map((l) => (
-          <SortableListRow
-            key={l.id}
-            list={l}
-            active={activeListId === l.id}
-            onClick={() => navigate(`/lists/${l.id}`)}
-            onDeleted={() => {
-              if (activeListId === l.id) {
-                navigate("/");
-              }
-            }}
-          />
-        ))}
-      </SortableContext>
+        <SortableContext
+          items={userLists.map((l) => `list:${l.id}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          {userLists.map((l) => (
+            <SortableListRow
+              key={l.id}
+              list={l}
+              active={activeListId === l.id}
+              onClick={() => navigate(`/lists/${l.id}`)}
+              onDeleted={() => {
+                if (activeListId === l.id) {
+                  navigate("/");
+                }
+              }}
+            />
+          ))}
+        </SortableContext>
+      </div>
     </div>
   );
 }

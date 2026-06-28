@@ -17,7 +17,7 @@ export function PublishCenterSection(): React.JSX.Element {
   if (!proAvailable) {
     return (
       <SidebarNavButton
-        icon={<Rocket size={20} />}
+        icon={<Rocket size={18} />}
         label={t("sidebar.publishCenter")}
         active={false}
         onClick={() => useToastStore.getState().show("info", t("sidebar.publishCenterLocked"))}
@@ -29,7 +29,7 @@ export function PublishCenterSection(): React.JSX.Element {
 
   return (
     <SidebarNavButton
-      icon={<Rocket size={20} />}
+      icon={<Rocket size={18} />}
       label={t("sidebar.publishCenter")}
       active={active}
       onClick={() => navigate("/publish")}

@@ -41,34 +41,43 @@ export function SidebarPanel(): React.JSX.Element {
   return (
     <aside
       data-collapsed={collapsed ? "" : undefined}
-      className="sidebar-panel beatos-card rounded-xl flex-shrink-0 overflow-y-auto py-3 flex flex-col gap-4 relative beatos-scroll"
+      className="sidebar-panel beatos-card rounded-xl flex-shrink-0 overflow-hidden py-3 flex flex-col gap-3 relative"
       style={collapsed ? undefined : { width }}
     >
-      {/* Header — mirrors the detail panel's: toggle on the LEFT, then the
-          LIBRARY label (Spotify-style). Collapsed → just the centered toggle. */}
-      <div className={collapsed ? "flex justify-center" : "flex items-center gap-2 px-3"}>
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          aria-pressed={collapsed}
-          title={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
-          aria-label={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
-          className="text-text-tertiary hover:text-text-primary p-1.5 -ml-1 rounded-md hover:bg-bg-row-hover"
-          data-sidebar-toggle
-        >
-          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        </button>
-        {!collapsed && <span className="beatos-eyebrow">{t("sidebar.library")}</span>}
+      {/* Zone 1 — fixed top: toggle + LIBRARY label, then primary nav. Stays put
+          while the Lists zone scrolls (Spotify/Apple Music app-shell pattern). */}
+      <div className="shrink-0 flex flex-col gap-3">
+        {/* Header — toggle on the LEFT, then the LIBRARY label. Collapsed → just
+            the centered toggle. */}
+        <div className={collapsed ? "flex justify-center" : "flex items-center gap-2 px-3"}>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-pressed={collapsed}
+            title={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+            aria-label={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+            className="text-text-tertiary hover:text-text-primary p-1.5 -ml-1 rounded-md hover:bg-bg-row-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent"
+            data-sidebar-toggle
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+          {!collapsed && <span className="beatos-eyebrow">{t("sidebar.library")}</span>}
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <AllBeatsSection />
+          <PublishCenterSection />
+          <ChatSection />
+          <ApprovalsSection />
+          <TrashSection />
+        </div>
       </div>
-      <div className="flex flex-col gap-0.5">
-        <AllBeatsSection />
-        <PublishCenterSection />
-        <ChatSection />
-        <ApprovalsSection />
-        <TrashSection />
-      </div>
+
+      {/* Zone 2 — scrollable middle: only the Lists section scrolls (its LISTS
+          header stays pinned; see ListsSection). */}
       <ListsSection activeListId={activeListId} />
-      <div className="mt-auto flex flex-col gap-0.5">
+
+      {/* Zone 3 — fixed bottom: account + settings, always visible. */}
+      <div className="shrink-0 flex flex-col gap-0.5">
         <SidebarFooter />
         <SettingsSection />
       </div>

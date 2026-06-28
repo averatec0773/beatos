@@ -18,6 +18,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Changed
 
+- **Sidebar is now a fixed-frame layout.** The top navigation and the bottom account/Settings stay pinned while only the playlist list scrolls (its "LISTS" header stays put too); the rows fade softly at the scroll edges, content is a touch more compact, and keyboard focus now shows a clear ring.
 - **First launch seeds 3 example beats instead of 1.** A brand-new library now starts with three template tracks (`template1/2/3`) spanning distinct styles, each with a cover, audio, a free non-commercial download plus MP3/WAV/STEM price tiers, and a reference link in its notes — so the catalog, pricing, and tagging are demonstrated out of the box. Existing libraries are left untouched.
 - **Batch analysis tells you what failed.** When you analyze several tracks at once, any that couldn't be analyzed are now reported with the reason (and logged), instead of disappearing into a silent count.
 - **Agent permissions are now two honest options.** The "Confirm every action" and "Auto-approve all" choices did the same thing under the hood (writes applied either way), so Settings now offers just **Enabled** (agent writes apply, gated by your AI client's own per-action approval and logged in Agent Actions) and **Read-only** (writes refused). An existing setting carries over automatically. The misleading auto-approve warning banner is gone.

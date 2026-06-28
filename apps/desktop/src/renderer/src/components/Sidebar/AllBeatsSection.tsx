@@ -15,7 +15,7 @@ export function AllBeatsSection(): React.JSX.Element {
 
   return (
     <SidebarNavButton
-      icon={<Music size={20} />}
+      icon={<Music size={18} />}
       label={t("sidebar.allBeats")}
       active={active}
       onClick={() => navigate("/")}

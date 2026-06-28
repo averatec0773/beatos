@@ -12,7 +12,7 @@ export function ChatSection(): React.JSX.Element {
 
   return (
     <SidebarNavButton
-      icon={<MessagesSquare size={20} />}
+      icon={<MessagesSquare size={18} />}
       label={t("sidebar.aiChat")}
       active={location.pathname === "/chat"}
       onClick={() => navigate("/chat")}

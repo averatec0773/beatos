@@ -13,7 +13,7 @@ export function SettingsSection(): React.JSX.Element {
 
   return (
     <SidebarNavButton
-      icon={<Settings size={20} />}
+      icon={<Settings size={18} />}
       label={t("sidebar.settings")}
       active={active}
       onClick={() => {

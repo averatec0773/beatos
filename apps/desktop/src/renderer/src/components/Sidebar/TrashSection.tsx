@@ -14,7 +14,7 @@ export function TrashSection(): React.JSX.Element {
 
   return (
     <SidebarNavButton
-      icon={<Trash2 size={20} />}
+      icon={<Trash2 size={18} />}
       label={t("sidebar.trash")}
       active={location.pathname === "/trash"}
       onClick={() => navigate("/trash")}
