@@ -55,7 +55,7 @@ export function ImportAudioDialog({
         if (!o) onCancel();
       }}
     >
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

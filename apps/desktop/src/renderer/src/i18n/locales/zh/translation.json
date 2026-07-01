@@ -698,6 +698,7 @@
     "decline": "取消",
     "notConfiguredTitle": "AI 尚未配置",
     "notConfiguredBody": "在 设置 里开启 AI Assist（选择提供方并粘贴你的 API key），即可与目录对话。",
+    "notConfiguredBodyWeb": "AI Assist 仅在 BeatOS 桌面应用中可用 —— 请在桌面应用里选择提供方并与目录对话。",
     "errorPrefix": "出错了",
     "newChat": "新对话",
     "subtitle": "用自然语言询问或修改你的曲库",

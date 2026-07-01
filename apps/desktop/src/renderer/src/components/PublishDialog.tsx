@@ -21,6 +21,9 @@ interface Props {
   open: boolean;
   trackId: number;
   platform?: string;
+  // Platforms the user may publish to (from the Publish Center session list). When
+  // more than one is available the header shows a selector; otherwise a static badge.
+  platforms?: string[];
   onClose: () => void;
 }
 
@@ -112,9 +115,22 @@ export function PublishDialog({
   open,
   trackId,
   platform = "netease",
+  platforms,
   onClose,
 }: Props): React.JSX.Element {
   const { t } = useTranslation();
+  // The publish target can be switched in the header. Initialised from the
+  // `platform` prop and reset whenever the dialog reopens or the prop changes;
+  // a user pick only lives until the next reopen. All downstream logic
+  // (export fields, session gate, upload body) keys on `selectedPlatform`.
+  const [selectedPlatform, setSelectedPlatform] = useState(platform);
+  useEffect(() => {
+    setSelectedPlatform(platform);
+  }, [platform, open]);
+  const targetOptions = useMemo(() => {
+    const list = platforms && platforms.length > 0 ? platforms : [platform];
+    return list.includes(selectedPlatform) ? list : [selectedPlatform, ...list];
+  }, [platforms, platform, selectedPlatform]);
   const [result, setResult] = useState<ExportResult | null>(null);
   const [trackAssets, setTrackAssets] = useState<Asset[]>([]);
   const [audioAssetId, setAudioAssetId] = useState<number | null>(null);
@@ -127,7 +143,7 @@ export function PublishDialog({
   // Real session validity, reused from the Publish Center store (headless check +
   // 24h cache). NOT the cheap file-existence check — an expired session file still
   // "exists", and gating on existence used to launch a browser into a dead session.
-  const sessionState = usePublishCenterStore((s) => s.sessions[platform]);
+  const sessionState = usePublishCenterStore((s) => s.sessions[selectedPlatform]);
   const loadSessions = usePublishCenterStore((s) => s.loadSessions);
   const validateSessions = usePublishCenterStore((s) => s.validateSessions);
   // undefined / "checking" = still verifying; "valid"/"unknown" may publish;
@@ -158,7 +174,7 @@ export function PublishDialog({
     () => trackAssets.filter((a) => isPromoVideoRole(a.role)),
     [trackAssets],
   );
-  const isDouyin = platform === "douyin";
+  const isDouyin = selectedPlatform === "douyin";
 
   const specFields = useMemo(
     () =>
@@ -179,7 +195,7 @@ export function PublishDialog({
     }
     setLoggingIn(true);
     try {
-      const { login_id } = await publishApi.login(platform);
+      const { login_id } = await publishApi.login(selectedPlatform);
       if (!mountedRef.current) return;
       let loginErrors = 0;
       loginPollRef.current = window.setInterval(async () => {
@@ -253,7 +269,7 @@ export function PublishDialog({
     setVideoAssetId(null);
 
     exportApi
-      .forTrack(trackId, platform)
+      .forTrack(trackId, selectedPlatform)
       .then((r) => !cancelled && setResult(r))
       .catch(() => {
         if (!cancelled)
@@ -297,7 +313,7 @@ export function PublishDialog({
       cancelled = true;
       stopPolling();
     };
-  }, [open, trackId, platform]);
+  }, [open, trackId, selectedPlatform]);
 
   useEffect(() => stopPolling, []);
 
@@ -319,13 +335,13 @@ export function PublishDialog({
       const body = isDouyin
         ? {
             track_id: trackId,
-            platform,
+            platform: selectedPlatform,
             video_asset_id: videoAssetId ?? undefined,
             cover_asset_id: coverAssetId ?? undefined,
           }
         : {
             track_id: trackId,
-            platform,
+            platform: selectedPlatform,
             audio_asset_id: audioAssetId ?? undefined,
             cover_asset_id: coverAssetId ?? undefined,
             deliverable_wav_asset_id: wavAssetId ?? undefined,
@@ -389,13 +405,31 @@ export function PublishDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      {/* No formal description — the title + labelled sections describe it. Explicit
+          undefined opts out of Radix's aria-describedby warning. */}
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {t("publishDialog.publishToPlatform")}
-            <span className="rounded border border-border-subtle px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-text-tertiary">
-              {platform}
-            </span>
+            {targetOptions.length > 1 ? (
+              <select
+                aria-label={t("publishDialog.publishToPlatform")}
+                value={selectedPlatform}
+                onChange={(e) => setSelectedPlatform(e.target.value)}
+                disabled={publishing || inProgress}
+                className="rounded border border-border-subtle bg-transparent px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-text-secondary focus:border-text-tertiary focus:outline-none disabled:opacity-40"
+              >
+                {targetOptions.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="rounded border border-border-subtle px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-text-tertiary">
+                {selectedPlatform}
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 

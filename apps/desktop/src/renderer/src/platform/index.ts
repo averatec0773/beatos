@@ -12,6 +12,12 @@ const hasBridge =
 
 export const platform: Platform = hasBridge ? electronPlatform : webPlatform;
 
+/** True under the Electron shell (native host present), false in the same-origin
+ *  web build. Use for features the web build can't offer (e.g. AI Assist, whose
+ *  provider/key settings are desktop-only) so the UI can degrade honestly instead
+ *  of pointing web users at settings that don't exist there. */
+export const isDesktop = hasBridge;
+
 /** True only under Electron on macOS, where the window uses
  *  `titleBarStyle: 'hiddenInset'` and the traffic lights overlay the renderer's
  *  top-left (src/main/index.ts) — so the top bar must inset its left edge to

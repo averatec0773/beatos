@@ -52,7 +52,7 @@ export function PublishTrackPicker({ open, onClose, onPick }: Props): React.JSX.
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{t("publishCenter.publishTrack")}</DialogTitle>
         </DialogHeader>

@@ -81,7 +81,7 @@ export function FileBrowserDialog(): React.JSX.Element {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && cancel()}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>
             {mode === "folder" ? t("fileBrowser.titleFolder") : t("fileBrowser.titleFile")}
