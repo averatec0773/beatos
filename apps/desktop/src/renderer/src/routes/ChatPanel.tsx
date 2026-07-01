@@ -3,6 +3,7 @@ import { Send, Loader2, AlertTriangle, Sparkles, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { ai } from "@/api/ai";
+import { isDesktop } from "@/platform";
 import { useChatStore } from "@/stores/chat";
 import { ChatMessageRow, TypingIndicator } from "@/components/Chat/ChatMessage";
 
@@ -91,7 +92,9 @@ export function ChatPanel(): React.JSX.Element {
         <h1 className="mb-1.5 text-lg font-semibold text-text-primary">
           {t("chat.notConfiguredTitle")}
         </h1>
-        <p className="max-w-sm text-sm text-text-secondary">{t("chat.notConfiguredBody")}</p>
+        <p className="max-w-sm text-sm text-text-secondary">
+          {isDesktop ? t("chat.notConfiguredBody") : t("chat.notConfiguredBodyWeb")}
+        </p>
       </section>
     );
   }

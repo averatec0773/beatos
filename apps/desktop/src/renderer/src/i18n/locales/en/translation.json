@@ -698,6 +698,7 @@
     "decline": "Decline",
     "notConfiguredTitle": "AI is not set up",
     "notConfiguredBody": "Turn on AI Assist in Settings (pick a provider and paste your API key) to chat with your catalog.",
+    "notConfiguredBodyWeb": "AI Assist is available in the BeatOS desktop app — open it there to pick a provider and chat with your catalog.",
     "errorPrefix": "Something went wrong",
     "newChat": "New chat",
     "subtitle": "Ask about your catalog or make changes in plain language",

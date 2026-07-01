@@ -264,6 +264,8 @@ export function PublishCenterPanel(): React.JSX.Element {
         <PublishDialog
           open
           trackId={publishTrackId}
+          platform={platforms.includes("netease") ? "netease" : platforms[0]}
+          platforms={platforms}
           onClose={() => {
             setPublishTrackId(null);
             void refreshJobs();
