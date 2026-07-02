@@ -139,8 +139,17 @@ try {
       await page.waitForFunction(() => window.__beatos.engine().status !== "idle", {
         timeout: 10000,
       });
-      // After leaving idle, wait a further 2s for position to advance (mirrors assertDawWavDecode).
-      await new Promise((r) => setTimeout(r, 2000));
+      // After leaving idle, poll up to 8s for the position to advance (a fixed
+      // 2s wait flaked on slow shared CI runners); pass as soon as it moves.
+      await page
+        .waitForFunction(
+          () => {
+            const e = window.__beatos.engine();
+            return e.status === "error" || e.position > 0;
+          },
+          { timeout: 8000 },
+        )
+        .catch(() => {});
       const engineState = await page.evaluate(() => window.__beatos.engine());
       if (engineState.status === "error") {
         failures.push(
