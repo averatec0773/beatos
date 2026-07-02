@@ -16,8 +16,11 @@ can stay on a range-capable FileResponse.
 """
 from __future__ import annotations
 
+import pathlib
 import struct
 from typing import BinaryIO
+
+_COPY_CHUNK = 1 << 20  # 1 MiB stream-copy window for the data body
 
 
 def wav_needs_repair(f: BinaryIO) -> bool:
@@ -117,3 +120,85 @@ def repair_wav_if_needed(buf: bytes) -> bytes:
     struct.pack_into("<I", out, data_chunk + 4, data_len)
     out[data_chunk + 8:data_chunk + 8 + data_len] = buf[data_start:data_start + data_len]
     return bytes(out)
+
+
+def repair_wav_to_file(src: pathlib.Path, dst: pathlib.Path) -> None:
+    """Sanitize the WAV at `src` and write the canonical { fmt, data } result to
+    `dst`, streaming the (large) data body in chunks so neither the source nor the
+    output is ever fully resident in memory.
+
+    Walks chunk headers by seeking (the fmt block is small enough to read), then
+    writes a fresh RIFF header followed by a chunked copy of the data section.
+    Mirrors `repair_wav_if_needed`: keeps `fmt ` + `data` verbatim, drops the rest,
+    and unwraps WAVE_FORMAT_EXTENSIBLE (0xFFFE) to a plain PCM(1)/FLOAT(3) code.
+
+    Raises ValueError if `src` is not a WAV with usable fmt + data chunks.
+    """
+    with open(src, "rb") as f:
+        head = f.read(12)
+        if len(head) < 12 or head[0:4] != b"RIFF" or head[8:12] != b"WAVE":
+            raise ValueError("not a RIFF/WAVE file")
+
+        fmt_offset = fmt_len = -1
+        data_offset = data_len = -1
+        fmt_body = b""
+        while True:
+            hdr = f.read(8)
+            if len(hdr) < 8:
+                break
+            cid = hdr[0:4]
+            size = struct.unpack("<I", hdr[4:8])[0]
+            body = f.tell()
+            if cid == b"fmt ":
+                fmt_offset, fmt_len = body, size
+                fmt_body = f.read(size)
+                f.seek(body + size + (size & 1))
+            elif cid == b"data":
+                data_offset, data_len = body, size
+                f.seek(body + size + (size & 1))
+            else:
+                f.seek(body + size + (size & 1))
+
+        if fmt_offset < 0 or data_offset < 0 or fmt_len <= 0 or data_len <= 0:
+            raise ValueError("missing fmt or data chunk")
+
+        raw_fmt = struct.unpack_from("<H", fmt_body, 0)[0] if len(fmt_body) >= 2 else 1
+        is_ext = raw_fmt == 0xFFFE
+        unwrapped = raw_fmt
+        if is_ext and len(fmt_body) >= 26:
+            sub = struct.unpack_from("<H", fmt_body, 24)[0]
+            if sub in (1, 3):
+                unwrapped = sub
+
+        fmt_out = bytearray(fmt_body)
+        if is_ext and unwrapped != raw_fmt:
+            struct.pack_into("<H", fmt_out, 0, unwrapped)
+
+        fmt_pad = fmt_len & 1
+        out_size = 12 + 8 + fmt_len + fmt_pad + 8 + data_len
+
+        with open(dst, "wb") as w:
+            header = bytearray(20 + fmt_len + fmt_pad + 8)
+            header[0:4] = b"RIFF"
+            struct.pack_into("<I", header, 4, out_size - 8)
+            header[8:12] = b"WAVE"
+            header[12:16] = b"fmt "
+            struct.pack_into("<I", header, 16, fmt_len)
+            header[20:20 + fmt_len] = fmt_out
+            # fmt pad byte is already 0 from bytearray init.
+            data_chunk = 20 + fmt_len + fmt_pad
+            header[data_chunk:data_chunk + 4] = b"data"
+            struct.pack_into("<I", header, data_chunk + 4, data_len)
+            w.write(header)
+
+            f.seek(data_offset)
+            remaining = data_len
+            while remaining > 0:
+                block = f.read(min(_COPY_CHUNK, remaining))
+                if not block:
+                    break
+                w.write(block)
+                remaining -= len(block)
+            # No trailing pad byte for an odd-length data chunk: data is the last
+            # chunk in the canonical output, so the pad is optional — and omitting
+            # it keeps these bytes identical to repair_wav_if_needed's out_size.

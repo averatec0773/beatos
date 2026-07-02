@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <title>BeatOS</title>
+    <!-- Relative path resolves under both hosts: file:// (packaged Electron) and
+         same-origin http (web SPA served by the sidecar). Avoids the web favicon
+         404 that logged a console error on every load. -->
+    <link rel="icon" type="image/png" href="./favicon.png" />
     <!--
       CSP for the BeatOS renderer — shared by the Electron build AND the browser
       (web) build, so it allows the union of what each host needs:

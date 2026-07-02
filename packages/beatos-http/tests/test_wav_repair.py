@@ -2,7 +2,13 @@
 import io
 import struct
 
-from beatos_http.wav_repair import repair_wav_if_needed, wav_needs_repair
+import pytest
+
+from beatos_http.wav_repair import (
+    repair_wav_if_needed,
+    repair_wav_to_file,
+    wav_needs_repair,
+)
 
 
 def _chunk(cid: bytes, body: bytes) -> bytes:
@@ -100,3 +106,57 @@ def test_extensible_format_is_unwrapped_to_pcm():
     data_len = struct.unpack_from("<I", out, data_off + 4)[0]
     assert out[data_off + 8:data_off + 8 + data_len] == audio
     assert struct.unpack_from("<I", out, 4)[0] == len(out) - 8
+
+
+def test_repair_wav_to_file_matches_in_memory(tmp_path):
+    """The streaming file-to-file repair produces the same canonical bytes as the
+    in-memory repair, without buffering the whole file."""
+    audio = b"\x11\x22\x33\x44" * 256
+    dirty = _riff(
+        _chunk(b"JUNK", b"\x00" * 12),
+        _chunk(b"fmt ", _fmt_pcm()),
+        _chunk(b"data", audio),
+        _chunk(b"cue ", b"\x00" * 4),
+    )
+    src = tmp_path / "dirty.wav"
+    src.write_bytes(dirty)
+    dst = tmp_path / "clean.wav"
+
+    repair_wav_to_file(src, dst)
+
+    out = dst.read_bytes()
+    assert out == repair_wav_if_needed(dirty)
+    assert wav_needs_repair(io.BytesIO(out)) is False
+
+
+def test_repair_wav_to_file_handles_odd_data_length(tmp_path):
+    """An odd-length data chunk gets its trailing pad byte written back."""
+    audio = b"\xaa\xbb\xcc"  # 3 bytes -> odd, needs a pad byte
+    dirty = _riff(
+        _chunk(b"JUNK", b"\x00" * 4),
+        _chunk(b"fmt ", _fmt_pcm()),
+        _chunk(b"data", audio),
+    )
+    src = tmp_path / "odd.wav"
+    src.write_bytes(dirty)
+    dst = tmp_path / "odd-clean.wav"
+
+    repair_wav_to_file(src, dst)
+
+    out = dst.read_bytes()
+    assert out == repair_wav_if_needed(dirty)
+    data_off = out.index(b"data")
+    data_len = struct.unpack_from("<I", out, data_off + 4)[0]
+    assert data_len == 3
+    assert out[data_off + 8:data_off + 8 + 3] == audio
+    # data is the last chunk, so no trailing pad byte is emitted (matches the
+    # in-memory repair's out_size).
+    assert len(out) == data_off + 8 + 3
+
+
+def test_repair_wav_to_file_rejects_non_wav(tmp_path):
+    src = tmp_path / "notwav.bin"
+    src.write_bytes(b"ID3\x04not a wav at all")
+    dst = tmp_path / "out.wav"
+    with pytest.raises(ValueError):
+        repair_wav_to_file(src, dst)

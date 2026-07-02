@@ -21,9 +21,13 @@ def _fmt_amount(amount: float) -> str:
 def _price_line(tier: LicenseTier) -> str:
     label = tier.name or "+".join(tier.deliverables) or "Tier"
     usd = tier.prices.get("USD")
-    if usd is None:
-        return f"{label}: —"
-    return f"{label}: ${_fmt_amount(usd)}"
+    if usd is not None:
+        return f"{label}: ${_fmt_amount(usd)}"
+    for code, amount in (tier.prices or {}).items():
+        if amount is None:
+            continue
+        return f"{label}: {code} {_fmt_amount(amount)} (not exported — USD required)"
+    return f"{label}: —"
 
 
 def _price_tiers(tiers: list[LicenseTier]) -> list[dict]:
@@ -99,7 +103,18 @@ def render(
 
     price_value = "\n".join(_price_line(t) for t in tiers)
     fields.append(ExportField(key="price", label="Price", value=price_value))
+    exported_tiers = _price_tiers(tiers)
     fields.append(ExportField(key="price_tiers", label="Price tiers",
-                              value=json.dumps(_price_tiers(tiers))))
+                              value=json.dumps(exported_tiers)))
+
+    if tiers and not exported_tiers:
+        fields.append(ExportField(
+            key="price_note", label="Pricing warning",
+            value=(
+                f"{len(tiers)} license tier(s) have no USD price. BeatStars lists "
+                "prices in USD, so these tiers were not exported — set USD prices "
+                "or configure licenses manually on BeatStars."
+            ),
+        ))
 
     return ExportResult(platform=PLATFORM, fields=fields)

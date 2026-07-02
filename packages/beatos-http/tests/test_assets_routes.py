@@ -273,3 +273,97 @@ def test_audio_endpoint_repairs_dirty_wav(tmp_path):
     assert b"JUNK" not in res.content
     assert b"cue " not in res.content
     assert len(res.content) < wav.stat().st_size
+
+
+def test_repaired_wav_second_request_hits_cache(tmp_path, monkeypatch):
+    """A repaired WAV is cached; a second play must reuse the cache file rather
+    than re-run the repair."""
+    import beatos_http.routes.assets as assets_mod
+
+    client = TestClient(create_app())
+    track_id = _create_track(client)
+    wav = tmp_path / "dirty.wav"
+    _make_dirty_wav(wav)
+    asset_id = client.post(
+        f"/api/tracks/{track_id}/assets",
+        json={"role": "audio_tagged", "path": str(wav)},
+    ).json()["id"]
+
+    calls = {"n": 0}
+    real = assets_mod.repair_wav_to_file
+
+    def _counting(src, dst):
+        calls["n"] += 1
+        return real(src, dst)
+
+    monkeypatch.setattr(assets_mod, "repair_wav_to_file", _counting)
+
+    first = client.get(f"/api/assets/audio/{asset_id}")
+    second = client.get(f"/api/assets/audio/{asset_id}")
+
+    assert first.status_code == 200 and second.status_code == 200
+    assert first.content == second.content
+    assert calls["n"] == 1  # repaired once, second request served from cache
+
+
+def test_repaired_wav_stale_source_rerepairs(tmp_path, monkeypatch):
+    """Changing the source WAV (new size/mtime) invalidates the cache entry and
+    triggers a fresh repair."""
+    import beatos_http.routes.assets as assets_mod
+
+    client = TestClient(create_app())
+    track_id = _create_track(client)
+    wav = tmp_path / "dirty.wav"
+    _make_dirty_wav(wav)
+    asset_id = client.post(
+        f"/api/tracks/{track_id}/assets",
+        json={"role": "audio_tagged", "path": str(wav)},
+    ).json()["id"]
+
+    calls = {"n": 0}
+    real = assets_mod.repair_wav_to_file
+
+    def _counting(src, dst):
+        calls["n"] += 1
+        return real(src, dst)
+
+    monkeypatch.setattr(assets_mod, "repair_wav_to_file", _counting)
+
+    client.get(f"/api/assets/audio/{asset_id}")
+    assert calls["n"] == 1
+
+    # Rewrite the source with a different body so size + mtime both change.
+    import struct
+
+    def chunk(cid, body):
+        pad = b"\x00" if (len(body) & 1) else b""
+        return cid + struct.pack("<I", len(body)) + body + pad
+
+    fmt = struct.pack("<HHIIHH", 1, 1, 44100, 44100 * 2, 2, 16)
+    audio = b"\x55\x66\x77\x88" * 128  # different length than the original
+    body = b"WAVE" + chunk(b"JUNK", b"\x00" * 12) + chunk(b"fmt ", fmt) + chunk(b"data", audio)
+    wav.write_bytes(b"RIFF" + struct.pack("<I", len(body)) + body)
+
+    client.get(f"/api/assets/audio/{asset_id}")
+    assert calls["n"] == 2  # stale source re-repaired
+
+
+def test_repaired_wav_supports_range(tmp_path):
+    """The cached repaired WAV is served via FileResponse, so Range works."""
+    client = TestClient(create_app())
+    track_id = _create_track(client)
+    wav = tmp_path / "dirty.wav"
+    _make_dirty_wav(wav)
+    asset_id = client.post(
+        f"/api/tracks/{track_id}/assets",
+        json={"role": "audio_tagged", "path": str(wav)},
+    ).json()["id"]
+
+    res = client.get(
+        f"/api/assets/audio/{asset_id}",
+        headers={"Range": "bytes=0-15"},
+    )
+
+    assert res.status_code == 206
+    assert "content-range" in {k.lower() for k in res.headers.keys()}
+    assert res.headers["content-range"].startswith("bytes ")

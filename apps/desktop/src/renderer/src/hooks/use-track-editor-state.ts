@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 
 import { tracks } from "@/api/tracks";
 import type { Track } from "@/api/tracks";
-import { assets as assetsApi } from "@/api/assets";
 import { analysis } from "@/api/analysis";
 import { ai, type TagSuggestion } from "@/api/ai";
 import { loadAllProducerNames } from "@/lib/known-producers";
@@ -58,7 +57,7 @@ export function useTrackEditorState(): TrackEditorState {
   const location = useLocation();
   const updateInStore = useTrackStore((s) => s.update);
   const removeInStore = useTrackStore((s) => s.remove);
-  const setAssetsForTrack = useAssetStore((s) => s.setForTrack);
+  const ensureAssetsForTrack = useAssetStore((s) => s.ensureForTrack);
   const assetsByTrack = useAssetStore((s) => s.byTrack);
   const trackList = useTrackStore((s) => s.list);
 
@@ -113,12 +112,16 @@ export function useTrackEditorState(): TrackEditorState {
   useEffect(() => {
     if (!params.id) return;
     let cancelled = false;
-    Promise.all([tracks.get(Number(params.id)), assetsApi.listForTrack(Number(params.id))])
-      .then(([t, assetList]) => {
-        if (!cancelled) {
-          setTrack(t);
-          setAssetsForTrack(t.id, assetList);
-        }
+    // `ensureForTrack` populates the asset store itself (and dedupes against a
+    // concurrent `tracks.select` fetch of the same id); we ignore its result
+    // here and only need the track row for the form.
+    void ensureAssetsForTrack(Number(params.id)).catch(() => {
+      /* non-fatal — the asset store logs; the track load below drives loadError */
+    });
+    tracks
+      .get(Number(params.id))
+      .then((t) => {
+        if (!cancelled) setTrack(t);
       })
       .catch((e) => {
         if (!cancelled) setLoadError(String(e));
@@ -126,7 +129,7 @@ export function useTrackEditorState(): TrackEditorState {
     return () => {
       cancelled = true;
     };
-  }, [params.id, setAssetsForTrack]);
+  }, [params.id, ensureAssetsForTrack]);
 
   useEffect(() => {
     const el = document.getElementById("track-title");

@@ -12,6 +12,9 @@ AssetRole = Literal[
     "loop",
     "stems",
     "cover",
+    "promo_video_vertical",
+    "promo_video_landscape",
+    "promo_video_square",
 ]
 AssetMode = Literal["linked", "managed"]
 

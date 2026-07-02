@@ -19,7 +19,6 @@ class PublishRequestBody(BaseModel):
     deliverable_stems_asset_id: Optional[int] = None
     schedule: Optional[_dt.datetime] = None
     dry_run: bool = False
-    auto_advance: bool = False
 
 
 class PublishLoginBody(BaseModel):

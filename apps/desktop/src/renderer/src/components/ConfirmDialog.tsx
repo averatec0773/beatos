@@ -30,7 +30,14 @@ export function ConfirmDialog(): React.JSX.Element {
         if (!open) respond(false);
       }}
     >
-      <DialogContent className="max-w-sm">
+      {/* With a message, <DialogDescription> auto-registers itself with Radix.
+          Without one, explicitly opt out (aria-describedby={undefined}) to
+          silence Radix's "missing Description" warning (e.g. the bulk-trash
+          "Move N tracks to trash?" confirm carries no message). */}
+      <DialogContent
+        className="max-w-sm"
+        {...(current?.message ? {} : { "aria-describedby": undefined })}
+      >
         <DialogHeader>
           <DialogTitle>{current?.title}</DialogTitle>
           {current?.message && <DialogDescription>{current.message}</DialogDescription>}

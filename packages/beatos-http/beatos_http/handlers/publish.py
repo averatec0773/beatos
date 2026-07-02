@@ -1,11 +1,12 @@
 """Pro-gated direct-apply handler for publish_track.
 
 Registered only when the beatos-publish engine is present, so in the free build
-the publish_track tool isn't offered and this handler never registers. It is
-invoked when the tool passes `dry_run=False` through `submit_write`: it starts
-the publish job — a fire-and-forget browser run — and returns the job_id. The
-engine is lazy-imported inside the handler so this module imports cleanly in the
-free build too.
+the publish_track tool isn't offered and this handler never registers. The MCP
+publish_track tool routes every call through `submit_write` — dry-run included —
+so this handler runs for both; the dry_run flag rides inside the request payload
+and the engine decides how far to take the job. It starts the publish job — a
+fire-and-forget browser run — and returns the job_id. The engine is lazy-imported
+inside the handler so this module imports cleanly in the free build too.
 """
 from __future__ import annotations
 

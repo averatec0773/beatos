@@ -1,7 +1,6 @@
 import { create } from "zustand";
 
 import { Track, TrackUpdate, tracks as api } from "@/api/tracks";
-import { assets as assetsApi } from "@/api/assets";
 import { applyDefaultLicenseTiers } from "@/lib/default-license-tiers";
 import { applyDefaultIsFree, loadDefaultIsFree } from "@/lib/default-free";
 import { useAssetStore } from "./assets";
@@ -98,12 +97,16 @@ export const useTrackStore = create<TrackState>((set, get) => ({
       set({ current: null });
       return;
     }
+    // Already the current track (e.g. a double-click delivering two clicks) —
+    // nothing to re-select and no need to refetch assets.
+    if (get().current?.id === id) return;
     const found = get().list.find((t) => t.id === id) ?? null;
     set({ current: found });
     if (found) {
-      assetsApi
-        .listForTrack(found.id)
-        .then((list) => useAssetStore.getState().setForTrack(found.id, list))
+      // Deduped: shares any in-flight fetch with the editor mount effect.
+      useAssetStore
+        .getState()
+        .ensureForTrack(found.id)
         .catch((e) => console.warn("[tracks.select] fetch assets failed:", e));
     }
   },

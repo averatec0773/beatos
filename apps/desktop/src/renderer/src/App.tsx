@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { HashRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 
@@ -143,6 +143,10 @@ export default function App(): React.JSX.Element {
               <Route path="/trash" element={<TrashPanel />} />
               <Route path="/publish" element={<PublishCenterPanel />} />
               <Route path="/chat" element={<ChatPanel />} />
+              {/* Catch-all: an unknown hash route (e.g. #/agent) would otherwise
+                  render an empty body with no shell or recovery. Redirect to the
+                  library instead. */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
         </HashRouter>

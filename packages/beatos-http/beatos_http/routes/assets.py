@@ -16,10 +16,18 @@ from beatos_core.assets.service import (
     relocate_asset,
 )
 from beatos_core.assets._constants import AUDIO_ROLES as _AUDIO_ROLES
+from beatos_core.db import resolve_db_path
 from beatos_core.models import Asset, AssetCreate
-from beatos_http.wav_repair import repair_wav_if_needed, wav_needs_repair
+from beatos_http.wav_repair import repair_wav_to_file, wav_needs_repair
 
 router = APIRouter(tags=["assets"])
+
+
+def _wav_repair_dir() -> pathlib.Path:
+    """Cache root for sanitized WAVs — a sibling of the sqlite DB (same convention
+    the demo seed follows with `resolve_db_path().parent`), so it lives under the
+    per-user BeatOS app-data dir and never invents a new root."""
+    return resolve_db_path().parent / "wav-repair"
 
 
 class RelocatePayload(BaseModel):
@@ -114,20 +122,37 @@ async def audio_stream(asset_id: int) -> Response:
     if is_wav:
         # Clean WAVs stay on a range-capable FileResponse (decodeAudioData and
         # the audio element handle them fine). Only DAW WAVs with extra RIFF
-        # chunks / EXTENSIBLE fmt are buffered + sanitized so Chromium can
-        # decode them — matching what the Electron beatos-asset:// proxy did.
+        # chunks / EXTENSIBLE fmt need sanitizing so Chromium can decode them —
+        # matching what the Electron beatos-asset:// proxy did.
         def _scan() -> bool:
             with open(p, "rb") as f:
                 return wav_needs_repair(f)
 
         if await asyncio.to_thread(_scan):
-            raw = await asyncio.to_thread(p.read_bytes)
-            repaired = await asyncio.to_thread(repair_wav_if_needed, raw)
-            return Response(
-                content=repaired,
-                media_type="audio/wav",
-                headers={"Cache-Control": "no-store"},
-            )
+            # Repair once to a cache file, then serve it via FileResponse — this
+            # restores Range support and keeps memory constant on every replay
+            # (the old path read + copied + buffered the whole file per request,
+            # ~3x RSS for a large WAV). Cache key = asset id + source size + mtime;
+            # a changed source (new size/mtime) invalidates and re-repairs.
+            cached = await asyncio.to_thread(_repaired_wav_path, asset.id, p)
+            return FileResponse(cached, media_type="audio/wav")
         return FileResponse(p, media_type="audio/wav")
 
     return FileResponse(p, media_type=media)
+
+
+def _repaired_wav_path(asset_id: int, src: pathlib.Path) -> pathlib.Path:
+    """Return the path to the sanitized copy of `src`, repairing it into the cache
+    on a miss / stale entry. Runs on a worker thread (blocking file I/O)."""
+    st = src.stat()
+    cache_dir = _wav_repair_dir()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    dst = cache_dir / f"{asset_id}-{st.st_size}-{int(st.st_mtime_ns)}.wav"
+    if dst.exists():
+        return dst
+    # Repair to a temp sibling then atomically rename, so a concurrent reader
+    # never observes a half-written cache file.
+    tmp = dst.with_name(dst.name + ".tmp")
+    repair_wav_to_file(src, tmp)
+    tmp.replace(dst)
+    return dst

@@ -76,3 +76,36 @@ def test_price_tiers_skips_non_usd_priced_tier():
     import json as _json
     pt = _json.loads({x.key: x for x in er.fields}["price_tiers"].value)
     assert pt == []  # CNY-only tier has no USD → skipped
+
+
+def test_cny_only_tiers_show_fallback_and_price_note():
+    tiers = [
+        LicenseTier(id=1, track_id=1, name="MP3 Lease", deliverables=["mp3"],
+                    prices={"CNY": 128.0}, share=None, created_at=_NOW, updated_at=_NOW),
+        LicenseTier(id=2, track_id=1, name="WAV Lease", deliverables=["wav"],
+                    prices={"CNY": 188.0}, share=None, created_at=_NOW, updated_at=_NOW),
+    ]
+    er = beatstars.render(_track(), tiers, {},
+                          prod="", year=2026, publish_date="2026-01-01")
+    f = {x.key: x for x in er.fields}
+    assert "MP3 Lease: CNY 128 (not exported — USD required)" in f["price"].value
+    assert "WAV Lease: CNY 188 (not exported — USD required)" in f["price"].value
+    assert json.loads(f["price_tiers"].value) == []
+    assert "price_note" in f
+    assert "USD" in f["price_note"].value
+
+
+def test_usd_tiers_have_no_price_note():
+    tiers = [_tier(["mp3"], 20.0), _tier(["wav"], 25.0, id=2)]
+    er = beatstars.render(_track(), tiers, {},
+                          prod="", year=2026, publish_date="2026-01-01")
+    f = {x.key: x for x in er.fields}
+    assert f["price"].value == "T: $20\nT: $25"
+    assert "price_note" not in f
+
+
+def test_no_tiers_has_no_price_note():
+    er = beatstars.render(_track(), [], {},
+                          prod="", year=2026, publish_date="2026-01-01")
+    f = {x.key: x for x in er.fields}
+    assert "price_note" not in f

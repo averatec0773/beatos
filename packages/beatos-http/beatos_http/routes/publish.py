@@ -4,6 +4,7 @@ importable without it."""
 from __future__ import annotations
 
 import asyncio
+import os
 
 from fastapi import APIRouter, HTTPException, Response
 
@@ -43,7 +44,11 @@ async def create_publish(req: PublishRequestBody) -> dict:
 
     if req.platform not in available():
         raise HTTPException(400, f"unknown platform {req.platform}")
-    engine_req = PublishRequest(**req.model_dump())
+    # auto_advance (NetEase multi-step flow) is intentionally NOT exposed on this
+    # unauthenticated localhost body — any local process could otherwise trigger
+    # it. Enable only via the BEATOS_PUBLISH_AUTO_ADVANCE=1 dev escape hatch.
+    auto_advance = os.environ.get("BEATOS_PUBLISH_AUTO_ADVANCE") == "1"
+    engine_req = PublishRequest(**req.model_dump(), auto_advance=auto_advance)
     job_id = REGISTRY.create(engine_req)
     task = asyncio.create_task(run_job(job_id, engine_req))
     _running.add(task)

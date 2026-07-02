@@ -134,8 +134,9 @@ def create_app() -> FastAPI:
 
     # Restrict to the renderer's own origins (dev Vite server + packaged app's
     # file:// origin, which reports as "null"). A wildcard here would let any
-    # web page the user visits reach this no-auth localhost API and approve
-    # pending write tokens cross-origin — defeating the human-in-the-loop gate.
+    # web page the user visits reach this no-auth localhost API and issue writes
+    # cross-origin (catalog edits apply directly under the L1 model) — defeating
+    # the human-in-the-loop gate.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_allowed_origins(),
