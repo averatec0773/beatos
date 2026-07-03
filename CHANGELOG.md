@@ -8,6 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+## [0.0.50] — 2026-07-03 — In-app AI Agent, BeatStars export, tagged MP3 + license PDF, tabbed Settings
+
 ### Added
 
 - **BeatStars export, and assisted-publish groundwork.** BeatStars joins NetEase and 抖音 as an export target — a track renders clean BeatStars-ready fields (title, BPM, key, genre/mood mapped to BeatStars' taxonomy, tags, USD license tiers, free-download flag) via `export_metadata` / `list_export_platforms`, free in desktop and browser builds. Pro adds an assisted-publish recipe that fills the studio.beatstars.com upload form and hands back at the **Publish track** step (single page, no SMS); the publish path's live success-signal is pending a real dogfood pass.
