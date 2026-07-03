@@ -8,7 +8,7 @@ license = { text = "Apache-2.0" }
 dependencies = [
     "beatos-core",
     "beatos-http",
-    "mcp>=1.27,<1.28",
+    "mcp>=1.28.1,<1.29",
     "structlog>=25.5.0",
 ]
 

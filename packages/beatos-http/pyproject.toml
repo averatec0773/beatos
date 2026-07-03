@@ -8,7 +8,7 @@ license = { text = "Apache-2.0" }
 dependencies = [
     "asgi-correlation-id>=4.3.4",
     "beatos-core",
-    "fastapi>=0.115",
+    "fastapi>=0.139.0",
     "httpx>=0.27",
     "reportlab>=4.0",
     "structlog>=25.5.0",
