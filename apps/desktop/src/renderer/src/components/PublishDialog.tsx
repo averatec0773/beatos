@@ -476,58 +476,58 @@ export function PublishDialog({
           {isDouyin ? (
             <>
               <FileRow
-                label="Promo video"
-                hint="Promo video published to Douyin (vertical 9:16 preferred)"
+                label={t("publishDialog.slotPromoVideo")}
+                hint={t("publishDialog.slotPromoVideoHint")}
                 value={videoAssetId}
                 onChange={setVideoAssetId}
                 items={videoAssets}
-                emptyLabel="No video available"
+                emptyLabel={t("publishDialog.noVideoAvailable")}
                 withRole
               />
               <FileRow
-                label="Cover"
-                hint="Video cover — defaults to the track's current cover (optional)"
+                label={t("publishDialog.slotCover")}
+                hint={t("publishDialog.slotVideoCoverHint")}
                 value={coverAssetId}
                 onChange={setCoverAssetId}
                 items={coverAssets}
-                emptyLabel="No cover"
+                emptyLabel={t("publishDialog.noCover")}
               />
             </>
           ) : (
             <>
               <FileRow
-                label="Preview audio"
-                hint="Public preview on the platform — defaults to the tagged version (so the clean file isn't exposed)"
+                label={t("publishDialog.slotPreviewAudio")}
+                hint={t("publishDialog.slotPreviewAudioHint")}
                 value={audioAssetId}
                 onChange={setAudioAssetId}
                 items={audioAssets}
-                emptyLabel="No audio available"
+                emptyLabel={t("publishDialog.noAudioAvailable")}
                 withRole
               />
               <FileRow
-                label="Deliverable WAV"
-                hint="Lossless no-watermark file paid buyers download — defaults to the untagged WAV (required for any rental tier)"
+                label={t("publishDialog.slotDeliverableWav")}
+                hint={t("publishDialog.slotDeliverableWavHint")}
                 value={wavAssetId}
                 onChange={setWavAssetId}
                 items={wavAssets}
-                emptyLabel="Don't upload"
+                emptyLabel={t("publishDialog.dontUpload")}
                 withRole
               />
               <FileRow
-                label="Stems"
-                hint="Stems package buyers of the stems tier receive (<200MB; skip the tier if none)"
+                label={t("publishDialog.slotStems")}
+                hint={t("publishDialog.slotStemsHint")}
                 value={stemsAssetId}
                 onChange={setStemsAssetId}
                 items={stemsAssets}
-                emptyLabel="Don't upload"
+                emptyLabel={t("publishDialog.dontUpload")}
               />
               <FileRow
-                label="Cover"
-                hint="Album cover — defaults to the track's current cover"
+                label={t("publishDialog.slotCover")}
+                hint={t("publishDialog.slotCoverHint")}
                 value={coverAssetId}
                 onChange={setCoverAssetId}
                 items={coverAssets}
-                emptyLabel="No cover"
+                emptyLabel={t("publishDialog.noCover")}
               />
             </>
           )}

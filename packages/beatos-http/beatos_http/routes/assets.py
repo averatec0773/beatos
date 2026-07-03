@@ -150,6 +150,15 @@ def _repaired_wav_path(asset_id: int, src: pathlib.Path) -> pathlib.Path:
     dst = cache_dir / f"{asset_id}-{st.st_size}-{int(st.st_mtime_ns)}.wav"
     if dst.exists():
         return dst
+    # Evict superseded entries for this asset (source re-exported in place →
+    # new size/mtime → new key) plus any temp left by a crashed repair, so the
+    # cache holds at most one file per asset instead of growing unboundedly.
+    for pattern in (f"{asset_id}-*.wav", f"{asset_id}-*.wav.tmp"):
+        for stale in cache_dir.glob(pattern):
+            try:
+                stale.unlink()
+            except OSError:
+                pass  # being read / already gone — the new entry still supersedes it
     # Repair to a temp sibling then atomically rename, so a concurrent reader
     # never observes a half-written cache file.
     tmp = dst.with_name(dst.name + ".tmp")

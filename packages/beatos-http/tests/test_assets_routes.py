@@ -347,6 +347,11 @@ def test_repaired_wav_stale_source_rerepairs(tmp_path, monkeypatch):
     client.get(f"/api/assets/audio/{asset_id}")
     assert calls["n"] == 2  # stale source re-repaired
 
+    # Eviction: the superseded cache entry must be gone — at most ONE cache
+    # file per asset, or in-place re-exports grow the dir without bound.
+    cache_files = list(assets_mod._wav_repair_dir().glob(f"{asset_id}-*.wav"))
+    assert len(cache_files) == 1
+
 
 def test_repaired_wav_supports_range(tmp_path):
     """The cached repaired WAV is served via FileResponse, so Range works."""

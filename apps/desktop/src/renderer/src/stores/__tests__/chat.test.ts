@@ -68,6 +68,31 @@ describe("useChatStore", () => {
     expect(s.messages.at(-1)?.text).toBe("Trashed.");
   });
 
+  it("a turn resolving after reset() is discarded — no cross-thread merge", async () => {
+    let resolveSend!: (v: unknown) => void;
+    vi.mocked(chatApi.send).mockReturnValue(
+      new Promise((r) => {
+        resolveSend = r;
+      }) as never,
+    );
+    useChatStore.setState({ input: "old thread" });
+    const inflight = useChatStore.getState().send();
+    useChatStore.getState().reset(); // "New chat" before the reply lands
+    resolveSend({
+      conversation_id: 9,
+      reply: "stale",
+      tool_calls: [],
+      messages: [],
+      pending_confirm: { tool_uses: [{ id: "d1", name: "trash_tracks", input: {} }], summary: "x" },
+    });
+    await inflight;
+    const s = useChatStore.getState();
+    expect(s.messages).toEqual([]);
+    expect(s.conversationId).toBeNull();
+    expect(s.pendingConfirm).toBeNull();
+    expect(s.sending).toBe(false);
+  });
+
   it("send records an error and clears sending on failure", async () => {
     vi.mocked(chatApi.send).mockRejectedValue(new Error("boom"));
     useChatStore.setState({ input: "hi" });

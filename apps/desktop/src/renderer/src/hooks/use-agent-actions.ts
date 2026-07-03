@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { apiDelete } from "@/api/client";
 import { useApiBase } from "@/hooks/use-api-base";
 
 export type AgentActionStatus = "applied" | "failed" | "refused_read_only";
@@ -54,13 +55,14 @@ export function useAgentActions(): UseAgentActions {
   }, [apiBase]);
 
   // Optimistically drop the row(s); the 4s poll reconciles with the server.
+  // apiDelete attaches the local API token (the DELETE routes are token-gated).
   const deleteAction = async (id: number): Promise<void> => {
     setActions((prev) => prev.filter((a) => a.id !== id));
-    await fetch(`${apiBase}/api/agent-actions/${id}`, { method: "DELETE" }).catch(() => null);
+    await apiDelete(`/api/agent-actions/${id}`).catch(() => null);
   };
   const clearAll = async (): Promise<void> => {
     setActions([]);
-    await fetch(`${apiBase}/api/agent-actions`, { method: "DELETE" }).catch(() => null);
+    await apiDelete(`/api/agent-actions`).catch(() => null);
   };
 
   return { actions, deleteAction, clearAll };

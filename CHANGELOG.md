@@ -37,6 +37,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Fixed
 
+- **The publish dialog's file slots are translated now.** The upload-slot labels, hints, and empty states ("Preview audio", "Deliverable WAV", "Don't upload", …) were hardcoded English; they now follow the UI language like the rest of the dialog.
+- **Starting a new AI Agent chat mid-reply no longer merges conversations.** Clicking "New chat" while a reply was still in flight let the stale reply land in the fresh thread (and silently reattach the old conversation); an in-flight turn is now discarded the moment you reset.
+- **The Agent Actions audit log can't be wiped by a rogue local page.** The delete/clear endpoints now require the same local API token as the other agent-control settings, so a stray `file://` page can no longer erase the record of what an agent did.
+- **The WAV-repair cache no longer grows without bound.** Re-exporting a linked WAV in place left the old sanitized copy behind on every change; superseded cache entries are now evicted, keeping at most one cache file per asset.
 - **Promo video files can be attached again.** Adding a promo video (9:16 / 16:9 / 1:1) in the track editor failed with a validation error — the API's asset-role list was never taught the promo roles. They're accepted now, unblocking the 抖音 video publish path.
 - **BeatStars export no longer silently drops non-USD pricing.** A track priced only in ¥ used to export empty price tiers with no explanation; the export now shows each tier in its own currency marked "not exported — USD required" plus an explicit pricing warning, so you know to set USD prices (or fill licenses on BeatStars by hand). No automatic currency conversion.
 - **Playing a repair-needed WAV no longer loads the whole file into memory.** DAW-exported WAVs that need header repair used to be buffered in RAM in full on every play (gigabytes for large files); the repair now streams once into a small on-disk cache next to the database and replays serve from it with seek (Range) support restored.

@@ -79,6 +79,30 @@ async def test_sensitive_setting_write_open_when_token_unset(client):
     assert res.status_code == 200
 
 
+@pytest.mark.asyncio
+async def test_agent_actions_delete_requires_token_when_configured(client, monkeypatch):
+    # The audit log is the accountability record for agent writes — a file://
+    # page must not be able to erase it. Reads stay open.
+    monkeypatch.setenv("BEATOS_API_TOKEN", TOKEN)
+    res = await client.delete("/api/agent-actions")
+    assert res.status_code == 401
+    res = await client.delete("/api/agent-actions/1")
+    assert res.status_code == 401
+    res = await client.get("/api/agent-actions")
+    assert res.status_code == 200
+    res = await client.delete("/api/agent-actions", headers=AUTH)
+    assert res.status_code == 200
+    res = await client.delete("/api/agent-actions/1", headers=AUTH)
+    assert res.status_code == 404  # authorized; no such row
+
+
+@pytest.mark.asyncio
+async def test_agent_actions_delete_open_when_token_unset(client):
+    res = await client.delete("/api/agent-actions")
+    assert res.status_code == 200
+    assert res.json() == {"deleted": 0}
+
+
 # --- B-H3: /api/fs disabled in Electron mode ---
 
 

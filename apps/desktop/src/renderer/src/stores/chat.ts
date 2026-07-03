@@ -66,6 +66,12 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>((set, get) => {
+  // Run epoch: bumped by every send/confirm and by reset(). A turn that resolves
+  // after the user started a new thread (reset mid-flight) must be discarded —
+  // otherwise its stale reply appends to the new thread, overwrites the fresh
+  // conversationId, and can resurface an abandoned pendingConfirm.
+  let runId = 0;
+
   const applyTurn = (res: ChatTurnResponse): void => {
     set({
       conversationId: res.conversation_id,
@@ -89,6 +95,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     async send() {
       const text = get().input.trim();
       if (!text || get().sending) return;
+      const run = ++runId;
       set({
         input: "",
         sending: true,
@@ -96,23 +103,26 @@ export const useChatStore = create<ChatState>((set, get) => {
         messages: [...get().messages, { role: "user", text }],
       });
       try {
-        applyTurn(await chatApi.send({ message: text, conversation_id: get().conversationId }));
+        const res = await chatApi.send({ message: text, conversation_id: get().conversationId });
+        if (run === runId) applyTurn(res);
       } catch (e) {
-        set({ error: e instanceof Error ? e.message : String(e) });
+        if (run === runId) set({ error: e instanceof Error ? e.message : String(e) });
       } finally {
-        set({ sending: false });
+        if (run === runId) set({ sending: false });
       }
     },
     async confirm(approve) {
       const cid = get().conversationId;
       if (cid == null || !get().pendingConfirm || get().sending) return;
+      const run = ++runId;
       set({ sending: true, error: null, pendingConfirm: null });
       try {
-        applyTurn(await chatApi.confirm({ conversation_id: cid, approve }));
+        const res = await chatApi.confirm({ conversation_id: cid, approve });
+        if (run === runId) applyTurn(res);
       } catch (e) {
-        set({ error: e instanceof Error ? e.message : String(e) });
+        if (run === runId) set({ error: e instanceof Error ? e.message : String(e) });
       } finally {
-        set({ sending: false });
+        if (run === runId) set({ sending: false });
       }
     },
     async hydrate() {
@@ -134,7 +144,16 @@ export const useChatStore = create<ChatState>((set, get) => {
         // Offline / no AI configured — stay on an empty thread.
       }
     },
-    reset: () =>
-      set({ conversationId: null, messages: [], input: "", pendingConfirm: null, error: null }),
+    reset: () => {
+      runId += 1; // invalidate any in-flight turn
+      set({
+        conversationId: null,
+        messages: [],
+        input: "",
+        sending: false,
+        pendingConfirm: null,
+        error: null,
+      });
+    },
   };
 });
