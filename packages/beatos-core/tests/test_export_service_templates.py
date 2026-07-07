@@ -115,7 +115,8 @@ async def test_publish_date_injected(db, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_free_prefix_only_on_free_track(db):
-    import aiosqlite, datetime as dt
+    import aiosqlite
+    import datetime as dt
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     async with aiosqlite.connect(db) as conn:
         await conn.execute(

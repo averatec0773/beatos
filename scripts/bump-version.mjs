@@ -6,6 +6,7 @@
 //
 //   node scripts/bump-version.mjs            # sync pyprojects → package.json
 //   node scripts/bump-version.mjs 0.0.27.2   # set all five files
+//   node scripts/bump-version.mjs --check    # read-only: exit 1 on any drift
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -22,7 +23,28 @@ const pyprojects = [
   resolve(root, "packages/beatos-mcp/pyproject.toml"),
 ];
 
-const target = process.argv[2] ?? JSON.parse(readFileSync(desktopPkg, "utf8")).version;
+const arg = process.argv[2];
+const checkOnly = arg === "--check";
+
+if (checkOnly) {
+  const rows = [
+    ["apps/desktop/package.json", JSON.parse(readFileSync(desktopPkg, "utf8")).version],
+  ];
+  for (const f of pyprojects) {
+    const m = readFileSync(f, "utf8").match(/^version = "(.*)"$/m);
+    rows.push([f.replace(root + "/", ""), m ? m[1] : "(none)"]);
+  }
+  for (const [f, v] of rows) console.log(`  ${v}  ${f}`);
+  const versions = new Set(rows.map((r) => r[1]));
+  if (versions.size === 1) {
+    console.log(`aligned at ${[...versions][0]}`);
+    process.exit(0);
+  }
+  console.error("version drift detected — run: node scripts/bump-version.mjs <version>");
+  process.exit(1);
+}
+
+const target = arg ?? JSON.parse(readFileSync(desktopPkg, "utf8")).version;
 
 if (!/^\d+\.\d+\.\d+(\.\d+)?$/.test(target)) {
   console.error(`bad version: ${target}`);

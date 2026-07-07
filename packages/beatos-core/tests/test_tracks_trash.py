@@ -27,7 +27,6 @@ async def _fresh_db(tmp_path, monkeypatch):
 @pytest.mark.asyncio
 async def test_migration_008_idempotent(tmp_path, monkeypatch):
     """Applying migrations twice does not error."""
-    import pathlib
     import aiosqlite
 
     db_path = tmp_path / "idem.db"

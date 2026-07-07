@@ -1,5 +1,4 @@
 """Tests for beatos_core.tracks.service."""
-import pathlib
 
 import aiosqlite
 import pytest

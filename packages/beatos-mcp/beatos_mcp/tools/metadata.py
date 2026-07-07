@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import aiosqlite
 
 from beatos_mcp.db import connect_writable
 from beatos_mcp.policy import submit_write

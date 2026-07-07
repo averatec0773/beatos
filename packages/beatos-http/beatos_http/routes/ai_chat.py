@@ -9,7 +9,7 @@ DELETE /api/ai/chat/conversations/{id}   — delete a conversation.
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from beatos_core.chat import service as chat_store
 from beatos_http.ai import service as ai_service

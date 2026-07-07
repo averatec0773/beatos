@@ -44,9 +44,13 @@ async def _autofill(track, result, job) -> None:
     sets: list[str] = []
     params: list = []
     if track.bpm is None and result.bpm is not None and (result.bpm_confidence or 0) >= BPM_AUTOFILL_CONFIDENCE:
-        sets.append("bpm=?"); params.append(int(result.bpm)); job["filled_bpm"] += 1
+        sets.append("bpm=?")
+        params.append(int(result.bpm))
+        job["filled_bpm"] += 1
     if not track.key_signature and result.key and (result.key_confidence or 0) >= KEY_AUTOFILL_CONFIDENCE:
-        sets.append("key_signature=?"); params.append(result.key); job["filled_key"] += 1
+        sets.append("key_signature=?")
+        params.append(result.key)
+        job["filled_key"] += 1
     if not sets:
         return
     params.append(track.id)

@@ -2,7 +2,6 @@
 import json
 import os
 
-import pytest
 
 from beatos_http.handshake import (
     default_handshake_path,

@@ -1,5 +1,4 @@
 """Tests for license_tier service (v0.0.26)."""
-import json
 
 import pytest
 

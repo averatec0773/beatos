@@ -1,5 +1,4 @@
 import datetime as dt
-import socket
 
 import aiosqlite
 import pytest

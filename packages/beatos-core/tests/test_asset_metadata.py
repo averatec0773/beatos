@@ -1,8 +1,6 @@
 """Tests for mutagen-based audio metadata extraction."""
-import struct
 import wave
 
-import pytest
 
 from beatos_core.assets.metadata import read_audio_metadata
 

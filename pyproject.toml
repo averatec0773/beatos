@@ -36,6 +36,7 @@ dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "httpx>=0.27",
+    "ruff>=0.8",
 ]
 # Build-only tooling for packaging the sidecar into a standalone binary
 # (EPIC-D1: `uv run pyinstaller build/beatos-sidecar.spec`). Dev/build-time
@@ -48,3 +49,20 @@ build = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "--import-mode=importlib"
+
+# Baseline lint: default rules (pycodestyle errors + pyflakes). Scope is the
+# Python workspace only — the desktop app has eslint; the Pro submodule has
+# its own repo/checks.
+[tool.ruff]
+line-length = 100
+extend-exclude = ["packages/pro", "apps", ".venv"]
+
+[tool.ruff.lint.per-file-ignores]
+# Bootstrap ordering is deliberate: logging must be configured before
+# importing uvicorn / the app factory.
+"packages/beatos-http/beatos_http/__main__.py" = ["E402"]
+# Tests keep deliberate patterns the app code doesn't: monkeypatch-then-import
+# (E402), seed variables held for row-count side effects (F841), short list
+# fixtures named `l` (E741), compact seed lines (E702). Mirrors the desktop
+# eslint config, which also relaxes stylistic rules for test files.
+"packages/*/tests/**" = ["E402", "E702", "E741", "F841"]

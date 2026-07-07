@@ -55,3 +55,29 @@ async def test_get_track_includes_assets(fresh_db):
 async def test_get_track_missing_raises(fresh_db):
     with pytest.raises(TrackNotFound, match="Track 999"):
         await get_track(999)
+
+
+@pytest.mark.asyncio
+async def test_get_track_exposes_is_free_project_path_and_asset_format(fresh_db):
+    """Read-surface parity (rules 18/19): fields agents can write must be
+    readable back. is_free, project_path, and asset.format were historically
+    missing from the MCP read columns — this pins them in."""
+    async with aiosqlite.connect(fresh_db) as conn:
+        cur = await conn.execute(
+            "INSERT INTO track (title, is_free, project_path, created_at, updated_at) "
+            "VALUES ('Free Beat', 1, '/proj/beat1', '2026-07-06', '2026-07-06')"
+        )
+        await conn.commit()
+        tid = cur.lastrowid
+        await conn.execute(
+            "INSERT INTO asset "
+            "(track_id, role, abs_path, missing, format, created_at, updated_at) "
+            "VALUES (?, 'audio_tagged', '/x/y.wav', 0, 'wav', '2026-07-06', '2026-07-06')",
+            (tid,),
+        )
+        await conn.commit()
+
+    result = await get_track(tid)
+    assert result["is_free"] is True
+    assert result["project_path"] == "/proj/beat1"
+    assert result["assets"][0]["format"] == "wav"

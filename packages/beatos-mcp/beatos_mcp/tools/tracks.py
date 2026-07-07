@@ -13,12 +13,15 @@ class TrackNotFound(RuntimeError):
 
 
 # Use fully-qualified column names so the same SELECT works in JOIN queries (T9 uses these).
+# Column order == index order in the row builders below — append new columns
+# LAST and extend the builder in the same change (see the add-db-field skill).
 _TRACK_COLS = (
     "track.id, track.title, track.producer, track.genre, track.mood, "
     "track.key_signature, track.bpm, track.description, "
-    "track.created_at, track.updated_at, track.deleted_at"
+    "track.created_at, track.updated_at, track.deleted_at, "
+    "track.is_free, track.project_path"
 )
-_ASSET_COLS = "id, track_id, role, abs_path, missing"
+_ASSET_COLS = "id, track_id, role, abs_path, missing, format"
 
 
 def _parse_json_array(raw: Any) -> list[str] | None:
@@ -45,6 +48,9 @@ def _row_to_track(row: tuple) -> dict:
         "created_at": row[8],
         "updated_at": row[9],
         "deleted_at": row[10],
+        # Rule 19: is_free = free non-commercial download ALONGSIDE paid tiers.
+        "is_free": bool(row[11]),
+        "project_path": row[12],
     }
 
 
@@ -55,6 +61,8 @@ def _row_to_asset(row: tuple) -> dict:
         "role": row[2],
         "abs_path": row[3],
         "missing": bool(row[4]),
+        # Rule 18: format is an attribute ('' for non-audio), not part of the role.
+        "format": row[5],
     }
 
 

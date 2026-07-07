@@ -1,8 +1,7 @@
 """Tests for analyze_asset service (Phase 2)."""
-import datetime as _dt
 import pathlib
 import shutil
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import aiosqlite
 import pytest

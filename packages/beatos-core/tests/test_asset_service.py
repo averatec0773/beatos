@@ -11,7 +11,6 @@ from beatos_core.assets.service import (
     detach_asset,
     get_asset,
     list_assets,
-    list_assets_for_track,
     missing_sweep,
     relocate_asset,
 )

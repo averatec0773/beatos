@@ -11,6 +11,8 @@ import datetime as _dt
 import os
 import pathlib
 import re
+import shutil
+import sys
 from pathlib import Path
 
 import aiosqlite
@@ -80,13 +82,58 @@ async def run_migrations(db_path: pathlib.Path | str) -> None:
             await conn.commit()
 
 
+def _default_data_dir() -> Path:
+    """Per-OS app-data dir backing the DEFAULT db location (v0.0.50+ — keeps
+    SQLite off cloud-synced folders like ~/Music). Mirrors the dev-Electron
+    userData dir (app name "beatos-desktop") and the platform branches in
+    beatos_http.handshake.default_handshake_path — keep the three in sync.
+    Packaged desktop builds always pass BEATOS_DB_PATH explicitly, so this
+    default only governs web/standalone mode."""
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "beatos-desktop"
+    if sys.platform.startswith("win"):
+        return Path(os.environ.get("APPDATA", str(Path.home()))) / "beatos-desktop"
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    return (Path(xdg) if xdg else Path.home() / ".config") / "beatos-desktop"
+
+
+def legacy_db_path() -> Path:
+    """The pre-v0.0.50 default (~/Music/BeatOS/global.db). Referenced only by
+    the one-time migration below; the desktop equivalent lives in
+    apps/desktop/src/main/db-migrate.ts."""
+    return Path.home() / "Music" / "BeatOS" / "global.db"
+
+
 def resolve_db_path() -> Path:
-    """Resolve the global db path. Honors BEATOS_DB_PATH env var, otherwise defaults
-    to ~/Music/BeatOS/global.db (cross-platform — pathlib.Path.home() handles it)."""
+    """Resolve the global db path. Honors the BEATOS_DB_PATH env var, otherwise
+    defaults to <per-OS app-data dir>/global.db — the same library the desktop
+    app uses, so web mode and desktop see one catalog."""
     override = os.environ.get("BEATOS_DB_PATH")
     if override:
         return Path(override)
-    return Path.home() / "Music" / "BeatOS" / "global.db"
+    return _default_data_dir() / "global.db"
+
+
+def migrate_legacy_db_if_needed() -> bool:
+    """One-time copy of a pre-v0.0.50 library into the new default location.
+
+    Runs only when the DEFAULT path is in play (no BEATOS_DB_PATH override),
+    the new location has no DB yet, and a legacy DB exists. COPY, never move —
+    the legacy file stays untouched as a backup. The -wal/-shm sidecars are
+    copied too so an un-checkpointed write-ahead log isn't lost (mirrors
+    apps/desktop/src/main/db-migrate.ts). Returns True when a copy happened."""
+    if os.environ.get("BEATOS_DB_PATH"):
+        return False
+    target = resolve_db_path()
+    legacy = legacy_db_path()
+    if target.exists() or not legacy.exists():
+        return False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    for suffix in ("", "-wal", "-shm"):
+        src = Path(str(legacy) + suffix)
+        if src.exists():
+            shutil.copyfile(src, str(target) + suffix)
+    return True
 
 
 @contextlib.asynccontextmanager

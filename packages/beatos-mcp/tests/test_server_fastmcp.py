@@ -1,4 +1,3 @@
-import pytest
 
 from beatos_mcp.server import mcp
 

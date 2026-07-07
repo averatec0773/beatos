@@ -6,7 +6,9 @@
 # private Pro engine (not a uv workspace member), so this is a clean non-Pro build
 # — the Publish Center stays a locked upsell. For the Pro variant use `make web-pro`.
 # Override the port with BEATOS_HTTP_PORT (default 8765) and the library with
-# BEATOS_DB_PATH (default ~/Music/BeatOS/global.db).
+# BEATOS_DB_PATH (default: the per-OS app-data dir, e.g. ~/Library/Application
+# Support/beatos-desktop/global.db — the same library as the desktop app; a
+# pre-v0.0.50 ~/Music/BeatOS library is copied over once on first run).
 
 set -euo pipefail
 

@@ -8,7 +8,6 @@ from beatos_core.export.models import ExportResult
 from beatos_core.export.platforms import beatstars, douyin, netease
 from beatos_core.export.templates import DEFAULT_TEMPLATES
 from beatos_core.licenses.service import list_tiers_for_track
-from beatos_core.models.license_tier import LicenseTier
 from beatos_core.models.track import Track
 from beatos_core.tracks.service import get_track
 

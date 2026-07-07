@@ -8,6 +8,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+### Fixed
+
+- **The browser app now opens the same library as the desktop app.** The web build's default database moved to the app-data folder to match the desktop app (which moved there in 0.0.50) — previously `make web` could silently open the stale pre-0.0.50 `~/Music/BeatOS` backup, so edits made in one app didn't show in the other. An existing legacy library is copied over once on first run (the old copy stays as a backup).
+- **AI agents can now read back free-download status, project folder, and file formats.** MCP `get_track`/`list_tracks` payloads gained `is_free`, `project_path`, and per-file `format` — these fields were writable by agents but invisible when reading, so an agent couldn't tell WAV from MP3 variants or see a track's free/paid state.
+
 ## [0.0.50] — 2026-07-03 — In-app AI Agent, BeatStars export, tagged MP3 + license PDF, tabbed Settings
 
 ### Added

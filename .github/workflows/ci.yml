@@ -36,6 +36,9 @@ jobs:
       - name: Sync workspace
         run: uv sync
 
+      - name: ruff
+        run: uv run ruff check .
+
       - name: pytest
         run: uv run pytest -q
 

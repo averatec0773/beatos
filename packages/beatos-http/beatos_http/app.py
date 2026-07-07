@@ -12,16 +12,14 @@ import os
 import pathlib
 import socket
 from contextlib import asynccontextmanager
-from typing import Optional
 
-import aiosqlite
 import structlog
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from beatos_core.db import resolve_db_path, run_migrations
+from beatos_core.db import migrate_legacy_db_if_needed, resolve_db_path, run_migrations
 from beatos_http import __version__
 from beatos_http.seed.demo import seed_demo_if_needed
 from beatos_http.mcp_auth import get_mcp_token, guard_mcp_app
@@ -76,6 +74,12 @@ def _allowed_origins() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Web/standalone mode: one-time copy of a pre-v0.0.50 ~/Music/BeatOS library
+    # into the new default location (desktop does this in main/db-migrate.ts;
+    # no-op whenever BEATOS_DB_PATH is set).
+    if migrate_legacy_db_if_needed():
+        log.info("legacy db copied to new default location", db=str(resolve_db_path()))
+
     await run_migrations(resolve_db_path())
     log.info("sidecar startup: migrations applied")
 

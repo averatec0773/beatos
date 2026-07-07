@@ -1,6 +1,5 @@
 import pathlib
 
-import pytest
 
 from beatos_core.audio_analysis.bpm import analyze_bpm
 from beatos_core.audio_analysis.key import analyze_key

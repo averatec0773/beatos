@@ -1,5 +1,3 @@
-import anyio
-import pytest
 from httpx import ASGITransport, AsyncClient
 
 from beatos_http.app import create_app
