@@ -435,7 +435,7 @@ if pro_available():
     async def publish_track(
         track_id: Annotated[int, Field(description="Track id to publish.")],
         platform: Annotated[str, Field(description="Platform key from list_publish_platforms (e.g. 'netease', 'douyin').")],
-        audio_asset_id: Annotated[int | None, Field(description="Audio asset id (untagged) — required for music platforms like netease.")] = None,
+        audio_asset_id: Annotated[int | None, Field(description="PUBLIC PREVIEW audio asset id — required for music platforms like netease. Pass the TAGGED (watermarked) version so the clean file is never publicly streamable; the untagged lossless master belongs in deliverable_wav_asset_id.")] = None,
         video_asset_id: Annotated[int | None, Field(description="Promo-video asset id — required for video platforms like douyin.")] = None,
         cover_asset_id: Annotated[int | None, Field(description="Cover image asset id, optional.")] = None,
         deliverable_wav_asset_id: Annotated[int | None, Field(description="Buyer-deliverable lossless WAV asset id (netease 授权设置).")] = None,
