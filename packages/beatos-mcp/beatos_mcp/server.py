@@ -438,7 +438,7 @@ if pro_available():
         audio_asset_id: Annotated[int | None, Field(description="PUBLIC PREVIEW audio asset id — required for music platforms like netease. Pass the TAGGED (watermarked) version so the clean file is never publicly streamable; the untagged lossless master belongs in deliverable_wav_asset_id.")] = None,
         video_asset_id: Annotated[int | None, Field(description="Promo-video asset id — required for video platforms like douyin.")] = None,
         cover_asset_id: Annotated[int | None, Field(description="Cover image asset id, optional.")] = None,
-        deliverable_wav_asset_id: Annotated[int | None, Field(description="Buyer-deliverable lossless WAV asset id (netease 授权设置).")] = None,
+        deliverable_wav_asset_id: Annotated[int | None, Field(description="UNTAGGED lossless WAV asset id — the buyer deliverable on netease (授权设置), and the REQUIRED master file for beatstars (the engine refuses to publish beatstars without it).")] = None,
         deliverable_stems_asset_id: Annotated[int | None, Field(description="Buyer-deliverable stems-zip asset id (netease 授权设置).")] = None,
         dry_run: Annotated[bool, Field(description="Defaults to TRUE (a safe rehearsal: fill the form but do NOT submit). You must pass dry_run=false to actually publish — this is the deliberate-confirm gate for a real, irreversible platform post.")] = True,
         account: Annotated[str, Field(description="Session account; default 'default'.")] = "default",

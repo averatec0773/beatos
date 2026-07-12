@@ -8,7 +8,7 @@ import datetime as _dt
 
 import aiosqlite
 
-from beatos_core.db import resolve_db_path
+from beatos_core.db import connect_writable, resolve_db_path
 from beatos_core.models import List as ListModel
 from beatos_core.models import Track
 from beatos_core.tracks.service import _SELECT_COLS as _TRACK_SELECT_COLS
@@ -30,20 +30,25 @@ async def add_track_to_list(track_id: int, list_id: int) -> bool:
     "added" from "already in" — silent no-op success used to look like a
     failure in the UI).
     """
-    db_path = resolve_db_path()
-    async with aiosqlite.connect(db_path) as conn:
-        cursor = await conn.execute(
-            "INSERT OR IGNORE INTO track_list (track_id, list_id, position, added_at) "
-            "VALUES (?, ?, 0, ?)",
-            (track_id, list_id, _now()),
-        )
+    # connect_writable: FK enforcement ON (rule 9) — a bare connect would let a
+    # membership row reference a deleted track/list without erroring. OR IGNORE
+    # does NOT cover FK violations (conflict clauses never apply to them), so a
+    # dangling reference raises IntegrityError → report it as "not added".
+    async with connect_writable() as conn:
+        try:
+            cursor = await conn.execute(
+                "INSERT OR IGNORE INTO track_list (track_id, list_id, position, added_at) "
+                "VALUES (?, ?, 0, ?)",
+                (track_id, list_id, _now()),
+            )
+        except aiosqlite.IntegrityError:
+            return False
         await conn.commit()
         return cursor.rowcount > 0
 
 
 async def remove_track_from_list(track_id: int, list_id: int) -> None:
-    db_path = resolve_db_path()
-    async with aiosqlite.connect(db_path) as conn:
+    async with connect_writable() as conn:
         await conn.execute(
             "DELETE FROM track_list WHERE track_id = ? AND list_id = ?",
             (track_id, list_id),

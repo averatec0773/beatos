@@ -171,3 +171,18 @@ async def test_tracks_in_list_default_position_order():
 
     rows = await tracks_in_list(lst.id)
     assert [r.title for r in rows] == ["Third", "First", "Second"]
+
+
+@pytest.mark.asyncio
+async def test_add_to_list_refuses_orphan_membership():
+    """Rule 9 guard (audit R4b): the membership write path enforces FKs, so a
+    row referencing a nonexistent track/list is rejected (OR IGNORE turns the
+    FK violation into rowcount 0 → False), not silently inserted as an orphan."""
+    lst = await create_list(name="Real list", kind="user")
+    assert await add_track_to_list(999_999, lst.id) is False  # no such track
+
+    track = await create_track("Real track")
+    assert await add_track_to_list(track.id, 999_999) is False  # no such list
+
+    # Sanity: a legitimate membership still inserts.
+    assert await add_track_to_list(track.id, lst.id) is True

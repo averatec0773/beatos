@@ -13,27 +13,23 @@ one-click launchers exist, signed installers don't yet — that line is v0.1.0.
 ## Next patch (v0.0.51 candidate) — hygiene + audit follow-ups
 
 Small fixes bundled per the fix-bundling rule (one commit, one patch bump).
-Already in the working tree from the 2026-07-06 audit session (uncommitted):
-
-- ✅ Web/desktop DB default unification — web mode now defaults to the same
-  per-OS app-data library as the desktop app, with a one-time copy of a
-  pre-v0.0.50 `~/Music/BeatOS` library (`beatos_core/db.py`,
-  `beatos_http/app.py` lifespan).
-- ✅ MCP read-surface parity — `get_track`/`list_tracks` now expose `is_free`,
-  `project_path`, and per-asset `format` (`beatos_mcp/tools/tracks.py`).
-- ✅ Python lint baseline — ruff config + CI gate; layering guard test
-  (rule 2) + golden MCP tool-surface test.
-- ✅ Dead dep removed (`@electron-toolkit/preload`); implicit deps declared
-  (http: aiosqlite/mutagen/pydantic · mcp: aiosqlite/pydantic).
+Landed since 0.0.50 and sitting in `[Unreleased]`: the 2026-07-06 hygiene
+bundle (web/desktop DB unification, MCP read parity, ruff baseline + guard
+tests, dep cleanup) and the 2026-07-12 publish-workflow audit fixes
+(P-series batches 1–2: MCP preview-slot honesty, Pro engine hardening,
+`missing_sweep` off-loop, membership FK enforcement).
 
 Still open for this patch (or the next):
 
-- [ ] `missing_sweep` blocking `Path.exists()` loop → `asyncio.to_thread`
-  (`beatos_core/assets/service.py` — a dead network mount can stall the sidecar).
-- [ ] `lists/membership.py` missing `PRAGMA foreign_keys=ON` on its write path.
 - [ ] Repo hygiene: close badge-spam PRs #34/#43, prune the two stale
   `.claude/worktrees/*`, review the 3 major dependabot bumps
   (#53 Tailwind 4 · #55 Vite 8 · #68 TypeScript 6 — manual review, not auto-merge).
+- [ ] Publish terminal-state semantics (audit P2, decision ratified):
+  `PublishStage.EXPIRED` + `PublishResult.outcome`, stale-job detection,
+  cancel-on-delete (Phase D1).
+- [ ] Publish session probing + `/api/publish` token gate (audit P3/P20,
+  Phase D2); export quality — beatstars `trackType`, douyin title/topics
+  (audit P16/P17, Phase D3).
 
 ## v0.1.0 — first tagged installers
 
@@ -55,11 +51,14 @@ distribution, not features:
 
 ## Pro track (private `beatos-pro` repo)
 
-- BeatStars publish recipe hardening: preview-track slot, cover (Uppy) input,
-  mood-taxonomy coverage, free-download checkbox, live success signal — then a
-  real dogfood pass end-to-end.
-- 抖音 publish: dogfood with a real promo video.
-- Pro repo CI (its 65 tests currently run only by hand).
+- BeatStars publish recipe recalibration (2026-07-12 audit P5, one Rule-B live
+  session): preview-track slot, cover Edit-dropdown → Uppy flow, free-download
+  checkbox (MDC classes), genre/mood vocab harvest from the live option lists,
+  live success signal, dry-run draft auto-delete — then a real dogfood pass.
+- 抖音 publish: dogfood with a real promo video (also re-wires `schedule`).
+- Pro repo CI (its 124 tests currently run only by hand).
+- Engine-native trace instrumentation (`BEATOS_PUBLISH_TRACE`) + platform-
+  parametrized `publish-dev.py` v2; drivers dedup refactor (own version).
 
 ## Web Phase 3 — remote / LAN access (deferred, no committed version)
 

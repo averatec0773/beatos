@@ -5,6 +5,7 @@ resolved via BEATOS_DB_PATH (or ~/Music/BeatOS/global.db).
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import mimetypes
 import pathlib
@@ -218,9 +219,15 @@ async def missing_sweep() -> dict[str, int]:
             "SELECT id, abs_path, missing FROM asset"
         ) as cur:
             rows = await cur.fetchall()
-        for asset_id, abs_path, was_missing in rows:
+        # Existence checks run in ONE worker-thread batch: Path.exists() on a
+        # dead network mount can block for minutes, and doing it inline stalled
+        # the whole event loop / sidecar (audit R4a).
+        exist_flags = await asyncio.to_thread(
+            lambda paths: [pathlib.Path(p).exists() for p in paths],
+            [r[1] for r in rows],
+        )
+        for (asset_id, abs_path, was_missing), exists in zip(rows, exist_flags):
             checked += 1
-            exists = pathlib.Path(abs_path).exists()
             if exists and was_missing:
                 await conn.execute(
                     "UPDATE asset SET missing = 0, updated_at = ? WHERE id = ?",
