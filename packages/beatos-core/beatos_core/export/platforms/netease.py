@@ -86,7 +86,10 @@ def render(
         )
 
     fields: list[ExportField] = []
-    fields.append(ExportField(key="album_name", label="专辑名", value=_tmpl("album_name")))
+    # .strip(): the album_name template can leave a trailing space (e.g. a
+    # `{year} ` suffix with no trailing token), which the album field shouldn't
+    # carry (audit P21).
+    fields.append(ExportField(key="album_name", label="专辑名", value=_tmpl("album_name").strip()))
     fields.append(ExportField(key="album_description", label="专辑描述", value=_tmpl("album_description")))
     fields.append(ExportField(key="title", label="标题", value=_tmpl("beat_name")))
 

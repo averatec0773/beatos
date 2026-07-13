@@ -63,3 +63,33 @@ def test_is_free_field():
 def test_free_prefix_in_title_when_free():
     r = render(_track(title="X", is_free=True), [], _tmpl(douyin_title="{free}{title}"))
     assert _fields(r)["title"].value == "[FREE] X"
+
+
+def test_title_truncation_avoids_latin_word_fragment():
+    """P17: a hard [:30] cut sliced "…Chinese Hip Hop型beat" into "…型bea"; the cut
+    must back off to a word boundary instead of leaving a latin fragment."""
+    r = render(
+        _track(title="寒江雪", genre=["Chinese Hip Hop"], is_free=True),
+        [],
+        _tmpl(douyin_title="{free}{title} {genre_zh}型beat"),
+    )
+    title = _fields(r)["title"].value
+    assert len(title) <= 30
+    # No trailing mid-word latin fragment (would end with a partial ASCII run).
+    assert not title.endswith("型bea")
+    assert title == title.rstrip()  # no trailing space from the backoff
+
+
+def test_cjk_title_cut_not_backed_off():
+    """A pure-CJK overflow has no latin boundary problem — cut at maxlen as-is."""
+    r = render(_track(title="字" * 40), [], _tmpl(douyin_title="{title}"))
+    assert _fields(r)["title"].value == "字" * 30
+
+
+def test_topics_collapse_internal_spaces():
+    """P17: a multi-word topic breaks the #tag inject at the first space, so
+    internal whitespace is collapsed ("Chinese Hip Hop" → "ChineseHipHop")."""
+    t = _track(genre=["Chinese Hip Hop"], tags=["Type Beat"])
+    r = render(t, [], _tmpl(douyin_topics="说唱"))
+    topics = _json.loads(_fields(r)["topics"].value)
+    assert topics == ["ChineseHipHop", "TypeBeat", "说唱"]

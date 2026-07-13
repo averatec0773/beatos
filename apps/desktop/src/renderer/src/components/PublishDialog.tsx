@@ -211,9 +211,10 @@ export function PublishDialog({
             setLoggingIn(false);
             // Re-check for real: loadSessions sees the now-present session file and
             // marks it stale, then validateSessions confirms it's actually live.
+            // Scoped to the target platform so the dialog doesn't cold-probe others.
             await loadSessions();
             if (!mountedRef.current) return;
-            await validateSessions();
+            await validateSessions(false, [selectedPlatform]);
           } else if (status === "failed" || status === "timeout") {
             if (loginPollRef.current) {
               window.clearInterval(loginPollRef.current);
@@ -302,11 +303,11 @@ export function PublishDialog({
 
     // Real validity check (headless), cached 24h by the store so repeat opens are
     // instant. Gating Publish on this instead of file-existence is the fix for
-    // launching into an expired session.
+    // launching into an expired session. Scoped to the target platform only.
     void (async () => {
       await loadSessions();
       if (cancelled) return;
-      await validateSessions();
+      await validateSessions(false, [selectedPlatform]);
     })();
 
     return () => {

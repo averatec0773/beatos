@@ -6,8 +6,9 @@ from __future__ import annotations
 import asyncio
 import os
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 
+from beatos_http.api_auth import require_api_token
 from beatos_http.pro import pro_available
 from beatos_http.publish_schemas import (
     PublishLoginBody,
@@ -35,7 +36,11 @@ def _require_pro() -> None:
 
 
 @router.post("/api/publish")
-async def create_publish(req: PublishRequestBody) -> dict:
+async def create_publish(req: PublishRequestBody, request: Request) -> dict:
+    # Token-gated (audit P20): starting a publish spawns a real browser and
+    # uploads files — a local file:// page (which Electron CORS lets reach the
+    # API) must not trigger it. No-op in web mode (same-origin, no token).
+    require_api_token(request)
     _require_pro()
     from beatos_publish.jobs import REGISTRY
     from beatos_publish.models import PublishRequest
@@ -91,7 +96,9 @@ async def publish_sessions_validate(body: PublishValidateBody | None = None) -> 
 
 
 @router.post("/api/publish/login")
-async def publish_login_start(body: PublishLoginBody) -> dict:
+async def publish_login_start(body: PublishLoginBody, request: Request) -> dict:
+    # Token-gated (audit P20): opens a real headed browser for platform login.
+    require_api_token(request)
     _require_pro()
     from beatos_publish.platforms import available
     if body.platform not in available():
@@ -123,7 +130,9 @@ async def publish_jobs() -> dict:
 # Clear-all must precede the /{job_id} catch-all so DELETE /api/publish/jobs
 # isn't captured as job_id="jobs".
 @router.delete("/api/publish/jobs")
-async def publish_clear_jobs() -> dict:
+async def publish_clear_jobs(request: Request) -> dict:
+    # Token-gated (audit P20): cancels live browsers + wipes publish history.
+    require_api_token(request)
     _require_pro()
     from beatos_publish.jobs import REGISTRY
     # Cancel any live browser runs before dropping the records, so "Clear all"
@@ -134,7 +143,9 @@ async def publish_clear_jobs() -> dict:
 
 
 @router.delete("/api/publish/{job_id}", status_code=204)
-async def publish_delete_job(job_id: str) -> Response:
+async def publish_delete_job(job_id: str, request: Request) -> Response:
+    # Token-gated (audit P20): cancels the live browser run + drops the record.
+    require_api_token(request)
     _require_pro()
     from beatos_publish.jobs import REGISTRY
     # Cancel the live browser run (if any) — unwinds browser_context, closes the

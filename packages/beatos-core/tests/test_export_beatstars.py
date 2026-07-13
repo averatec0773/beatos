@@ -109,3 +109,11 @@ def test_no_tiers_has_no_price_note():
                           prod="", year=2026, publish_date="2026-01-01")
     f = {x.key: x for x in er.fields}
     assert "price_note" not in f
+
+
+def test_emits_track_type_beat():
+    """P16: the engine reads trackType to set the BeatStars Type select; the key
+    must exist (was never emitted → select left at default)."""
+    er = beatstars.render(_track(), [], {})
+    fields = {f.key: f.value for f in er.fields}
+    assert fields.get("trackType") == "Beat"

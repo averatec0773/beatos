@@ -17,6 +17,10 @@ class PublishRequestBody(BaseModel):
     cover_asset_id: Optional[int] = None
     deliverable_wav_asset_id: Optional[int] = None
     deliverable_stems_asset_id: Optional[int] = None
+    # DOUYIN-ONLY, and not yet surfaced in the UI: flows through to the engine's
+    # 定时发布 driver. netease/beatstars publish() ignore it (no scheduled-release
+    # gate), so setting it for those platforms is a silent no-op — don't expose a
+    # schedule control for them (audit P16).
     schedule: Optional[_dt.datetime] = None
     dry_run: bool = False
 

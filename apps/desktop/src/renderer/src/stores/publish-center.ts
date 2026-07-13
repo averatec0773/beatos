@@ -47,7 +47,7 @@ interface PublishCenterState {
   loadSessions(): Promise<void>;
   /** Headless validity check. Skips platforms validated within the TTL unless
    *  force=true (manual refresh). */
-  validateSessions(force?: boolean): Promise<void>;
+  validateSessions(force?: boolean, only?: string[]): Promise<void>;
   /** Optimistically record a just-completed login as valid. */
   markLoggedIn(platform: string): void;
   refreshJobs(): Promise<void>;
@@ -96,15 +96,18 @@ export const usePublishCenterStore = create<PublishCenterState>((set, get) => ({
       console.warn("[publish-center] loadSessions failed", e);
     }
   },
-  async validateSessions(force = false) {
+  async validateSessions(force = false, only?: string[]) {
     if (_validateInflight) return _validateInflight; // collapse concurrent calls
     const current = get().sessions;
     // loadSessions marks a platform 'checking' iff it is present AND its expensive
     // result is stale/never. So 'checking' is exactly the set that needs a headless
     // hit — only those go to the browser (a forced refresh re-checks everything).
-    const toCheck = force
+    let toCheck = force
       ? Object.keys(current)
       : Object.keys(current).filter((p) => current[p] === "checking");
+    // Scope to a subset when the caller only cares about one platform (opening a
+    // publish dialog for NetEase shouldn't cold-launch a browser for the others).
+    if (only && only.length > 0) toCheck = toCheck.filter((p) => only.includes(p));
     if (toCheck.length === 0) return;
     const run = (async () => {
       set({ validating: true });

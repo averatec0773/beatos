@@ -99,6 +99,11 @@ def render(
     fields.append(ExportField(key="tags", label="Tags", value=" ".join(track.tags or [])))
     fields.append(ExportField(key="is_free", label="Free download",
                               value="1" if track.is_free else ""))
+    # Track Type: the publish engine reads this to set the BeatStars Type select.
+    # BeatOS only catalogs beats, so it's constant — but the key must EXIST or the
+    # engine's f.get('trackType') is None and the select is left at its default
+    # (audit P16: the field was never emitted).
+    fields.append(ExportField(key="trackType", label="Track type", value="Beat"))
     fields.append(ExportField(key="visibility", label="Visibility", value="PUBLIC"))
 
     price_value = "\n".join(_price_line(t) for t in tiers)
