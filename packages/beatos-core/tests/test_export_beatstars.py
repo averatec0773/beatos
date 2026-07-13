@@ -117,3 +117,12 @@ def test_emits_track_type_beat():
     er = beatstars.render(_track(), [], {})
     fields = {f.key: f.value for f in er.fields}
     assert fields.get("trackType") == "Beat"
+
+
+def test_chinese_hip_hop_maps_to_hip_hop():
+    """P5/Phase C: the canonical BeatOS genre 'Chinese Hip Hop' has no BeatStars
+    option (live-verified), so it maps to 'Hip Hop' rather than passing through
+    unmatched (which the autocomplete then couldn't select)."""
+    er = beatstars.render(_track(genre=["Chinese Hip Hop"]), [], {})
+    f = {x.key: x.value for x in er.fields}
+    assert f["genre"] == "Hip Hop"
