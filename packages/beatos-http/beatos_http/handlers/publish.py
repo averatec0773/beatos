@@ -37,6 +37,9 @@ if pro_available():
         task = asyncio.create_task(run_job(job_id, req))
         _publish_tasks.add(task)
         task.add_done_callback(_publish_tasks.discard)
+        # Index by job_id so a DELETE can cancel this live browser run (audit P19).
+        from beatos_http.publish_tasks import track
+        track(job_id, task)
 
         return {
             "job_id": job_id,

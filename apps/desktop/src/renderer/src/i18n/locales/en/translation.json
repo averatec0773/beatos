@@ -575,6 +575,7 @@
     "browserOpen": "Browser open…",
     "logIn": "Log in",
     "awaitingMsg": "Auto-uploaded — finish the last step in the browser (read the agreement, then SMS-verify).",
+    "expiredMsg": "The browser window was held open for you but has since closed. If you finished on the platform, this is done; otherwise start the publish again.",
     "published": "Published",
     "view": "View",
     "publishFailedDetail": "Publish failed: {{error}}",
@@ -591,7 +592,8 @@
     "stageAwaitingReview": "Waiting for you",
     "stageAwaitingSms": "Waiting for you",
     "stageDone": "Done",
-    "stageFailed": "Failed"
+    "stageFailed": "Failed",
+    "stageExpired": "Window closed"
   },
   "publishCenter": {
     "title": "Publish Center",
@@ -620,6 +622,7 @@
     "waitingForReview": "Waiting for you — finish in the open browser (next → sign → submit)",
     "waitingForSms": "Waiting for you — finish in the open browser (enter SMS → submit)",
     "published": "Published",
+    "windowClosed": "Window closed — verify on the platform, or republish",
     "failedJob": "Failed — {{message}}",
     "viewListing": "View listing",
     "republish": "Republish",

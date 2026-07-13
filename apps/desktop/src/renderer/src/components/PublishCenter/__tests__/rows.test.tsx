@@ -49,6 +49,19 @@ describe("LiveJobRow", () => {
     );
     expect(screen.getByRole("link", { name: /View listing/ })).toHaveAttribute("href", "https://x");
   });
+  it("expired shows the window-closed note and a republish button (audit P2/P18)", async () => {
+    const onRepublish = vi.fn();
+    render(
+      <LiveJobRow
+        job={{ ...base, stage: "expired", result: { ok: true, error: "closed on timeout" } }}
+        title="My Beat"
+        onRepublish={onRepublish}
+      />,
+    );
+    expect(screen.getByText(/Window closed/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Republish/ }));
+    expect(onRepublish).toHaveBeenCalledWith(7);
+  });
   it("calls onDelete with the job id when the × is clicked", async () => {
     const onDelete = vi.fn();
     render(<LiveJobRow job={base} title="My Beat" onRepublish={vi.fn()} onDelete={onDelete} />);

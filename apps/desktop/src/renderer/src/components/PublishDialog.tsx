@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Rocket, Loader2, CheckCircle2, AlertCircle, MonitorSmartphone } from "lucide-react";
+import { Rocket, Loader2, CheckCircle2, AlertCircle, MonitorSmartphone, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 
@@ -32,7 +32,7 @@ interface Props {
 // A publish stops polling on any of these terminal stages. awaiting_* are the
 // human gates: the engine filled+uploaded everything a machine can, and a person
 // finishes in the browser (read the agreement + SMS verify).
-const TERMINAL = new Set(["done", "failed", "awaiting_review", "awaiting_sms"]);
+const TERMINAL = new Set(["done", "failed", "expired", "awaiting_review", "awaiting_sms"]);
 // A status/login poll gives up after this many CONSECUTIVE failed reads (~the
 // sidecar going away mid-flight) so the dialog can't spin forever. A successful
 // read resets the counter, so a long legit publish (human-in-loop) is unaffected.
@@ -393,6 +393,7 @@ export function PublishDialog({
     awaiting_sms: "publishDialog.stageAwaitingSms",
     done: "publishDialog.stageDone",
     failed: "publishDialog.stageFailed",
+    expired: "publishDialog.stageExpired",
   };
 
   const stageLabel = stage
@@ -567,12 +568,21 @@ export function PublishDialog({
         </div>
 
         {/* — status + action — */}
-        {(isAwaiting || (job && stage === "done") || (job && stage === "failed")) && (
+        {(isAwaiting ||
+          (job && stage === "done") ||
+          (job && stage === "failed") ||
+          (job && stage === "expired")) && (
           <div className="mt-3">
             {isAwaiting && (
               <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
                 <MonitorSmartphone className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="leading-snug">{t("publishDialog.awaitingMsg")}</span>
+              </div>
+            )}
+            {stage === "expired" && (
+              <div className="flex items-start gap-2 rounded-md border border-text-tertiary/40 bg-bg-elevated px-3 py-2 text-xs text-text-secondary">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="leading-snug">{t("publishDialog.expiredMsg")}</span>
               </div>
             )}
             {stage === "done" && (

@@ -53,6 +53,9 @@ async def create_publish(req: PublishRequestBody) -> dict:
     task = asyncio.create_task(run_job(job_id, engine_req))
     _running.add(task)
     task.add_done_callback(_running.discard)
+    # Index by job_id so a DELETE of a live job can cancel it (audit P19).
+    from beatos_http.publish_tasks import track
+    track(job_id, task)
     return {"job_id": job_id}
 
 
@@ -123,13 +126,21 @@ async def publish_jobs() -> dict:
 async def publish_clear_jobs() -> dict:
     _require_pro()
     from beatos_publish.jobs import REGISTRY
-    return {"deleted": REGISTRY.clear()}
+    # Cancel any live browser runs before dropping the records, so "Clear all"
+    # doesn't leave orphaned browsers driving in the background (audit P19).
+    from beatos_http.publish_tasks import cancel
+    cancelled = sum(cancel(j.job_id) for j in REGISTRY.all())
+    return {"deleted": REGISTRY.clear(), "cancelled": cancelled}
 
 
 @router.delete("/api/publish/{job_id}", status_code=204)
 async def publish_delete_job(job_id: str) -> Response:
     _require_pro()
     from beatos_publish.jobs import REGISTRY
+    # Cancel the live browser run (if any) — unwinds browser_context, closes the
+    # window — THEN drop the record (audit P19).
+    from beatos_http.publish_tasks import cancel
+    cancel(job_id)
     if not REGISTRY.delete(job_id):
         raise HTTPException(404, "job not found")
     return Response(status_code=204)

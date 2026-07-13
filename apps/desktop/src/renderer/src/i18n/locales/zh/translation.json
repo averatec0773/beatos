@@ -575,6 +575,7 @@
     "browserOpen": "浏览器已打开…",
     "logIn": "登录",
     "awaitingMsg": "已自动上传 —— 请在打开的浏览器中完成最后一步（阅读协议，然后短信验证）。",
+    "expiredMsg": "浏览器窗口曾为你保持打开，现已关闭。如果你已在平台上完成，则本次已结束；否则请重新发起发布。",
     "published": "已发布",
     "view": "查看",
     "publishFailedDetail": "发布失败: {{error}}",
@@ -591,7 +592,8 @@
     "stageAwaitingReview": "等待你操作",
     "stageAwaitingSms": "等待你操作",
     "stageDone": "完成",
-    "stageFailed": "失败"
+    "stageFailed": "失败",
+    "stageExpired": "窗口已关闭"
   },
   "publishCenter": {
     "title": "Publish Center",
@@ -620,6 +622,7 @@
     "waitingForReview": "等待你操作——在已打开的浏览器中完成（下一步 → 签名 → 提交）",
     "waitingForSms": "等待你操作——在已打开的浏览器中完成（输入短信验证码 → 提交）",
     "published": "已发布",
+    "windowClosed": "窗口已关闭——请在平台上确认，或重新发布",
     "failedJob": "失败——{{message}}",
     "viewListing": "查看发布",
     "republish": "重新发布",

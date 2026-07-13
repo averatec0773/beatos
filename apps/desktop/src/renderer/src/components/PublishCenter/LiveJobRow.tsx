@@ -1,5 +1,7 @@
 import React from "react";
 import { Loader2, Clock, CheckCircle2, XCircle, X } from "lucide-react";
+// Terminal stages the Publish Center no longer treats as "live" (stops the
+// fast poll + spinner). awaiting_* stay live (browser is held open).
 import { useTranslation } from "react-i18next";
 
 import type { PublishJobFull } from "@/api/publish";
@@ -34,6 +36,10 @@ export function LiveJobRow({ job, title, onRepublish, onDelete }: Props): React.
             <span className="flex items-center gap-1 text-success">
               <CheckCircle2 size={12} /> {t("publishCenter.published")}
             </span>
+          ) : stage === "expired" ? (
+            <span className="flex items-center gap-1 text-text-tertiary">
+              <Clock size={12} /> {t("publishCenter.windowClosed")}
+            </span>
           ) : stage === "failed" ? (
             <span className="flex items-center gap-1 text-danger">
               <XCircle size={12} /> {t("publishCenter.failedJob", { message: job.message })}
@@ -55,7 +61,7 @@ export function LiveJobRow({ job, title, onRepublish, onDelete }: Props): React.
           >
             {t("publishCenter.viewListing")}
           </a>
-        ) : stage === "failed" ? (
+        ) : stage === "failed" || stage === "expired" ? (
           <button
             type="button"
             onClick={() => onRepublish(job.request.track_id)}

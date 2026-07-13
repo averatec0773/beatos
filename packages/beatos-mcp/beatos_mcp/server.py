@@ -495,9 +495,16 @@ if pro_available():
         """Poll a publish job started by publish_track (Pro). Returns
         {job_id, stage, message, result?}. Stages: queued/launching/navigating/
         uploading_audio/uploading_cover/filling_metadata/uploading_deliverables/
-        submitting/awaiting_review/awaiting_sms/done/failed. The job may PARK at
-        'awaiting_review' or 'awaiting_sms' until a human acts at the browser — that is
-        expected, not a failure. 'done' = published, 'failed' = error."""
+        submitting/awaiting_review/awaiting_sms/done/failed/expired.
+
+        While the browser is held open for the human, the job is 'awaiting_review'
+        or 'awaiting_sms' WITH result=null — that means "act now in the browser",
+        not a failure. Terminals: 'done' = platform-confirmed publish (result.url),
+        'failed' = engine error, 'expired' = the engine drove to the human gate,
+        held the browser, and the hold elapsed with no success — the live window
+        is CLOSED (if the human finished on the platform it may still have
+        published; verify there). result.outcome (success/dry_run/expired/failed)
+        disambiguates result.ok, which is True for dry runs and expiries too."""
         from beatos_publish.jobs import REGISTRY
         job = REGISTRY.get(job_id)
         if job is None:

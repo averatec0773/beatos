@@ -83,7 +83,7 @@ export function PublishCenterPanel(): React.JSX.Element {
       if (cancelled) return;
       const active = usePublishCenterStore
         .getState()
-        .jobs.some((j) => j.stage !== "done" && j.stage !== "failed");
+        .jobs.some((j) => j.stage !== "done" && j.stage !== "failed" && j.stage !== "expired");
       jobsTimer.current = window.setTimeout(
         () => void tick(),
         active ? POLL_ACTIVE_MS : POLL_IDLE_MS,
@@ -173,9 +173,7 @@ export function PublishCenterPanel(): React.JSX.Element {
         <h1 className="mb-1.5 flex items-center gap-2 text-lg font-semibold text-text-primary">
           <Rocket size={18} /> {t("publishCenter.title")}
         </h1>
-        <p className="max-w-sm text-sm text-text-secondary">
-          {t("sidebar.publishCenterLocked")}
-        </p>
+        <p className="max-w-sm text-sm text-text-secondary">{t("sidebar.publishCenterLocked")}</p>
       </div>
     );
   }
