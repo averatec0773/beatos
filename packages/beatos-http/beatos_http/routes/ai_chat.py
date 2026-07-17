@@ -8,10 +8,11 @@ DELETE /api/ai/chat/conversations/{id}   — delete a conversation.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from beatos_core.chat import service as chat_store
+from beatos_http.api_auth import require_api_token
 from beatos_http.ai import service as ai_service
 from beatos_http.ai.chat_service import (
     pending_tool_uses_from,
@@ -53,7 +54,9 @@ async def _provider_or_409():
 
 
 @router.post("/api/ai/chat")
-async def chat(req: ChatRequest) -> dict:
+async def chat(req: ChatRequest, _gate: None = Depends(require_api_token)) -> dict:
+    # Drives the AI agent (catalog writes + spends the user's provider
+    # credits) → token-gated (audit B5). No-op in web mode.
     provider = await _provider_or_409()
     cid = req.conversation_id
     if cid is None:
@@ -73,7 +76,7 @@ async def chat(req: ChatRequest) -> dict:
 
 
 @router.post("/api/ai/chat/confirm")
-async def chat_confirm(req: ConfirmRequest) -> dict:
+async def chat_confirm(req: ConfirmRequest, _gate: None = Depends(require_api_token)) -> dict:
     provider = await _provider_or_409()
     conv = await chat_store.get_conversation(req.conversation_id)
     if conv is None:

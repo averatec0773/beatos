@@ -139,3 +139,59 @@ def test_fs_routes_present_by_default(monkeypatch):
     app = create_app()
     paths = _all_paths(app.routes)
     assert "/api/fs/list" in paths
+
+
+# --- B5 (audit 2026-07-16): irreversible-delete + AI-credit-spend gates ---
+
+
+@pytest.mark.asyncio
+async def test_purge_all_requires_token_when_configured(client, monkeypatch):
+    monkeypatch.setenv("BEATOS_API_TOKEN", TOKEN)
+    res = await client.post("/api/tracks/trash/purge_all")
+    assert res.status_code == 401
+    res = await client.post("/api/tracks/trash/purge_all", headers=AUTH)
+    assert res.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_hard_delete_gated_but_soft_trash_open(client, monkeypatch):
+    monkeypatch.setenv("BEATOS_API_TOKEN", TOKEN)
+    created = await client.post("/api/tracks", json={"title": "gate probe"})
+    tid = created.json()["id"]
+    # Irreversible hard delete without the token → 401 (row untouched).
+    res = await client.delete(f"/api/tracks/{tid}?purge=true")
+    assert res.status_code == 401
+    # Reversible soft trash stays open (renderer flow, undoable from Trash).
+    res = await client.delete(f"/api/tracks/{tid}")
+    assert res.status_code == 204
+    # Hard delete with the token succeeds.
+    res = await client.delete(f"/api/tracks/{tid}?purge=true", headers=AUTH)
+    assert res.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_ai_spend_routes_require_token_when_configured(client, monkeypatch):
+    monkeypatch.setenv("BEATOS_API_TOKEN", TOKEN)
+    # The 401 must fire BEFORE any 404/409 body work — these endpoints spend
+    # the user's own provider credits.
+    assert (await client.post("/api/tracks/1/suggest-tags")).status_code == 401
+    assert (
+        await client.post("/api/ai/suggest-tags/batch", json={"ids": [1]})
+    ).status_code == 401
+    assert (await client.post("/api/ai/chat", json={"message": "hi"})).status_code == 401
+    assert (
+        await client.post(
+            "/api/ai/chat/confirm", json={"conversation_id": 1, "approve": True}
+        )
+    ).status_code == 401
+    # With the token the gate opens (AI unconfigured → 409, not 401).
+    res = await client.post("/api/ai/chat", json={"message": "hi"}, headers=AUTH)
+    assert res.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_ai_spend_routes_open_when_token_unset(client):
+    # Web mode: no token configured → guard stands down (same-origin CORS is
+    # the barrier there); AI unconfigured surfaces its normal 409.
+    res = await client.post("/api/ai/chat", json={"message": "hi"})
+    assert res.status_code == 409

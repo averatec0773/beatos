@@ -5,7 +5,9 @@ makes pydantic return 422 for any unknown field.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
+
+from beatos_http.api_auth import require_api_token
 
 from beatos_core.models import Track, TrackCreate, TrackUpdate
 from beatos_core.lists.membership import tracks_in_list
@@ -132,8 +134,13 @@ async def list_trashed() -> list[Track]:
 
 
 @router.post("/trash/purge_all")
-async def purge_all_trashed() -> dict[str, int]:
-    """Hard-delete every track currently in trash. Returns count purged."""
+async def purge_all_trashed(request: Request) -> dict[str, int]:
+    """Hard-delete every track currently in trash. Returns count purged.
+
+    Irreversible → requires the local API token (audit B5): Electron's CORS
+    admits the file:// null origin, and a stray local page must not be able
+    to wipe the library. No-op in web mode (no token configured)."""
+    require_api_token(request)
     return {"purged": await purge_all_trash()}
 
 
@@ -208,8 +215,11 @@ async def restore(track_id: int) -> Track:
 
 
 @router.delete("/{track_id}", status_code=204)
-async def remove(track_id: int, purge: bool = Query(default=False)) -> Response:
+async def remove(request: Request, track_id: int, purge: bool = Query(default=False)) -> Response:
     if purge:
+        # Hard delete is irreversible → token-gated (audit B5); soft trash
+        # stays open — it's reversible from the Trash view.
+        require_api_token(request)
         await purge_track(track_id)
     else:
         await delete_track(track_id)

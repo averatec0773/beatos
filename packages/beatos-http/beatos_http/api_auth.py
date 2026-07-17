@@ -3,12 +3,16 @@
 
 In the packaged Electron app, CORS allows the file:// ("null") origin so the
 renderer can reach the localhost API — but that also lets any local .html the
-user opens reach it. A handful of settings writes defeat the human-in-the-loop
-gate if called by such a page — chiefly flipping `agent_permission_mode` out of
-its enforced state, plus writing AI provider / API-key settings. The Electron
-main mints a random `BEATOS_API_TOKEN`, passes it to the sidecar and exposes it
-to the renderer through the preload bridge (which a file:// page lacks); these
-endpoints then require it.
+user opens reach it. The Electron main mints a random `BEATOS_API_TOKEN`,
+passes it to the sidecar and exposes it to the renderer through the preload
+bridge (which a file:// page lacks); the gated endpoints then require it.
+
+Gated surface (grown by audits — keep this list current):
+- agent-control settings writes (`agent_permission_mode`, AI provider/key) —
+  they defeat the human-in-the-loop gate;
+- agent-actions log deletes; publish mutating routes (P20);
+- irreversible catalog destruction (`purge_all`, hard `DELETE ?purge=true`)
+  and AI-credit-spending endpoints (suggest-tags, batch, chat) — audit B5.
 
 No-op in web mode: there `BEATOS_API_TOKEN` is unset, the SPA is same-origin, and
 CORS already preflight-blocks cross-origin writes — so the guard stands down.

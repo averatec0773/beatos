@@ -12,6 +12,7 @@ import os
 import pathlib
 import re
 import shutil
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -52,15 +53,59 @@ async def _applied_versions(conn: aiosqlite.Connection) -> set[int]:
     return {r[0] for r in rows}
 
 
+_TXN_CONTROL = frozenset(
+    {"BEGIN", "BEGIN TRANSACTION", "COMMIT", "COMMIT TRANSACTION", "END", "END TRANSACTION"}
+)
+
+
+def _stmt_core(stmt: str) -> str:
+    """The statement minus `--` comment lines, normalized for classification.
+
+    A chunk like "-- rebuild note\nBEGIN;" must classify as BEGIN, or the
+    txn-control filter misses it and the runner's transaction nests.
+    """
+    lines = [ln for ln in stmt.splitlines() if ln.strip() and not ln.strip().startswith("--")]
+    return "\n".join(lines).strip().rstrip(";").strip().upper()
+
+
+def _split_statements(sql: str) -> list[str]:
+    """Split a migration script into individual statements.
+
+    `sqlite3.complete_statement` does the lexing, so semicolons inside string
+    literals (and trigger bodies, should one ever appear) don't split. Standalone
+    transaction-control statements are dropped — the runner provides the
+    transaction, and a nested BEGIN from a file that carries its own pair
+    (021 does) would error. Comment-only chunks are dropped too.
+    """
+    statements: list[str] = []
+    buf = ""
+    for line in sql.splitlines(keepends=True):
+        buf += line
+        if sqlite3.complete_statement(buf):
+            statements.append(buf.strip())
+            buf = ""
+    tail = buf.strip()
+    # A trailing fragment with no ';' can be a final unterminated statement.
+    if tail:
+        statements.append(tail)
+    return [s for s in statements if _stmt_core(s) and _stmt_core(s) not in _TXN_CONTROL]
+
+
 async def run_migrations(db_path: pathlib.Path | str) -> None:
     """Apply every migration not yet recorded in `schema_version`.
 
-    Safe to call repeatedly: already-applied migrations are skipped.
+    Safe to call repeatedly: already-applied migrations are skipped. Each
+    migration is applied ATOMICALLY together with its `schema_version` row —
+    a mid-file failure (disk full, crash, bad statement) rolls the whole file
+    back, so a re-run starts from a clean slate instead of hitting
+    "table already exists" on a half-applied schema.
     """
     db_path = pathlib.Path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    async with aiosqlite.connect(db_path) as conn:
+    # isolation_level=None → true autocommit; the runner controls transactions
+    # explicitly (Python's implicit-BEGIN mode would fight the explicit BEGIN).
+    async with aiosqlite.connect(db_path, isolation_level=None) as conn:
         # WAL persists at file level; must run before any transaction opens.
         await conn.execute("PRAGMA journal_mode=WAL")
         await _ensure_schema_version_table(conn)
@@ -70,16 +115,25 @@ async def run_migrations(db_path: pathlib.Path | str) -> None:
             if version in applied:
                 continue
             sql = path.read_text(encoding="utf-8")
-            # executescript issues an implicit COMMIT before running; wrap DDL
-            # that may conflict with bootstrap tables by filtering them out.
             # schema_version is managed by the runner, not by migration files.
             filtered = _strip_schema_version_ddl(sql)
-            await conn.executescript(filtered)
-            await conn.execute(
-                "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
-                (version, _dt.datetime.now(_dt.timezone.utc).isoformat()),
-            )
-            await conn.commit()
+            statements = _split_statements(filtered)
+            # IMMEDIATE takes the write lock up front, so a concurrent second
+            # process (pre-single-instance-lock builds) blocks here instead of
+            # failing halfway through.
+            await conn.execute("BEGIN IMMEDIATE")
+            try:
+                for stmt in statements:
+                    await conn.execute(stmt)
+                await conn.execute(
+                    "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
+                    (version, _dt.datetime.now(_dt.timezone.utc).isoformat()),
+                )
+            except BaseException:
+                with contextlib.suppress(Exception):
+                    await conn.execute("ROLLBACK")
+                raise
+            await conn.execute("COMMIT")
 
 
 def _default_data_dir() -> Path:

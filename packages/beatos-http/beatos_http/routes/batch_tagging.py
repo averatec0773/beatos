@@ -16,13 +16,14 @@ import pathlib
 import uuid
 
 import structlog
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from beatos_core.assets.service import get_asset
 from beatos_core.tracks.service import get_track, update_track
 
 from beatos_http.ai import service as ai_service
+from beatos_http.api_auth import require_api_token
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 log = structlog.get_logger(__name__)
@@ -114,7 +115,8 @@ async def _run_job(job_id: str, track_ids: list[int], provider) -> None:
 
 
 @router.post("/suggest-tags/batch")
-async def start_batch(req: _BatchRequest) -> dict:
+async def start_batch(req: _BatchRequest, _gate: None = Depends(require_api_token)) -> dict:
+    # One paid provider call per id → token-gated (audit B5). No-op in web mode.
     provider = await ai_service.get_active_provider()
     if provider is None:
         raise HTTPException(409, "AI tagging is not enabled. Set it up in Settings → AI Assist.")

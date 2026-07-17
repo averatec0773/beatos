@@ -10,10 +10,12 @@ from __future__ import annotations
 import logging
 import pathlib
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from beatos_core.assets.service import get_asset
 from beatos_core.tracks.service import get_track
+
+from beatos_http.api_auth import require_api_token
 
 from beatos_http.ai import service as ai_service
 from beatos_http.ai.provider import TagSuggestion
@@ -49,7 +51,11 @@ async def _load_cover(track) -> bytes | None:
 
 
 @track_router.post("/api/tracks/{track_id}/suggest-tags", response_model=TagSuggestion)
-async def suggest_tags(track_id: int) -> TagSuggestion:
+async def suggest_tags(track_id: int, _gate: None = Depends(require_api_token)) -> TagSuggestion:
+    # Spends the user's own AI-provider credits → token-gated (audit B5) so a
+    # stray file:// page can't burn the balance. No-op in web mode. Depends
+    # (not an explicit Request param) so tests can keep calling the handler
+    # directly.
     track = await get_track(track_id)
     if track is None:
         raise HTTPException(404, "Track not found")
