@@ -103,6 +103,36 @@ async def test_empty_tiers_allowed(db_path):
 
 
 @pytest.mark.asyncio
+async def test_preview_sample_is_line_list(db_path):
+    # build_preview slices sample to SAMPLE_CAP ENTRIES — a pre-joined string
+    # here was sliced to 5 characters, corrupting the audit-log preview.
+    await set_license_tiers(
+        track_id=1,
+        tiers=[
+            {"name": "MP3", "deliverables": ["mp3"], "prices": {"CNY": 300}},
+            {"name": "WAV", "deliverables": ["wav"], "prices": {"CNY": 500}},
+        ],
+    )
+    summ = await _latest_summary(db_path)
+    sample = summ["sample"]
+    assert isinstance(sample, list) and len(sample) == 2
+    assert all(isinstance(line, str) and len(line) > 5 for line in sample)
+    assert any("MP3" in line for line in sample)
+
+
+@pytest.mark.asyncio
+async def test_preview_sample_overflow_stays_within_cap(db_path):
+    tiers = [
+        {"name": f"T{i}", "deliverables": ["mp3"], "prices": {"CNY": 100 + i}} for i in range(7)
+    ]
+    await set_license_tiers(track_id=1, tiers=tiers)
+    summ = await _latest_summary(db_path)
+    sample = summ["sample"]
+    assert len(sample) == 5  # 4 tiers + the "… and 3 more" line
+    assert "3 more" in sample[-1]
+
+
+@pytest.mark.asyncio
 async def test_unknown_track_raises(db_path):
     with pytest.raises(ValueError, match="not found"):
         await set_license_tiers(track_id=9999, tiers=[{"name": "MP3"}])

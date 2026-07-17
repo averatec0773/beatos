@@ -28,11 +28,24 @@ _PACKAGEABLE = frozenset({
 
 _ILLEGAL = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
+# Windows reserved device basenames — a folder/file named CON/NUL/COM1/…
+# raises OSError on mkdir/zip-extract there, aborting the whole export.
+_WIN_RESERVED = re.compile(r"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$", re.IGNORECASE)
+
+# Component length cap: composed dest/list/track/file paths must stay clear of
+# Windows' 260-char MAX_PATH. 120 keeps titles readable while leaving room.
+_MAX_COMPONENT = 120
+
 
 def _sanitize(name: str, fallback: str) -> str:
-    """Make a string safe as a single path component (no separators / illegal
-    chars / trailing dots-spaces). Falls back when nothing usable remains."""
+    """Make a string safe as a single path component on every target OS (no
+    separators / illegal chars / trailing dots-spaces / Windows reserved device
+    names / overlong components). Falls back when nothing usable remains."""
     cleaned = _ILLEGAL.sub("_", (name or "").strip()).rstrip(". ")
+    if _WIN_RESERVED.match(cleaned):
+        cleaned = f"_{cleaned}"
+    if len(cleaned) > _MAX_COMPONENT:
+        cleaned = cleaned[:_MAX_COMPONENT].rstrip(". ")
     return cleaned or fallback
 
 

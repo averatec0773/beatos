@@ -1,7 +1,7 @@
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 
 import { TrackEditor } from "@/routes/TrackEditor";
 import { useTrackStore } from "@/stores/tracks";
@@ -131,5 +131,66 @@ describe("TrackEditor (auto-save)", () => {
       await vi.advanceTimersByTimeAsync(2000);
     });
     expect(update).toHaveBeenCalledTimes(1); // no auto-retry
+  });
+
+  it("resets the save-error gate when navigating editor→editor (rule 6 route reuse)", async () => {
+    vi.spyOn(tracks, "get").mockImplementation(async (id: number) => ({
+      ...sampleTrack,
+      id,
+      title: id === 1 ? "TrackOne" : "TrackTwo",
+    }));
+    vi.spyOn(assetsApi, "listForTrack").mockResolvedValue([]);
+    // Track 1's save fails; track 2's must still be allowed to save.
+    const update = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("sidecar down"))
+      .mockImplementation(async (_id: number, payload: Record<string, unknown>) => ({
+        ...sampleTrack,
+        ...payload,
+      }));
+    useTrackStore.setState({ update });
+
+    function NavTo({ to }: { to: string }): React.JSX.Element {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => navigate(to)}>
+          nav-next
+        </button>
+      );
+    }
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <MemoryRouter initialEntries={["/tracks/1/edit"]}>
+        <NavTo to="/tracks/2/edit" />
+        <Routes>
+          <Route path="/tracks/:id/edit" element={<TrackEditor />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    // Track 1: edit, save fails → error state.
+    const titleA = await screen.findByDisplayValue("TrackOne");
+    await user.clear(titleA);
+    await user.type(titleA, "EditA");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900);
+    });
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    await waitFor(() => screen.getByRole("button", { name: /save failed/i }));
+
+    // Navigate to track 2 while the editor stays mounted (route reuse).
+    await user.click(screen.getByText("nav-next"));
+    const titleB = await screen.findByDisplayValue("TrackTwo");
+
+    // Track 2: edit — auto-save must fire (the stale error gate must be gone).
+    await user.clear(titleB);
+    await user.type(titleB, "EditB");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900);
+    });
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
+    expect(update.mock.calls.at(-1)?.[0]).toBe(2);
+    expect((update.mock.calls.at(-1)?.[1] as { title: string }).title).toBe("EditB");
   });
 });

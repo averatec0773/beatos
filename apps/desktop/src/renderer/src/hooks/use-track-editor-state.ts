@@ -112,6 +112,13 @@ export function useTrackEditorState(): TrackEditorState {
   useEffect(() => {
     if (!params.id) return;
     let cancelled = false;
+    // The editor instance persists across editor→editor navigation (rule 6),
+    // so the previous track's save lifecycle must not leak into this one — a
+    // stale `error` would gate BOTH the autosave debounce and the exit flush
+    // for the new track (silent edit loss).
+    setSaveState("idle");
+    setSaveErrorMsg(null);
+    setLastSavedAt(null);
     // `ensureForTrack` populates the asset store itself (and dedupes against a
     // concurrent `tracks.select` fetch of the same id); we ignore its result
     // here and only need the track row for the form.

@@ -173,16 +173,21 @@ async def set_license_tiers(track_id: int, tiers: list[dict[str, Any]]) -> dict:
         raise ValueError(f"track id={track_id} not found")
     title = row[1]
 
+    # build_preview expects sample as list[str] (it slices to SAMPLE_CAP
+    # entries) — a pre-joined string would be sliced to 5 CHARACTERS in the
+    # agent_action_log / Agent Actions dashboard.
     if normalized:
-        sample_lines = "\n".join(f"  - {_format_tier(t)}" for t in normalized[:5])
-        if len(normalized) > 5:
-            sample_lines += f"\n  - … and {len(normalized) - 5} more"
+        # Keep the overflow line inside build_preview's SAMPLE_CAP=5 window.
+        shown = normalized[:5] if len(normalized) <= 5 else normalized[:4]
+        sample_lines = [_format_tier(t) for t in shown]
+        if len(normalized) > len(shown):
+            sample_lines.append(f"… and {len(normalized) - len(shown)} more")
         headline = (
             f"Replace license tiers on \"{title}\" ({len(normalized)} tier"
             f"{'s' if len(normalized) != 1 else ''})"
         )
     else:
-        sample_lines = "  (no tiers — track will have no license set)"
+        sample_lines = ["(no tiers — track will have no license set)"]
         headline = f"Clear all license tiers on \"{title}\""
 
     payload = {

@@ -183,6 +183,7 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
 
   const [addingList, setAddingList] = useState(false);
   const [newListName, setNewListName] = useState("");
+  const newListCommittedRef = useRef(false);
 
   const collapsed = useSidebarPanelStore((s) => s.collapsed);
   const userLists = useMemo(() => allLists.filter((l) => l.kind !== "system"), [allLists]);
@@ -222,11 +223,17 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
   const fadeMask = `linear-gradient(to bottom, ${fadeTop}, ${fadeBottom})`;
 
   function onAddListClick(): void {
+    newListCommittedRef.current = false;
     setNewListName("");
     setAddingList(true);
   }
 
   async function commitNewList(): Promise<void> {
+    // One-shot guard (same as commitRename): Enter starts the async create,
+    // the state update unmounts the focused input, and the resulting blur
+    // re-enters here — without the guard that creates a duplicate list.
+    if (newListCommittedRef.current) return;
+    newListCommittedRef.current = true;
     const name = newListName.trim();
     if (!name) {
       setAddingList(false);
@@ -244,6 +251,7 @@ export function ListsSection({ activeListId }: { activeListId: number | null }):
   }
 
   function cancelNewList(): void {
+    newListCommittedRef.current = true;
     setAddingList(false);
     setNewListName("");
   }

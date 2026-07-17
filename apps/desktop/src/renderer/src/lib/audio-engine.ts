@@ -95,6 +95,10 @@ class AudioEngine {
       // no-audio track), in which case a plain early-return would leave the
       // store stuck at `loading` with progress 0-0. Re-arm the post-load
       // state machine so callers see a consistent `paused` + duration.
+      // The source may still be PLAYING (single-track Next wraps back to the
+      // current asset) — stop it first, or the caller's follow-up play()
+      // double-starts the Tone source.
+      this.player.stop();
       this.stopRaf();
       this.offsetAtStart = 0;
       this.setStatus("paused");

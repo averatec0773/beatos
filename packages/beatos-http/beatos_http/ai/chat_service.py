@@ -71,9 +71,13 @@ def budget_history(messages: list[dict]) -> list[dict]:
 
     if len(out) > _MAX_HISTORY_MESSAGES:
         start = len(out) - _MAX_HISTORY_MESSAGES
-        # Don't start the kept window on a turn carrying tool_result blocks whose
-        # matching tool_use we just dropped — advance past them.
-        while start < len(out) and _has_tool_result(out[start].get("content")):
+        # The kept window must open on a PLAIN user turn: a leading tool_result
+        # turn would reference a dropped tool_use, and a leading assistant turn
+        # 400s on Anthropic (first message role must be "user") — which would
+        # wedge every subsequent turn of a long conversation at 502.
+        while start < len(out) and (
+            out[start].get("role") != "user" or _has_tool_result(out[start].get("content"))
+        ):
             start += 1
         out = out[start:]
     return out
@@ -97,7 +101,15 @@ def sanitize_history(messages: list[dict]) -> list[dict]:
             out.pop()
             continue
         break
-    return out
+    # Also repair the FRONT: a stored history that opens on an assistant turn
+    # (persisted by the pre-fix budget truncation) or on a tool_result turn
+    # 400s on Anthropic — drop leading turns until a plain user turn.
+    start = 0
+    while start < len(out) and (
+        out[start].get("role") != "user" or _has_tool_result(out[start].get("content"))
+    ):
+        start += 1
+    return out[start:] if start else out
 
 
 def pending_tool_uses_from(messages: list[dict]) -> list[dict]:
@@ -180,7 +192,13 @@ def _confirm_summary(tool_uses: list[dict]) -> str:
     for tu in tool_uses:
         if is_destructive(tu["name"]):
             spec = find_tool(tu["name"])
-            payload = spec["build"](tu.get("input") or {}) if spec else {}
+            # A builder crash on malformed model input must not 500 the turn —
+            # this runs BEFORE the confirm round-trip, so the tool name is an
+            # acceptable degraded summary.
+            try:
+                payload = spec["build"](tu.get("input") or {}) if spec else {}
+            except Exception:
+                payload = {}
             parts.append(payload.get("preview", {}).get("headline", tu["name"]))
     return "; ".join(parts) or "Confirm these changes?"
 

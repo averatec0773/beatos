@@ -81,3 +81,34 @@ def test_build_write_payload_shapes():
     tr = build_write_payload("trash_tracks", {"ids": [5]})
     assert tr["ids"] == [5]
     assert isinstance(tr["preview"], dict) and tr["preview"]["headline"]
+
+
+def test_builders_tolerate_malformed_model_input():
+    # Providers fall back to input={} when the model emits unparseable tool
+    # JSON; builders also run on the pre-confirm summary path where a KeyError
+    # would 500 the whole turn and drop the conversation state.
+    up = build_write_payload("update_tracks", {})
+    assert up["ids"] == [] and up["patch"] == {}
+    tr = build_write_payload("trash_tracks", {})
+    assert tr["ids"] == []
+    assert tr["preview"]["headline"]
+
+
+def test_confirm_summary_survives_builder_crash():
+    from beatos_http.ai.chat_service import _confirm_summary
+    from beatos_http.ai import chat_tools
+
+    # Even if a builder raises, the confirm summary must degrade to the tool
+    # name instead of propagating (the route only catches RuntimeError).
+    spec = next(s for s in chat_tools.WRITE_TOOLS if s["name"] == "trash_tracks")
+    original = spec["build"]
+
+    def boom(_inp: dict) -> dict:
+        raise KeyError("ids")
+
+    spec["build"] = boom
+    try:
+        summary = _confirm_summary([{"name": "trash_tracks", "input": {}}])
+    finally:
+        spec["build"] = original
+    assert summary == "trash_tracks"

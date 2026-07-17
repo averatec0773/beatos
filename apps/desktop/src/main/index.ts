@@ -178,6 +178,16 @@ function startSidecar(): void {
   if (sidecar.stdout) tagStream(sidecar.stdout, "info");
   if (sidecar.stderr) tagStream(sidecar.stderr, "error");
 
+  // A failed spawn (ENOENT: uv missing from a GUI-inherited PATH; EACCES on a
+  // packaged binary) emits 'error' on a later tick — without a listener Node
+  // re-throws it as an uncaughtException and the app hard-crashes instead of
+  // reaching the handshake-timeout error dialog.
+  sidecar.on("error", (err) => {
+    logger.error(`[sidecar] spawn failed: ${String(err)}`);
+    apiPort = null;
+    sidecar = null;
+  });
+
   sidecar.on("exit", (code, signal) => {
     logger.warn(`[sidecar] process exited code=${code} signal=${signal}`);
     apiPort = null;
@@ -276,7 +286,27 @@ function createWindow(): void {
   }
 }
 
+// Two instances would each spawn a sidecar against the SAME userData DB and
+// race run_migrations on upgrade (executescript autocommits mid-file — a lost
+// race can wedge the schema). Hold the lock for the app's whole life; a second
+// launch just focuses the existing window.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  });
+}
+
 app.whenReady().then(async () => {
+  // The losing instance's ready event can still fire before quit() lands —
+  // it must not boot a splash/sidecar of its own.
+  if (!gotSingleInstanceLock) return;
   configureLogger();
   logger.info("[main] electron app ready");
 

@@ -158,8 +158,15 @@ function runClaude(
   args: string[],
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn("claude", args, {
+    // On Windows the Claude Code CLI is an npm shim (`claude.cmd`), which
+    // spawn() cannot execute without a shell (Node throws EINVAL since the
+    // CVE-2024-27980 hardening). shell:true skips arg quoting, so quote any
+    // arg with whitespace (repoRoot may contain spaces) ourselves.
+    const isWin = process.platform === "win32";
+    const spawnArgs = isWin ? args.map((a) => (/\s/.test(a) ? `"${a}"` : a)) : args;
+    const child = spawn("claude", spawnArgs, {
       stdio: ["ignore", "pipe", "pipe"],
+      shell: isWin,
     });
     let stdout = "";
     let stderr = "";

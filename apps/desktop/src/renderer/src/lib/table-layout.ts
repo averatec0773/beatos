@@ -27,5 +27,3 @@ export function getGridTemplateColumns(widths: Record<ColumnKey, number>): strin
 
 /** Horizontal gap between grid tracks. Used in both header and row. */
 export const TABLE_COL_GAP = "12px";
-/** Left/right padding inside the grid container. */
-export const TABLE_COL_PADDING_X = "1rem"; // matches Tailwind px-4

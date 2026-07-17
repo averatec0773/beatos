@@ -101,3 +101,20 @@ async def test_package_bad_dest(populated_list, tmp_path):
     items = [{"track_id": m["track_id"], "asset_ids": [f["asset_id"] for f in m["files"]]} for m in manifest]
     with pytest.raises(ValueError, match="Destination folder"):
         await package_list(populated_list["list_id"], items, mode="zip", dest=str(tmp_path / "nope"))
+
+
+def test_sanitize_windows_reserved_and_length():
+    from beatos_core.lists.export import _MAX_COMPONENT, _sanitize
+
+    # Windows reserved device basenames must be defused (mkdir("NUL") raises
+    # OSError on Windows and aborts the whole export).
+    assert _sanitize("NUL", "t") == "_NUL"
+    assert _sanitize("con", "t") == "_con"
+    assert _sanitize("COM1", "t") == "_COM1"
+    # Non-reserved lookalikes pass through.
+    assert _sanitize("CONSOLE", "t") == "CONSOLE"
+    assert _sanitize("NULL", "t") == "NULL"
+    # Component length capped clear of MAX_PATH composition.
+    assert len(_sanitize("x" * 500, "t")) == _MAX_COMPONENT
+    # Cap must not leave a trailing dot/space (illegal on Windows).
+    assert not _sanitize(("y" * (_MAX_COMPONENT - 1)) + ". tail", "t").endswith((".", " "))

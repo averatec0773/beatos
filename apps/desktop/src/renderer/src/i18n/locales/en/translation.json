@@ -87,6 +87,7 @@
     "addTier": "Add tier",
     "saveTierFailed": "Save tier failed: {{error}}",
     "deleteTierFailed": "Delete tier failed: {{error}}",
+    "defaultCopyFailed": "Failed to copy default tier ({{name}}): {{error}}",
     "addPresetTierFailed": "Add {{preset}} tier failed: {{error}}",
     "addTierFailed": "Add tier failed: {{error}}",
     "tierNameRequired": "Tier name is required.",

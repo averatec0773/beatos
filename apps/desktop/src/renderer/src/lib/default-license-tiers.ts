@@ -1,5 +1,6 @@
 import { appSettings } from "@/api/app-settings";
 import { licenseTiers, type LicenseTierCreate } from "@/api/license-tiers";
+import i18n from "@/i18n";
 import { useToastStore } from "@/stores/toast";
 
 /**
@@ -59,9 +60,13 @@ export async function applyDefaultLicenseTiers(trackId: number): Promise<void> {
         continue;
       }
       console.warn("[default-license-tiers] apply tier failed:", tpl, msg);
-      useToastStore
-        .getState()
-        .show("error", `默认价格档复制失败 (${tpl.name ?? tpl.deliverables?.join("+")}): ${msg}`);
+      useToastStore.getState().show(
+        "error",
+        i18n.t("licenseTiers.defaultCopyFailed", {
+          name: tpl.name ?? tpl.deliverables?.join("+"),
+          error: msg,
+        }),
+      );
     }
   }
 }

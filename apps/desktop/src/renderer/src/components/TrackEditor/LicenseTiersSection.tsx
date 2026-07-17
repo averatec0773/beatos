@@ -154,8 +154,15 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     emptySlotsRef.current = emptySlots;
   }, [emptySlots]);
   const [pendingCustom, setPendingCustom] = useState<PendingCustom | null>(null);
-  const savingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
-  const createTimers = useRef<Map<PresetKey, ReturnType<typeof setTimeout>>>(new Map());
+  // Timer entries carry their payload (tier draft / owning track) so a flush
+  // can fire the pending write directly instead of dropping it — see
+  // flushPendingWrites below.
+  const savingTimers = useRef<
+    Map<number, { handle: ReturnType<typeof setTimeout>; next: DraftTier }>
+  >(new Map());
+  const createTimers = useRef<
+    Map<PresetKey, { handle: ReturnType<typeof setTimeout>; trackId: number }>
+  >(new Map());
   const pendingNameRef = useRef<HTMLInputElement | null>(null);
 
   const reload = useCallback(async (): Promise<void> => {
@@ -169,7 +176,84 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     }
   }, [trackId]);
 
+  async function maybeCreatePresetTier(preset: PresetKey, tid: number = trackId): Promise<void> {
+    const slot = emptySlotsRef.current[preset];
+    if (!slot || slot.creating) return;
+    const prices = inputsToPrices(slot.priceInputs, slot.otherCurrency);
+    const share = parseShare(slot.shareInput);
+    // Create the tier once the producer has set anything worth saving — a
+    // price OR a share. (A share-only tier still won't map to NetEase without
+    // a CNY price, but it's the producer's data to keep.)
+    if (Object.keys(prices).length === 0 && share == null) return;
+    setEmptySlots((prev) => ({
+      ...prev,
+      [preset]: { ...prev[preset], creating: true },
+    }));
+    try {
+      const created = await api.create(tid, {
+        name: preset.toUpperCase(),
+        deliverables: [preset],
+        prices,
+        share,
+      });
+      setTiers((prev) => [...prev, toDraft(created)]);
+      setEmptySlots((prev) => ({
+        ...prev,
+        [preset]: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
+      }));
+    } catch (e) {
+      // Reset the whole slot (incl. priceInputs + shareInput) so a failed
+      // create can't leave a stuck value that re-fires the debounce on the
+      // next keystroke.
+      setEmptySlots((prev) => ({
+        ...prev,
+        [preset]: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
+      }));
+      useToastStore.getState().show(
+        "error",
+        t("licenseTiers.addPresetTierFailed", {
+          preset: preset.toUpperCase(),
+          error: e instanceof Error ? e.message : String(e),
+        }),
+      );
+    }
+  }
+
+  /** Fire every pending debounced write immediately. Debounced tier saves and
+   *  preset creates would otherwise be silently discarded when the editor
+   *  closes inside the debounce window (ESC right after typing a price). */
+  function flushPendingWrites(): void {
+    for (const [tierId, entry] of savingTimers.current) {
+      clearTimeout(entry.handle);
+      void api.update(tierId, draftToUpdate(entry.next)).catch((e) => {
+        useToastStore
+          .getState()
+          .show(
+            "error",
+            t("licenseTiers.saveTierFailed", { error: e instanceof Error ? e.message : String(e) }),
+          );
+      });
+    }
+    savingTimers.current.clear();
+    for (const [preset, entry] of createTimers.current) {
+      clearTimeout(entry.handle);
+      void maybeCreatePresetTier(preset, entry.trackId);
+    }
+    createTimers.current.clear();
+  }
+  // Latest-closure ref so the unmount cleanup (empty deps → stale closures)
+  // and the trackId effect always call the current flush. Same pattern as
+  // use-track-editor-state's flushRef.
+  const flushRef = useRef(flushPendingWrites);
   useEffect(() => {
+    flushRef.current = flushPendingWrites;
+  });
+
+  useEffect(() => {
+    // Fire (not drop) any writes still inside the debounce window before the
+    // section re-targets a new track — entries carry their own tier id /
+    // track id, so this is safe after the prop already changed.
+    flushRef.current();
     setLoading(true);
     setEmptySlots(emptyPresetDefaults());
     setPendingCustom(null);
@@ -177,13 +261,8 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
   }, [trackId, reload]);
 
   useEffect(() => {
-    const save = savingTimers.current;
-    const create = createTimers.current;
     return () => {
-      for (const timer of save.values()) clearTimeout(timer);
-      save.clear();
-      for (const timer of create.values()) clearTimeout(timer);
-      create.clear();
+      flushRef.current();
     };
   }, []);
 
@@ -210,7 +289,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
 
   function scheduleSave(tierId: number, next: DraftTier): void {
     const existing = savingTimers.current.get(tierId);
-    if (existing) clearTimeout(existing);
+    if (existing) clearTimeout(existing.handle);
     const handle = setTimeout(async () => {
       try {
         await api.update(tierId, draftToUpdate(next));
@@ -225,7 +304,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
         savingTimers.current.delete(tierId);
       }
     }, AUTOSAVE_MS);
-    savingTimers.current.set(tierId, handle);
+    savingTimers.current.set(tierId, { handle, next });
   }
 
   function updateLocal(tierId: number, mutator: (tier: DraftTier) => DraftTier): void {
@@ -265,7 +344,7 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
     if (!tier) return;
     const pending = savingTimers.current.get(tierId);
     if (pending) {
-      clearTimeout(pending);
+      clearTimeout(pending.handle);
       savingTimers.current.delete(tierId);
     }
     try {
@@ -292,11 +371,11 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
       },
     }));
     const existing = createTimers.current.get(preset);
-    if (existing) clearTimeout(existing);
+    if (existing) clearTimeout(existing.handle);
     const handle = setTimeout(() => {
-      void maybeCreatePresetTier(preset);
+      void maybeCreatePresetTier(preset, trackId);
     }, AUTOSAVE_MS);
-    createTimers.current.set(preset, handle);
+    createTimers.current.set(preset, { handle, trackId });
   }
 
   function onEmptyPresetOtherCurrencyChange(preset: PresetKey, next: string | null): void {
@@ -319,54 +398,11 @@ export function LicenseTiersSection({ trackId, isFree }: Props): React.JSX.Eleme
       [preset]: { ...prev[preset], shareInput: raw },
     }));
     const existing = createTimers.current.get(preset);
-    if (existing) clearTimeout(existing);
+    if (existing) clearTimeout(existing.handle);
     const handle = setTimeout(() => {
-      void maybeCreatePresetTier(preset);
+      void maybeCreatePresetTier(preset, trackId);
     }, AUTOSAVE_MS);
-    createTimers.current.set(preset, handle);
-  }
-
-  async function maybeCreatePresetTier(preset: PresetKey): Promise<void> {
-    const slot = emptySlotsRef.current[preset];
-    if (!slot || slot.creating) return;
-    const prices = inputsToPrices(slot.priceInputs, slot.otherCurrency);
-    const share = parseShare(slot.shareInput);
-    // Create the tier once the producer has set anything worth saving — a
-    // price OR a share. (A share-only tier still won't map to NetEase without
-    // a CNY price, but it's the producer's data to keep.)
-    if (Object.keys(prices).length === 0 && share == null) return;
-    setEmptySlots((prev) => ({
-      ...prev,
-      [preset]: { ...prev[preset], creating: true },
-    }));
-    try {
-      const created = await api.create(trackId, {
-        name: preset.toUpperCase(),
-        deliverables: [preset],
-        prices,
-        share,
-      });
-      setTiers((prev) => [...prev, toDraft(created)]);
-      setEmptySlots((prev) => ({
-        ...prev,
-        [preset]: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
-      }));
-    } catch (e) {
-      // Reset the whole slot (incl. priceInputs + shareInput) so a failed
-      // create can't leave a stuck value that re-fires the debounce on the
-      // next keystroke.
-      setEmptySlots((prev) => ({
-        ...prev,
-        [preset]: { priceInputs: {}, otherCurrency: null, shareInput: "", creating: false },
-      }));
-      useToastStore.getState().show(
-        "error",
-        t("licenseTiers.addPresetTierFailed", {
-          preset: preset.toUpperCase(),
-          error: e instanceof Error ? e.message : String(e),
-        }),
-      );
-    }
+    createTimers.current.set(preset, { handle, trackId });
   }
 
   function openPendingCustom(): void {

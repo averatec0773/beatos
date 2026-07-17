@@ -32,6 +32,10 @@ export const useListStore = create<ListState>((set, get) => ({
     try {
       const all = await api.all();
       set({ all });
+    } catch (e) {
+      // Keep the previous list on failure; fire-and-forget callers (drag-end,
+      // boot hydrate) would otherwise surface an unhandled rejection.
+      console.warn("[lists] refresh failed:", e);
     } finally {
       set({ loading: false });
     }

@@ -3,6 +3,7 @@ from beatos_http.ai.chat_service import (
     _MAX_HISTORY_MESSAGES,
     _MAX_TOOL_RESULT_CHARS,
     budget_history,
+    sanitize_history,
 )
 
 
@@ -53,3 +54,29 @@ def test_caps_message_count_without_orphaning_tool_result():
 def test_short_history_passes_through():
     msgs = [{"role": "user", "content": "a"}, {"role": "assistant", "content": [{"type": "text", "text": "b"}]}]
     assert budget_history(msgs) == msgs
+
+
+def test_window_never_opens_on_assistant_turn():
+    # The cut landing on an assistant turn must advance to the next plain user
+    # turn — Anthropic 400s when messages[0].role != "user", which wedged long
+    # conversations at 502 on every subsequent turn.
+    msgs = [{"role": "user", "content": f"m{i}"} for i in range(_MAX_HISTORY_MESSAGES + 5)]
+    cut = len(msgs) - _MAX_HISTORY_MESSAGES
+    msgs[cut] = {"role": "assistant", "content": [{"type": "text", "text": "a"}]}
+    out = budget_history(msgs)
+    assert out, "window must not be emptied"
+    assert out[0]["role"] == "user"
+    assert not isinstance(out[0]["content"], list)
+
+
+def test_sanitize_repairs_history_opening_on_assistant_turn():
+    # Pre-fix budget truncation could PERSIST a history that opens on an
+    # assistant turn; sanitize_history must repair it on replay.
+    msgs = [
+        {"role": "assistant", "content": [{"type": "text", "text": "legacy cut"}]},
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": [{"type": "text", "text": "reply"}]},
+    ]
+    out = sanitize_history(msgs)
+    assert out[0]["role"] == "user"
+    assert len(out) == 2

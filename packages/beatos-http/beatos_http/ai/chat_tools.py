@@ -101,9 +101,12 @@ def _preview_update_tracks(inp: dict) -> str:
 
 
 def _build_update_tracks(inp: dict) -> dict:
+    # Tolerate missing keys: providers fall back to input={} when the model
+    # emits unparseable tool JSON, and this builder also runs on the
+    # pre-confirm summary path where a KeyError would 500 the whole turn.
     return {
-        "ids": inp["ids"],
-        "patch": inp["patch"],
+        "ids": inp.get("ids") or [],
+        "patch": inp.get("patch") or {},
         "preview": {"headline": _preview_update_tracks(inp)},
     }
 
@@ -113,7 +116,7 @@ def _preview_trash_tracks(inp: dict) -> str:
 
 
 def _build_trash_tracks(inp: dict) -> dict:
-    return {"ids": inp["ids"], "preview": {"headline": _preview_trash_tracks(inp)}}
+    return {"ids": inp.get("ids") or [], "preview": {"headline": _preview_trash_tracks(inp)}}
 
 
 # Write tools. `tool_name` is the apply-handler name (beatos_core.approvals). They

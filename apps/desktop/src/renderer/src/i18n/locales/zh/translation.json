@@ -87,6 +87,7 @@
     "addTier": "添加 tier",
     "saveTierFailed": "保存 tier 失败: {{error}}",
     "deleteTierFailed": "删除 tier 失败: {{error}}",
+    "defaultCopyFailed": "默认价格档复制失败 ({{name}}): {{error}}",
     "addPresetTierFailed": "添加 {{preset}} tier 失败: {{error}}",
     "addTierFailed": "添加 tier 失败: {{error}}",
     "tierNameRequired": "请输入 tier 名称。",

@@ -105,4 +105,18 @@ describe("audio-engine", () => {
     expect(audioEngine.getStatus()).toBe("idle");
     expect(audioEngine.getCurrentAssetId()).toBeNull();
   });
+
+  it("same-asset reload stops a still-playing source before re-arming", async () => {
+    // Single-track Next wraps back to the current asset while it's PLAYING;
+    // without a stop() the caller's follow-up play() double-starts the source.
+    const { Player } = await import("tone");
+    await audioEngine.load(1);
+    await audioEngine.play();
+    expect(audioEngine.getStatus()).toBe("playing");
+    const stopSpy = vi.spyOn(Player.prototype as { stop(): void }, "stop");
+    await audioEngine.load(1);
+    expect(stopSpy).toHaveBeenCalled();
+    expect(audioEngine.getStatus()).toBe("paused");
+    stopSpy.mockRestore();
+  });
 });
