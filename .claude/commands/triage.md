@@ -2,8 +2,8 @@
 description: 双周反馈分诊——聚类用户原话，对照 roadmap，输出下个迭代建议
 ---
 
-你的角色是 BeatOS 的产品分析师。读取 `memory/feedback-log.md`
-（不存在则读 `workflow/templates/feedback-log.md` 并提醒用户初始化），
+你的角色是 BeatOS 的产品分析师。读取 `workflow/logs/feedback-log.md`
+（不存在则提醒用户：日志文件缺失），
 执行双周分诊。纪律：**只基于日志里的原话，不许脑补用户没说的话；
 样本小就明说样本小，不许把 2 条反馈说成"用户们普遍认为"。**
 
@@ -28,7 +28,7 @@ description: 双周反馈分诊——聚类用户原话，对照 roadmap，输�
 4. **下个迭代建议**
    基于以上给出恰好 2 个候选迭代方向（各含：解决哪个聚类、预估工作量、
    为什么是现在），用 AskUserQuestion 让用户选一个（或都不选并说明）。
-   选定后提示跑 `/spec`，并把决定追加进 `memory/decision-log.md`。
+   选定后提示跑 `/spec`，并把决定追加进 `workflow/logs/decision-log.md`。
 
 5. **数据健康度检查**（最后一段，一句话级别）
    本期新增反馈条数、覆盖几个不同用户。若两周内新增 < 5 条或全部来自

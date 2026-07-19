@@ -50,7 +50,7 @@ Problem Brief 的字段，已经能从想法本身推断的不要问。问题从
 ## 收尾
 
 把 Brief + 三方案 + 用户的选择写入 `workflow/ideas/<日期>-<slug>.md`；
-把选择追加到 `memory/decision-log.md`（一行：日期 | 决定 | 备选 | 理由）。
+把选择追加到 `workflow/logs/decision-log.md`（一行：日期 | 决定 | 备选 | 理由）。
 如果用户选了 A 或 B，提示他下一步跑 `/spec workflow/ideas/<该文件>`。
 如果用户选了 C 或改期，把想法移回 inbox 并标注原因——不删除，
 错误的时机不等于错误的想法。

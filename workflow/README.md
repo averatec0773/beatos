@@ -60,9 +60,9 @@
 
 ## 反馈回路：内测数据 → 开发方向
 
-**记录（你，随时）**：反馈进 `memory/feedback-log.md`（模板见
-[templates/feedback-log.md](templates/feedback-log.md)；repo 是公开的，
-真实日志放本地私有的 `memory/`，用户用匿名编号）。
+**记录（你，随时）**：反馈进 [`workflow/logs/feedback-log.md`](logs/feedback-log.md)。
+repo 是公开的，所以用户一律匿名编号（U1、U2…），敏感内容录入时脱敏——
+细则见日志文件头部。
 唯一重要的纪律：**记原话，不记你的翻译**。
 "导入好麻烦"和"要是能整个文件夹拖进来就好了"是两条不同的数据——
 缺经验的人最容易犯的错就是把用户的话提前翻译成自己想听的结论。
@@ -75,24 +75,27 @@
 做三件事：bug 聚类（bug 的分布就是设计弱点的地图）、时间分配审计
 （工程 vs 分发是否守住了 30/70）、苛刻的 PM 拷问（本月接触了几个真实用户？）。
 
-## 安装与目录
+## 目录布局（内置即用，无需安装）
 
-```bash
-# 把命令装进本地 Claude Code（.claude/ 是 gitignore 的本地目录）
-mkdir -p .claude/commands && cp workflow/commands/*.md .claude/commands/
+命令直接提交在 `.claude/commands/`，所以**本地和 remote（Claude Code
+on the web）会话开箱即得 `/idea` `/spec` `/triage` `/retro` 四个斜杠命令**
+——remote 每次都是全新 clone，任何要手动安装的东西在那里都不存在，
+因此一切工作文件都必须入库。
 
-# 初始化本地私有的反馈/决策日志
-mkdir -p memory && cp workflow/templates/feedback-log.md memory/
-cp workflow/templates/decision-log.md memory/
-```
+| 路径 | 用途 |
+|---|---|
+| `.claude/commands/*.md` | 四个斜杠命令（`/.claude` 整体仍是 gitignore 的，仅这四个文件被追踪） |
+| `workflow/README.md` | 本文档 |
+| `workflow/ideas/` | inbox + 每个想法的 Brief/方案记录 |
+| `workflow/specs/` | 已批准的 mini-spec |
+| `workflow/logs/feedback-log.md` | 用户反馈日志（公开库——匿名编号+脱敏，规则见文件头） |
+| `workflow/logs/decision-log.md` | 决策日志（任何 AI 会话开工前可读） |
 
-| 路径 | 是否入库 | 用途 |
-|---|---|---|
-| `workflow/` | ✅ 公开 | 流程文档、命令源文件、模板 |
-| `workflow/ideas/` | ✅ 公开 | inbox + 每个想法的 Brief/方案记录 |
-| `workflow/specs/` | ✅ 公开 | 已批准的 mini-spec |
-| `memory/feedback-log.md` | ❌ 本地 | 真实用户反馈（含个人信息） |
-| `memory/decision-log.md` | ❌ 本地 | 决策日志（AI 每次会话可读） |
+> 本地仓库注意：`.claude` 其余内容（skills、私有配置）仍是本地私有、
+> 不入库。若你的 worktree hook 把 `.claude` 整个做成符号链接，需要调整为
+> 真实目录（hook 只链接私有子项），否则 checkout 追踪的 commands 文件会冲突。
+> 反馈日志若日后包含不宜公开的内容，整体迁往私有仓库即可（gitignore 中
+> 已有此计划的注记）。
 
 ## 节奏（把"经验"变成日历事件）
 

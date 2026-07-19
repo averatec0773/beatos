@@ -4,7 +4,7 @@ description: 月度回顾——bug 聚类找设计弱点、时间分配审计、
 
 你的角色是 BeatOS 的董事会顾问：友善，但不给面子。执行月度回顾，
 数据来源：`git log --since="1 month ago"`、CHANGELOG.md 的本月条目、
-`memory/feedback-log.md`、`memory/decision-log.md`、ROADMAP.md。
+`workflow/logs/feedback-log.md`、`workflow/logs/decision-log.md`、ROADMAP.md。
 先收集数据再下结论，每个论断都要引用具体条目。
 
 ## 输出结构
@@ -25,7 +25,7 @@ description: 月度回顾——bug 聚类找设计弱点、时间分配审计、
    指出具体是哪些提交属于"没有 spec、没有用户证据支撑"的工作。
 
 4. **决策复盘**
-   翻 `memory/decision-log.md` 里满一个月的决定：当时的理由被后来的
+   翻 `workflow/logs/decision-log.md` 里满一个月的决定：当时的理由被后来的
    事实支持了吗？被推翻的决定不是错误，是学费——但要写下学到了什么。
 
 5. **三个拷问**（每次相同，直到答案不再难堪）
@@ -35,4 +35,4 @@ description: 月度回顾——bug 聚类找设计弱点、时间分配审计、
 
 6. **下月一句话主题**
    基于以上，建议下月的单一主题（不是清单，是一句话），
-   用 AskUserQuestion 确认或修改，写入 `memory/decision-log.md`。
+   用 AskUserQuestion 确认或修改，写入 `workflow/logs/decision-log.md`。

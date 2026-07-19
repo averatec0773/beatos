@@ -11,6 +11,11 @@ TODO.md
 # NOTE: no trailing slash — in git worktrees the post-checkout hook installs
 # these as SYMLINKS (not dirs), and a trailing-slash pattern matches dirs only,
 # so `git add -A` in a worktree would otherwise re-track the harness symlinks.
+# EXCEPTION: .claude/commands/{idea,spec,triage,retro}.md ARE tracked (added
+# while already under version control, so this ignore rule doesn't affect
+# them) — they ship the /idea /spec /triage /retro workflow to every fresh
+# clone, including Claude Code on the web. Everything else under .claude
+# stays local-only as before.
 /.claude
 /CLAUDE.md
 /AGENTS.md
@@ -87,6 +92,8 @@ logs/
 !apps/desktop/logs/
 apps/desktop/logs/*
 !apps/desktop/logs/.gitkeep
+# workflow/logs holds the tracked feedback/decision logs, not app logs
+!/workflow/logs/
 
 # Audit reports produced by .claude/skills/audit
 /reports/
