@@ -9,7 +9,7 @@ dependencies = [
     "aiosqlite>=0.20",
     "beatos-core",
     "beatos-http",
-    "mcp>=1.27,<1.28",
+    "mcp>=1.28.1,<1.29",
     "pydantic>=2.9",
     "structlog>=25.5.0",
 ]
