@@ -14,6 +14,18 @@ _GENRE_CAP = 3
 _MOOD_CAP = 5
 
 
+def _dedup(values) -> list[str]:
+    """Order-preserving de-duplication, dropping empties — vocab mapping can
+    collapse distinct source labels onto one target."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for v in values:
+        if v and v not in seen:
+            seen.add(v)
+            out.append(v)
+    return out
+
+
 def _fmt_amount(amount: float) -> str:
     return f"{amount:g}"
 
@@ -69,7 +81,11 @@ def render(
     genre_map = load_vocab_map(PLATFORM, "genre")
     mood_map = load_vocab_map(PLATFORM, "mood")
 
-    genres = [genre_map.get(g, g) for g in (track.genre or [])]
+    # Map through the vocab, then dedup order-preserving: several source
+    # genres/moods can collapse to one BeatStars label (e.g. Sacred + Epic both
+    # → "Epic"), which would otherwise render "Epic / Epic" and make the
+    # extension type the same chip twice.
+    genres = _dedup(genre_map.get(g, g) for g in (track.genre or []))
     genre_en = genres[0] if genres else ""
 
     free = templates.get("free_prefix", "[FREE] ") if track.is_free else ""
@@ -92,7 +108,7 @@ def render(
     fields.append(ExportField(key="genre", label="Genre",
                               value=" / ".join(genres), options=genres, note=genre_note))
 
-    moods = [mood_map.get(m, m) for m in (track.mood or [])]
+    moods = _dedup(mood_map.get(m, m) for m in (track.mood or []))
     mood_note = "BeatStars mood cap 5" if len(moods) > _MOOD_CAP else None
     fields.append(ExportField(key="mood", label="Mood", value=" / ".join(moods), note=mood_note))
 
