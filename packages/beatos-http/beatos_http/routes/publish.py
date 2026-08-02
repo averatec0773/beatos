@@ -4,9 +4,11 @@ importable without it."""
 from __future__ import annotations
 
 import asyncio
+import mimetypes
 import os
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.responses import FileResponse
 
 from beatos_http.api_auth import require_api_token
 from beatos_http.pro import pro_available
@@ -60,12 +62,18 @@ async def create_publish(req: PublishRequestBody, request: Request) -> dict:
         # panel claims it via /api/publish/tickets/*. Resolution failures (bad
         # track / missing asset / no recipe) fail the POST eagerly.
         from beatos_publish.errors import PublishError
-        from beatos_publish.tickets import stage_ticket
+        from beatos_publish.tickets import stage_ticket, upload_url
         try:
             ticket_id = await stage_ticket(engine_req)
         except (PublishError, ValueError) as e:
             raise HTTPException(400, str(e))
-        return {"job_id": ticket_id, "mode": "extension"}
+        # upload_url: the platform page the user opens in their own browser
+        # (design §4 step 1 — the renderer offers it as a link).
+        return {
+            "job_id": ticket_id,
+            "mode": "extension",
+            "upload_url": upload_url(req.platform),
+        }
     job_id = REGISTRY.create(engine_req)
     task = asyncio.create_task(run_job(job_id, engine_req))
     _running.add(task)
@@ -151,6 +159,9 @@ async def publish_clear_jobs(request: Request) -> dict:
     # doesn't leave orphaned browsers driving in the background (audit P19).
     from beatos_http.publish_tasks import cancel
     cancelled = sum(cancel(j.job_id) for j in REGISTRY.all())
+    # Extension tickets: every capability asset URL dies with its job row.
+    from beatos_publish.tickets import invalidate_all
+    invalidate_all()
     return {"deleted": REGISTRY.clear(), "cancelled": cancelled}
 
 
@@ -197,6 +208,59 @@ async def publish_ticket_report(job_id: str, body: TicketReportBody, request: Re
     return {"ok": True}
 
 
+# CORS on the asset-streaming route ONLY (capability-URL model, design §8): the
+# extension content script fetches asset bytes from a platform page origin, so
+# this one route answers cross-origin. Access control is the per-claim
+# unguessable nonce in the path — ticket-scoped, regenerated on re-claim, dead
+# once the ticket is terminal or deleted. The main API is an open localhost read
+# surface anyway; the nonce is required precisely so platform-page scripts can't
+# enumerate assets. Deliberately NOT token-gated — page contexts can't carry the
+# Authorization header without a preflight, and the nonce already gates access.
+_ASSET_CORS = {"Access-Control-Allow-Origin": "*"}
+
+
+@router.options("/api/publish/tickets/{job_id}/assets/{asset_id}/{nonce}")
+async def publish_ticket_asset_preflight(job_id: str, asset_id: int, nonce: str) -> Response:
+    # A simple GET needs no preflight, but answer one anyway (belt-and-braces
+    # for fetch wrappers that add innocuous options).
+    return Response(
+        status_code=204,
+        headers={**_ASSET_CORS, "Access-Control-Allow-Methods": "GET, OPTIONS"},
+    )
+
+
+@router.get("/api/publish/tickets/{job_id}/assets/{asset_id}/{nonce}")
+async def publish_ticket_asset(job_id: str, asset_id: int, nonce: str) -> FileResponse:
+    _require_pro()
+    from beatos_publish.tickets import _TERMINAL_STAGES, ticket_asset_path
+    from beatos_publish.jobs import REGISTRY
+    job = REGISTRY.get(job_id)
+    if job is None:
+        raise HTTPException(404, "job not found", headers=_ASSET_CORS)
+    if job.stage in _TERMINAL_STAGES:
+        # Gone, not Not-Found: the ticket existed but its asset URLs expired
+        # with it — tells a live panel to stop retrying.
+        raise HTTPException(410, "ticket is terminal — asset links expired", headers=_ASSET_CORS)
+    try:
+        path = ticket_asset_path(job_id, asset_id, nonce)
+    except KeyError:
+        # Unknown asset and nonce mismatch are indistinguishable on purpose.
+        raise HTTPException(404, "asset not found", headers=_ASSET_CORS)
+    if not os.path.isfile(path):
+        # The catalog row exists but the bytes don't (offline/unmounted drive —
+        # dogfood found a whole missing volume). Name the file so the panel can
+        # tell the user exactly what to remount.
+        raise HTTPException(
+            404,
+            f"asset file missing on disk: {os.path.basename(path)} "
+            "(is the drive it lives on mounted?)",
+            headers=_ASSET_CORS,
+        )
+    media_type = mimetypes.guess_type(path)[0] or "application/octet-stream"
+    # FileResponse stats the file → correct Content-Length; streams the body.
+    return FileResponse(path, media_type=media_type, headers=_ASSET_CORS)
+
+
 @router.delete("/api/publish/{job_id}", status_code=204)
 async def publish_delete_job(job_id: str, request: Request) -> Response:
     # Token-gated (audit P20): cancels the live browser run + drops the record.
@@ -207,6 +271,10 @@ async def publish_delete_job(job_id: str, request: Request) -> Response:
     # window — THEN drop the record (audit P19).
     from beatos_http.publish_tasks import cancel
     cancel(job_id)
+    # Extension tickets: deleting the job kills its capability asset URLs (and
+    # merged field reports) — nothing outlives the row (design §8).
+    from beatos_publish.tickets import invalidate_ticket
+    invalidate_ticket(job_id)
     if not REGISTRY.delete(job_id):
         raise HTTPException(404, "job not found")
     return Response(status_code=204)

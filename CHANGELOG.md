@@ -10,7 +10,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ### Added
 
-- **Extension-based publishing, phase 1 (Pro).** A new Chrome extension can claim a staged publish "ticket" from BeatOS and fill the BeatStars track form inside your own logged-in browser — real-user session, no separate automation browser — reporting per-field results honestly (filled / needs-you / skipped) and always leaving the final Publish click to you. Staged via `POST /api/publish` with `mode:"extension"`; the fixed local port now also reports the app's API port so the extension can find it. Metadata fill only in this phase; file uploads and NetEase follow.
+- **Extension-based publishing (Pro).** A new Chrome extension can claim a staged publish "ticket" from BeatOS and fill the BeatStars track form inside your own logged-in browser — real-user session, no separate automation browser — reporting per-field results honestly (filled / needs-you / skipped) and always leaving the final Publish click to you. It also uploads the audio and cover files: the extension fetches each from BeatOS over a one-time capability link and drops it into the platform's upload slot (master WAV + tagged preview + cover, live-verified end to end; stems and NetEase follow). Choose it in the publish dialog via "Publish method → Browser extension"; the automation-browser path is unchanged. Staged via `POST /api/publish` with `mode:"extension"`; the fixed local port reports the app's API port so the extension can find it.
 
 ### Fixed
 

@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Rocket, Loader2, CheckCircle2, AlertCircle, MonitorSmartphone, Clock } from "lucide-react";
+import {
+  Rocket,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  MonitorSmartphone,
+  Clock,
+  Puzzle,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 
@@ -131,6 +139,18 @@ export function PublishDialog({
     const list = platforms && platforms.length > 0 ? platforms : [platform];
     return list.includes(selectedPlatform) ? list : [selectedPlatform, ...list];
   }, [platforms, platform, selectedPlatform]);
+  // Extension-mode publishing (fill in the user's OWN browser via the BeatOS
+  // extension) is offered platform-by-platform as recipes land: BeatStars first
+  // (extension design P1/P2). Default stays the automation-browser engine.
+  const [publishMethod, setPublishMethod] = useState<"engine" | "extension">("engine");
+  useEffect(() => {
+    setPublishMethod("engine");
+  }, [selectedPlatform, open]);
+  const extensionCapable = selectedPlatform === "beatstars";
+  const useExtension = extensionCapable && publishMethod === "extension";
+  // Platform upload-page URL returned by an extension-mode stage — the user
+  // opens it themselves; the extension side panel takes over from there.
+  const [ticketUrl, setTicketUrl] = useState<string | null>(null);
   const [result, setResult] = useState<ExportResult | null>(null);
   const [trackAssets, setTrackAssets] = useState<Asset[]>([]);
   const [audioAssetId, setAudioAssetId] = useState<number | null>(null);
@@ -262,6 +282,7 @@ export function PublishDialog({
     let cancelled = false;
     setResult(null);
     setJob(null);
+    setTicketUrl(null);
     setTrackAssets([]);
     setAudioAssetId(null);
     setCoverAssetId(null);
@@ -332,6 +353,7 @@ export function PublishDialog({
     }
     setPublishing(true);
     setJob(null);
+    setTicketUrl(null);
     try {
       const body = isDouyin
         ? {
@@ -343,12 +365,16 @@ export function PublishDialog({
         : {
             track_id: trackId,
             platform: selectedPlatform,
+            // Extension mode stages a ticket instead of launching the engine
+            // browser; polling below is unchanged (same job registry).
+            ...(useExtension ? { mode: "extension" as const } : {}),
             audio_asset_id: audioAssetId ?? undefined,
             cover_asset_id: coverAssetId ?? undefined,
             deliverable_wav_asset_id: wavAssetId ?? undefined,
             deliverable_stems_asset_id: stemsAssetId ?? undefined,
           };
-      const { job_id } = await publishApi.create(body);
+      const { job_id, upload_url } = await publishApi.create(body);
+      if (upload_url) setTicketUrl(upload_url);
       stopPolling();
       let pollErrors = 0;
       pollRef.current = window.setInterval(async () => {
@@ -437,14 +463,46 @@ export function PublishDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {sessionChecking && (
+        {extensionCapable && (
+          <div
+            role="radiogroup"
+            aria-label={t("publishDialog.publishMethod")}
+            className="mb-3 flex items-center gap-3 text-xs text-text-secondary"
+          >
+            <span className={sectionCls}>{t("publishDialog.publishMethod")}</span>
+            <label className="flex cursor-pointer items-center gap-1.5">
+              <input
+                type="radio"
+                name="publish-method"
+                checked={publishMethod === "engine"}
+                onChange={() => setPublishMethod("engine")}
+                disabled={publishing || inProgress}
+              />
+              {t("publishDialog.methodEngine")}
+            </label>
+            <label className="flex cursor-pointer items-center gap-1.5">
+              <input
+                type="radio"
+                name="publish-method"
+                checked={publishMethod === "extension"}
+                onChange={() => setPublishMethod("extension")}
+                disabled={publishing || inProgress}
+              />
+              {t("publishDialog.methodExtension")}
+            </label>
+          </div>
+        )}
+
+        {/* Session banners concern the automation-browser session only — the
+            extension rides the user's own logged-in browser. */}
+        {!useExtension && sessionChecking && (
           <div className="mb-3 flex items-center gap-2 rounded-md border border-border-subtle bg-bg-elevated px-3 py-2 text-xs text-text-secondary">
             <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
             {t("publishDialog.checkingSession")}
           </div>
         )}
 
-        {sessionBlocked && (
+        {!useExtension && sessionBlocked && (
           <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             <span className="flex items-center gap-2">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
@@ -467,7 +525,7 @@ export function PublishDialog({
           </div>
         )}
 
-        {sessionState === "unknown" && (
+        {!useExtension && sessionState === "unknown" && (
           <div className="mb-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-text-secondary">
             <AlertCircle className="h-3.5 w-3.5 shrink-0 text-warning" />
             {t("publishDialog.sessionUnknown")}
@@ -570,6 +628,25 @@ export function PublishDialog({
           </div>
         </div>
 
+        {/* — extension staged hand-off: the ticket waits for the user's own
+            browser; from "filling" onward the stage spinner takes over — */}
+        {useExtension && job && (stage === "staged" || stage === "claimed") && (
+          <div className="mt-3 flex items-start gap-2 rounded-md border border-border-subtle bg-bg-elevated px-3 py-2 text-xs text-text-secondary">
+            <Puzzle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="leading-snug">
+              {t("publishDialog.extensionStagedMsg")}
+              {ticketUrl && (
+                <>
+                  {" — "}
+                  <a href={ticketUrl} target="_blank" rel="noreferrer" className="underline">
+                    {t("publishDialog.openPlatformPage")}
+                  </a>
+                </>
+              )}
+            </span>
+          </div>
+        )}
+
         {/* — status + action — */}
         {(isAwaiting ||
           (job && stage === "done") ||
@@ -637,7 +714,9 @@ export function PublishDialog({
             onClick={handlePublish}
             disabled={
               publishing ||
-              !canPublishSession ||
+              // The automation-session gate applies to the engine path only —
+              // extension mode fills in the user's own logged-in browser.
+              (!useExtension && !canPublishSession) ||
               (isDouyin ? videoAssetId == null : audioAssetId == null)
             }
           >

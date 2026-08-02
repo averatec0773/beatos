@@ -10,6 +10,11 @@ export interface PublishJob {
 export interface PublishCreateBody {
   track_id: number;
   platform: string;
+  /**
+   * "engine" (default) drives the Pro automation browser; "extension" stages a
+   * ticket the BeatOS browser extension claims in the user's own browser.
+   */
+  mode?: "engine" | "extension";
   /** Streamable preview audio (music platforms). */
   audio_asset_id?: number;
   /** Promo video (video platforms, e.g. douyin). */
@@ -38,9 +43,17 @@ export interface PublishJobFull {
   result?: { ok: boolean; url?: string; error?: string };
 }
 
+export interface PublishCreateResult {
+  job_id: string;
+  /** Present only for mode:"extension" responses. */
+  mode?: "extension";
+  /** Platform upload-page URL to open in the user's own browser (extension mode). */
+  upload_url?: string;
+}
+
 export const publishApi = {
-  create(body: PublishCreateBody): Promise<{ job_id: string }> {
-    return apiPost<{ job_id: string }>(`/api/publish`, body);
+  create(body: PublishCreateBody): Promise<PublishCreateResult> {
+    return apiPost<PublishCreateResult>(`/api/publish`, body);
   },
   status(jobId: string): Promise<PublishJob> {
     return apiGet<PublishJob>(`/api/publish/${encodeURIComponent(jobId)}`);
