@@ -59,8 +59,15 @@ class AIProvider(Protocol):
         log the API key or the raw response verbatim."""
         ...
 
-    async def run_chat(self, *, messages: list[dict], tools: list[dict]) -> "ChatTurn":
+    async def run_chat(
+        self, *, messages: list[dict], tools: list[dict], system: str | None = None
+    ) -> "ChatTurn":
         """Run one non-streaming chat turn with tool-use. `messages` is the
         Anthropic message history; `tools` is the tool-definition array. Returns
-        the assistant text + any tool calls + stop reason. Never logs the key."""
+        the assistant text + any tool calls + stop reason. Never logs the key.
+
+        `system` overrides the default in-app-assistant system prompt. Callers
+        that are NOT the chat assistant (e.g. the publish description writer,
+        which passes no tools) must set it — otherwise the model is told to
+        "use the provided tools" that do not exist."""
         ...

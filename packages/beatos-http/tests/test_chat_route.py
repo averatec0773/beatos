@@ -22,7 +22,7 @@ class _ScriptedProvider:
         self._turns = list(turns)
         self.calls = 0
 
-    async def run_chat(self, *, messages, tools):
+    async def run_chat(self, *, messages, tools, system=None):
         turn = self._turns[self.calls]
         self.calls += 1
         return turn
@@ -66,7 +66,7 @@ async def test_chat_provider_error_becomes_502(db, monkeypatch):
     await run_migrations(db)
 
     class _Boom:
-        async def run_chat(self, *, messages, tools):
+        async def run_chat(self, *, messages, tools, system=None):
             raise RuntimeError("AI provider request failed: HTTP 401")
 
     async def _p():

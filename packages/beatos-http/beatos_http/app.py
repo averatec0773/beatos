@@ -27,6 +27,7 @@ from beatos_http.routes import (
     agent_actions,
     ai,
     ai_chat,
+    ai_description,
     analysis,
     app_settings,
     assets,
@@ -42,6 +43,7 @@ from beatos_http.routes import (
     pro,
     producers,
     publish,
+    publish_history,
     sweep,
     tagged_mp3,
     tracks,
@@ -164,11 +166,16 @@ def create_app() -> FastAPI:
     app.include_router(inject.read_router)
     app.include_router(producers.router)
     app.include_router(pro.router)
+    # publish_history MUST precede publish: the latter ends with the catch-all
+    # GET /api/publish/{job_id}, which otherwise swallows /api/publish/history
+    # and 404s it as an unknown job (verified empirically, P4).
+    app.include_router(publish_history.router)
     app.include_router(publish.router)
     app.include_router(app_settings.router)
     app.include_router(ai.router)
     app.include_router(ai.track_router)
     app.include_router(ai_chat.router)
+    app.include_router(ai_description.router)
     app.include_router(batch_tagging.router)
     app.include_router(license_pdf.track_router)
     app.include_router(tagged_mp3.track_router)

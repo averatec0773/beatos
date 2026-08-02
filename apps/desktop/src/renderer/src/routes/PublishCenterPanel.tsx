@@ -11,6 +11,7 @@ import { useToastStore } from "@/stores/toast";
 import { confirmDialog } from "@/stores/confirm-dialog";
 import { SessionHealthRow } from "@/components/PublishCenter/SessionHealthRow";
 import { LiveJobRow } from "@/components/PublishCenter/LiveJobRow";
+import { PublishHistorySection } from "@/components/PublishCenter/PublishHistorySection";
 import { PublishTrackPicker } from "@/components/PublishCenter/PublishTrackPicker";
 import { PublishDialog } from "@/components/PublishDialog";
 
@@ -21,6 +22,9 @@ const SECTION = "text-[10px] font-medium uppercase tracking-[0.1em] text-text-te
 // sidecar 30×/min forever — we still poll slowly to pick up a newly-started publish.
 const POLL_ACTIVE_MS = 2000;
 const POLL_IDLE_MS = 8000;
+// Stages that mean a live job is settled — crossing into one is when the
+// History section is worth re-reading (it has no poll of its own).
+const TERMINAL_STAGES = new Set(["done", "failed", "expired"]);
 // Stop a login poll after this many CONSECUTIVE failed reads (sidecar gone /
 // login_id no longer known) instead of 404ing forever. Resets on any good read.
 const MAX_LOGIN_POLL_ERRORS = 10;
@@ -162,18 +166,34 @@ export function PublishCenterPanel(): React.JSX.Element {
 
   const platforms = useMemo(() => Object.keys(sessions), [sessions]);
 
+  // Rule 4: select the list, derive here — never .filter inside the selector.
+  const historyReloadKey = useMemo(
+    () =>
+      jobs
+        .filter((j) => TERMINAL_STAGES.has(j.stage))
+        .map((j) => j.job_id)
+        .sort()
+        .join(","),
+    [jobs],
+  );
+
   // Free build (Pro status settled, publish not available): clean upsell wall
   // instead of a panel firing 402s. While status is still loading, render nothing.
   if (proLoaded && !publishAvailable) {
     return (
-      <div className="beatos-card flex h-full flex-col items-center justify-center rounded-xl p-8 text-center">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-bg-elevated">
-          <Lock size={24} className="text-text-tertiary" />
+      <div className="beatos-card beatos-scroll h-full overflow-y-auto rounded-xl p-5">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-border-subtle p-8 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-bg-elevated">
+            <Lock size={24} className="text-text-tertiary" />
+          </div>
+          <h1 className="mb-1.5 flex items-center gap-2 text-lg font-semibold text-text-primary">
+            <Rocket size={18} /> {t("publishCenter.title")}
+          </h1>
+          <p className="max-w-sm text-sm text-text-secondary">{t("sidebar.publishCenterLocked")}</p>
         </div>
-        <h1 className="mb-1.5 flex items-center gap-2 text-lg font-semibold text-text-primary">
-          <Rocket size={18} /> {t("publishCenter.title")}
-        </h1>
-        <p className="max-w-sm text-sm text-text-secondary">{t("sidebar.publishCenterLocked")}</p>
+        {/* History is catalog data, not a Pro capability — the sidecar serves it
+            without the publish engine, so a free build still sees past attempts. */}
+        <PublishHistorySection />
       </div>
     );
   }
@@ -249,6 +269,8 @@ export function PublishCenterPanel(): React.JSX.Element {
           ))
         )}
       </div>
+
+      <PublishHistorySection reloadKey={historyReloadKey} />
 
       <PublishTrackPicker
         open={pickerOpen}

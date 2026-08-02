@@ -26,3 +26,22 @@ def test_sidecar_startup_registers_apply_handlers():
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert r.returncode == 0, f"stdout={r.stdout!r} stderr={r.stderr!r}"
     assert r.stdout.startswith("OK"), r.stdout
+
+
+def test_publish_history_route_is_not_shadowed_by_the_job_catch_all():
+    """routes/publish.py ends with the catch-all GET /api/publish/{job_id},
+    which matches /api/publish/history too. The history router must therefore be
+    registered BEFORE it in app.py — otherwise history silently 404s as an
+    unknown job (P4; empirically confirmed). This guards the ordering against a
+    well-meaning import/registration reshuffle."""
+    from fastapi.testclient import TestClient
+
+    from beatos_http.app import create_app
+
+    client = TestClient(create_app())
+    response = client.get("/api/publish/history")
+    assert response.status_code == 200, (
+        f"history shadowed by the /api/publish/{{job_id}} catch-all: "
+        f"{response.status_code} {response.text[:120]}"
+    )
+    assert "attempts" in response.json()

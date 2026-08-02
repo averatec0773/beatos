@@ -182,11 +182,16 @@ class OpenAICompatibleProvider:
         reply = self._first_message(data).get("content") or ""
         return _parse_suggestion(reply if isinstance(reply, str) else "")
 
-    async def run_chat(self, *, messages: list[dict], tools: list[dict]) -> ChatTurn:
+    async def run_chat(
+        self, *, messages: list[dict], tools: list[dict], system: str | None = None
+    ) -> ChatTurn:
+        mapped = _to_openai_messages(messages)
+        if system:
+            mapped = [{"role": "system", "content": system}, *mapped]
         payload: dict = {
             "model": self._model,
             "max_tokens": _CHAT_MAX_TOKENS,
-            "messages": _to_openai_messages(messages),
+            "messages": mapped,
         }
         if tools:
             payload["tools"] = _to_openai_tools(tools)

@@ -22,7 +22,7 @@ class _ScriptedProvider:
         self._turns = list(turns)
         self.calls = 0
 
-    async def run_chat(self, *, messages, tools):
+    async def run_chat(self, *, messages, tools, system=None):
         turn = self._turns[self.calls]
         self.calls += 1
         return turn

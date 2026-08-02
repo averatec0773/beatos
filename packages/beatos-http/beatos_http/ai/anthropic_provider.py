@@ -148,12 +148,12 @@ class AnthropicProvider:
         return _parse_suggestion(text)
 
     async def run_chat(
-        self, *, messages: list[dict], tools: list[dict]
+        self, *, messages: list[dict], tools: list[dict], system: str | None = None
     ) -> ChatTurn:
         payload = {
             "model": self._model,
             "max_tokens": _CHAT_MAX_TOKENS,
-            "system": _CHAT_SYSTEM,
+            "system": system or _CHAT_SYSTEM,
             "messages": messages,
             "tools": tools,
         }
