@@ -22,6 +22,18 @@ read_router = APIRouter(tags=["inject"])
 # Overwrite-style single slot. Phase 1 holds one staged fill at a time.
 _STAGED: dict | None = None
 
+# Main-app ephemeral port, advertised via /ping so the extension can DISCOVER
+# the token-gated main API from the fixed port (rule 10 revised: the fixed port
+# stays read-only — discovery only, all writes token-gated on the main app).
+# Set once at startup by __main__ via create_inject_app(main_port=...); None
+# when unknown (bare create_app in tests, fixed port unbound).
+_MAIN_PORT: int | None = None
+
+
+def set_main_port(port: int | None) -> None:
+    global _MAIN_PORT
+    _MAIN_PORT = port
+
 
 class StageRequest(BaseModel):
     track_id: int
@@ -30,8 +42,10 @@ class StageRequest(BaseModel):
 
 @read_router.get("/api/inject/ping")
 async def inject_ping() -> dict:
-    """Liveness + identity marker so the extension confirms it's BeatOS."""
-    return {"beatos_inject": True}
+    """Liveness + identity marker so the extension confirms it's BeatOS, plus
+    the main-app port for discovery (both apps share this module singleton, so
+    the main app's own /ping reports the same value — or null when unset)."""
+    return {"beatos_inject": True, "main_port": _MAIN_PORT}
 
 
 @router.post("/api/inject/stage")

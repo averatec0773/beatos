@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); BeatOS 
 
 ## [Unreleased]
 
+### Added
+
+- **Extension-based publishing, phase 1 (Pro).** A new Chrome extension can claim a staged publish "ticket" from BeatOS and fill the BeatStars track form inside your own logged-in browser — real-user session, no separate automation browser — reporting per-field results honestly (filled / needs-you / skipped) and always leaving the final Publish click to you. Staged via `POST /api/publish` with `mode:"extension"`; the fixed local port now also reports the app's API port so the extension can find it. Metadata fill only in this phase; file uploads and NetEase follow.
+
 ### Fixed
 
 - **A failed upgrade can no longer wedge the library database.** Each schema migration now applies atomically together with its version record — if a migration is interrupted (crash, disk full), the database rolls back to its pre-migration state and the next launch simply retries, instead of being stuck half-migrated with the app unable to start.

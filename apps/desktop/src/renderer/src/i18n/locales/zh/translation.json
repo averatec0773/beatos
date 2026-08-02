@@ -582,6 +582,8 @@
     "publishFailedDetail": "发布失败: {{error}}",
     "publish": "发布",
     "stageQueued": "已排队",
+    "stageStaged": "等待插件接管",
+    "stageClaimed": "插件已接管",
     "stageLaunching": "启动浏览器",
     "stageNavigating": "打开上传页面",
     "stageCreatingAlbum": "创建专辑",

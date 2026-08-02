@@ -382,6 +382,8 @@ export function PublishDialog({
   const inProgress = Boolean(job) && !TERMINAL.has(stage ?? "");
   const STAGE_KEY: Record<string, string> = {
     queued: "publishDialog.stageQueued",
+    staged: "publishDialog.stageStaged",
+    claimed: "publishDialog.stageClaimed",
     launching: "publishDialog.stageLaunching",
     navigating: "publishDialog.stageNavigating",
     creating_album: "publishDialog.stageCreatingAlbum",

@@ -582,6 +582,8 @@
     "publishFailedDetail": "Publish failed: {{error}}",
     "publish": "Publish",
     "stageQueued": "Queued",
+    "stageStaged": "Waiting for extension",
+    "stageClaimed": "Claimed by extension",
     "stageLaunching": "Launching browser",
     "stageNavigating": "Opening upload page",
     "stageCreatingAlbum": "Creating album",

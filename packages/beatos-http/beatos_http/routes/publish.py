@@ -14,6 +14,7 @@ from beatos_http.publish_schemas import (
     PublishLoginBody,
     PublishRequestBody,
     PublishValidateBody,
+    TicketReportBody,
 )
 
 router = APIRouter(tags=["publish"])
@@ -54,6 +55,17 @@ async def create_publish(req: PublishRequestBody, request: Request) -> dict:
     # it. Enable only via the BEATOS_PUBLISH_AUTO_ADVANCE=1 dev escape hatch.
     auto_advance = os.environ.get("BEATOS_PUBLISH_AUTO_ADVANCE") == "1"
     engine_req = PublishRequest(**req.model_dump(), auto_advance=auto_advance)
+    if req.mode == "extension":
+        # Extension mode stages a ticket (no browser task) — the extension side
+        # panel claims it via /api/publish/tickets/*. Resolution failures (bad
+        # track / missing asset / no recipe) fail the POST eagerly.
+        from beatos_publish.errors import PublishError
+        from beatos_publish.tickets import stage_ticket
+        try:
+            ticket_id = await stage_ticket(engine_req)
+        except (PublishError, ValueError) as e:
+            raise HTTPException(400, str(e))
+        return {"job_id": ticket_id, "mode": "extension"}
     job_id = REGISTRY.create(engine_req)
     task = asyncio.create_task(run_job(job_id, engine_req))
     _running.add(task)
@@ -142,6 +154,49 @@ async def publish_clear_jobs(request: Request) -> dict:
     return {"deleted": REGISTRY.clear(), "cancelled": cancelled}
 
 
+# --- Extension tickets (2026-08-01 design). Declared BEFORE the /{job_id}
+# catch-all (see the NOTE below — ordering is load-bearing). Reads are open
+# (panel polling); claim/report mutate ticket state and are token-gated like
+# every other mutating publish route (P20).
+
+@router.get("/api/publish/tickets/pending")
+async def publish_tickets_pending(platform: str | None = None) -> dict:
+    _require_pro()
+    from beatos_publish.tickets import pending_tickets
+    return {"tickets": pending_tickets(platform)}
+
+
+@router.post("/api/publish/tickets/{job_id}/claim")
+async def publish_ticket_claim(job_id: str, request: Request) -> dict:
+    require_api_token(request)
+    _require_pro()
+    from beatos_publish.errors import PublishError
+    from beatos_publish.tickets import claim_ticket
+    try:
+        return await claim_ticket(job_id)
+    except KeyError:
+        raise HTTPException(404, "job not found")
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+    except PublishError as e:
+        # Claim re-resolves export + assets; a since-deleted asset fails here.
+        raise HTTPException(409, str(e))
+
+
+@router.post("/api/publish/tickets/{job_id}/report")
+async def publish_ticket_report(job_id: str, body: TicketReportBody, request: Request) -> dict:
+    require_api_token(request)
+    _require_pro()
+    from beatos_publish.tickets import report_ticket
+    try:
+        report_ticket(job_id, body.stage, body.message, body.reports)
+    except KeyError:
+        raise HTTPException(404, "job not found")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
 @router.delete("/api/publish/{job_id}", status_code=204)
 async def publish_delete_job(job_id: str, request: Request) -> Response:
     # Token-gated (audit P20): cancels the live browser run + drops the record.
@@ -158,8 +213,9 @@ async def publish_delete_job(job_id: str, request: Request) -> Response:
 
 
 # NOTE: keep this catch-all LAST — it matches any /api/publish/<x>, so every
-# literal /api/publish/... route (sessions, sessions/validate, login, jobs)
-# must be declared above it or it will shadow them (→ 404 "job not found").
+# literal /api/publish/... route (sessions, sessions/validate, login, jobs,
+# tickets/*) must be declared above it or it will shadow them (→ 404 "job not
+# found").
 @router.get("/api/publish/{job_id}")
 async def publish_status(job_id: str) -> dict:
     _require_pro()
@@ -167,4 +223,10 @@ async def publish_status(job_id: str) -> dict:
     job = REGISTRY.get(job_id)
     if job is None:
         raise HTTPException(404, "job not found")
-    return job.model_dump()
+    out = job.model_dump()
+    # Extension tickets carry cumulative per-field fill reports; engine jobs keep
+    # the response shape unchanged. mode defaults to "engine" for legacy rows.
+    if getattr(job.request, "mode", "engine") == "extension":
+        from beatos_publish.tickets import ticket_reports
+        out["field_reports"] = ticket_reports(job_id)
+    return out

@@ -44,6 +44,14 @@ export function LiveJobRow({ job, title, onRepublish, onDelete }: Props): React.
             <span className="flex items-center gap-1 text-danger">
               <XCircle size={12} /> {t("publishCenter.failedJob", { message: job.message })}
             </span>
+          ) : stage === "staged" || stage === "claimed" ? (
+            // Extension tickets: waiting on the browser extension, not the engine.
+            <span className="flex items-center gap-1 text-warning">
+              <Clock size={12} />{" "}
+              {stage === "staged"
+                ? t("publishDialog.stageStaged")
+                : t("publishDialog.stageClaimed")}
+            </span>
           ) : (
             <span className="flex items-center gap-1 text-text-tertiary">
               <Loader2 size={12} className="animate-spin" /> {job.message || stage}

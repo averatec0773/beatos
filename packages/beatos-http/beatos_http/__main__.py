@@ -81,7 +81,9 @@ async def _serve(main_sock: socket.socket, main_port: int) -> None:
     inject_sock = _try_bind_fixed(INJECT_PORT)
     if inject_sock is not None:
         inj_cfg = uvicorn.Config(
-            app=create_inject_app(),
+            # main_port: advertised on /api/inject/ping so the extension can
+            # discover the token-gated main API from the fixed discovery port.
+            app=create_inject_app(main_port=main_port),
             host="127.0.0.1",
             port=INJECT_PORT,
             log_level="warning",

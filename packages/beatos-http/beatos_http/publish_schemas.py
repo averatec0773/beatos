@@ -3,15 +3,18 @@ exist in the free build without importing the private engine's models."""
 from __future__ import annotations
 
 import datetime as _dt
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PublishRequestBody(BaseModel):
     track_id: int
     platform: str
     account: str = "default"
+    # "engine" drives the Pro patchright browser (default, unchanged path);
+    # "extension" stages a ticket for the browser extension to claim.
+    mode: Literal["engine", "extension"] = "engine"
     audio_asset_id: Optional[int] = None
     video_asset_id: Optional[int] = None
     cover_asset_id: Optional[int] = None
@@ -23,6 +26,15 @@ class PublishRequestBody(BaseModel):
     # schedule control for them (audit P16).
     schedule: Optional[_dt.datetime] = None
     dry_run: bool = False
+
+
+class TicketReportBody(BaseModel):
+    """Extension → sidecar progress report for a claimed ticket. `reports` is
+    the cumulative field-report list (offeros protocol: re-sent in full, merged
+    by (page, field_id) server-side)."""
+    stage: Optional[str] = None
+    message: str = ""
+    reports: list[dict] = Field(default_factory=list)
 
 
 class PublishLoginBody(BaseModel):

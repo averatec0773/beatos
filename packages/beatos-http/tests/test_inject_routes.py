@@ -111,18 +111,36 @@ async def test_form_map_unknown_also_empty(client):
 @pytest.mark.asyncio
 async def test_ping(client):
     res = await client.get("/api/inject/ping")
-    assert res.json() == {"beatos_inject": True}
+    assert res.json() == {"beatos_inject": True, "main_port": None}
 
 
 @pytest.mark.asyncio
 async def test_inject_app_serves_ping_and_formmap():
+    inject.set_main_port(None)
     app = create_inject_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
-        assert (await c.get("/api/inject/ping")).json() == {"beatos_inject": True}
+        assert (await c.get("/api/inject/ping")).json() == {
+            "beatos_inject": True,
+            "main_port": None,
+        }
         res = await c.get("/api/inject/form-map/netease")
         assert res.status_code == 200
         assert res.json() == {}
+
+
+@pytest.mark.asyncio
+async def test_ping_advertises_main_port_for_discovery():
+    """The fixed-port app stays read-only, but its ping advertises the main-app
+    ephemeral port so the extension can discover the token-gated API."""
+    app = create_inject_app(main_port=54321)
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as c:
+            body = (await c.get("/api/inject/ping")).json()
+            assert body == {"beatos_inject": True, "main_port": 54321}
+    finally:
+        inject.set_main_port(None)  # module singleton — don't leak across tests
 
 
 def _all_paths(routes) -> set[str]:
